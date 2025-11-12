@@ -1,0 +1,255 @@
+Kadmawala — Product Requirements Document
+ (PRD)
+ Project: Kadmawala Sales & CRM System
+ Client: Kadmawala (PNG Team)
+ Owner: Ofstartup
+ Version: 1.0
+ Date: 2025-11-11
+ 1. Executive Summary
+ Kadmawala requires a unified field-sales mobile application for their sales force and a complementary
+ web-based Admin Panel for managers. The system will digitize dealer→retailer→farmer relationships,
+ enable GPS/photo-verified visits (check-in/check-out), capture structured agricultural and commercial data,
+ and provide CRM-style reminders and analytics to increase adoption of Kadmawala feed products.
+ The deliverable is a product that supports: real-time visit logging, hierarchical data (Dealer → Retailer →
+ Farmer), dynamic forms for animal & feed data, automated reminders, offline-first data capture, and an
+ Admin Portal for monitoring, reporting, and insight generation.
+ Goals: - Improve field sales effectiveness and accountability. - Increase retailer demand and farmer
+ awareness for Kadmawala feed. - Produce measurable KPIs to guide marketing and distribution decisions.
+ 2. Scope & Objectives
+ In-scope (Phase 1): - Mobile app for Salespeople (Android/iOS): authentication, check-in/out, visit forms
+ (Dealer, Retailer, Farmer), photo & GPS capture, reminders, offline capability. - Admin Web Panel: user
+ management, view records, search & filters, reporting export, dashboards (visits, adoption, region
+ performance), CRM calendar. - Data model linking Dealer→Retailer→Farmer with sub-entities (Animals,
+ Feed entries, Brands). - Basic analytics and CSV export.
+ Out-of-scope (Phase 1): - Complex BI pipelines, external ERP integrations, payment flows, marketplace
+ features, automated messaging (SMS/WhatsApp) — may be Phase 2.
+ 1
+Success Metrics: - 90% of field visits recorded with GPS + photo within first 60 days. - 30% increase in
+ retailer stock share of Kadmawala feed in pilot regions within 6 months. - 80% app adoption rate among
+ assigned sales staff in first 30 days.
+ 3. Personas
+ Sales Executive (Rahul) - Role: Daily visits to dealers/retailers/farmers, collects data, creates follow-ups. 
+Needs: Fast data entry, quick check-in, reminders, verification features. - Pain Points: Offline connectivity,
+ long forms, duplicate data entry.
+ Regional Manager (Priya) - Role: Supervises sales team, monitors visits, approves leads, measures
+ performance. - Needs: Dashboard, exportable reports, alerts for missed visits.
+ Admin / Data Analyst (Imran) - Role: Clean and analyze field data, run reports for strategy. - Needs:
+ Structured export, filters, data validation tools.
+ Retailer / Farmer (Ramesh) - Role: Receives visits and feeds products. - Needs: Clear representation of
+ benefits (nutrition, cost), occasional printed reports.
+ 4. User Journeys
+ 4.1 Sales Executive — Day flow
+ 1. 
+2. 
+3. 
+4. 
+5. 
+6. 
+Login (biometric/pin) → App opens to Today’s Work. 
+Select assigned area or route → Tap "Start Visit". 
+App auto-captures GPS & camera for site verification (photo required). 
+Choose entity: Dealer / Retailer / Farmer. If new, open Create form; if existing, open Profile and Add
+ Visit entry. 
+Fill form fields quickly (pre-fill where possible), upload photos, add remarks, set Next Meeting Date. 
+Submit → Check-out → Visit recorded → Reminder scheduled.
+ 4.2 Admin — Monitoring flow
+ 1. 
+2. 
+3. 
+Login to Admin Panel → Dashboard shows daily visits, missed check-ins, new retailers added. 
+Filter by region / salesperson / date range → view sample forms and download CSV. 
+Review flagged records (missing photos, inconsistent GPS) and send feedback to team.
+ 2
+5. Feature List (Detailed)
+ 5.1 Mobile App Features
+ Authentication & Profiles - Secure login, role-based access, profile photo, contact info. - Password reset via
+ OTP (phone number required).
+ Check-in / Check-out - Geo-tagged check-in & check-out with timestamp.- Minimum distance validation (optional): app warns if user is >200m away from retailer location.
+ Entity Management - Create / Edit / View: Dealer, Retailer, Farmer.- Link Retailer → Dealer and Farmer → Retailer hierarchy. 
+Forms & Dynamic Fields - Dealer Form: name, contact, firm, area, remarks, photos. - Retailer Form: basic
+ info, quantity (MT), per/month (MT/month), list of brands used (brand + MT), remarks, photos. - Farmer
+ Form: animal counts (total, milking, non-milking), daily feed quantity, feed composition (ready-made +
+ natural), brand used, milk per day, cost per day, remarks. - Each form allows adding multiple feed-brand
+ entries (brand name + MT/month or kg/day).
+ Visit Log & CRM - Each visit saved as a record attached to entity with: photo(s), GPS coords, remarks, next
+ meeting date. - Reminder system: local notifications on device + server-side scheduled reminders for push
+ notifications.
+ Offline-first - Save entries offline and sync when online. Conflict resolution: local wins with timestamp;
+ admin can flag duplicates.
+ Validation & Verification - Mandatory site photo and GPS for every new visit.- Optional selfie verification (salesperson) for audit trails.
+ Quick Actions - Quick-add brand consumption, scan QR (future), call retailer directly from app.
+ 5.2 Admin Panel Features
+ User Management - Create / deactivate users, assign regions, view last active.
+ Data Explorer - Filterable tables for Dealers / Retailers / Farmers / Visits.- Export CSV / XLSX.
+ Dashboard & Analytics - KPIs: total visits, new retailers, adoption rate (% Kadmawala share).- Charts: visits per day, region heatmap (if coordinates available), brand-share pie charts.
+ CRM & Calendar - Master calendar of Next Meeting Dates with status (Pending / Completed / Missed).- Ability to mark visits as reviewed / flagged.
+ Reports - Pre-built reports: Weekly Visit Summary, Retailer Feed Share, Farmer Impact (milk vs feed cost). 
+3
+Data Quality Controls - Flag records missing required fields, missing photo, or GPS outliers.
+ 6. Data Model (ER Diagram)
+ erDiagram
+    SALES_PERSON ||--o{ VISIT : conducts
+    VISIT }o--|| ENTITY : "visit_for"
+    ENTITY ||--o{ RETAILER : is_a
+    ENTITY ||--o{ DEALER : is_a
+    ENTITY ||--o{ FARMER : is_a
+    RETAILER ||--o{ FARMER : has
+    FARMER ||--o{ ANIMAL : owns
+    RETAILER ||--o{ FEED_ENTRY : records
+    FARMER ||--o{ FEED_ENTRY : records
+    SALES_PERSON {
+        string id PK
+        string name
+        string phone
+        string region
+    }
+    ENTITY {
+        string id PK
+        string type
+        string name
+        string contact
+        string address
+        string dealer_id FK
+    }
+    VISIT {
+        string id PK
+        string entity_id FK
+        string sales_person_id FK
+        datetime checkin
+        datetime checkout
+        float latitude
+        float longitude
+        string photo_url
+        string remarks
+        date next_meeting_date
+    }
+    FEED_ENTRY {
+        string id PK
+        string related_entity_id FK
+        string brand
+ 4
+        float quantity_mt
+        string unit
+        float nutrition_value
+        float cost_per_day_per_animal
+    }
+    ANIMAL {
+        string id PK
+        string farmer_id FK
+        int total
+        int milking
+        int non_milking
+    }
+ 7. API & Integration Outline
+ Auth - 
+POST /api/v1/auth/login — returns JWT - 
+reset
+ Salesperson / Users - 
+POST /api/v1/auth/otp — for phone-based
+ GET /api/v1/users/{id} - 
+POST /api/v1/users — create user
+ Entities 
+(Dealer/Retailer/Farmer) - 
+GET 
+/api/v1/entities?
+ type=retailer&region=...&salesperson=... - 
+POST /api/v1/entities — create entity - 
+api/v1/entities/{id} — update
+ Visits - 
+POST /api/v1/visits — create visit (photo upload via multipart) - 
+PUT /
+ GET /api/v1/visits?
+ date=2025-11-10&salesperson=...
+ Feed Entries - 
+POST /api/v1/feed_entries — brand, qty, unit, nutrition - 
+feed_entries?entity_id=...
+ GET /api/v1/
+ Reports & Exports - 
+GET /api/v1/reports/retailer_feed_share?from=...&to=...
+ Notifications - 
+POST /api/v1/notifications/schedule — server schedules push notifications for
+ next_meeting_date
+ 8. UI / UX Wireframes & Diagrams
+ *(These are high-level flow diagrams you can convert into pixel wireframes.)
+ 5
+8.1 Sales App — Main Flow
+ flowchart TD
+    A[Login] --> B[Today’s Work]
+    B --> C{Start Visit}
+    C --> D[Select Entity]
+    D --> E[Open Profile or Create New]
+    E --> F[Fill Form + Photo + GPS]
+    F --> G[Submit]
+    G --> H[Check-out & Save]
+    H --> I[Sync]
+    I --> J[Admin Dashboard]
+ 8.2 Admin Panel — Main Screens
+ 1. 
+2. 
+3. 
+4. 
+5. 
+Dashboard (KPIs)
+ Data Explorer (table + filters)
+ Reports (download)
+ User Management
+ CRM Calendar
+ 9. Business Logic & Calculators
+ Farmer Nutrition / Cost Calculator - Inputs: ready_made_feed_kg_per_day, natural_feed_kg_per_day,
+ feed_brand_nutrition_score, cost_ready_per_kg, milk_per_day_per_animal
+ • 
+• 
+• 
+• 
+• 
+• 
+Derived:
+ total_feed_kg = ready_made_feed_kg_per_day + natural_feed_kg_per_day
+ nutrition_value = weighted_sum(brand_nutrition * qty) + natural_nutrition
+ cost_per_day_per_animal = total_feed_kg * cost_ready_per_kg (plus estimated cost of natural)
+ projected_milk_increase = function(nutrition_value)
+ monetary_benefit = (projected_milk_increase * milk_price) - (cost_diff)
+ Retailer Feed Share Calculation - For a retailer, sum quantity of all brands (MT/month). Kadmawala Share =
+ kadmawala_mt / total_mt.
+ 10. Non-functional Requirements
+ Performance - App should load Today’s Work within 2s on average mobile networks.
+ Availability - Backend uptime 99.5% (exempting scheduled maintenance).
+ 6
+Security - JWT auth, HTTPS everywhere, role-based access, S3 or equivalent for media with presigned URLs.
+ Compliance & Privacy - Store only necessary personal data; phone numbers encrypted at rest.
+ Scalability - Design for 1,000 active salespeople and 100k entity records in Phase 1. Use pagination and
+ indexes for list APIs.
+ 11. Roadmap & Phases
+ Phase 1 (MVP, 6–8 weeks) - Mobile app core (check-in/out, Dealer/Retailer/Farmer forms, offline sync) 
+Admin Panel: basic dashboards, user mgmt, data explorer, CSV export - Feed & animal data capture, basic
+ nutrition calculator
+ Phase 2 (2–3 months after MVP) - Advanced analytics & heatmaps - Automated messaging (WhatsApp/
+ SMS) for reminders and farm tips - Deeper BI and integrations (ERP, supply chain)
+ Phase 3 (Future) - Predictive recommendations (which retailer to target next) - Incentive & commission
+ module - In-app learning modules for farmers
+ 12. Acceptance Criteria
+ The product will be accepted if: - Sales team can create and submit visits with GPS & photo in offline/online
+ modes. - Admin can view and export the collected data by dealer/retailer/farmer. - Reminders are created
+ and triggered for next meeting dates. - Nutrition calculator computes a basic daily cost and projected
+ benefit for farmers.
+ 13. Risks & Mitigations
+ Risk: Low adoption by sales team
+ Mitigation: Simple forms, training sessions, incentivize early usage, offline support.
+ Risk: Poor data quality (fake photos/GPS)
+ Mitigation: Implement distance checks, random audits, and mandatory photos for new entities.
+ Risk: Offline sync conflicts
+ Mitigation: Timestamps + local precedence + admin conflict resolution UI.
+ 7
+14. Appendix
+ • 
+• 
+Sample Retailer table format (CSV-ready): 
+retailer_name, area, total_mt_per_month, 
+kadmawala_mt_per_month, other_brands, last_visit, next_visit, salesperson, 
+photo_url
+ Sample Farmer fields: 
+farmer_name, retailer_id, total_animals, milking, 
+non_milking, ready_feed_kg_day, natural_feed_kg_day, brand, nutrition_value, 
+cost_per_day_per_animal, milk_per_day, notes
+ End of PRD v1.0
+ 8

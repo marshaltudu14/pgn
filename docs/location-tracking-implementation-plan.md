@@ -49,7 +49,7 @@ This secure enhanced MVP implementation plan focuses on building a comprehensive
 **Enhanced Tracking Rules:**
 - **Only when checked in:** Location tracking active only between check-in and check-out
 - **Fixed interval:** Send location updates every 5 minutes to server
-- **Path filtering:** Show path only when salesman travels at least 50 meters
+- **Path filtering:** Show path only when employee travels at least 50 meters
 - **Automatic stop:** Tracking stops immediately upon check-out
 - **Movement detection:** Only display paths for actual movement, not idle time
 
@@ -61,27 +61,27 @@ This secure enhanced MVP implementation plan focuses on building a comprehensive
 - Local path storage with encrypted compression for offline mode
 
 **Path Visualization Features:**
-- **Unique Colored Paths:** Each salesman assigned a unique color for easy tracking
+- **Unique Colored Paths:** Each employee assigned a unique color for easy tracking
 - **Color Assignment:** Automatically assign distinct colors from predefined palette
 - **Real-time path rendering** on admin dashboard map with individual colors
 - **Color-coded by Time:** Recent segments in brighter shades, older segments faded
-- **Path animation** showing movement timeline with salesman colors
-- **Legend Display:** Show color assignments for easy salesman identification
+- **Path animation** showing movement timeline with employee colors
+- **Legend Display:** Show color assignments for easy employee identification
 - **Distance and duration calculations** for each path segment
 - **Regional Overlays:** Show assigned region boundaries on map
 - **Export path data** for analysis and reporting
 
 **Color Assignment Algorithm:**
 ```javascript
-const assignUniqueColors = (salesmen) => {
+const assignUniqueColors = (employees) => {
   const colorPalette = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
     '#FF9FF3', '#54A0FF', '#48DBFB', '#0ABDE3', '#006BA6',
     '#FFB6C1', '#4A90E2', '#7B68EE', '#FF6F61', '#6B5B95'
   ];
 
-  return salesmen.map((salesman, index) => ({
-    ...salesman,
+  return employees.map((employee, index) => ({
+    ...employee,
     pathColor: colorPalette[index % colorPalette.length],
     colorIndex: index
   }));
@@ -90,9 +90,9 @@ const assignUniqueColors = (salesmen) => {
 
 **Regional Assignment Display:**
 - **Region Visualization:** Show assigned regions with boundaries on mobile app map
-- **Multiple Region Support:** Display all regions assigned to salesman
+- **Multiple Region Support:** Display all regions assigned to employee
 - **Primary Region Highlight:** Emphasize primary operational region
-- **Informative Only:** Regions displayed for salesman awareness only
+- **Informative Only:** Regions displayed for employee awareness only
 - **No Automated Compliance:** Manual monitoring by admin only
 
 #### 1.2 Unique User ID System
@@ -135,8 +135,8 @@ const assignUniqueColors = (salesmen) => {
 **Employment Status Authentication Handling:**
 ```javascript
 // Server-side login validation
-const validateUserLogin = async (salesmanId) => {
-  const user = await getSalesman(salesmanId);
+const validateUserLogin = async (employeeId) => {
+  const user = await getSalesman(employeeId);
 
   if (!user) {
     return { success: false, error: 'User not found' };
@@ -260,7 +260,7 @@ if (loginResponse.error === 'User account has been deleted') {
 
 **Face Recognition Retry Mechanism:**
 ```javascript
-const faceRecognitionWithRetry = async (salesmanId, maxRetries = 3) => {
+const faceRecognitionWithRetry = async (employeeId, maxRetries = 3) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     const result = await captureAndRecognizeFace();
 
@@ -289,9 +289,9 @@ const faceRecognitionWithRetry = async (salesmanId, maxRetries = 3) => {
 
 **Server Embedding Validation:**
 ```javascript
-const validateEmbeddingSync = async (salesmanId) => {
-  const serverEmbedding = await downloadEmbedding(salesmanId);
-  const localEmbedding = getLocalEmbedding(salesmanId);
+const validateEmbeddingSync = async (employeeId) => {
+  const serverEmbedding = await downloadEmbedding(employeeId);
+  const localEmbedding = getLocalEmbedding(employeeId);
 
   const similarity = compareEmbeddings(serverEmbedding, localEmbedding);
 
@@ -315,7 +315,7 @@ const validateEmbeddingSync = async (salesmanId) => {
 **Admin Reference Photo Workflow:**
 ```javascript
 // Admin uploads reference photo
-const uploadReferencePhoto = async (salesmanId, photoFile) => {
+const uploadReferencePhoto = async (employeeId, photoFile) => {
   // 1. Validate photo quality and liveness
   const validation = await validatePhotoQuality(photoFile);
   if (!validation.isValid) throw new Error('Invalid photo quality');
@@ -324,13 +324,13 @@ const uploadReferencePhoto = async (salesmanId, photoFile) => {
   const embedding = await generateFaceEmbedding(photoFile);
 
   // 3. Store photo in Supabase Storage
-  const photoUrl = await uploadPhotoToStorage(salesmanId, photoFile);
+  const photoUrl = await uploadPhotoToStorage(employeeId, photoFile);
 
-  // 4. Update salesman record
-  await updateSalesmanEmbedding(salesmanId, embedding, photoUrl);
+  // 4. Update employee record
+  await updateSalesmanEmbedding(employeeId, embedding, photoUrl);
 
   // 5. Force device sync on next login
-  await markEmbeddingForSync(salesmanId);
+  await markEmbeddingForSync(employeeId);
 };
 ```
 
@@ -483,7 +483,7 @@ const mandatoryPermissionCheck = async () => {
 - **Subsequent logins:** Biometric fingerprint only
 
 **User Management:**
-- Admin creates salesman accounts with user_id and password
+- Admin creates employee accounts with user_id and password
 - Salespeople use assigned credentials for first login
 - Biometric authentication stored locally for convenience
 
@@ -497,9 +497,9 @@ const mandatoryPermissionCheck = async () => {
 - OpenStreetMap integration (free)
 
 **Map Features:**
-- Show all currently checked-in salesmen
+- Show all currently checked-in employees
 - Live location markers
-- Basic salesman info on marker click
+- Basic employee info on marker click
 - Auto-center on current view
 
 #### 3.2 Attendance Verification & Audit Interface
@@ -514,14 +514,14 @@ const mandatoryPermissionCheck = async () => {
 
 **Audit Log Viewer:**
 - Comprehensive activity log with advanced filtering
-- Searchable by salesman, date range, activity type
+- Searchable by employee, date range, activity type
 - Export functionality for compliance reporting
 - Detailed event information with metadata
-- Timeline view for individual salesman activities
+- Timeline view for individual employee activities
 - Suspicious activity alerts and flagging
 
 **Face Recognition Management:**
-- Reference photo management for each salesman
+- Reference photo management for each employee
 - Face recognition accuracy monitoring
 - Failed attempt analysis and reporting
 - Confidence score distribution analytics
@@ -530,16 +530,16 @@ const mandatoryPermissionCheck = async () => {
 #### 3.3 Enhanced Salesman Management
 
 **CRUD Operations:**
-- Add new salesman (user_id, name, password, reference photo)
-- Edit existing salesman details with audit logging
-- Delete salesman accounts with compliance checks
+- Add new employee (user_id, name, password, reference photo)
+- Edit existing employee details with audit logging
+- Delete employee accounts with compliance checks
 - View current status (checked-in/out) with last known location
 - Manage face recognition reference photos
 - View attendance statistics and compliance metrics
 
 **Enhanced Dashboard View:**
-- Total active salesmen with breakdown by status
-- Currently checked-in salesmen with location tracking
+- Total active employees with breakdown by status
+- Currently checked-in employees with location tracking
 - Face recognition success rates and accuracy metrics
 - Pending verification queue count
 - Today's attendance statistics with approval rates
@@ -601,7 +601,7 @@ kadmawala-tracking/
 │       ├── auth/               # Authentication service
 │       ├── attendance/         # Attendance service
 │       ├── location/           # Location service
-│       └── salesman/           # Salesman management service
+│       └── employee/           # Employee management service
 └── package.json                # Root package.json
 ```
 
@@ -611,11 +611,11 @@ kadmawala-tracking/
 
 **Shared TypeScript Interfaces:**
 - Salesman profile data (id, humanReadableUserId, name, contact info, active status)
-- Check-in/out data structures (salesmanId, location, selfie, timestamp, userId)
+- Check-in/out data structures (employeeId, location, selfie, timestamp, userId)
 - Location data format (latitude, longitude, accuracy, timestamp, distanceFromPrevious)
 - Path tracking data (pathSegments, distance calculations, movement thresholds)
 - Attendance record model (check-in/out times, locations, selfies, userId)
-- Location update tracking (salesmanId, coordinates, timestamp, pathSegmentId)
+- Location update tracking (employeeId, coordinates, timestamp, pathSegmentId)
 - JWT token structures (access/refresh tokens, claims, expiration)
 - Security audit data (security events, authentication attempts, API access)
 
@@ -649,8 +649,8 @@ kadmawala-tracking/
 ### Core Tables
 
 ```sql
--- Salesman users table with PGN branding and integrated face recognition
-CREATE TABLE salesmen (
+-- Employee users table with PGN branding and integrated face recognition
+CREATE TABLE employees (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   human_readable_user_id VARCHAR(20) UNIQUE NOT NULL, -- PGN-2024-0001 format
   name VARCHAR(100) NOT NULL,
@@ -661,17 +661,19 @@ CREATE TABLE salesmen (
   -- Face recognition data (stored in same row for simplicity and security)
   face_embedding_data BYTEA, -- Encrypted face embedding vector for server-side validation
   reference_photo_url TEXT NOT NULL, -- Reference selfie for admin verification
+  reference_photo_data BYTEA, -- Base64 encoded reference photo data
   embedding_version VARCHAR(20) DEFAULT '1.0', -- Version of embedding model
 
-  -- Regional assignment
-  assigned_regions TEXT[], -- Array of region names/IDs assigned to salesman
-  primary_region TEXT, -- Primary region for main operations
+  -- Regional assignment (embedded regional data)
+  assigned_regions TEXT[], -- Array of region names assigned to employee
+  primary_region VARCHAR(100), -- Primary region for main operations
+  region_code VARCHAR(20), -- Short region code like HYD, BGLR, MUM
 
   -- Employment status management
   employment_status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SUSPENDED, RESIGNED, TERMINATED, ON_LEAVE
   employment_status_reason TEXT, -- Reason for employment status change
   employment_status_changed_at TIMESTAMP WITH TIME ZONE, -- When status was changed
-  employment_status_changed_by UUID REFERENCES salesmen(id) ON DELETE SET NULL, -- Admin who changed status
+  employment_status_changed_by UUID REFERENCES employees(id) ON DELETE SET NULL, -- Admin who changed status
   can_login BOOLEAN DEFAULT true, -- Based on employment status, controls app access
 
   failed_login_attempts INTEGER DEFAULT 0,
@@ -683,36 +685,29 @@ CREATE TABLE salesmen (
 );
 
 
--- Salesman regions management
-CREATE TABLE sales_regions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  region_name VARCHAR(100) UNIQUE NOT NULL,
-  region_code VARCHAR(20) UNIQUE, -- Short code like HYD, BGLR, MUM
-  description TEXT,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
 -- Smart daily attendance records with enhanced security and reliability
 CREATE TABLE daily_attendance (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  salesman_id UUID REFERENCES salesmen(id) ON DELETE CASCADE,
-  attendance_date DATE NOT NULL, -- One record per day per salesman
+  employee_id UUID REFERENCES employees(id) ON DELETE CASCADE,
+  attendance_date DATE NOT NULL, -- One record per day per employee
   check_in_time TIMESTAMP WITH TIME ZONE,
   check_out_time TIMESTAMP WITH TIME ZONE,
   check_in_latitude DECIMAL(10,8),
   check_in_longitude DECIMAL(11,8),
   check_out_latitude DECIMAL(10,8),
   check_out_longitude DECIMAL(11,8),
-  check_in_selfie_url TEXT NOT NULL, -- MANDATORY: Always store selfie for verification
-  check_out_selfie_url TEXT, -- MANDATORY if normal check-out
+  -- File data embedded directly in attendance record
+  check_in_selfie_url TEXT, -- URL to stored selfie
+  check_in_selfie_data BYTEA, -- Base64 encoded check-in selfie data
+  check_out_selfie_url TEXT, -- URL to stored check-out selfie
+  check_out_selfie_data BYTEA, -- Base64 encoded check-out selfie data
   check_in_face_confidence DECIMAL(5,2), -- Client-side recognition confidence
   check_out_face_confidence DECIMAL(5,2),
   total_work_hours DECIMAL(5,2), -- Calculated total hours
   total_distance_meters DECIMAL(10,2), -- Total distance traveled during day
   verification_status VARCHAR(20) DEFAULT 'pending', -- 'auto_approved', 'manual_approved', 'manual_rejected', 'pending'
-  verified_by UUID REFERENCES salesmen(id) ON DELETE SET NULL,
+  verified_by UUID REFERENCES employees(id) ON DELETE SET NULL,
   verification_notes TEXT,
   is_active BOOLEAN DEFAULT true, -- true when checked in, false when checked out
 
@@ -732,64 +727,11 @@ CREATE TABLE daily_attendance (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-  -- Ensure one record per salesman per day
-  UNIQUE(salesman_id, attendance_date)
+  -- Ensure one record per employee per day
+  UNIQUE(employee_id, attendance_date)
 );
 
--- Security events for comprehensive audit logging
-CREATE TABLE security_events (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  salesman_id UUID REFERENCES salesmen(id) ON DELETE SET NULL,
-  event_type VARCHAR(50) NOT NULL, -- 'login_success', 'login_failed', 'check_in', 'check_out', 'suspicious_activity'
-  event_details JSONB NOT NULL, -- Full details of the event
-  ip_address INET,
-  user_agent TEXT,
-  device_fingerprint TEXT,
-  success BOOLEAN NOT NULL,
-  threat_level INTEGER DEFAULT 0, -- 0=info, 1=warning, 2=critical
-  resolved BOOLEAN DEFAULT false,
-  resolved_by UUID REFERENCES salesmen(id) ON DELETE SET NULL,
-  resolved_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 
--- API request logging for security monitoring (lightweight - can be purged periodically)
-CREATE TABLE api_request_logs (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  salesman_id UUID REFERENCES salesmen(id) ON DELETE SET NULL,
-  endpoint TEXT NOT NULL,
-  method VARCHAR(10) NOT NULL,
-  status_code INTEGER NOT NULL,
-  response_time_ms INTEGER,
-  ip_address INET,
-  user_agent TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- File storage for all images (selfies, face embeddings, etc.)
-CREATE TABLE file_uploads (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  file_name TEXT NOT NULL,
-  file_path TEXT NOT NULL,
-  file_size BIGINT,
-  mime_type TEXT,
-  file_type VARCHAR(20) NOT NULL, -- 'selfie', 'face_embedding', 'reference_photo'
-  uploader_id UUID REFERENCES salesmen(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Face recognition attempts for audit (lightweight table)
-CREATE TABLE face_recognition_attempts (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  salesman_id UUID REFERENCES salesmen(id) ON DELETE CASCADE,
-  daily_attendance_id UUID REFERENCES daily_attendance(id) ON DELETE CASCADE,
-  attempt_type VARCHAR(20) NOT NULL, -- 'check_in' or 'check_out'
-  confidence_score DECIMAL(5,2), -- 0-100 percentage from client-side processing
-  processing_time_ms INTEGER, -- Client-side processing time
-  device_info JSONB, -- Device info for audit
-  success BOOLEAN NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
 ```
 
 ## Robust Check-Out Failure Handling System
@@ -893,9 +835,9 @@ const emergencyCheckOut = async (reason, lastLocationData) => {
 #### Server-Side Emergency Processing
 ```javascript
 // Server-side emergency check-out handling
-const processEmergencyCheckOut = async (salesmanId, emergencyData) => {
+const processEmergencyCheckOut = async (employeeId, emergencyData) => {
   // 1. Find active attendance record
-  const attendanceRecord = await findActiveAttendance(salesmanId);
+  const attendanceRecord = await findActiveAttendance(employeeId);
 
   // 2. Update with emergency data
   await attendanceRecord.update({
@@ -912,14 +854,14 @@ const processEmergencyCheckOut = async (salesmanId, emergencyData) => {
 
   // 3. Create security event
   await createSecurityEvent({
-    salesmanId,
+    employeeId,
     eventType: 'emergency_check_out',
     eventDetails: emergencyData,
     threatLevel: getEmergencyThreatLevel(emergencyData.reason)
   });
 
   // 4. Notify admins for review
-  await notifyAdminsForEmergencyCheckout(salesmanId, emergencyData);
+  await notifyAdminsForEmergencyCheckout(employeeId, emergencyData);
 };
 ```
 
@@ -990,19 +932,19 @@ const processEmergencyCheckOut = async (salesmanId, emergencyData) => {
 ```sql
 -- Optimized indexes for PGN smart schema
 
--- Salesman indexes
-CREATE INDEX idx_salesmen_human_readable_user_id
-ON salesmen(human_readable_user_id);
+-- Employee indexes
+CREATE INDEX idx_employees_human_readable_user_id
+ON employees(human_readable_user_id);
 
-CREATE INDEX idx_salesmen_active_status
-ON salesmen(is_active, last_login_at DESC);
+CREATE INDEX idx_employees_active_status
+ON employees(is_active, last_login_at DESC);
 
-CREATE INDEX idx_salesmen_face_embedding
-ON salesmen(face_embedding_data) WHERE face_embedding_data IS NOT NULL;
+CREATE INDEX idx_employees_face_embedding
+ON employees(face_embedding_data) WHERE face_embedding_data IS NOT NULL;
 
 -- Daily attendance indexes (optimized for queries)
-CREATE INDEX idx_daily_attendance_salesman_date
-ON daily_attendance(salesman_id, attendance_date DESC);
+CREATE INDEX idx_daily_attendance_employee_date
+ON daily_attendance(employee_id, attendance_date DESC);
 
 CREATE INDEX idx_daily_attendance_date_active
 ON daily_attendance(attendance_date, is_active);
@@ -1035,43 +977,11 @@ CREATE INDEX idx_daily_attendance_path_data_battery
 ON daily_attendance USING GIN((path_data::jsonb) jsonb_path_ops)
 WHERE path_data IS NOT NULL;
 
--- Security monitoring indexes
-CREATE INDEX idx_security_events_salesman_type
-ON security_events(salesman_id, event_type, created_at DESC);
-
-CREATE INDEX idx_security_events_threat_level
-ON security_events(threat_level, resolved, created_at DESC);
-
-CREATE INDEX idx_security_events_recent
-ON security_events(created_at DESC) WHERE threat_level > 0;
-
--- API request monitoring indexes (lightweight, for security)
-CREATE INDEX idx_api_request_logs_recent
-ON api_request_logs(created_at DESC);
-
-CREATE INDEX idx_api_request_logs_status
-ON api_request_logs(status_code, created_at DESC);
-
--- Face recognition audit indexes
-CREATE INDEX idx_face_recognition_attempts_salesman_attendance
-ON face_recognition_attempts(salesman_id, daily_attendance_id, created_at DESC);
-
-CREATE INDEX idx_face_recognition_attempts_confidence
-ON face_recognition_attempts(confidence_score DESC, created_at DESC);
-
--- File upload indexes
-CREATE INDEX idx_file_uploads_type_uploader
-ON file_uploads(file_type, uploader_id);
-
-CREATE INDEX idx_file_uploads_created_at
-ON file_uploads(created_at DESC);
 
 -- Composite indexes for common admin queries
 CREATE INDEX idx_daily_attendance_composite_admin
 ON daily_attendance(attendance_date DESC, is_active, verification_status);
 
-CREATE INDEX idx_security_events_composite_threat
-ON security_events(threat_level DESC, resolved, created_at DESC);
 ```
 
 ## Mobile App Implementation
@@ -1147,25 +1057,25 @@ ON security_events(threat_level DESC, resolved, created_at DESC);
 #### 1. Enhanced Real-time Map with Unique Colored Paths
 - OpenStreetMap integration with path rendering capabilities
 - 30-second polling for location updates with secure authentication
-- **Unique colored paths** for each salesman with automatic color assignment
-- Real-time path visualization for salesman movement (50m+ segments only)
-- Interactive markers showing salesman details with PGN-2024-0001 IDs
-- **Path legend** displaying color assignments for all active salesmen
-- Path animation showing movement timeline with individual salesman colors
+- **Unique colored paths** for each employee with automatic color assignment
+- Real-time path visualization for employee movement (50m+ segments only)
+- Interactive markers showing employee details with PGN-2024-0001 IDs
+- **Path legend** displaying color assignments for all active employees
+- Path animation showing movement timeline with individual employee colors
 - **Regional overlays** showing assigned region boundaries and compliance
 - Distance and duration calculations for each path segment
-- Filter options by salesman, region, or time period
+- Filter options by employee, region, or time period
 
 #### 2. Comprehensive Salesman Management with Employment Status
-- Table view of all salesmen with human-readable user IDs (PGN-2024-0001)
+- Table view of all employees with human-readable user IDs (PGN-2024-0001)
 - Add/Edit functionality with audit logging for all changes
 - **Employment Status Management:** Professional status tracking (ACTIVE, SUSPENDED, RESIGNED, TERMINATED, ON_LEAVE)
 - **Status Change Tracking:** Record reasons and dates for employment status changes
 - **Access Control:** Automatic login management based on employment status
 - **Data Preservation:** All attendance and tracking data preserved permanently regardless of status
 - **Status Change Audit:** Complete log of all employment status changes
-- **Region assignment:** Assign single or multiple regions to each salesman
-- **Primary region selection:** Set main operational region for each salesman
+- **Region assignment:** Assign single or multiple regions to each employee
+- **Primary region selection:** Set main operational region for each employee
 - **Reference photo upload:** Admin-controlled photo upload with liveness validation
 - **Embedding management:** Generate and distribute face embeddings to devices
 - Security status indicators (account locked, failed attempts, last login)
@@ -1196,9 +1106,9 @@ const employmentStatusLoginConfig = {
 **Employment Status Management Implementation:**
 ```javascript
 // Admin updates employment status
-const updateEmploymentStatus = async (salesmanId, newStatus, reason, adminId) => {
-  // 1. Update salesman status with audit information
-  await updateSalesmanStatus(salesmanId, {
+const updateEmploymentStatus = async (employeeId, newStatus, reason, adminId) => {
+  // 1. Update employee status with audit information
+  await updateSalesmanStatus(employeeId, {
     employment_status: newStatus,
     employment_status_reason: reason,
     employment_status_changed_at: new Date(),
@@ -1208,11 +1118,11 @@ const updateEmploymentStatus = async (salesmanId, newStatus, reason, adminId) =>
 
   // 2. Revoke active tokens if access revoked
   if (!employmentStatusLoginConfig[newStatus].canLogin) {
-    await revokeAllUserTokens(salesmanId);
+    await revokeAllUserTokens(employeeId);
   }
 
   // 3. Notify user if applicable
-  await notifyEmploymentStatusChange(salesmanId, newStatus, reason);
+  await notifyEmploymentStatusChange(employeeId, newStatus, reason);
 };
 ```
 
@@ -1230,7 +1140,7 @@ const updateEmploymentStatus = async (salesmanId, newStatus, reason, adminId) =>
 - **Effective Dates:** Clear timelines for status changes```
 
 #### 3. Admin Reference Photo Management System
-- **Photo Upload Interface:** Upload high-quality reference photos for each salesman
+- **Photo Upload Interface:** Upload high-quality reference photos for each employee
 - **Liveness Detection:** Validate photos to prevent digital photo uploads
 - **Quality Control:** Automatic photo quality analysis and validation
 - **Embedding Generation:** Server-side face embedding generation from photos
@@ -1242,8 +1152,8 @@ const updateEmploymentStatus = async (salesmanId, newStatus, reason, adminId) =>
 #### 4. Region Management Dashboard
 - **Region Definition:** Create and manage geographical regions
 - **Region Boundaries:** Define GPS coordinates for region boundaries
-- **Region Assignment:** Assign salesmen to specific regions
-- **Region Visualization:** Display regions on maps for salesman awareness
+- **Region Assignment:** Assign employees to specific regions
+- **Region Visualization:** Display regions on maps for employee awareness
 - **Manual Monitoring:** Admin manually monitors regional activity
 - **Simple Analytics:** Basic region-based reports (no automated compliance)
 - **Regional Display:** Show assigned regions in mobile app
@@ -1372,7 +1282,7 @@ const updateEmploymentStatus = async (salesmanId, newStatus, reason, adminId) =>
 ✅ Check-in/out with face recognition + selfie + GPS location
 ✅ Location tracking every 5 minutes when checked in
 ✅ Offline data storage with face recognition sync validation
-✅ Admin can see live map with salesman locations
+✅ Admin can see live map with employee locations
 ✅ Admin verification interface for attendance records
 ✅ Comprehensive audit logging and monitoring
 ✅ Reference photo management for face recognition

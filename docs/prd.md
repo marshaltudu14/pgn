@@ -50,7 +50,7 @@ PGN requires a sophisticated attendance and location tracking system to replace 
 
 ### Functional Requirements:
 
-**FR1:** The system shall generate unique human-readable user IDs in format PGN-YYYY-NNNN for each salesman that cannot be changed once assigned.
+**FR1:** The system shall generate unique human-readable user IDs in format PGN-YYYY-NNNN for each employee that cannot be changed once assigned.
 
 **FR2:** The system shall implement face recognition attendance with confidence scoring, automatically approving when confidence >90% and requiring manual verification for confidence 70-90%.
 
@@ -58,7 +58,7 @@ PGN requires a sophisticated attendance and location tracking system to replace 
 
 **FR4:** The system shall capture mandatory selfie photos for all attendance attempts (both check-in and check-out) and store them permanently for audit purposes.
 
-**FR5:** The system shall track salesman location every 5 minutes when checked in, but only display path segments when movement exceeds 50 meters.
+**FR5:** The system shall track employee location every 5 minutes when checked in, but only display path segments when movement exceeds 50 meters.
 
 **FR6:** The system shall implement automatic check-out scenarios for app closure, battery drain, and timeout situations with proper audit logging.
 
@@ -66,7 +66,7 @@ PGN requires a sophisticated attendance and location tracking system to replace 
 
 **FR8:** The system shall implement JWT-based API authentication with 15-minute token expiration and route-level validation.
 
-**FR9:** The system shall provide an admin dashboard with real-time map view showing all checked-in salesmen with unique colored paths.
+**FR9:** The system shall provide an admin dashboard with real-time map view showing all checked-in employees with unique colored paths.
 
 **FR10:** The system shall include comprehensive audit logging for all user actions, system events, and administrative changes.
 
@@ -74,7 +74,7 @@ PGN requires a sophisticated attendance and location tracking system to replace 
 
 **FR12:** The system shall provide face recognition management interface for admins to upload reference photos and generate embeddings.
 
-**FR13:** The system shall implement regional assignment functionality, allowing admins to assign salesmen to specific regions for display purposes only.
+**FR13:** The system shall implement regional assignment functionality, allowing admins to assign employees to specific regions for display purposes only.
 
 **FR14:** The system shall provide battery level monitoring and alerts during location tracking.
 
@@ -82,7 +82,7 @@ PGN requires a sophisticated attendance and location tracking system to replace 
 
 ### Non-Functional Requirements:
 
-**NFR1:** The system shall support 15-100 concurrent salesmen with acceptable performance under normal load conditions.
+**NFR1:** The system shall support 15-100 concurrent employees with acceptable performance under normal load conditions.
 
 **NFR2:** The system shall process face recognition within 3 seconds under normal network conditions.
 
@@ -116,7 +116,7 @@ The system must provide a dual-interface experience: a streamlined mobile app fo
 ### Key Interaction Paradigms:
 - **Mobile:** One-handed operation with large touch targets, minimal typing, voice guidance for face recognition, and clear visual feedback for all status changes
 - **Admin Dashboard:** Keyboard-driven navigation with mouse support, drill-down information architecture, real-time data updates, and batch operation capabilities
-- **Cross-Platform:** Consistent information hierarchy, unified color schemes for salesman identification, and synchronized state management
+- **Cross-Platform:** Consistent information hierarchy, unified color schemes for employee identification, and synchronized state management
 - **Error Recovery:** Graceful degradation with clear user guidance, automatic retry mechanisms, and offline indication
 
 ### Core Screens and Views:
@@ -145,7 +145,7 @@ Implement PGN corporate branding with professional blue color scheme, consistent
 ### Target Device and Platforms: Web Responsive and Mobile Only
 - **Mobile:** Android-only deployment supporting versions 8.0+ with varying screen sizes and resolutions
 - **Web:** Responsive Next.js dashboard supporting modern browsers (Chrome, Firefox, Safari, Edge) on desktop and tablet devices
-- **Cross-Platform Considerations:** Shared design system ensuring consistent experience, responsive breakpoints for tablet admin access, and synchronized color schemes for salesman identification
+- **Cross-Platform Considerations:** Shared design system ensuring consistent experience, responsive breakpoints for tablet admin access, and synchronized color schemes for employee identification
 
 ---
 
@@ -213,7 +213,7 @@ The project will implement comprehensive testing including unit tests for busine
 
 **Epic 3: Location Tracking & Path Visualization** - Build the 5-minute interval location tracking system with 50-meter movement filtering, path visualization on admin dashboard with unique colored paths, and battery monitoring.
 
-**Epic 4: Admin Dashboard & Management** - Create the comprehensive admin interface including real-time map monitoring, salesman management with employment status, reference photo management, and security event monitoring.
+**Epic 4: Admin Dashboard & Management** - Create the comprehensive admin interface including real-time map monitoring, employee management with employment status, reference photo management, and security event monitoring.
 
 **Epic 5: Offline Support & Data Synchronization** - Implement offline-first capabilities with local data storage, automatic sync when connection is restored, and robust handling of network interruption scenarios.
 
@@ -248,21 +248,16 @@ The project will implement comprehensive testing including unit tests for busine
 
 #### Story 1.2: Database Schema and Supabase Setup
 **As a** developer,
-**I want** to set up Supabase database with complete schema for users, attendance, locations, and audit logging,
+**I want** to set up Supabase database with complete schema for employees, attendance, locations, and audit logging,
 **so that** all application data can be stored securely with proper relationships and constraints.
 
 **Acceptance Criteria:**
 1. Supabase project created with PostgreSQL database configuration
-2. Salesmen table created with all required columns including human_readable_user_id, employment status, and face recognition fields
-3. Daily_attendance table created with smart schema for consolidated daily records and JSONB path data
-4. Security_events table created for comprehensive audit logging with threat level tracking
-5. Api_request_logs table created for security monitoring and performance tracking
-6. File_uploads table created for managing selfies and reference photos
-7. Face_recognition_attempts table created for auditing recognition attempts
-8. Sales_regions table created for regional assignment management
-9. All required indexes created for optimal query performance
-10. Row Level Security (RLS) policies implemented on all tables
-11. Database migrations documented and stored in repository
+2. Employees table created with all required columns including human_readable_user_id, employment status, face recognition fields, reference photo, and regional assignment
+3. Daily_attendance table created with smart schema for consolidated daily records, JSONB path data, and embedded file information
+4. All required indexes created for optimal query performance
+5. Row Level Security (RLS) policies implemented on all tables
+6. Database migrations documented and stored in repository
 
 #### Story 1.3: JWT Authentication System
 **As a** developer,
@@ -300,13 +295,13 @@ The project will implement comprehensive testing including unit tests for busine
 
 #### Story 1.5: Basic User Management Interface
 **As an** administrator,
-**I want** a basic web interface to create and manage salesman accounts,
+**I want** a basic web interface to create and manage employee accounts,
 **so that** users can be onboarded and managed through the system.
 
 **Acceptance Criteria:**
 1. Salesman list page created with search and filtering capabilities
-2. Create salesman form implemented with validation for required fields
-3. Edit salesman form implemented with audit logging for all changes
+2. Create employee form implemented with validation for required fields
+3. Edit employee form implemented with audit logging for all changes
 4. Employment status management implemented with dropdown selection
 5. User ID generation implemented in PGN-YYYY-NNNN format
 6. Basic password management implemented with secure hashing
@@ -337,7 +332,7 @@ The project will implement comprehensive testing including unit tests for busine
 **Epic Goal:** Implement the complete check-in/check-out workflow with face recognition, selfie capture, GPS location tracking, and admin verification queue for attendance management.
 
 #### Story 2.1: Mobile Camera Integration and Face Recognition
-**As a** salesman,
+**As a** employee,
 **I want** to use face recognition for check-in/check-out with automatic confidence scoring,
 **so that** attendance verification is fast, reliable, and secure.
 
@@ -354,7 +349,7 @@ The project will implement comprehensive testing including unit tests for busine
 10. Error handling for camera failures and recognition errors
 
 #### Story 2.2: Check-in/Check-out Workflow
-**As a** salesman,
+**As a** employee,
 **I want** a seamless check-in and check-out process with automatic location capture,
 **so that** I can quickly start and end my workday with proper verification.
 
@@ -406,7 +401,7 @@ The project will implement comprehensive testing including unit tests for busine
 
 #### Story 2.5: Reference Photo Management
 **As an** administrator,
-**I want** to manage reference photos and face embeddings for salesmen,
+**I want** to manage reference photos and face embeddings for employees,
 **so that** face recognition has accurate baseline data for verification.
 
 **Acceptance Criteria:**
@@ -416,7 +411,7 @@ The project will implement comprehensive testing including unit tests for busine
 4. Photo version control and change tracking
 5. Embedding synchronization to mobile devices
 6. Reference photo storage with access controls
-7. Bulk upload capability for multiple salesmen
+7. Bulk upload capability for multiple employees
 8. Photo quality analysis and feedback
 9. Audit logging for all photo changes
 10. Face recognition accuracy monitoring
@@ -426,7 +421,7 @@ The project will implement comprehensive testing including unit tests for busine
 **Epic Goal:** Build the 5-minute interval location tracking system with 50-meter movement filtering, path visualization on admin dashboard with unique colored paths, and battery monitoring.
 
 #### Story 3.1: Background Location Service
-**As a** salesman,
+**As a** employee,
 **I want** automatic location tracking while checked in,
 **so that** my work movements are properly recorded without manual intervention.
 
@@ -462,23 +457,23 @@ The project will implement comprehensive testing including unit tests for busine
 #### Story 3.3: Admin Map with Path Visualization
 **As an** administrator,
 **I want** to view real-time locations and movement paths on a map,
-**so that** I can monitor salesman activities and verify work locations.
+**so that** I can monitor employee activities and verify work locations.
 
 **Acceptance Criteria:**
 1. OpenStreetMap integration with Leaflet implementation
-2. Real-time location markers for checked-in salesmen
-3. Unique colored path rendering for each salesman
+2. Real-time location markers for checked-in employees
+3. Unique colored path rendering for each employee
 4. Path animation showing movement timeline
-5. Color legend for salesman identification
-6. Interactive markers with salesman information
+5. Color legend for employee identification
+6. Interactive markers with employee information
 7. Map controls for zoom, pan, and layer selection
 8. Regional overlay display for assigned areas
-9. Path filtering by date range and salesman
+9. Path filtering by date range and employee
 10. Export functionality for map data and paths
 
 #### Story 3.4: Color Assignment and Salesman Identification
 **As an** administrator,
-**I want** consistent color coding for each salesman,
+**I want** consistent color coding for each employee,
 **so that** I can easily identify individuals on the map and reports.
 
 **Acceptance Criteria:**
@@ -486,15 +481,15 @@ The project will implement comprehensive testing including unit tests for busine
 2. Color palette definition with distinct colors
 3. Consistent color usage across all interfaces
 4. Color-based filtering and search capabilities
-5. Color legend with salesman information
+5. Color legend with employee information
 6. Color preference management for administrators
 7. Accessibility compliance for color choices
 8. Color-based data visualization in reports
-9. Color conflict resolution for new salesmen
+9. Color conflict resolution for new employees
 10. Color scheme customization options
 
 #### Story 3.5: Battery Monitoring and Optimization
-**As a** salesman,
+**As a** employee,
 **I want** the app to monitor battery usage and optimize tracking,
 **so that** location tracking doesn't excessively drain my device battery.
 
@@ -512,7 +507,7 @@ The project will implement comprehensive testing including unit tests for busine
 
 ### Epic 4: Admin Dashboard & Management
 
-**Epic Goal:** Create the comprehensive admin interface including real-time map monitoring, salesman management with employment status, reference photo management, and security event monitoring.
+**Epic Goal:** Create the comprehensive admin interface including real-time map monitoring, employee management with employment status, reference photo management, and security event monitoring.
 
 #### Story 4.1: Dashboard Home and Overview
 **As an** administrator,
@@ -521,7 +516,7 @@ The project will implement comprehensive testing including unit tests for busine
 
 **Acceptance Criteria:**
 1. Dashboard home with key performance indicators
-2. Real-time statistics for checked-in salesmen
+2. Real-time statistics for checked-in employees
 3. Today's attendance summary with approval rates
 4. Pending verification queue count
 5. System health indicators and alerts
@@ -533,31 +528,31 @@ The project will implement comprehensive testing including unit tests for busine
 
 #### Story 4.2: Advanced Salesman Management
 **As an** administrator,
-**I want** comprehensive salesman management with employment status control,
+**I want** comprehensive employee management with employment status control,
 **so that** I can manage the workforce effectively and maintain proper access control.
 
 **Acceptance Criteria:**
-1. Enhanced salesman CRUD operations with validation
+1. Enhanced employee CRUD operations with validation
 2. Employment status management (ACTIVE, SUSPENDED, RESIGNED, TERMINATED, ON_LEAVE)
 3. Status change workflow with reason tracking
 4. Access control based on employment status
-5. Bulk operations for multiple salesmen
+5. Bulk operations for multiple employees
 6. Advanced search and filtering capabilities
 7. Salesman activity history and analytics
 8. Device management and session monitoring
-9. Communication tools for salesman notifications
+9. Communication tools for employee notifications
 10. Compliance reporting for workforce management
 
 #### Story 4.3: Regional Assignment Management
 **As an** administrator,
 **I want** to manage regional assignments and display settings,
-**so that** salesmen are properly assigned to operational areas.
+**so that** employees are properly assigned to operational areas.
 
 **Acceptance Criteria:**
 1. Region creation and management interface
 2. GPS boundary definition for regions
 3. Salesman assignment to single or multiple regions
-4. Primary region selection for each salesman
+4. Primary region selection for each employee
 5. Regional visualization on maps
 6. Region-based analytics and reporting
 7. Regional compliance monitoring
@@ -604,7 +599,7 @@ The project will implement comprehensive testing including unit tests for busine
 **Epic Goal:** Implement offline-first capabilities with local data storage, automatic sync when connection is restored, and robust handling of network interruption scenarios.
 
 #### Story 5.1: Local Database Implementation
-**As a** salesman,
+**As a** employee,
 **I want** the app to store all data locally when offline,
 **so that** I can continue working without internet connectivity.
 
@@ -638,7 +633,7 @@ The project will implement comprehensive testing including unit tests for busine
 10. Sync audit logging and monitoring
 
 #### Story 5.3: Offline Face Recognition Handling
-**As a** salesman,
+**As a** employee,
 **I want** face recognition to work offline with server validation later,
 **so that** attendance verification works regardless of connectivity.
 
@@ -655,7 +650,7 @@ The project will implement comprehensive testing including unit tests for busine
 10. Offline recognition performance optimization
 
 #### Story 5.4: Offline User Experience
-**As a** salesman,
+**As a** employee,
 **I want** clear feedback about offline status and sync progress,
 **so that** I understand the system state and data synchronization.
 
@@ -856,7 +851,7 @@ The project will implement comprehensive testing including unit tests for busine
 
 **Acceptance Criteria:**
 1. Technical documentation for developers
-2. User manuals for salesmen and administrators
+2. User manuals for employees and administrators
 3. API documentation and integration guides
 4. Security best practices documentation
 5. Troubleshooting guides and FAQs
@@ -877,7 +872,7 @@ The project will implement comprehensive testing including unit tests for busine
 ## 8. Next Steps
 
 ### UX Expert Prompt:
-Create detailed user experience flows and wireframes for the PGN Location Tracking & Attendance system, focusing on the mobile salesman experience and admin dashboard usability. Ensure designs address the pain points identified in user journey mapping, particularly battery anxiety, privacy concerns, and offline scenarios.
+Create detailed user experience flows and wireframes for the PGN Location Tracking & Attendance system, focusing on the mobile employee experience and admin dashboard usability. Ensure designs address the pain points identified in user journey mapping, particularly battery anxiety, privacy concerns, and offline scenarios.
 
 ### Architect Prompt:
 Design the detailed technical architecture for the PGN Location Tracking & Attendance system based on this PRD, focusing on the monorepo structure, service layer security, Supabase database schema, and React Native/Next.js integration. Ensure the architecture supports the face recognition workflow, offline capabilities, and comprehensive audit logging requirements.

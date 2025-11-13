@@ -15,7 +15,15 @@
       "mcp__supabase__search_docs",
       "WebFetch(domain:docs.expo.dev)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__supabase__list_organizations",
+      "mcp__supabase__list_projects",
+      "Bash(supabase --version:*)",
+      "mcp__supabase__get_project",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__list_extensions",
+      "mcp__supabase__list_migrations"
     ],
     "deny": [],
     "ask": []

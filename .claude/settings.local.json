@@ -10,7 +10,10 @@
       "mcp__context7__get-library-docs",
       "Bash(npm uninstall:*)",
       "Bash(npx expo install:*)",
-      "Bash(npx expo prebuild:*)"
+      "Bash(npx expo prebuild:*)",
+      "WebSearch",
+      "mcp__supabase__search_docs",
+      "WebFetch(domain:docs.expo.dev)"
     ],
     "deny": [],
     "ask": []

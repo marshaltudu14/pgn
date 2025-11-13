@@ -1,1 +1,4 @@
-// Shared package - add exports here when needed
+// Main entry point for @pgn/shared package
+export * from './types';
+export * from './utils';
+export * from './constants';

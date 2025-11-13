@@ -13,7 +13,7 @@
     "clean": "npm run clean:mobile && npm run clean:web && npm run clean:shared",
     "clean:mobile": "cd apps/mobile && npm run clean || rm -rf node_modules",
     "clean:web": "cd apps/web && rm -rf .next node_modules",
-    "clean:shared": "cd packages/shared && rm -rf dist node_modules",
+    "clean:shared": "cd packages/shared && npm run clean",
     "build": "npm run build:shared && npm run build:mobile && npm run build:web",
     "build:mobile": "cd apps/mobile && npm run build",
     "build:web": "cd apps/web && npm run build",
@@ -29,10 +29,14 @@
     "lint": "npm run lint:mobile && npm run lint:web && npm run lint:shared",
     "lint:mobile": "cd apps/mobile && npm run lint",
     "lint:web": "cd apps/web && npm run lint",
-    "lint:shared": "cd packages/shared && npm run lint"
+    "lint:shared": "cd packages/shared && npm run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:fix": "npm run lint -- --fix"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "prettier": "^3.0.0"
   },
   "engines": {
     "node": ">=18.0.0",

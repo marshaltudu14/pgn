@@ -13,7 +13,9 @@
       "Bash(npx expo prebuild:*)",
       "WebSearch",
       "mcp__supabase__search_docs",
-      "WebFetch(domain:docs.expo.dev)"
+      "WebFetch(domain:docs.expo.dev)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

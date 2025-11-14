@@ -30,3 +30,6 @@ export function isValidLocation(location: LocationData): boolean {
     location.timestamp instanceof Date
   );
 }
+
+// Re-export user ID utilities
+export * from './user-id';

@@ -60,7 +60,7 @@ describe('AuthService', () => {
     };
 
     const validLoginRequest: LoginRequest = {
-      userId: 'PGN-2024-0001',
+      email: 'john.doe@company.com',
       password: 'password123',
     };
 

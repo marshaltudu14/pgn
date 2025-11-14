@@ -46,7 +46,10 @@
       "mcp__shadcn__get_add_command_for_items",
       "Bash(tree:*)",
       "mcp__next-devtools__nextjs_runtime",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "mcp__shadcn__get_project_registries",
+      "Bash(ls:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []

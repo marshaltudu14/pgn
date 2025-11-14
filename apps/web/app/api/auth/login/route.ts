@@ -9,14 +9,14 @@ import { LoginRequest } from '@pgn/shared';
  *
  * Authenticates an employee and returns a JWT token using Supabase
  */
-export const POST = async (req: NextRequest): Promise<NextResponse> => {
+const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
   console.log('🚀 Login API endpoint called');
 
   try {
     // Parse request body first to get user identifier for rate limiting
     console.log('📝 Parsing request body...');
     const body = await req.json() as LoginRequest;
-    console.log('📋 Request body received:', { email: body.email, userId: body.userId, hasPassword: !!body.password });
+    console.log('📋 Request body received:', { email: body.email, hasPassword: !!body.password });
 
     // Validate required fields
     if (!body.password || !body.email) {
@@ -98,18 +98,15 @@ export const POST = async (req: NextRequest): Promise<NextResponse> => {
     console.error('Login API error:', error);
     return AuthErrorService.serverError('An unexpected error occurred during login');
   }
-}, createRateLimit({
+};
+
+export const POST = withRateLimit(loginHandler, createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 5, // 5 attempts per user per 15 minutes
-  message: 'Too many login attempts for this account, please try again later.',
-  keyGenerator: (req) => {
-    // Use user identifier as key for per-user rate limiting
+  maxRequests: 20, // 20 attempts per IP per 15 minutes
+  message: 'Too many login attempts from this IP, please try again later.',
+  keyGenerator: (req: NextRequest) => {
     const forwarded = req.headers.get('x-forwarded-for');
     const ip = forwarded ? forwarded.split(',')[0] : 'unknown';
-
-    // Try to get user identifier from request body
-    // Since we don't have the body yet, we'll use a combination approach
-    // This will be refined when we actually process the request
     return `auth:${ip}`;
   }
 }));

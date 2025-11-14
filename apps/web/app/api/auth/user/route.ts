@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { withRateLimit, apiRateLimit } from '@/lib/rate-limit';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';

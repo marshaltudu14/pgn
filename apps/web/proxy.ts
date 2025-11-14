@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { authService } from './services/auth.service';
 
 // Paths that require authentication
 const protectedPaths = ['/dashboard'];
 // Paths that should redirect authenticated users away
 const publicOnlyPaths = ['/'];
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Get auth token from cookies or headers
-  const token = request.cookies.get('auth-storage')?.value;
-
-  // Parse auth state from cookie
+  // Check authentication using auth service
   let isAuthenticated = false;
-  if (token) {
-    try {
-      const authState = JSON.parse(token);
-      isAuthenticated = authState.state?.isAuthenticated && authState.state?.token;
-    } catch (error) {
-      console.error('Error parsing auth cookie:', error);
-    }
+  try {
+    const currentUser = await authService.getCurrentUser();
+    isAuthenticated = !!currentUser;
+  } catch (error) {
+    console.error('Error checking authentication in middleware:', error);
+    isAuthenticated = false;
   }
 
   // Redirect unauthenticated users from protected paths to root (login)

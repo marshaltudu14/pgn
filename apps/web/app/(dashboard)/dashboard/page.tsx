@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useAuthStore } from '../lib/stores/authStore';
+import { useAuthStore } from '../../lib/stores/authStore';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
@@ -11,12 +11,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     initialize();
-
-    // Redirect to login if not authenticated after initialization
-    if (!user && !localStorage.getItem('auth-storage')) {
-      router.push('/');
-    }
-  }, [initialize, user, router]);
+    // Note: Authentication is handled by proxy middleware
+  }, [initialize]);
 
   const handleEmployeesClick = () => {
     router.push('/dashboard/employees');

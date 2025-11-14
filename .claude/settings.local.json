@@ -38,7 +38,8 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_wait_for",
       "Bash(npm run dev)",
-      "Bash(PORT=3001 npm run dev:*)"
+      "Bash(PORT=3001 npm run dev:*)",
+      "Bash(robocopy:*)"
     ],
     "deny": [],
     "ask": []

@@ -39,15 +39,22 @@
       "mcp__playwright__browser_wait_for",
       "Bash(npm run dev)",
       "Bash(PORT=3001 npm run dev:*)",
-      "Bash(robocopy:*)"
+      "Bash(robocopy:*)",
+      "mcp__shadcn__search_items_in_registries",
+      "mcp__shadcn__view_items_in_registries",
+      "mcp__shadcn__get_item_examples_from_registries",
+      "mcp__shadcn__get_add_command_for_items",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "playwright",
     "context7",
     "supabase",
-    "next-devtools"
+    "next-devtools",
+    "shadcn"
   ]
 }

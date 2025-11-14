@@ -10,13 +10,16 @@ import { LoginRequest } from '@pgn/shared';
  * Authenticates an employee and returns a JWT token using Supabase
  */
 export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse> => {
+  console.log('🚀 Login API endpoint called');
   try {
     // Parse request body
+    console.log('📝 Parsing request body...');
     const body = await req.json() as LoginRequest;
+    console.log('📋 Request body received:', { email: body.email, userId: body.userId, hasPassword: !!body.password });
 
     // Validate required fields
-    if (!body.userId || !body.password) {
-      return AuthErrorService.validationError('User ID and password are required');
+    if (!body.password || (!body.email && !body.userId)) {
+      return AuthErrorService.validationError('Email/Username and password are required');
     }
 
     // Get client IP for rate limiting
@@ -24,7 +27,7 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
     const ipAddress = forwarded ? forwarded.split(',')[0] : 'unknown';
 
     // Check rate limit
-    const hasExceededLimit = await authService.hasExceededRateLimit(ipAddress);
+    const hasExceededLimit = await authService.hasExceededRateLimit();
     if (hasExceededLimit) {
       return AuthErrorService.rateLimitError(
         'Too many login attempts, please try again later.',
@@ -33,8 +36,10 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
     }
 
     try {
+      console.log('🔐 Calling authService.login()...');
       // Attempt login using auth service
       const loginResponse = await authService.login(body);
+      console.log('✅ authService.login() successful');
 
       // Return success response
       const response = NextResponse.json(loginResponse);
@@ -48,7 +53,7 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
 
     } catch (loginError) {
       // Track failed login attempt for rate limiting
-      await authService.trackFailedLoginAttempt(body.userId, ipAddress);
+      await authService.trackFailedLoginAttempt(body.email || body.userId || '', ipAddress);
 
       // Handle specific employment status errors
       const errorMessage = loginError instanceof Error ? loginError.message : 'Login failed';

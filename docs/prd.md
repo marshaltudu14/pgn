@@ -283,15 +283,13 @@ The project will implement comprehensive testing including unit tests for busine
 
 **Acceptance Criteria:**
 1. Base service class created with common database operations and security checks
-2. Salesman service implemented with CRUD operations and audit logging
+2. Employee service implemented with CRUD operations and employment status validation
 3. Attendance service implemented with business logic for check-in/check-out validation
-4. Security service implemented for threat detection and event logging
-5. File service implemented for secure image upload and storage management
-6. All service functions include comprehensive audit logging
-7. Error handling and validation implemented in all services
-8. Database transaction handling implemented for data consistency
-9. Service integration tests created for critical operations
-10. Documentation for service layer patterns and usage
+4. Location service implemented for GPS tracking and path data management
+5. All service functions include proper error handling and validation
+6. Database transaction handling implemented for data consistency
+7. Service integration tests created for critical operations
+8. API routes properly integrated with service layer
 
 #### Story 1.5: Basic User Management Interface
 **As an** administrator,
@@ -299,9 +297,9 @@ The project will implement comprehensive testing including unit tests for busine
 **so that** users can be onboarded and managed through the system.
 
 **Acceptance Criteria:**
-1. Salesman list page created with search and filtering capabilities
+1. Employee list page created with search and filtering capabilities
 2. Create employee form implemented with validation for required fields
-3. Edit employee form implemented with audit logging for all changes
+3. Edit employee form implemented with proper validation
 4. Employment status management implemented with dropdown selection
 5. User ID generation implemented in PGN-YYYY-NNNN format
 6. Basic password management implemented with secure hashing

@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { RateLimitOptions } from '@pgn/shared';
 
 // Simple in-memory rate limiting store
 // In production, you'd want to use Redis or a similar solution
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
-interface RateLimitOptions {
-  windowMs: number;
-  maxRequests: number;
-  message?: string;
+interface ExtendedRateLimitOptions extends RateLimitOptions {
   keyGenerator?: (req: NextRequest) => string;
 }
 
 /**
  * Rate limiting middleware for Next.js API routes
  */
-export function createRateLimit(options: RateLimitOptions) {
+export function createRateLimit(options: ExtendedRateLimitOptions) {
   const {
     windowMs,
     maxRequests,
@@ -66,13 +64,9 @@ export function createRateLimit(options: RateLimitOptions) {
       );
     }
 
-    // Add rate limit headers to successful requests
-    const response = NextResponse.next();
-    response.headers.set('X-RateLimit-Limit', maxRequests.toString());
-    response.headers.set('X-RateLimit-Remaining', (maxRequests - existing.count).toString());
-    response.headers.set('X-RateLimit-Reset', existing.resetTime.toString());
-
-    return response;
+    // Rate limit check passed, allow request to proceed
+    // In API routes, return null to allow the handler to continue
+    return null;
   };
 }
 

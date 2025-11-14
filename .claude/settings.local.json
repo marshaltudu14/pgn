@@ -28,7 +28,17 @@
       "Bash(dir:*)",
       "Bash(npm test:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "mcp__next-devtools__nextjs_docs",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_type",
+      "Bash(npx shadcn@latest add:*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for",
+      "Bash(npm run dev)",
+      "Bash(PORT=3001 npm run dev:*)"
     ],
     "deny": [],
     "ask": []

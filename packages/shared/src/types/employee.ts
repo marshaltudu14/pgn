@@ -14,12 +14,23 @@ export interface EmployeeData {
 export interface Employee {
   id: string;
   humanReadableUserId: string;
-  name: string;
-  contactInfo: {
-    email?: string;
-    phone?: string;
-  };
-  active: boolean;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  employmentStatus: EmploymentStatus;
+  canLogin: boolean;
+  employmentStatusChangedAt?: Date;
+  employmentStatusChangedBy?: string;
+  faceEmbedding?: number[];
+  referencePhotoUrl?: string;
+  referencePhotoData?: ArrayBuffer;
+  assignedRegions?: string[];
+  primaryRegion?: string;
+  regionCode?: string;
+  failedLoginAttempts?: number;
+  accountLockedUntil?: Date;
+  deviceInfo?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }

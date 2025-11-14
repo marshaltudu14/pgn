@@ -18,7 +18,8 @@ export interface TokenGenerateOptions {
 }
 
 export interface LoginRequest {
-  userId: string;
+  email?: string;
+  userId?: string;
   password: string;
 }
 

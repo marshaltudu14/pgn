@@ -12,20 +12,22 @@ import {
 } from '@pgn/shared';
 
 // Mock Supabase client
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: jest.fn(() => ({
-      select: jest.fn(() => ({
-        eq: jest.fn(() => ({
-          single: jest.fn(),
-        })),
+const mockSupabaseClient = {
+  from: jest.fn(() => ({
+    select: jest.fn(() => ({
+      eq: jest.fn(() => ({
+        single: jest.fn(),
       })),
     })),
-    auth: {
-      signInWithPassword: jest.fn(),
-      signOut: jest.fn(),
-    },
+  })),
+  auth: {
+    signInWithPassword: jest.fn(),
+    signOut: jest.fn(),
   },
+};
+
+jest.mock('@/utils/supabase/server', () => ({
+  createClient: jest.fn(() => mockSupabaseClient),
 }));
 
 // Mock JWT service
@@ -37,7 +39,7 @@ jest.mock('@/lib/jwt', () => ({
   },
 }));
 
-const mockSupabase = require('@/lib/supabase').supabase;
+const mockSupabase = mockSupabaseClient;
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -350,7 +352,7 @@ describe('AuthService', () => {
 
   describe('hasExceededRateLimit', () => {
     it('should return false (no rate limiting implemented)', async () => {
-      const result = await authService.hasExceededRateLimit('192.168.1.1');
+      const result = await authService.hasExceededRateLimit();
       expect(result).toBe(false);
     });
   });

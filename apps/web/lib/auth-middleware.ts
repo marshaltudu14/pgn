@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtService } from './jwt';
-import { JWTPayload, EmploymentStatus } from '@pgn/shared';
+import { JWTPayload, EmploymentStatus, AuthMiddlewareOptions } from '@pgn/shared';
 
 export interface AuthenticatedRequest extends NextRequest {
   user?: JWTPayload;
-}
-
-export interface AuthMiddlewareOptions {
-  requireAuth?: boolean;
-  checkEmploymentStatus?: boolean;
 }
 
 /**

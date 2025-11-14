@@ -80,59 +80,43 @@ export class AuthService {
   
   /**
    * Authenticate user with Supabase auth and return session info
-   * Supports both email (admin) and userId (employee) login
+   * Uses email + password for both admin and employee login
    * Admin users do not get JWT tokens since they only login via Next.js
+   * Employee users get JWT tokens for API access
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    console.log('🔐 Login attempt started:', { email: credentials.email, userId: credentials.userId });
-    const { email, userId, password } = credentials;
+    console.log('🔐 Login attempt started:', { email: credentials.email });
+    const { email, password } = credentials;
+
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+
     const supabase = await createClient();
-    let employee: {
-      id: string;
-      human_readable_id: string;
-      employment_status: EmploymentStatus;
-      can_login: boolean;
-      full_name: string;
-      email: string;
-      first_name: string;
-      last_name: string;
-    } | null = null;
-    let authEmail = '';
+    const authEmail = email.toLowerCase().trim();
 
     try {
-      // If email is provided (admin login), authenticate directly with email
-      if (email) {
-        console.log('👨‍💼 Attempting admin login with email:', email);
-        const authEmail = email.trim();
+      console.log('🔑 Authenticating with Supabase...');
+      // Authenticate with Supabase using email and password
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password: password,
+      });
 
-        console.log('🔑 Authenticating with Supabase...');
-        // Authenticate with Supabase using email and password
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password: password,
-        });
+      console.log('📊 Supabase auth result:', { authError: authError?.message, hasUser: !!authData?.user });
 
-        console.log('📊 Supabase auth result:', { authError: authError?.message, hasUser: !!authData?.user });
+      if (authError || !authData.user) {
+        console.log('❌ Authentication failed:', authError?.message);
+        throw new Error('Invalid email or password');
+      }
 
-        if (authError || !authData.user) {
-          console.log('❌ Authentication failed:', authError?.message);
-          throw new Error('Invalid email or password');
-        }
+      // Check if user is admin by looking at user metadata
+      const userMetadata = authData.user.user_metadata || {};
+      console.log('🔍 User metadata:', userMetadata);
 
-        console.log('👤 User authenticated, checking admin role...');
-        // Check if user has admin role from user_metadata (raw_user_meta_data)
-        const userMetadata = authData.user.user_metadata || {};
-        console.log('🔍 User metadata:', userMetadata);
-
-        if (userMetadata.role !== 'admin') {
-          console.log('🚫 User is not admin, signing out...');
-          await supabase.auth.signOut();
-          throw new Error('Access denied - admin privileges required');
-        }
-
+      if (userMetadata.role === 'admin') {
         console.log('✅ Admin user verified');
         // Admin users don't get JWT tokens since they only login via Next.js
-        // Create authenticated user object for admin
         const authenticatedUser: AuthenticatedUser = {
           id: authData.user.id,
           humanReadableId: authEmail,
@@ -149,47 +133,97 @@ export class AuthService {
         };
         console.log('✅ Admin login successful:', response);
         return response;
-      } else if (userId) {
-        console.log('👷 Attempting employee login with user ID:', userId);
-        // Employee login with User ID
-        employee = await this.findEmployeeByHumanReadableId(userId.trim());
+      } else {
+        // Employee login - check if they exist in employees table
+        console.log('👷 Attempting employee validation for:', authEmail);
+        const employee = await this.findEmployeeByEmail(authEmail);
+
         if (!employee) {
-          console.log('❌ Employee not found');
-          throw new Error('Invalid user ID or password');
+          console.log('❌ Employee not found in employees table');
+          await supabase.auth.signOut();
+          throw new Error('Employee account not found - contact administrator');
         }
 
-        console.log('👷 Employee found:', { id: employee.id, email: employee.email });
-        // Authenticate with Supabase using employee's email and password
-        authEmail = employee.email || '';
-        console.log('🔑 Authenticating employee with Supabase...');
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: authEmail,
-          password: password,
+        console.log('👷 Employee found:', {
+          id: employee.id,
+          human_readable_id: employee.human_readable_id,
+          status: employee.employment_status
         });
 
-        console.log('📊 Employee auth result:', { authError: authError?.message, hasUser: !!authData?.user });
-
-        if (authError || !authData.user) {
-          console.log('❌ Employee authentication failed:', authError?.message);
-          throw new Error('Invalid user ID or password');
+        // Check if employee can login based on employment status
+        if (!employee.can_login) {
+          await supabase.auth.signOut();
+          const message = this.getEmploymentStatusMessage(employee.employment_status);
+          throw new Error(message);
         }
-      } else {
-        throw new Error('Email or User ID is required');
+
+        // Generate JWT token for employee (for API access)
+        const token = jwtService.generateToken({
+          employeeId: employee.id,
+          humanReadableId: employee.human_readable_id,
+          employmentStatus: employee.employment_status,
+          canLogin: employee.can_login,
+        });
+
+        // Create authenticated user object
+        const authenticatedUser: AuthenticatedUser = {
+          id: employee.id,
+          humanReadableId: employee.human_readable_id,
+          fullName: employee.full_name || authEmail,
+          email: authEmail,
+          employmentStatus: employee.employment_status,
+          canLogin: employee.can_login,
+        };
+
+        const response = {
+          message: 'Login successful',
+          token,
+          employee: authenticatedUser,
+        };
+        console.log('✅ Employee login successful:', response);
+        return response;
       }
     } catch (error) {
       console.error('💥 Login error:', error);
       throw error;
     }
+  }
 
-    // Check if employee can login based on employment status
-    if (employee && !employee.can_login) {
-      await supabase.auth.signOut();
-      const message = this.getEmploymentStatusMessage(employee.employment_status);
-      throw new Error(message);
+  /**
+   * Find employee by email in employees table
+   */
+  private async findEmployeeByEmail(email: string) {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, human_readable_user_id, employment_status, can_login, email, first_name, last_name')
+        .eq('email', email.toLowerCase().trim())
+        .single();
+
+      if (error || !data) {
+        console.error('Employee lookup error:', error);
+        return null;
+      }
+
+      return {
+        id: data.id,
+        human_readable_id: data.human_readable_user_id,
+        employment_status: data.employment_status,
+        can_login: data.can_login,
+        full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name
+      };
+    } catch (error) {
+      console.error('Database query error:', error);
+      return null;
     }
+  }
 
-    // Generate JWT token for employee (for API access)
-    const token = jwtService.generateToken({
+  /**
+   * Refresh JWT token (extracts user ID from current token)
       employeeId: employee?.id || 'admin',
       humanReadableId: employee?.human_readable_id || authEmail,
       employmentStatus: employee?.employment_status || 'ACTIVE',
@@ -325,11 +359,10 @@ export class AuthService {
 
   /**
    * Track failed login attempt for rate limiting
-   * Simple implementation - in production would use Redis or dedicated table
+   * Simple implementation using console logging for internal company use
    */
   async trackFailedLoginAttempt(userId: string, ipAddress: string): Promise<void> {
     try {
-      // Log failed attempt - in production would store in database or Redis
       console.log(`Failed login attempt for user ${userId} from IP ${ipAddress} at ${new Date().toISOString()}`);
     } catch (error) {
       console.error('Failed to track login attempt:', error);
@@ -339,6 +372,7 @@ export class AuthService {
   /**
    * Check if user has exceeded rate limit
    * Simple implementation - in production would use Redis or rate limiting service
+   * For internal company use, basic in-memory rate limiting is sufficient
    */
   async hasExceededRateLimit(): Promise<boolean> {
     try {

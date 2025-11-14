@@ -32,7 +32,8 @@ export const useAuthStore = create<AuthState>()(
             // Token exists, but we need a way to validate it
             // For now, assume it's valid if we have user data
             if (storedState.user) {
-              const isAdmin = storedState.user.email === 'test@example.com';
+              // Admin detection based on email containing 'admin' or token absence (admins don't get JWT tokens)
+              const isAdmin = storedState.user.email.includes('admin') || !storedState.token;
               set({
                 isAuthenticated: true,
                 isAdmin,
@@ -116,7 +117,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const loginResponse = data as LoginResponse;
-          const isAdmin = loginResponse.employee.email === 'test@example.com';
+          // Admin detection: admins don't get JWT tokens, employees do
+          const isAdmin = !loginResponse.token || loginResponse.employee.email.includes('admin');
 
           set({
             user: loginResponse.employee,

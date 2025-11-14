@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withRateLimit, authRateLimit } from '@/lib/rate-limit';
+import { withRateLimit, createRateLimit } from '@/lib/rate-limit';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';
 import { LoginRequest } from '@pgn/shared';
@@ -9,31 +9,43 @@ import { LoginRequest } from '@pgn/shared';
  *
  * Authenticates an employee and returns a JWT token using Supabase
  */
-export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse> => {
+export const POST = async (req: NextRequest): Promise<NextResponse> => {
   console.log('🚀 Login API endpoint called');
+
   try {
-    // Parse request body
+    // Parse request body first to get user identifier for rate limiting
     console.log('📝 Parsing request body...');
     const body = await req.json() as LoginRequest;
     console.log('📋 Request body received:', { email: body.email, userId: body.userId, hasPassword: !!body.password });
 
     // Validate required fields
-    if (!body.password || (!body.email && !body.userId)) {
-      return AuthErrorService.validationError('Email/Username and password are required');
+    if (!body.password || !body.email) {
+      return AuthErrorService.validationError('Email and password are required');
     }
 
-    // Get client IP for rate limiting
+    // No rate limiting for admin users, rate limiting for employees
+    const email = body.email.toLowerCase().trim();
+    let userRateLimit = null;
+
+    // Only apply rate limiting to non-admin users
+    if (!email.includes('admin')) {
+      userRateLimit = createRateLimit({
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        maxRequests: 5, // 5 attempts per user per 15 minutes
+        message: 'Too many login attempts for this account, please try again later.',
+        keyGenerator: () => `auth:user:email:${email}`,
+      });
+
+      // Check per-user rate limit
+      const rateLimitResult = userRateLimit(req);
+      if (rateLimitResult) {
+        return rateLimitResult;
+      }
+    }
+
+    // Get client IP for logging
     const forwarded = req.headers.get('x-forwarded-for');
     const ipAddress = forwarded ? forwarded.split(',')[0] : 'unknown';
-
-    // Check rate limit
-    const hasExceededLimit = await authService.hasExceededRateLimit();
-    if (hasExceededLimit) {
-      return AuthErrorService.rateLimitError(
-        'Too many login attempts, please try again later.',
-        900 // 15 minutes
-      );
-    }
 
     try {
       console.log('🔐 Calling authService.login()...');
@@ -52,8 +64,10 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
       return response;
 
     } catch (loginError) {
-      // Track failed login attempt for rate limiting
-      await authService.trackFailedLoginAttempt(body.email || body.userId || '', ipAddress);
+      // Track failed login attempt for rate limiting (only for non-admin users)
+      if (!email.includes('admin')) {
+        await authService.trackFailedLoginAttempt(email, ipAddress);
+      }
 
       // Handle specific employment status errors
       const errorMessage = loginError instanceof Error ? loginError.message : 'Login failed';
@@ -84,7 +98,21 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
     console.error('Login API error:', error);
     return AuthErrorService.serverError('An unexpected error occurred during login');
   }
-}, authRateLimit);
+}, createRateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  maxRequests: 5, // 5 attempts per user per 15 minutes
+  message: 'Too many login attempts for this account, please try again later.',
+  keyGenerator: (req) => {
+    // Use user identifier as key for per-user rate limiting
+    const forwarded = req.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0] : 'unknown';
+
+    // Try to get user identifier from request body
+    // Since we don't have the body yet, we'll use a combination approach
+    // This will be refined when we actually process the request
+    return `auth:${ip}`;
+  }
+}));
 
 /**
  * Handle unsupported methods

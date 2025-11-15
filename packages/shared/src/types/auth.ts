@@ -1,9 +1,11 @@
 // JWT and Authentication Types
+import { Database } from './supabase';
+
 export type EmploymentStatus = 'ACTIVE' | 'SUSPENDED' | 'RESIGNED' | 'TERMINATED' | 'ON_LEAVE';
 
 export interface JWTPayload {
   sub: string; // Employee human readable ID (PGN-2024-0001)
-  employeeId: string; // Internal employee UUID
+  employeeId: string; // Internal employee UUID (now same as auth.users.id)
   employmentStatus: EmploymentStatus;
   canLogin: boolean;
   iat: number; // Issued at timestamp
@@ -58,4 +60,73 @@ export interface AuthenticatedUser {
   email: string;
   employmentStatus: EmploymentStatus;
   canLogin: boolean;
+}
+
+// API Request/Response types (not database types)
+export interface CreateEmployeeRequest {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  employment_status?: EmploymentStatus;
+  can_login?: boolean;
+  primary_region?: string;
+  region_code?: string;
+  assigned_regions?: string[];
+  password?: string;
+}
+
+export interface UpdateEmployeeRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  employment_status?: EmploymentStatus;
+  can_login?: boolean;
+  primary_region?: string;
+  region_code?: string;
+  assigned_regions?: string[];
+}
+
+export interface ChangeEmploymentStatusRequest {
+  employment_status: EmploymentStatus;
+  reason?: string;
+  changed_by: string;
+}
+
+export interface RegionalAssignmentRequest {
+  primary_region?: string;
+  region_code?: string;
+  assigned_regions?: string[];
+}
+
+export interface EmployeeListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  employment_status?: EmploymentStatus[];
+  primary_region?: string;
+  assigned_regions?: string[];
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface EmployeeListResponse {
+  employees: Database['public']['Tables']['employees']['Row'][];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+// User ID generation types
+export interface UserIdSequence {
+  year: number;
+  last_sequence: number;
+}
+
+export interface GeneratedUserId {
+  userId: string;
+  sequence: number;
+  year: number;
 }

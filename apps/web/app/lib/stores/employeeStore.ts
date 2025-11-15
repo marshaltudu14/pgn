@@ -2,6 +2,65 @@ import { create } from 'zustand';
 import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest } from '@pgn/shared';
 import { useUIStore } from './uiStore';
 
+/**
+ * Transform technical error messages into user-friendly ones
+ */
+function getUserFriendlyErrorMessage(error: string): string {
+  // Clean up the error message first
+  const cleanError = error.replace(/AuthApiError:\s*/, '').replace(/DatabaseError:\s*/, '').trim();
+
+  // Handle common Supabase Auth errors
+  if (cleanError.includes('A user with this email address has already been registered') ||
+      error.includes('A user with this email address has already been registered')) {
+    return 'An employee with this email address already exists. Please use a different email address.';
+  }
+
+  if (cleanError.includes('An employee with this email address already exists in the authentication system') ||
+      error.includes('An employee with this email address already exists in the authentication system')) {
+    return 'An employee with this email address already exists. Please use a different email address.';
+  }
+
+  if (cleanError.includes('You do not have permission to create employees') ||
+      error.includes('You do not have permission to create employees')) {
+    return 'You do not have permission to create employees. Please contact your administrator.';
+  }
+
+  if (cleanError.includes('User not found')) {
+    return 'Employee not found in the system.';
+  }
+
+  if (cleanError.includes('Invalid login credentials')) {
+    return 'The email or password you entered is incorrect.';
+  }
+
+  if (cleanError.includes('new row violates row-level security policy')) {
+    return 'You do not have permission to create employees. Please contact your administrator.';
+  }
+
+  if (cleanError.includes('duplicate key')) {
+    return 'An employee with these details already exists.';
+  }
+
+  if (cleanError.includes('Password should be at least')) {
+    return 'Password must be at least 6 characters long.';
+  }
+
+  if (cleanError.includes('Failed to create auth user')) {
+    return 'Failed to create user account. Please check the email and try again.';
+  }
+
+  if (cleanError.includes('Network connection failed')) {
+    return 'Network connection failed. Please check your internet connection and try again.';
+  }
+
+  if (cleanError.includes('timeout')) {
+    return 'Request timed out. Please try again.';
+  }
+
+  // Generic fallback
+  return 'An error occurred. Please try again or contact support if the problem persists.';
+}
+
 interface EmployeeState {
   employees: Employee[];
   selectedEmployee: Employee | null;
@@ -56,8 +115,8 @@ interface EmployeeState {
   fetchEmployees: (params?: Partial<EmployeeListParams>) => Promise<void>;
   createEmployee: (employeeData: CreateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: Employee }>;
   updateEmployee: (id: string, employeeData: UpdateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: Employee }>;
-  deleteEmployee: (id: string) => Promise<{ success: boolean; error?: string }>;
   updateEmploymentStatus: (id: string, request: ChangeEmploymentStatusRequest) => Promise<{ success: boolean; error?: string }>;
+  resetEmployeePassword: (id: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   setSelectedEmployee: (employee: Employee | null) => void;
   setFilters: (filters: Partial<EmployeeFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -133,14 +192,15 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         error: null,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch employees';
+      const technicalMessage = error instanceof Error ? error.message : 'Failed to fetch employees';
+      const userFriendlyMessage = getUserFriendlyErrorMessage(technicalMessage);
       console.error('Error fetching employees:', error);
       set({
         loading: false,
-        error: errorMessage,
+        error: technicalMessage,
         employees: [],
       });
-      useUIStore.getState().showNotification(errorMessage, 'error');
+      useUIStore.getState().showNotification(userFriendlyMessage, 'error');
     }
   },
 
@@ -177,17 +237,18 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 
       return { success: true, data: newEmployee };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create employee';
+      const technicalMessage = error instanceof Error ? error.message : 'Failed to create employee';
+      const userFriendlyMessage = getUserFriendlyErrorMessage(technicalMessage);
       console.error('Error creating employee:', error);
 
       set({
         loading: false,
-        error: errorMessage,
+        error: technicalMessage,
       });
 
-      useUIStore.getState().showNotification(errorMessage, 'error');
+      useUIStore.getState().showNotification(userFriendlyMessage, 'error');
 
-      return { success: false, error: errorMessage };
+      return { success: false, error: userFriendlyMessage };
     }
   },
 
@@ -224,59 +285,55 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 
       return { success: true, data: updatedEmployee };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update employee';
+      const technicalMessage = error instanceof Error ? error.message : 'Failed to update employee';
+      const userFriendlyMessage = getUserFriendlyErrorMessage(technicalMessage);
       console.error('Error updating employee:', error);
 
       set({
         loading: false,
-        error: errorMessage,
+        error: technicalMessage,
       });
 
-      useUIStore.getState().showNotification(errorMessage, 'error');
+      useUIStore.getState().showNotification(userFriendlyMessage, 'error');
 
-      return { success: false, error: errorMessage };
+      return { success: false, error: userFriendlyMessage };
     }
   },
 
-  deleteEmployee: async (id) => {
+  resetEmployeePassword: async (id, newPassword) => {
     set({ loading: true, error: null });
     try {
       const response = await fetch(`/api/employees/${id}`, {
-        method: 'DELETE',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPassword }),
       });
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Failed to delete employee');
+        throw new Error(result.error || 'Failed to reset password');
       }
 
-      // Optimistically remove from the list
-      set((state) => ({
-        employees: state.employees.filter((emp) => emp.id !== id),
-        selectedEmployee: state.selectedEmployee?.id === id ? null : state.selectedEmployee,
-        loading: false,
-        error: null,
-      }));
-
-      useUIStore.getState().showNotification('Employee deleted successfully', 'success');
-
-      // Refresh to get updated pagination
-      await get().fetchEmployees();
+      set({ loading: false, error: null });
+      useUIStore.getState().showNotification('Password reset successfully', 'success');
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete employee';
-      console.error('Error deleting employee:', error);
+      const technicalMessage = error instanceof Error ? error.message : 'Failed to reset password';
+      const userFriendlyMessage = getUserFriendlyErrorMessage(technicalMessage);
+      console.error('Error resetting password:', error);
 
       set({
         loading: false,
-        error: errorMessage,
+        error: technicalMessage,
       });
 
-      useUIStore.getState().showNotification(errorMessage, 'error');
+      useUIStore.getState().showNotification(userFriendlyMessage, 'error');
 
-      return { success: false, error: errorMessage };
+      return { success: false, error: userFriendlyMessage };
     }
   },
 
@@ -313,17 +370,18 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update employment status';
+      const technicalMessage = error instanceof Error ? error.message : 'Failed to update employment status';
+      const userFriendlyMessage = getUserFriendlyErrorMessage(technicalMessage);
       console.error('Error updating employment status:', error);
 
       set({
         loading: false,
-        error: errorMessage,
+        error: technicalMessage,
       });
 
-      useUIStore.getState().showNotification(errorMessage, 'error');
+      useUIStore.getState().showNotification(userFriendlyMessage, 'error');
 
-      return { success: false, error: errorMessage };
+      return { success: false, error: userFriendlyMessage };
     }
   },
 

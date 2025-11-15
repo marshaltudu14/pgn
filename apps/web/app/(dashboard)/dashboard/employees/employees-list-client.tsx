@@ -32,11 +32,6 @@ export default function EmployeeListClient() {
     router.push('/dashboard/employees/form?mode=create');
   };
 
-  const handleEmployeeDelete = (employee: Employee) => {
-    // Delete action is handled in the employee list component
-    console.log('Employee deleted:', employee);
-  };
-
   const handleEmployeeStatusChange = (employee: Employee, status: EmploymentStatus) => {
     // Status change is handled in the employee list component
     console.log('Employee status changed:', employee, status);
@@ -65,7 +60,6 @@ export default function EmployeeListClient() {
       <EmployeeList
         onEmployeeSelect={handleEmployeeSelect}
         onEmployeeEdit={handleEmployeeEdit}
-        onEmployeeDelete={handleEmployeeDelete}
         onEmployeeStatusChange={handleEmployeeStatusChange}
         onEmployeeCreate={handleEmployeeCreate}
       />

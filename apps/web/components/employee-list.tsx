@@ -26,17 +26,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,12 +35,11 @@ import {
 } from '@/components/ui/dialog';
 import { Employee, EmploymentStatus } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
-import { Search, Filter, Plus, Edit, Trash2, Eye, UserCheck } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Eye, UserCheck } from 'lucide-react';
 
 interface EmployeeListProps {
   onEmployeeSelect?: (employee: Employee) => void;
   onEmployeeEdit?: (employee: Employee) => void;
-  onEmployeeDelete?: (employee: Employee) => void;
   onEmployeeStatusChange?: (employee: Employee, status: EmploymentStatus) => void;
   onEmployeeCreate?: () => void;
 }
@@ -69,7 +57,6 @@ const EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNE
 export function EmployeeList({
   onEmployeeSelect,
   onEmployeeEdit,
-  onEmployeeDelete,
   onEmployeeStatusChange,
   onEmployeeCreate,
 }: EmployeeListProps) {
@@ -80,14 +67,12 @@ export function EmployeeList({
     pagination,
     filters,
     fetchEmployees,
-    deleteEmployee,
     updateEmploymentStatus,
     setFilters,
     setPagination,
     clearError,
   } = useEmployeeStore();
 
-  const [deleteConfirmEmployee, setDeleteConfirmEmployee] = useState<Employee | null>(null);
   const [statusChangeEmployee, setStatusChangeEmployee] = useState<Employee | null>(null);
   const [tempStatusForDialog, setTempStatusForDialog] = useState<EmploymentStatus>('ACTIVE');
 
@@ -113,14 +98,7 @@ export function EmployeeList({
     setPagination(1, size); // Reset to first page with new page size
   };
 
-  const handleDeleteEmployee = async (employee: Employee) => {
-    const result = await deleteEmployee(employee.id);
-    if (result.success) {
-      setDeleteConfirmEmployee(null);
-      onEmployeeDelete?.(employee);
-    }
-  };
-
+  
   const handleStatusChangeSubmit = async (employee: Employee, newStatus: EmploymentStatus) => {
     const result = await updateEmploymentStatus(employee.id, {
       employment_status: newStatus,
@@ -336,39 +314,6 @@ export function EmployeeList({
                             </div>
                           </DialogContent>
                         </Dialog>
-
-                        <AlertDialog
-                          open={!!deleteConfirmEmployee}
-                          onOpenChange={() => setDeleteConfirmEmployee(null)}
-                        >
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setDeleteConfirmEmployee(employee)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will mark {employee.firstName} {employee.lastName} as terminated.
-                                This action can be reversed by updating their employment status.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteConfirmEmployee && handleDeleteEmployee(deleteConfirmEmployee)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -4,7 +4,6 @@
  */
 
 import {
-  Employee,
   CreateEmployeeRequest,
   UpdateEmployeeRequest,
   ChangeEmploymentStatusRequest,
@@ -12,7 +11,12 @@ import {
   EmployeeListParams,
   EmployeeListResponse
 } from '@pgn/shared';
+import { Database, TablesInsert, TablesUpdate } from '@pgn/shared/src/types/supabase';
+type Employee = Database['public']['Tables']['employees']['Row'];
+type EmployeeInsert = TablesInsert<'employees'>;
+type EmployeeUpdate = TablesUpdate<'employees'>;
 import { createClient } from '../utils/supabase/server';
+import { createAuthUser, resetUserPassword } from '../utils/supabase/admin';
 
 /**
  * Get the next user ID sequence for the current year
@@ -64,26 +68,59 @@ export async function generateHumanReadableUserId(): Promise<string> {
 export async function createEmployee(
   createData: CreateEmployeeRequest
 ): Promise<Employee> {
+  // Password is required for creating auth users
+  if (!createData.password) {
+    throw new Error('Password is required for creating new employee');
+  }
+
+  let authUserId: string | null = null;
+
+  try {
+    // Step 1: Create auth user first
+    const authResult = await createAuthUser(
+      createData.email,
+      createData.password,
+      {
+        first_name: createData.first_name,
+        last_name: createData.last_name,
+        employee_type: 'staff'
+      }
+    );
+
+    if (!authResult.success) {
+      throw new Error(`Failed to create auth user: ${authResult.error || 'Unknown error'}`);
+    }
+
+    authUserId = authResult.data?.user?.id || null;
+
+    if (!authUserId) {
+      throw new Error('Failed to get auth user ID');
+    }
+
+  } catch (error) {
+    console.error('Error creating auth user:', error);
+    throw error; // Re-throw to let caller handle
+  }
+
   try {
     const supabase = await createClient();
 
     // Generate human readable user ID
     const humanReadableUserId = await generateHumanReadableUserId();
 
-    // Prepare employee data for database
-    const employeeData = {
+    // Step 2: Create employee record with auth user ID as the primary key
+    const employeeData: EmployeeInsert = {
+      id: authUserId, // Use auth user ID directly as employee ID
       human_readable_user_id: humanReadableUserId,
       first_name: createData.first_name,
       last_name: createData.last_name,
       email: createData.email,
-      phone: createData.phone,
+      phone: createData.phone || null,
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
-      primary_region: createData.primary_region,
-      region_code: createData.region_code,
-      assigned_regions: createData.assigned_regions || [],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      primary_region: createData.primary_region || null,
+      region_code: createData.region_code || null,
+      assigned_regions: createData.assigned_regions || null
     };
 
     const { data, error } = await supabase
@@ -93,33 +130,16 @@ export async function createEmployee(
       .single();
 
     if (error) {
+      // If employee creation fails, we log the error but don't delete the auth user
+      // as per policy: once a user is created, they are never deleted
       console.error('Error creating employee:', error);
+      if (authUserId) {
+        console.error(`Employee creation failed for auth user ID ${authUserId}. Auth user remains in system.`);
+      }
       throw new Error(`Failed to create employee: ${error.message}`);
     }
 
-    return {
-      id: data.id,
-      humanReadableUserId: data.human_readable_user_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      employmentStatus: data.employment_status,
-      canLogin: data.can_login,
-      employmentStatusChangedAt: data.employment_status_changed_at,
-      employmentStatusChangedBy: data.employment_status_changed_by,
-      faceEmbedding: data.face_embedding,
-      referencePhotoUrl: data.reference_photo_url,
-      referencePhotoData: data.reference_photo_data,
-      assignedRegions: data.assigned_regions,
-      primaryRegion: data.primary_region,
-      regionCode: data.region_code,
-      failedLoginAttempts: data.failed_login_attempts,
-      accountLockedUntil: data.account_locked_until,
-      deviceInfo: data.device_info,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    return data; // Return the database row directly
   } catch (error) {
     console.error('Error in createEmployee:', error);
     throw error;
@@ -147,29 +167,7 @@ export async function getEmployeeById(id: string): Promise<Employee | null> {
       throw new Error(`Failed to get employee: ${error.message}`);
     }
 
-    return {
-      id: data.id,
-      humanReadableUserId: data.human_readable_user_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      employmentStatus: data.employment_status,
-      canLogin: data.can_login,
-      employmentStatusChangedAt: data.employment_status_changed_at,
-      employmentStatusChangedBy: data.employment_status_changed_by,
-      faceEmbedding: data.face_embedding,
-      referencePhotoUrl: data.reference_photo_url,
-      referencePhotoData: data.reference_photo_data,
-      assignedRegions: data.assigned_regions,
-      primaryRegion: data.primary_region,
-      regionCode: data.region_code,
-      failedLoginAttempts: data.failed_login_attempts,
-      accountLockedUntil: data.account_locked_until,
-      deviceInfo: data.device_info,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    return data; // Return the database row directly
   } catch (error) {
     console.error('Error in getEmployeeById:', error);
     throw error;
@@ -197,29 +195,7 @@ export async function getEmployeeByHumanReadableId(humanReadableId: string): Pro
       throw new Error(`Failed to get employee: ${error.message}`);
     }
 
-    return {
-      id: data.id,
-      humanReadableUserId: data.human_readable_user_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      employmentStatus: data.employment_status,
-      canLogin: data.can_login,
-      employmentStatusChangedAt: data.employment_status_changed_at,
-      employmentStatusChangedBy: data.employment_status_changed_by,
-      faceEmbedding: data.face_embedding,
-      referencePhotoUrl: data.reference_photo_url,
-      referencePhotoData: data.reference_photo_data,
-      assignedRegions: data.assigned_regions,
-      primaryRegion: data.primary_region,
-      regionCode: data.region_code,
-      failedLoginAttempts: data.failed_login_attempts,
-      accountLockedUntil: data.account_locked_until,
-      deviceInfo: data.device_info,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    return data; // Return the database row directly
   } catch (error) {
     console.error('Error in getEmployeeByHumanReadableId:', error);
     throw error;
@@ -247,29 +223,7 @@ export async function getEmployeeByEmail(email: string): Promise<Employee | null
       throw new Error(`Failed to get employee: ${error.message}`);
     }
 
-    return {
-      id: data.id,
-      humanReadableUserId: data.human_readable_user_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      employmentStatus: data.employment_status,
-      canLogin: data.can_login,
-      employmentStatusChangedAt: data.employment_status_changed_at,
-      employmentStatusChangedBy: data.employment_status_changed_by,
-      faceEmbedding: data.face_embedding,
-      referencePhotoUrl: data.reference_photo_url,
-      referencePhotoData: data.reference_photo_data,
-      assignedRegions: data.assigned_regions,
-      primaryRegion: data.primary_region,
-      regionCode: data.region_code,
-      failedLoginAttempts: data.failed_login_attempts,
-      accountLockedUntil: data.account_locked_until,
-      deviceInfo: data.device_info,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    return data; // Return the database row directly
   } catch (error) {
     console.error('Error in getEmployeeByEmail:', error);
     throw error;
@@ -334,29 +288,7 @@ export async function listEmployees(params: EmployeeListParams): Promise<Employe
       throw new Error(`Failed to list employees: ${error.message}`);
     }
 
-    const employees = (data || []).map(employee => ({
-      id: employee.id,
-      humanReadableUserId: employee.human_readable_user_id,
-      firstName: employee.first_name,
-      lastName: employee.last_name,
-      email: employee.email,
-      phone: employee.phone,
-      employmentStatus: employee.employment_status,
-      canLogin: employee.can_login,
-      employmentStatusChangedAt: employee.employment_status_changed_at,
-      employmentStatusChangedBy: employee.employment_status_changed_by,
-      faceEmbedding: employee.face_embedding,
-      referencePhotoUrl: employee.reference_photo_url,
-      referencePhotoData: employee.reference_photo_data,
-      assignedRegions: employee.assigned_regions,
-      primaryRegion: employee.primary_region,
-      regionCode: employee.region_code,
-      failedLoginAttempts: employee.failed_login_attempts,
-      accountLockedUntil: employee.account_locked_until,
-      deviceInfo: employee.device_info,
-      createdAt: employee.created_at,
-      updatedAt: employee.updated_at
-    }));
+    const employees = data || []; // Return database rows directly
 
     const total = count || 0;
     const hasMore = offset + limit < total;
@@ -384,8 +316,8 @@ export async function updateEmployee(
   try {
     const supabase = await createClient();
 
-    // Prepare update data for database
-    const employeeData: Record<string, string | boolean | string[]> = {
+    // Prepare update data for database using proper types
+    const employeeData: EmployeeUpdate = {
       updated_at: new Date().toISOString()
     };
 
@@ -411,29 +343,7 @@ export async function updateEmployee(
       throw new Error(`Failed to update employee: ${error.message}`);
     }
 
-    return {
-      id: data.id,
-      humanReadableUserId: data.human_readable_user_id,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      employmentStatus: data.employment_status,
-      canLogin: data.can_login,
-      employmentStatusChangedAt: data.employment_status_changed_at,
-      employmentStatusChangedBy: data.employment_status_changed_by,
-      faceEmbedding: data.face_embedding,
-      referencePhotoUrl: data.reference_photo_url,
-      referencePhotoData: data.reference_photo_data,
-      assignedRegions: data.assigned_regions,
-      primaryRegion: data.primary_region,
-      regionCode: data.region_code,
-      failedLoginAttempts: data.failed_login_attempts,
-      accountLockedUntil: data.account_locked_until,
-      deviceInfo: data.device_info,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at
-    };
+    return data; // Return the database row directly
   } catch (error) {
     console.error('Error in updateEmployee:', error);
     throw error;
@@ -548,6 +458,33 @@ export async function isHumanReadableIdTaken(humanReadableId: string, excludeId?
   } catch (error) {
     console.error('Error in isHumanReadableIdTaken:', error);
     return false;
+  }
+}
+
+/**
+ * Reset employee password
+ */
+export async function resetEmployeePassword(employeeId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Step 1: Get employee by ID to get their email
+    const employee = await getEmployeeById(employeeId);
+
+    if (!employee) {
+      return { success: false, error: 'Employee not found' };
+    }
+
+    // Step 2: Reset auth user password using email
+    const authResult = await resetUserPassword(employee.email, newPassword);
+
+    if (!authResult.success) {
+      return { success: false, error: authResult.error as string || 'Failed to reset password' };
+    }
+
+    console.log(`Password reset successfully for employee ${employeeId} (${employee.email})`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error in resetEmployeePassword:', error);
+    return { success: false, error: 'An unexpected error occurred' };
   }
 }
 

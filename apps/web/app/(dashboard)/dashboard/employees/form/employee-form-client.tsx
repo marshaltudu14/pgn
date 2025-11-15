@@ -220,15 +220,13 @@ export default function EmployeeFormClient() {
           </div>
         )}
 
-        <div className="bg-white dark:bg-black border rounded-lg">
-          <EmployeeForm
-            open={formOpen}
-            onOpenChange={setFormOpen}
-            employee={employee}
-            onSuccess={handleFormSuccess}
-            onCancel={handleFormCancel}
-          />
-        </div>
+        <EmployeeForm
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          employee={employee}
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+        />
       </div>
     </div>
   );

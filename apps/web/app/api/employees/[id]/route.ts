@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getEmployeeById,
   updateEmployee,
-  changeEmploymentStatus
+  changeEmploymentStatus,
+  resetEmployeePassword
 } from '@/services/employee.service';
 import { UpdateEmployeeRequest, EmploymentStatus } from '@pgn/shared';
 
@@ -180,7 +181,7 @@ export async function PATCH(
         message: 'Employment status updated successfully',
         changeLog: {
           employeeId: id,
-          previousStatus: employee.employmentStatus,
+          previousStatus: employee.employment_status,
           newStatus: employment_status,
           reason: reason || null,
           changed_by: changed_by || 'system',
@@ -268,6 +269,78 @@ export async function PATCH(
       {
         success: false,
         error: 'Failed to update employee',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    // Validate request body
+    if (!body.newPassword) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'New password is required'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate password length
+    if (body.newPassword.length < 6) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Password must be at least 6 characters long'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check if employee exists
+    const employee = await getEmployeeById(id);
+    if (!employee) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Employee not found'
+        },
+        { status: 404 }
+      );
+    }
+
+    // Reset password
+    const resetResult = await resetEmployeePassword(id, body.newPassword);
+
+    if (!resetResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: resetResult.error || 'Failed to reset password'
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to reset password',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

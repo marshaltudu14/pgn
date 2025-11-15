@@ -106,8 +106,31 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating employee:', error);
 
-    // Handle specific error cases
+    // Handle specific error cases and pass through the actual error message
     if (error instanceof Error) {
+      // Handle duplicate user error
+      if (error.message.includes('A user with this email address has already been registered')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'An employee with this email address already exists in the authentication system. Please use a different email address.'
+          },
+          { status: 409 }
+        );
+      }
+
+      // Handle row-level security policy errors
+      if (error.message.includes('new row violates row-level security policy')) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'You do not have permission to create employees. Please contact your administrator.'
+          },
+          { status: 403 }
+        );
+      }
+
+      // Handle duplicate key errors
       if (error.message.includes('duplicate key')) {
         return NextResponse.json(
           {
@@ -117,13 +140,22 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
+
+      // Pass through the actual error message
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(
       {
         success: false,
         error: 'Failed to create employee',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: 'Unknown error'
       },
       { status: 500 }
     );

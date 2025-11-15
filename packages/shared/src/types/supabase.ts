@@ -1,0 +1,365 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  public: {
+    Tables: {
+      daily_attendance: {
+        Row: {
+          attendance_date: string
+          battery_level_at_check_in: number | null
+          battery_level_at_check_out: number | null
+          check_in_face_confidence: number | null
+          check_in_latitude: number | null
+          check_in_location_name: string | null
+          check_in_longitude: number | null
+          check_in_selfie_data: string | null
+          check_in_timestamp: string | null
+          check_out_face_confidence: number | null
+          check_out_latitude: number | null
+          check_out_location_name: string | null
+          check_out_longitude: number | null
+          check_out_method: string | null
+          check_out_reason: string | null
+          check_out_selfie_data: string | null
+          check_out_timestamp: string | null
+          created_at: string | null
+          employee_id: string
+          id: string
+          last_location_update: string | null
+          path_data: Json | null
+          total_distance_meters: number | null
+          total_work_hours: number | null
+          updated_at: string | null
+          verification_notes: string | null
+          verification_status: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          attendance_date: string
+          battery_level_at_check_in?: number | null
+          battery_level_at_check_out?: number | null
+          check_in_face_confidence?: number | null
+          check_in_latitude?: number | null
+          check_in_location_name?: string | null
+          check_in_longitude?: number | null
+          check_in_selfie_data?: string | null
+          check_in_timestamp?: string | null
+          check_out_face_confidence?: number | null
+          check_out_latitude?: number | null
+          check_out_location_name?: string | null
+          check_out_longitude?: number | null
+          check_out_method?: string | null
+          check_out_reason?: string | null
+          check_out_selfie_data?: string | null
+          check_out_timestamp?: string | null
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          last_location_update?: string | null
+          path_data?: Json | null
+          total_distance_meters?: number | null
+          total_work_hours?: number | null
+          updated_at?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          attendance_date?: string
+          battery_level_at_check_in?: number | null
+          battery_level_at_check_out?: number | null
+          check_in_face_confidence?: number | null
+          check_in_latitude?: number | null
+          check_in_location_name?: string | null
+          check_in_longitude?: number | null
+          check_in_selfie_data?: string | null
+          check_in_timestamp?: string | null
+          check_out_face_confidence?: number | null
+          check_out_latitude?: number | null
+          check_out_location_name?: string | null
+          check_out_longitude?: number | null
+          check_out_method?: string | null
+          check_out_reason?: string | null
+          check_out_selfie_data?: string | null
+          check_out_timestamp?: string | null
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          last_location_update?: string | null
+          path_data?: Json | null
+          total_distance_meters?: number | null
+          total_work_hours?: number | null
+          updated_at?: string | null
+          verification_notes?: string | null
+          verification_status?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_attendance_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_attendance_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          account_locked_until: string | null
+          assigned_regions: string[] | null
+          can_login: boolean | null
+          created_at: string | null
+          device_info: Json | null
+          email: string
+          employment_status: string
+          employment_status_changed_at: string | null
+          employment_status_changed_by: string | null
+          face_embedding: string | null
+          failed_login_attempts: number | null
+          first_name: string
+          human_readable_user_id: string
+          id: string
+          last_name: string
+          phone: string | null
+          primary_region: string | null
+          reference_photo_data: string | null
+          reference_photo_url: string | null
+          region_code: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_locked_until?: string | null
+          assigned_regions?: string[] | null
+          can_login?: boolean | null
+          created_at?: string | null
+          device_info?: Json | null
+          email: string
+          employment_status?: string
+          employment_status_changed_at?: string | null
+          employment_status_changed_by?: string | null
+          face_embedding?: string | null
+          failed_login_attempts?: number | null
+          first_name: string
+          human_readable_user_id: string
+          id: string
+          last_name: string
+          phone?: string | null
+          primary_region?: string | null
+          reference_photo_data?: string | null
+          reference_photo_url?: string | null
+          region_code?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_locked_until?: string | null
+          assigned_regions?: string[] | null
+          can_login?: boolean | null
+          created_at?: string | null
+          device_info?: Json | null
+          email?: string
+          employment_status?: string
+          employment_status_changed_at?: string | null
+          employment_status_changed_by?: string | null
+          face_embedding?: string | null
+          failed_login_attempts?: number | null
+          first_name?: string
+          human_readable_user_id?: string
+          id?: string
+          last_name?: string
+          phone?: string | null
+          primary_region?: string | null
+          reference_photo_data?: string | null
+          reference_photo_url?: string | null
+          region_code?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+}
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
+  public: {
+    Enums: {},
+  },
+} as const

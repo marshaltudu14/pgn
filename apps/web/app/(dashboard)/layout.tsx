@@ -4,6 +4,7 @@ import React from 'react';
 import { useAuthStore } from '@/app/lib/stores/authStore';
 import ErrorBoundary from './dashboard/components/ui/error-boundary';
 import Notifications from './dashboard/components/ui/notifications';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +23,7 @@ import {
 import { Home, Users, Calendar, Settings, LogOut, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 
 const navigationItems = [
   {
@@ -57,13 +59,19 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <ErrorBoundary>
-        <Sidebar>
+        <Sidebar className="bg-white dark:bg-black border-r border-border">
           <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" className="font-semibold">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                    <Home className="size-4" />
+                  <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full">
+                    <Image
+                      src="/pgn-logo.jpg"
+                      alt="PGN System Logo"
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">PGN System</span>
@@ -115,24 +123,22 @@ export default function DashboardLayout({
         </Sidebar>
 
         <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-4">
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
             <SidebarTrigger className="-ml-1" />
             <div className="flex-1">
-              <h1 className="text-lg font-semibold text-gray-900">
+              <h1 className="text-lg font-semibold text-foreground">
                 {navigationItems.find(item => item.url === pathname)?.title || 'Dashboard'}
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700">
-                  {user?.fullName || user?.email}
-                </span>
-              </div>
+              <ThemeToggle />
+              <span className="text-sm font-medium text-foreground">
+                {user?.fullName || user?.email}
+              </span>
             </div>
           </header>
 
-          <main className="flex-1 bg-gray-50 p-6">
+          <main className="flex-1 bg-white dark:bg-black p-6">
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

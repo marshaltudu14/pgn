@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Eye, EyeOff } from 'lucide-react';
+import Image from 'next/image';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -62,19 +63,22 @@ const LoginForm = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen flex items-center justify-center bg-background dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8"
+      className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8"
     >
       <div className="w-full max-w-md space-y-8">
-        <div>
-          <h1 className="mt-6 text-center text-3xl font-bold text-foreground dark:text-white">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full">
+            <Image
+              src="/pgn-logo.jpg"
+              alt="PGN System Logo"
+              width={96}
+              height={96}
+              className="object-cover"
+            />
+          </div>
+          <h1 className="mt-6 text-center text-3xl font-bold text-foreground">
             PGN Admin Portal
           </h1>
-          <h2 className="mt-2 text-center text-xl text-muted-foreground dark:text-gray-300">
-            Sign in to your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-muted-foreground dark:text-gray-400">
-            Enter your credentials to access the dashboard
-          </p>
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

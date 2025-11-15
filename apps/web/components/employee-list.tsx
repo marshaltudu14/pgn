@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
@@ -57,11 +56,11 @@ interface EmployeeListProps {
 }
 
 const EMPLOYMENT_STATUS_COLORS: Record<EmploymentStatus, string> = {
-  ACTIVE: 'bg-green-100 text-green-800',
-  SUSPENDED: 'bg-yellow-100 text-yellow-800',
-  RESIGNED: 'bg-blue-100 text-blue-800',
-  TERMINATED: 'bg-red-100 text-red-800',
-  ON_LEAVE: 'bg-gray-100 text-gray-800',
+  ACTIVE: 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200',
+  SUSPENDED: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200',
+  RESIGNED: 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200',
+  TERMINATED: 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200',
+  ON_LEAVE: 'bg-muted text-muted-foreground',
 };
 
 const EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'];
@@ -189,14 +188,14 @@ export function EmployeeList({
             Add Employee
           </Button>
         </div>
-        <Card>
-          <CardHeader>
+        <div className="bg-white dark:bg-black border rounded-lg">
+          <div className="p-6 border-b">
             <div className="flex gap-4">
               <Skeleton className="h-10 w-64" />
               <Skeleton className="h-10 w-40" />
             </div>
-          </CardHeader>
-          <CardContent>
+          </div>
+          <div className="p-6">
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex gap-4 p-2">
@@ -208,8 +207,8 @@ export function EmployeeList({
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -235,8 +234,8 @@ export function EmployeeList({
         </div>
       )}
 
-      <Card>
-        <CardHeader>
+      <div className="bg-white dark:bg-black border rounded-lg">
+        <div className="p-6 border-b">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -262,9 +261,9 @@ export function EmployeeList({
               </SelectContent>
             </Select>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
+        </div>
+        <div className="p-6">
+          <div className="rounded-md border w-full overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -279,7 +278,7 @@ export function EmployeeList({
               </TableHeader>
               <TableBody>
                 {employees.map((employee) => (
-                  <TableRow key={employee.id} className="hover:bg-gray-50">
+                  <TableRow key={employee.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       {employee.humanReadableUserId}
                     </TableCell>
@@ -445,8 +444,8 @@ export function EmployeeList({
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

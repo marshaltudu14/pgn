@@ -6,6 +6,8 @@ import { useAuthStore } from '@/app/lib/stores/authStore';
 import { motion } from 'framer-motion';
 import { EmploymentStatus } from '@pgn/shared';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const CreateEmployeeForm = () => {
   const { createEmployee } = useEmployeeStore();
@@ -138,31 +140,26 @@ const CreateEmployeeForm = () => {
       className="px-4 py-6 max-w-2xl mx-auto"
     >
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Create New Employee</h1>
-        <p className="text-gray-600">
+        <h1 className="text-2xl font-bold text-foreground mb-2">Create New Employee</h1>
+        <p className="text-muted-foreground">
           Fill in the details to create a new employee account
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-black rounded-lg border p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* First Name Field */}
           <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-              First Name *
-            </label>
-            <input
+            <Label htmlFor="firstName">First Name *</Label>
+            <Input
               id="firstName"
               type="text"
               value={formData.firstName}
               onChange={(e) => handleInputChange('firstName', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                errors.firstName ? 'border-red-500' : 'border-gray-300'
-              }`}
               placeholder="Enter employee's first name"
             />
             {errors.firstName && (
-              <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+              <p className="mt-1 text-sm text-destructive">{errors.firstName}</p>
             )}
           </div>
 
@@ -176,13 +173,13 @@ const CreateEmployeeForm = () => {
               type="text"
               value={formData.lastName}
               onChange={(e) => handleInputChange('lastName', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                errors.lastName ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.lastName ? 'border-red-500' : 'border-border'
               }`}
               placeholder="Enter employee's last name"
             />
             {errors.lastName && (
-              <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+              <p className="mt-1 text-sm text-destructive">{errors.lastName}</p>
             )}
           </div>
 
@@ -196,13 +193,13 @@ const CreateEmployeeForm = () => {
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.email ? 'border-red-500' : 'border-border'
               }`}
               placeholder="employee@company.com"
             />
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              <p className="mt-1 text-sm text-destructive">{errors.email}</p>
             )}
           </div>
 
@@ -216,14 +213,14 @@ const CreateEmployeeForm = () => {
               type="tel"
               value={formData.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                errors.phone ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.phone ? 'border-red-500' : 'border-border'
               }`}
               placeholder="9876543210 (Indian mobile number)"
               maxLength={10}
             />
             {errors.phone && (
-              <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+              <p className="mt-1 text-sm text-destructive">{errors.phone}</p>
             )}
             <p className="mt-1 text-xs text-gray-500">
               10-digit Indian mobile number starting with 6, 7, 8, or 9
@@ -239,8 +236,8 @@ const CreateEmployeeForm = () => {
               id="employmentStatus"
               value={formData.employmentStatus}
               onChange={(e) => handleInputChange('employmentStatus', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                errors.employmentStatus ? 'border-red-500' : 'border-gray-300'
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                errors.employmentStatus ? 'border-red-500' : 'border-border'
               }`}
             >
               <option value="ACTIVE">Active</option>
@@ -250,7 +247,7 @@ const CreateEmployeeForm = () => {
               <option value="ON_LEAVE">On Leave</option>
             </select>
             {errors.employmentStatus && (
-              <p className="mt-1 text-sm text-red-600">{errors.employmentStatus}</p>
+              <p className="mt-1 text-sm text-destructive">{errors.employmentStatus}</p>
             )}
           </div>
 
@@ -265,9 +262,9 @@ const CreateEmployeeForm = () => {
                 type="checkbox"
                 checked={formData.canLogin}
                 onChange={(e) => handleInputChange('canLogin', e.target.checked)}
-                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                className="h-4 w-4 text-indigo-600 focus:ring-primary border-border rounded"
               />
-              <label htmlFor="canLogin" className="ml-2 text-sm text-gray-900">
+              <label htmlFor="canLogin" className="ml-2 text-sm text-foreground">
                 Employee can login to the system
               </label>
             </div>
@@ -298,7 +295,7 @@ const CreateEmployeeForm = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-gray-700 border border-border rounded-md hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>

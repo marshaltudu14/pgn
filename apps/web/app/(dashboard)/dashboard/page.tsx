@@ -30,10 +30,10 @@ export default function DashboardPage() {
       className="px-4 py-6"
     >
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           Welcome back, {user?.fullName || user?.email}!
         </h2>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           {isAdmin ? 'You have administrator access' : 'You have regular user access'}
         </p>
       </div>
@@ -42,7 +42,7 @@ export default function DashboardPage() {
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="bg-white overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
+          className="bg-background border overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
           onClick={handleEmployeesClick}
         >
           <div className="p-6">
@@ -53,8 +53,8 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Employee Management</h3>
-                <p className="mt-1 text-sm text-gray-500">View and manage employee records</p>
+                <h3 className="text-lg font-medium text-foreground">Employee Management</h3>
+                <p className="mt-1 text-sm text-muted-foreground">View and manage employee records</p>
               </div>
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function DashboardPage() {
           <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="bg-white overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
+            className="bg-background border overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
             onClick={handleCreateEmployeeClick}
           >
             <div className="p-6">
@@ -75,8 +75,8 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900">Create Employee</h3>
-                  <p className="mt-1 text-sm text-gray-500">Add new employee accounts</p>
+                  <h3 className="text-lg font-medium text-foreground">Create Employee</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Add new employee accounts</p>
                 </div>
               </div>
             </div>
@@ -86,7 +86,7 @@ export default function DashboardPage() {
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="bg-white overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
+          className="bg-background border overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
         >
           <div className="p-6">
             <div className="flex items-center">
@@ -96,8 +96,8 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Attendance Tracking</h3>
-                <p className="mt-1 text-sm text-gray-500">Monitor employee attendance</p>
+                <h3 className="text-lg font-medium text-foreground">Attendance Tracking</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Monitor employee attendance</p>
               </div>
             </div>
           </div>
@@ -105,13 +105,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-8">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-background border overflow-hidden shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <h3 className="text-lg leading-6 font-medium text-foreground">
               System Status
             </h3>
             <div className="mt-5">
-              <div className="bg-green-50 border border-green-200 rounded-md p-4">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -119,10 +119,10 @@ export default function DashboardPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-green-800">
+                    <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
                       All systems operational
                     </h3>
-                    <div className="mt-2 text-sm text-green-700">
+                    <div className="mt-2 text-sm text-green-700 dark:text-green-300">
                       <p>Authentication and database services are running normally.</p>
                     </div>
                   </div>

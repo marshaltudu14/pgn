@@ -8,29 +8,28 @@
 import { useState } from 'react';
 import { Employee, EmploymentStatus } from '@pgn/shared';
 import { EmployeeList } from '@/components/employee-list';
-import { EmployeeForm } from '@/components/employee-form';
-import { EmployeeDetail } from '@/components/employee-detail';
+import { EmployeeQuickView } from '@/components/employee-quick-view';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { useRouter } from 'next/navigation';
 
 export default function EmployeeListClient() {
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
+  const router = useRouter();
+  const [showQuickView, setShowQuickView] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
   const handleEmployeeSelect = (employee: Employee) => {
     setSelectedEmployee(employee);
-    setShowDetail(true);
+    setShowQuickView(true);
   };
 
   const handleEmployeeEdit = (employee: Employee) => {
-    setSelectedEmployee(employee);
-    setShowEditForm(true);
+    // Navigate to the form page with edit mode
+    router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
   };
 
   const handleEmployeeCreate = () => {
-    setSelectedEmployee(null);
-    setShowCreateForm(true);
+    // Navigate to the form page with create mode
+    router.push('/dashboard/employees/form?mode=create');
   };
 
   const handleEmployeeDelete = (employee: Employee) => {
@@ -43,11 +42,9 @@ export default function EmployeeListClient() {
     console.log('Employee status changed:', employee, status);
   };
 
-  const handleFormSuccess = () => {
-    // Close any open forms and refresh the employee list
-    setShowCreateForm(false);
-    setShowEditForm(false);
-    setSelectedEmployee(null);
+  const handleQuickViewEdit = (employee: Employee) => {
+    // Navigate to the form page with edit mode
+    router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
   };
 
   return (
@@ -73,28 +70,12 @@ export default function EmployeeListClient() {
         onEmployeeCreate={handleEmployeeCreate}
       />
 
-      {/* Create Employee Form */}
-      <EmployeeForm
-        open={showCreateForm}
-        onOpenChange={setShowCreateForm}
-        employee={null}
-        onSuccess={handleFormSuccess}
-      />
-
-      {/* Edit Employee Form */}
-      <EmployeeForm
-        open={showEditForm}
-        onOpenChange={setShowEditForm}
+      {/* Employee Quick View */}
+      <EmployeeQuickView
+        open={showQuickView}
+        onOpenChange={setShowQuickView}
         employee={selectedEmployee}
-        onSuccess={handleFormSuccess}
-      />
-
-      {/* Employee Detail View */}
-      <EmployeeDetail
-        open={showDetail}
-        onOpenChange={setShowDetail}
-        employee={selectedEmployee}
-        onEdit={handleEmployeeEdit}
+        onEdit={handleQuickViewEdit}
       />
     </div>
   );

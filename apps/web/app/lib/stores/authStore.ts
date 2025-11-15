@@ -128,11 +128,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
-          useUIStore.getState().showNotification({
-            type: 'success',
-            title: 'Login Successful',
-            message: `Welcome back, ${loginResponse.employee.fullName}!`,
-          });
+          useUIStore.getState().showNotification(`Welcome back, ${loginResponse.employee.fullName}!`, 'success');
 
           return { success: true };
         } catch (error) {
@@ -184,11 +180,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
-          useUIStore.getState().showNotification({
-            type: 'info',
-            title: 'Logged Out',
-            message: 'You have been logged out successfully.',
-          });
+          useUIStore.getState().showNotification('You have been logged out successfully.', 'info');
         } catch (error) {
           console.error('Logout error:', error);
           set({ isLoading: false });

@@ -39,7 +39,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Employee, EmploymentStatus } from '@pgn/shared';
+import { Employee, EmploymentStatus, CreateEmployeeRequest, UpdateEmployeeRequest } from '@pgn/shared';
+import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import { Loader2, Save, X } from 'lucide-react';
 
 const EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'];
@@ -86,9 +87,11 @@ interface EmployeeFormProps {
   onOpenChange: (open: boolean) => void;
   employee?: Employee | null;
   onSuccess?: (employee: Employee) => void;
+  onCancel?: () => void;
 }
 
-export function EmployeeForm({ open, onOpenChange, employee, onSuccess }: EmployeeFormProps) {
+export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel }: EmployeeFormProps) {
+  const { createEmployee, updateEmployee } = useEmployeeStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!employee;
@@ -133,47 +136,42 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess }: Employ
       setLoading(true);
       setError(null);
 
-      const url = isEditing ? `/api/employees/${employee!.id}` : '/api/employees';
-      const method = isEditing ? 'PUT' : 'POST';
+      let result;
 
-      const payload = isEditing
-        ? {
-            first_name: data.first_name,
-            last_name: data.last_name,
-            email: data.email,
-            phone: data.phone,
-            employment_status: data.employment_status,
-            can_login: data.can_login,
-            primary_region: data.primary_region,
-            region_code: data.region_code,
-            assigned_regions: data.assigned_regions,
-          }
-        : {
-            first_name: data.first_name,
-            last_name: data.last_name,
-            email: data.email,
-            phone: data.phone,
-            employment_status: data.employment_status,
-            can_login: data.can_login,
-            primary_region: data.primary_region,
-            region_code: data.region_code,
-            assigned_regions: data.assigned_regions,
-            password: data.password, // Password only required for creation
-          };
+      if (isEditing && employee) {
+        const updateData: UpdateEmployeeRequest = {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone,
+          employment_status: data.employment_status,
+          can_login: data.can_login,
+          primary_region: data.primary_region,
+          region_code: data.region_code,
+          assigned_regions: data.assigned_regions,
+        };
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        result = await updateEmployee(employee.id, updateData);
+      } else {
+        const createData: CreateEmployeeRequest = {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone,
+          employment_status: data.employment_status,
+          can_login: data.can_login,
+          primary_region: data.primary_region,
+          region_code: data.region_code,
+          assigned_regions: data.assigned_regions,
+          password: data.password, // Password only required for creation
+        };
 
-      const result = await response.json();
+        result = await createEmployee(createData);
+      }
 
       if (result.success) {
         onOpenChange(false);
-        onSuccess?.(result.data);
+        onSuccess?.(result.data!);
         form.reset();
       } else {
         setError(result.error || `Failed to ${isEditing ? 'update' : 'create'} employee`);
@@ -486,7 +484,10 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess }: Employ
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  onCancel?.();
+                  onOpenChange(false);
+                }}
               >
                 <X className="h-4 w-4 mr-2" />
                 Cancel

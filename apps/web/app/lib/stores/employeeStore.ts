@@ -1,86 +1,152 @@
 import { create } from 'zustand';
-import { Employee, EmploymentStatus, PaginationInfo } from '@pgn/shared';
+import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest } from '@pgn/shared';
 import { useUIStore } from './uiStore';
 
 interface EmployeeState {
   employees: Employee[];
   selectedEmployee: Employee | null;
   loading: boolean;
-  pagination: PaginationInfo;
+  error: string | null;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
   filters: {
     search: string;
-    status: string;
+    status: EmploymentStatus | 'all';
+    primaryRegion?: string;
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
+  };
+}
+
+interface EmployeeFilters {
+  search?: string;
+  status?: EmploymentStatus | 'all';
+  primaryRegion?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+interface EmployeeState {
+  employees: Employee[];
+  selectedEmployee: Employee | null;
+  loading: boolean;
+  error: string | null;
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+  filters: {
+    search: string;
+    status: EmploymentStatus | 'all';
+    primaryRegion?: string;
+    sortBy: string;
+    sortOrder: 'asc' | 'desc';
   };
 
-  fetchEmployees: (page?: number, filters?: Partial<{ search: string; status: string }>) => Promise<void>;
-  createEmployee: (employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>) => Promise<{ success: boolean; error?: string }>;
-  updateEmployee: (id: string, employeeData: Partial<Employee>) => Promise<{ success: boolean; error?: string }>;
-  updateEmploymentStatus: (id: string, status: EmploymentStatus, reason?: string) => Promise<{ success: boolean; error?: string }>;
+  fetchEmployees: (params?: Partial<EmployeeListParams>) => Promise<void>;
+  createEmployee: (employeeData: CreateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: Employee }>;
+  updateEmployee: (id: string, employeeData: UpdateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: Employee }>;
+  deleteEmployee: (id: string) => Promise<{ success: boolean; error?: string }>;
+  updateEmploymentStatus: (id: string, request: ChangeEmploymentStatusRequest) => Promise<{ success: boolean; error?: string }>;
   setSelectedEmployee: (employee: Employee | null) => void;
-  setFilters: (filters: Partial<{ search: string; status: string }>) => void;
+  setFilters: (filters: Partial<EmployeeFilters>) => void;
+  setPagination: (page: number, itemsPerPage?: number) => void;
   clearFilters: () => void;
+  clearError: () => void;
+  refetch: () => Promise<void>;
 }
 
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   employees: [],
   selectedEmployee: null,
   loading: false,
+  error: null,
   pagination: {
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
-    itemsPerPage: 10,
+    itemsPerPage: 20,
     hasNextPage: false,
     hasPreviousPage: false,
   },
   filters: {
     search: '',
-    status: '',
+    status: 'all',
+    sortBy: 'created_at',
+    sortOrder: 'desc',
   },
 
-  fetchEmployees: async (page = 1, filters) => {
-    set({ loading: true });
+  fetchEmployees: async (params) => {
+    set({ loading: true, error: null });
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
-        ...(filters?.search && { search: filters.search }),
-        ...(filters?.status && { status: filters.status }),
-      });
+      const { filters, pagination } = get();
+      const queryParams: EmployeeListParams = {
+        page: params?.page || pagination.currentPage,
+        limit: params?.limit || pagination.itemsPerPage,
+        search: params?.search || filters.search || undefined,
+        employment_status: params?.employment_status || (filters.status !== 'all' ? [filters.status as EmploymentStatus] : undefined),
+        primary_region: params?.primary_region || filters.primaryRegion,
+        sort_by: params?.sort_by || filters.sortBy,
+        sort_order: params?.sort_order || filters.sortOrder,
+      };
 
-      // TODO: Create this API route - for now using placeholder
-      const response = await fetch(`/api/employees?${params}`);
-      const data = await response.json();
+      const queryString = new URLSearchParams();
+      if (queryParams.page) queryString.set('page', queryParams.page.toString());
+      if (queryParams.limit) queryString.set('limit', queryParams.limit.toString());
+      if (queryParams.search) queryString.set('search', queryParams.search);
+      if (queryParams.employment_status) queryString.set('employment_status', queryParams.employment_status.join(','));
+      if (queryParams.primary_region) queryString.set('primary_region', queryParams.primary_region);
+      if (queryParams.sort_by) queryString.set('sort_by', queryParams.sort_by);
+      if (queryParams.sort_order) queryString.set('sort_order', queryParams.sort_order);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch employees');
+      const response = await fetch(`/api/employees?${queryString}`);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to fetch employees');
       }
 
+      const data: EmployeeListResponse = result.data;
+      const totalPages = Math.ceil(data.total / data.limit);
+
       set({
-        employees: data.employees || [],
-        pagination: data.pagination || {
-          currentPage: 1,
-          totalPages: 1,
-          totalCount: 0,
-          hasNextPage: false,
-          hasPreviousPage: false,
+        employees: data.employees,
+        pagination: {
+          currentPage: data.page,
+          totalPages,
+          totalItems: data.total,
+          itemsPerPage: data.limit,
+          hasNextPage: data.hasMore,
+          hasPreviousPage: data.page > 1,
         },
         loading: false,
+        error: null,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch employees';
       console.error('Error fetching employees:', error);
-      useUIStore.getState().showNotification({
-        type: 'error',
-        title: 'Error',
-        message: error instanceof Error ? error.message : 'Failed to fetch employees',
+      set({
+        loading: false,
+        error: errorMessage,
+        employees: [],
       });
-      set({ loading: false });
+      useUIStore.getState().showNotification(errorMessage, 'error');
     }
   },
 
   createEmployee: async (employeeData) => {
+    set({ loading: true, error: null });
     try {
-      // TODO: Create this API route - for now using placeholder
       const response = await fetch('/api/employees', {
         method: 'POST',
         headers: {
@@ -89,39 +155,45 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         body: JSON.stringify(employeeData),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create employee');
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to create employee');
       }
 
-      useUIStore.getState().showNotification({
-        type: 'success',
-        title: 'Success',
-        message: 'Employee created successfully',
-      });
+      const newEmployee = result.data;
 
-      // Refresh the employee list
+      // Optimistically add to the list
+      set((state) => ({
+        employees: [newEmployee, ...state.employees],
+        loading: false,
+        error: null,
+      }));
+
+      useUIStore.getState().showNotification('Employee created successfully', 'success');
+
+      // Refresh to get updated pagination
       await get().fetchEmployees();
 
-      return { success: true };
+      return { success: true, data: newEmployee };
     } catch (error) {
-      console.error('Error creating employee:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to create employee';
+      console.error('Error creating employee:', error);
 
-      useUIStore.getState().showNotification({
-        type: 'error',
-        title: 'Error',
-        message: errorMessage,
+      set({
+        loading: false,
+        error: errorMessage,
       });
+
+      useUIStore.getState().showNotification(errorMessage, 'error');
 
       return { success: false, error: errorMessage };
     }
   },
 
   updateEmployee: async (id, employeeData) => {
+    set({ loading: true, error: null });
     try {
-      // TODO: Create this API route - for now using placeholder
       const response = await fetch(`/api/employees/${id}`, {
         method: 'PUT',
         headers: {
@@ -130,72 +202,126 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         body: JSON.stringify(employeeData),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update employee');
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update employee');
       }
 
-      useUIStore.getState().showNotification({
-        type: 'success',
-        title: 'Success',
-        message: 'Employee updated successfully',
-      });
+      const updatedEmployee = result.data;
 
-      // Refresh the employee list
-      await get().fetchEmployees();
+      // Optimistically update the employee in the list
+      set((state) => ({
+        employees: state.employees.map((emp) =>
+          emp.id === id ? updatedEmployee : emp
+        ),
+        selectedEmployee: state.selectedEmployee?.id === id ? updatedEmployee : state.selectedEmployee,
+        loading: false,
+        error: null,
+      }));
 
-      return { success: true };
+      useUIStore.getState().showNotification('Employee updated successfully', 'success');
+
+      return { success: true, data: updatedEmployee };
     } catch (error) {
-      console.error('Error updating employee:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update employee';
+      console.error('Error updating employee:', error);
 
-      useUIStore.getState().showNotification({
-        type: 'error',
-        title: 'Error',
-        message: errorMessage,
+      set({
+        loading: false,
+        error: errorMessage,
       });
+
+      useUIStore.getState().showNotification(errorMessage, 'error');
 
       return { success: false, error: errorMessage };
     }
   },
 
-  updateEmploymentStatus: async (id, status, reason) => {
+  deleteEmployee: async (id) => {
+    set({ loading: true, error: null });
     try {
-      // TODO: Create this API route - for now using placeholder
+      const response = await fetch(`/api/employees/${id}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to delete employee');
+      }
+
+      // Optimistically remove from the list
+      set((state) => ({
+        employees: state.employees.filter((emp) => emp.id !== id),
+        selectedEmployee: state.selectedEmployee?.id === id ? null : state.selectedEmployee,
+        loading: false,
+        error: null,
+      }));
+
+      useUIStore.getState().showNotification('Employee deleted successfully', 'success');
+
+      // Refresh to get updated pagination
+      await get().fetchEmployees();
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete employee';
+      console.error('Error deleting employee:', error);
+
+      set({
+        loading: false,
+        error: errorMessage,
+      });
+
+      useUIStore.getState().showNotification(errorMessage, 'error');
+
+      return { success: false, error: errorMessage };
+    }
+  },
+
+  updateEmploymentStatus: async (id, request) => {
+    set({ loading: true, error: null });
+    try {
       const response = await fetch(`/api/employees/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status, reason }),
+        body: JSON.stringify(request),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update employment status');
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update employment status');
       }
 
-      useUIStore.getState().showNotification({
-        type: 'success',
-        title: 'Success',
-        message: 'Employment status updated successfully',
-      });
+      const updatedEmployee = result.data;
 
-      // Refresh the employee list
-      await get().fetchEmployees();
+      // Optimistically update the employee in the list
+      set((state) => ({
+        employees: state.employees.map((emp) =>
+          emp.id === id ? updatedEmployee : emp
+        ),
+        selectedEmployee: state.selectedEmployee?.id === id ? updatedEmployee : state.selectedEmployee,
+        loading: false,
+        error: null,
+      }));
+
+      useUIStore.getState().showNotification('Employment status updated successfully', 'success');
 
       return { success: true };
     } catch (error) {
-      console.error('Error updating employment status:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update employment status';
+      console.error('Error updating employment status:', error);
 
-      useUIStore.getState().showNotification({
-        type: 'error',
-        title: 'Error',
-        message: errorMessage,
+      set({
+        loading: false,
+        error: errorMessage,
       });
+
+      useUIStore.getState().showNotification(errorMessage, 'error');
 
       return { success: false, error: errorMessage };
     }
@@ -214,12 +340,33 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     }));
   },
 
+  setPagination: (page, itemsPerPage) => {
+    set((state) => ({
+      pagination: {
+        ...state.pagination,
+        currentPage: page,
+        itemsPerPage: itemsPerPage || state.pagination.itemsPerPage,
+      },
+    }));
+  },
+
   clearFilters: () => {
     set({
       filters: {
         search: '',
-        status: '',
+        status: 'all',
+        primaryRegion: undefined,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
       },
     });
+  },
+
+  clearError: () => {
+    set({ error: null });
+  },
+
+  refetch: async () => {
+    await get().fetchEmployees();
   },
 }));

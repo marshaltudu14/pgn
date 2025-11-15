@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -44,7 +44,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Employee, EmploymentStatus, EmployeeListParams } from '@pgn/shared';
+import { Employee, EmploymentStatus } from '@pgn/shared';
+import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import { Search, Filter, Plus, Edit, Trash2, Eye, UserCheck } from 'lucide-react';
 
 interface EmployeeListProps {
@@ -72,109 +73,62 @@ export function EmployeeList({
   onEmployeeStatusChange,
   onEmployeeCreate,
 }: EmployeeListProps) {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<EmploymentStatus | 'all'>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  const {
+    employees,
+    loading,
+    error,
+    pagination,
+    filters,
+    fetchEmployees,
+    deleteEmployee,
+    updateEmploymentStatus,
+    setFilters,
+    setPagination,
+    clearError,
+  } = useEmployeeStore();
+
   const [deleteConfirmEmployee, setDeleteConfirmEmployee] = useState<Employee | null>(null);
   const [statusChangeEmployee, setStatusChangeEmployee] = useState<Employee | null>(null);
-
-  const fetchEmployees = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params: EmployeeListParams = {
-        page: currentPage,
-        limit: 20,
-        search: searchTerm || undefined,
-        employment_status: selectedStatus !== 'all' ? [selectedStatus] : undefined,
-        sort_by: 'created_at',
-        sort_order: 'desc',
-      };
-
-      const response = await fetch('/api/employees?' + new URLSearchParams({
-        page: params.page?.toString() || '1',
-        limit: params.limit?.toString() || '20',
-        ...(params.search && { search: params.search }),
-        ...(params.employment_status && { employment_status: params.employment_status.join(',') }),
-        sort_by: params.sort_by || 'created_at',
-        sort_order: params.sort_order || 'desc',
-      }));
-
-      const result = await response.json();
-
-      if (result.success) {
-        setEmployees(result.data.employees);
-        setTotalPages(Math.ceil(result.data.total / result.data.limit));
-        setTotalCount(result.data.total);
-        setError(null);
-      } else {
-        setError(result.error || 'Failed to fetch employees');
-      }
-    } catch (err) {
-      setError('An error occurred while fetching employees');
-      console.error('Error fetching employees:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, searchTerm, selectedStatus]);
+  const [tempStatusForDialog, setTempStatusForDialog] = useState<EmploymentStatus>('ACTIVE');
 
   useEffect(() => {
     fetchEmployees();
-  }, [currentPage, searchTerm, selectedStatus, fetchEmployees]);
+  }, [fetchEmployees]);
+
+  const handleSearchChange = (value: string) => {
+    setFilters({ search: value });
+    setPagination(1); // Reset to first page
+  };
+
+  const handleStatusChange = (value: EmploymentStatus | 'all') => {
+    setFilters({ status: value });
+    setPagination(1); // Reset to first page
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPagination(1, size); // Reset to first page with new page size
+  };
 
   const handleDeleteEmployee = async (employee: Employee) => {
-    try {
-      const response = await fetch(`/api/employees/${employee.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setDeleteConfirmEmployee(null);
-        await fetchEmployees();
-        onEmployeeDelete?.(employee);
-      } else {
-        setError(result.error || 'Failed to delete employee');
-      }
-    } catch (err) {
-      setError('An error occurred while deleting employee');
-      console.error('Error deleting employee:', err);
+    const result = await deleteEmployee(employee.id);
+    if (result.success) {
+      setDeleteConfirmEmployee(null);
+      onEmployeeDelete?.(employee);
     }
   };
 
-  const handleStatusChange = async (employee: Employee, newStatus: EmploymentStatus) => {
-    try {
-      const response = await fetch(`/api/employees/${employee.id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          employmentStatus: newStatus,
-          changed_by: 'admin', // Would come from auth context
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setStatusChangeEmployee(null);
-        await fetchEmployees();
-        onEmployeeStatusChange?.(employee, newStatus);
-      } else {
-        setError(result.error || 'Failed to update employment status');
-      }
-    } catch (err) {
-      setError('An error occurred while updating employment status');
-      console.error('Error updating employment status:', err);
+  const handleStatusChangeSubmit = async (employee: Employee, newStatus: EmploymentStatus) => {
+    const result = await updateEmploymentStatus(employee.id, {
+      employment_status: newStatus,
+      changed_by: 'admin', // Would come from auth context
+    });
+    if (result.success) {
+      setStatusChangeEmployee(null);
+      onEmployeeStatusChange?.(employee, newStatus);
     }
   };
 
@@ -219,7 +173,7 @@ export function EmployeeList({
         <div>
           <h2 className="text-2xl font-bold">Employees</h2>
           <p className="text-muted-foreground">
-            {totalCount} employee{totalCount !== 1 ? 's' : ''} found
+            {pagination.totalItems} employee{pagination.totalItems !== 1 ? 's' : ''} found
           </p>
         </div>
         <Button onClick={onEmployeeCreate}>
@@ -229,8 +183,11 @@ export function EmployeeList({
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex justify-between items-center">
           <p className="text-red-800">{error}</p>
+          <Button variant="outline" size="sm" onClick={clearError}>
+            Dismiss
+          </Button>
         </div>
       )}
 
@@ -241,12 +198,12 @@ export function EmployeeList({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search employees..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={filters.search}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={selectedStatus} onValueChange={(value) => setSelectedStatus(value as EmploymentStatus | 'all')}>
+            <Select value={filters.status} onValueChange={(value) => handleStatusChange(value as EmploymentStatus | 'all')}>
               <SelectTrigger className="w-full sm:w-48">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filter by status" />
@@ -342,10 +299,8 @@ export function EmployeeList({
                             </DialogHeader>
                             <div className="space-y-4">
                               <Select
-                                value={statusChangeEmployee?.employmentStatus}
-                                onValueChange={(value) =>
-                                  setStatusChangeEmployee(prev => prev ? {...prev, employmentStatus: value as EmploymentStatus} : null)
-                                }
+                                value={tempStatusForDialog}
+                                onValueChange={(value) => setTempStatusForDialog(value as EmploymentStatus)}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select new status" />
@@ -365,12 +320,15 @@ export function EmployeeList({
                               <div className="flex gap-2">
                                 <Button
                                   variant="outline"
-                                  onClick={() => setStatusChangeEmployee(null)}
+                                  onClick={() => {
+                                    setStatusChangeEmployee(null);
+                                    setTempStatusForDialog('ACTIVE');
+                                  }}
                                 >
                                   Cancel
                                 </Button>
                                 <Button
-                                  onClick={() => statusChangeEmployee && handleStatusChange(employee, statusChangeEmployee.employmentStatus)}
+                                  onClick={() => handleStatusChangeSubmit(employee, tempStatusForDialog)}
                                 >
                                   Update Status
                                 </Button>
@@ -419,25 +377,44 @@ export function EmployeeList({
             </Table>
           </div>
 
-          {totalPages > 1 && (
+          {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-gray-600">
-                Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalCount)} of {totalCount} results
+              <div className="flex items-center space-x-4">
+                <div className="text-sm text-gray-600">
+                  Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
+                </div>
+                <Select
+                  value={pagination.itemsPerPage.toString()}
+                  onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  disabled={pagination.currentPage === 1}
                 >
                   Previous
                 </Button>
+                <span className="flex items-center px-3 text-sm text-gray-600">
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  disabled={pagination.currentPage === pagination.totalPages}
                 >
                   Next
                 </Button>

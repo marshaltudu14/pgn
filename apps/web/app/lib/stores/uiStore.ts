@@ -1,13 +1,10 @@
 import { create } from 'zustand';
-import { Notification } from '@pgn/shared';
+import { toast } from 'sonner';
 
 interface UIState {
-  notifications: Notification[];
   loading: Record<string, boolean>;
 
-  showNotification: (notification: Omit<Notification, 'id'>) => void;
-  removeNotification: (id: string) => void;
-  clearAllNotifications: () => void;
+  showNotification: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
 
   setLoading: (key: string, isLoading: boolean) => void;
   getLoading: (key: string) => boolean;
@@ -15,37 +12,24 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
-  notifications: [],
   loading: {},
 
-  showNotification: (notification) => {
-    const id = Date.now().toString();
-    const newNotification = {
-      ...notification,
-      id,
-      duration: notification.duration || 5000,
-    };
-
-    set((state) => ({
-      notifications: [...state.notifications, newNotification],
-    }));
-
-    // Auto-remove notification after duration
-    if (newNotification.duration && newNotification.duration > 0) {
-      setTimeout(() => {
-        get().removeNotification(id);
-      }, newNotification.duration);
+  showNotification: (message, type = 'info') => {
+    switch (type) {
+      case 'success':
+        toast.success(message);
+        break;
+      case 'error':
+        toast.error(message);
+        break;
+      case 'warning':
+        toast.warning(message);
+        break;
+      case 'info':
+      default:
+        toast.info(message);
+        break;
     }
-  },
-
-  removeNotification: (id) => {
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-    }));
-  },
-
-  clearAllNotifications: () => {
-    set({ notifications: [] });
   },
 
   setLoading: (key, isLoading) => {

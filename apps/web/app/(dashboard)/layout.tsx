@@ -3,7 +3,6 @@
 import React from 'react';
 import { useAuthStore } from '@/app/lib/stores/authStore';
 import ErrorBoundary from './dashboard/components/ui/error-boundary';
-import Notifications from './dashboard/components/ui/notifications';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
@@ -145,7 +144,6 @@ export default function DashboardLayout({
           </main>
         </SidebarInset>
       </ErrorBoundary>
-      <Notifications />
     </SidebarProvider>
   );
 }

@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Employee, EmploymentStatus } from '@pgn/shared';
+import { Employee } from '@pgn/shared';
 import { EmployeeList } from '@/components/employee-list';
 import { EmployeeQuickView } from '@/components/employee-quick-view';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -32,11 +32,7 @@ export default function EmployeeListClient() {
     router.push('/dashboard/employees/form?mode=create');
   };
 
-  const handleEmployeeStatusChange = (employee: Employee, status: EmploymentStatus) => {
-    // Status change is handled in the employee list component
-    console.log('Employee status changed:', employee, status);
-  };
-
+  
   const handleQuickViewEdit = (employee: Employee) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
@@ -60,7 +56,6 @@ export default function EmployeeListClient() {
       <EmployeeList
         onEmployeeSelect={handleEmployeeSelect}
         onEmployeeEdit={handleEmployeeEdit}
-        onEmployeeStatusChange={handleEmployeeStatusChange}
         onEmployeeCreate={handleEmployeeCreate}
       />
 

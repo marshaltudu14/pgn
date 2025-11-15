@@ -1,11 +1,12 @@
 /**
  * Employee List Component
  * Displays a searchable, filterable, and paginated list of employees
+ * Responsive design: table for desktop/tablet, mobile list for mobile
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -25,22 +26,13 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Employee, EmploymentStatus } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
-import { Search, Filter, Plus, Edit, Eye, UserCheck } from 'lucide-react';
+import { Search, Filter, Plus, Edit, Eye } from 'lucide-react';
 
 interface EmployeeListProps {
   onEmployeeSelect?: (employee: Employee) => void;
   onEmployeeEdit?: (employee: Employee) => void;
-  onEmployeeStatusChange?: (employee: Employee, status: EmploymentStatus) => void;
   onEmployeeCreate?: () => void;
 }
 
@@ -57,7 +49,6 @@ const EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNE
 export function EmployeeList({
   onEmployeeSelect,
   onEmployeeEdit,
-  onEmployeeStatusChange,
   onEmployeeCreate,
 }: EmployeeListProps) {
   const {
@@ -67,14 +58,10 @@ export function EmployeeList({
     pagination,
     filters,
     fetchEmployees,
-    updateEmploymentStatus,
     setFilters,
     setPagination,
     clearError,
   } = useEmployeeStore();
-
-  const [statusChangeEmployee, setStatusChangeEmployee] = useState<Employee | null>(null);
-  const [tempStatusForDialog, setTempStatusForDialog] = useState<EmploymentStatus>('ACTIVE');
 
   useEffect(() => {
     fetchEmployees();
@@ -98,18 +85,6 @@ export function EmployeeList({
     setPagination(1, size); // Reset to first page with new page size
   };
 
-  
-  const handleStatusChangeSubmit = async (employee: Employee, newStatus: EmploymentStatus) => {
-    const result = await updateEmploymentStatus(employee.id, {
-      employment_status: newStatus,
-      changed_by: 'admin', // Would come from auth context
-    });
-    if (result.success) {
-      setStatusChangeEmployee(null);
-      onEmployeeStatusChange?.(employee, newStatus);
-    }
-  };
-
   if (loading && employees.length === 0) {
     return (
       <div className="space-y-4">
@@ -120,13 +95,13 @@ export function EmployeeList({
             Add Employee
           </Button>
         </div>
-        <div className="bg-white dark:bg-black border rounded-lg">
-          <div className="p-6 border-b">
-            <div className="flex gap-4">
-              <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-10 w-40" />
-            </div>
+        <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+          <div className="flex gap-4">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-10 w-40" />
           </div>
+        </div>
+        <div className="hidden lg:block bg-white dark:bg-black">
           <div className="p-6">
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
@@ -139,6 +114,23 @@ export function EmployeeList({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+        <div className="lg:hidden">
+          <div className="divide-y divide-border">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="p-4 bg-white dark:bg-black">
+                <div className="flex gap-4 mb-3">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -161,44 +153,47 @@ export function EmployeeList({
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex justify-between items-center">
-          <p className="text-red-800">{error}</p>
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-4 flex justify-between items-center">
+          <p className="text-red-800 dark:text-red-200">{error}</p>
           <Button variant="outline" size="sm" onClick={clearError}>
             Dismiss
           </Button>
         </div>
       )}
 
-      <div className="bg-white dark:bg-black border rounded-lg">
-        <div className="p-6 border-b">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search employees..."
-                value={filters.search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={filters.status} onValueChange={(value) => handleStatusChange(value as EmploymentStatus | 'all')}>
-              <SelectTrigger className="w-full sm:w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {EMPLOYMENT_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status.replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Search and Filter Section */}
+      <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search employees..."
+              value={filters.search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10"
+            />
           </div>
+          <Select value={filters.status} onValueChange={(value) => handleStatusChange(value as EmploymentStatus | 'all')}>
+            <SelectTrigger className="w-full sm:w-48">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {EMPLOYMENT_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status.replace('_', ' ')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      {/* Desktop/Tablet View - Table */}
+      <div className="hidden lg:block bg-white dark:bg-black">
         <div className="p-6">
-          <div className="rounded-md border w-full overflow-x-auto">
+          <div className="w-full overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -244,6 +239,7 @@ export function EmployeeList({
                           variant="outline"
                           size="sm"
                           onClick={() => onEmployeeSelect?.(employee)}
+                          className="cursor-pointer"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -251,69 +247,10 @@ export function EmployeeList({
                           variant="outline"
                           size="sm"
                           onClick={() => onEmployeeEdit?.(employee)}
+                          className="cursor-pointer"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-
-                        <Dialog
-                          open={!!statusChangeEmployee}
-                          onOpenChange={() => setStatusChangeEmployee(null)}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setStatusChangeEmployee(employee)}
-                            >
-                              <UserCheck className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Change Employment Status</DialogTitle>
-                              <DialogDescription>
-                                Change the employment status for {employee.first_name} {employee.last_name}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4">
-                              <Select
-                                value={tempStatusForDialog}
-                                onValueChange={(value) => setTempStatusForDialog(value as EmploymentStatus)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select new status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {EMPLOYMENT_STATUSES.map((status) => (
-                                    <SelectItem key={status} value={status}>
-                                      <div className="flex items-center gap-2">
-                                        <Badge className={EMPLOYMENT_STATUS_COLORS[status]} variant="outline">
-                                          {status.replace('_', ' ')}
-                                        </Badge>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setStatusChangeEmployee(null);
-                                    setTempStatusForDialog('ACTIVE');
-                                  }}
-                                >
-                                  Cancel
-                                </Button>
-                                <Button
-                                  onClick={() => handleStatusChangeSubmit(employee, tempStatusForDialog)}
-                                >
-                                  Update Status
-                                </Button>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -321,53 +258,119 @@ export function EmployeeList({
               </TableBody>
             </Table>
           </div>
-
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-600">
-                  Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
-                </div>
-                <Select
-                  value={pagination.itemsPerPage.toString()}
-                  onValueChange={(value) => handlePageSizeChange(parseInt(value))}
-                >
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.currentPage - 1)}
-                  disabled={pagination.currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <span className="flex items-center px-3 text-sm text-gray-600">
-                  Page {pagination.currentPage} of {pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(pagination.currentPage + 1)}
-                  disabled={pagination.currentPage === pagination.totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Mobile View - App-style List (No container, no padding, no borders) */}
+      <div className="lg:hidden">
+        <div className="divide-y divide-border">
+          {employees.map((employee) => (
+            <div key={employee.id} className="p-4 bg-white dark:bg-black">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    {employee.first_name} {employee.last_name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {employee.human_readable_user_id}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEmployeeSelect?.(employee)}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEmployeeEdit?.(employee)}
+                    className="cursor-pointer hover:bg-muted/50"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Status:</span>
+                  <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]}>
+                    {employee.employment_status.replace('_', ' ')}
+                  </Badge>
+                </div>
+
+                <div className="text-sm">
+                  <span className="font-medium">Email:</span> {employee.email}
+                </div>
+
+                {employee.phone && (
+                  <div className="text-sm">
+                    <span className="font-medium">Phone:</span> {employee.phone}
+                  </div>
+                )}
+
+                {employee.primary_region && (
+                  <div className="text-sm">
+                    <span className="font-medium">Region:</span> {employee.primary_region}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pagination - visible on all screen sizes */}
+      {pagination.totalPages > 1 && (
+        <div className="p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
+              </div>
+              <Select
+                value={pagination.itemsPerPage.toString()}
+                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage - 1)}
+                disabled={pagination.currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="flex items-center px-3 text-sm text-gray-600 dark:text-gray-400">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(pagination.currentPage + 1)}
+                disabled={pagination.currentPage === pagination.totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

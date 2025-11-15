@@ -35,7 +35,7 @@ function BreadcrumbLink({
   asChild,
   className,
   ...props
-}: React.ComponentProps<"a"> & {
+}: Omit<React.ComponentProps<"a">, "style" | "ref"> & {
   asChild?: boolean
 }) {
   const Comp = asChild ? Slot : "a"
@@ -44,7 +44,7 @@ function BreadcrumbLink({
     <Comp
       data-slot="breadcrumb-link"
       className={cn("hover:text-foreground transition-colors", className)}
-      {...props}
+      {...(props as Omit<React.ComponentProps<"a">, "style" | "ref">)}
     />
   )
 }

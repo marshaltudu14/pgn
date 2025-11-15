@@ -53,7 +53,7 @@ const STATUS_ICON_MAP = {
 export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: EmployeeQuickViewProps) {
   if (!employee) return null;
 
-  const StatusIcon = STATUS_ICON_MAP[employee.employmentStatus] || Users;
+  const StatusIcon = STATUS_ICON_MAP[employee.employment_status as EmploymentStatus] || Users;
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -73,15 +73,15 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
             </div>
             <div>
               <DialogTitle className="text-xl font-semibold">
-                {employee.firstName} {employee.lastName}
+                {employee.first_name} {employee.last_name}
               </DialogTitle>
               <p className="text-sm text-muted-foreground">
-                {employee.humanReadableUserId}
+                {employee.human_readable_user_id}
               </p>
             </div>
           </div>
-          <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employmentStatus]}>
-            {employee.employmentStatus.replace('_', ' ')}
+          <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]}>
+            {employee.employment_status.replace('_', ' ')}
           </Badge>
         </DialogHeader>
 
@@ -119,7 +119,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                 <span className="text-sm text-muted-foreground">Created</span>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{formatDate(employee.createdAt)}</span>
+                  <span className="text-sm font-medium">{formatDate(employee.created_at!)}</span>
                 </div>
               </div>
 
@@ -127,7 +127,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                 <span className="text-sm text-muted-foreground">Last Updated</span>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">{formatDate(employee.updatedAt)}</span>
+                  <span className="text-sm font-medium">{formatDate(employee.updated_at!)}</span>
                 </div>
               </div>
             </CardContent>
@@ -144,52 +144,52 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
-                <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employmentStatus]} variant="outline">
-                  {employee.employmentStatus.replace('_', ' ')}
+                <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]} variant="outline">
+                  {employee.employment_status.replace('_', ' ')}
                 </Badge>
               </div>
 
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Login Access</span>
                 <div className="flex items-center gap-2">
-                  {employee.canLogin ? (
+                  {employee.can_login ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   ) : (
                     <XCircle className="h-4 w-4 text-red-600" />
                   )}
                   <span className="text-sm font-medium">
-                    {employee.canLogin ? 'Enabled' : 'Disabled'}
+                    {employee.can_login ? 'Enabled' : 'Disabled'}
                   </span>
                 </div>
               </div>
 
               <Separator />
 
-              {employee.primaryRegion && (
+              {employee.primary_region && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Primary Region</span>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{employee.primaryRegion}</span>
+                    <span className="text-sm font-medium">{employee.primary_region}</span>
                   </div>
                 </div>
               )}
 
-              {employee.regionCode && (
+              {employee.region_code && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Region Code</span>
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{employee.regionCode}</span>
+                    <span className="text-sm font-medium">{employee.region_code}</span>
                   </div>
                 </div>
               )}
 
-              {employee.assignedRegions && employee.assignedRegions.length > 0 && (
+              {employee.assigned_regions && employee.assigned_regions.length > 0 && (
                 <div className="space-y-2">
                   <span className="text-sm text-muted-foreground">Assigned Regions</span>
                   <div className="flex flex-wrap gap-1">
-                    {employee.assignedRegions.map((region, index) => (
+                    {employee.assigned_regions.map((region: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {region}
                       </Badge>
@@ -202,7 +202,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
         </div>
 
         {/* Status Information */}
-        {(employee.employmentStatusChangedAt || employee.employmentStatusChangedBy) && (
+        {(employee.employment_status_changed_at || employee.employment_status_changed_by) && (
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -211,22 +211,22 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {employee.employmentStatusChangedAt && (
+              {employee.employment_status_changed_at && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Status Changed On</span>
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">
-                      {formatDate(employee.employmentStatusChangedAt)}
+                      {formatDate(employee.employment_status_changed_at)}
                     </span>
                   </div>
                 </div>
               )}
 
-              {employee.employmentStatusChangedBy && (
+              {employee.employment_status_changed_by && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Changed By</span>
-                  <span className="text-sm font-medium">{employee.employmentStatusChangedBy}</span>
+                  <span className="text-sm font-medium">{employee.employment_status_changed_by}</span>
                 </div>
               )}
             </CardContent>

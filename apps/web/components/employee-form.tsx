@@ -104,15 +104,15 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
   useEffect(() => {
     if (employee && open) {
       form.reset({
-        first_name: employee.firstName,
-        last_name: employee.lastName,
+        first_name: employee.first_name,
+        last_name: employee.last_name,
         email: employee.email,
         phone: employee.phone || '',
-        employment_status: employee.employmentStatus,
-        can_login: employee.canLogin,
-        primary_region: employee.primaryRegion || '',
-        region_code: employee.regionCode || '',
-        assigned_regions: employee.assignedRegions || [],
+        employment_status: employee.employment_status as EmploymentStatus,
+        can_login: employee.can_login ?? true,
+        primary_region: employee.primary_region || '',
+        region_code: employee.region_code || '',
+        assigned_regions: employee.assigned_regions || [],
         password: '', // Don't pre-fill password
       });
     } else if (!employee && open) {
@@ -359,7 +359,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border-l-4 border-gray-300 dark:border-gray-600">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">User ID:</span> {isEditing ? employee?.humanReadableUserId : 'Will be generated automatically'}
+                  <span className="font-medium">User ID:</span> {isEditing ? employee?.human_readable_user_id : 'Will be generated automatically'}
                 </p>
               </div>
             </div>

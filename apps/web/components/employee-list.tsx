@@ -215,12 +215,12 @@ export function EmployeeList({
                 {employees.map((employee) => (
                   <TableRow key={employee.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
-                      {employee.humanReadableUserId}
+                      {employee.human_readable_user_id}
                     </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {employee.firstName} {employee.lastName}
+                          {employee.first_name} {employee.last_name}
                         </div>
                       </div>
                     </TableCell>
@@ -231,12 +231,12 @@ export function EmployeeList({
                       <div className="text-sm">{employee.phone || '-'}</div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employmentStatus]}>
-                        {employee.employmentStatus.replace('_', ' ')}
+                      <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]}>
+                        {employee.employment_status.replace('_', ' ')}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{employee.primaryRegion || '-'}</div>
+                      <div className="text-sm">{employee.primary_region || '-'}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -272,7 +272,7 @@ export function EmployeeList({
                             <DialogHeader>
                               <DialogTitle>Change Employment Status</DialogTitle>
                               <DialogDescription>
-                                Change the employment status for {employee.firstName} {employee.lastName}
+                                Change the employment status for {employee.first_name} {employee.last_name}
                               </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4">

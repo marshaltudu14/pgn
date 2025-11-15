@@ -66,7 +66,7 @@ export default function EmployeeFormClient() {
 
   const pageTitle = isEditMode ? 'Edit Employee' : 'Create New Employee';
   const pageDescription = isEditMode
-    ? `Update information for ${employee?.firstName} ${employee?.lastName}`
+    ? `Update information for ${employee?.first_name} ${employee?.last_name}`
     : 'Fill in the details to create a new employee account';
 
   if (isLoading) {
@@ -209,12 +209,12 @@ export default function EmployeeFormClient() {
             <div className="flex items-center space-x-4">
               <div>
                 <p className="text-sm font-medium">Employee ID</p>
-                <p className="text-lg">{employee.humanReadableUserId}</p>
+                <p className="text-lg">{employee.human_readable_user_id}</p>
               </div>
               <div className="h-8 w-px bg-border"></div>
               <div>
                 <p className="text-sm font-medium">Status</p>
-                <p className="text-lg">{employee.employmentStatus.replace('_', ' ')}</p>
+                <p className="text-lg">{employee.employment_status.replace('_', ' ')}</p>
               </div>
             </div>
           </div>

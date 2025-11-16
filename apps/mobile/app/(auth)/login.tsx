@@ -2,15 +2,15 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LoginRequest } from '@pgn/shared';
 import LoginForm from '@/components/LoginForm';
 
@@ -46,63 +46,59 @@ export default function LoginScreen() {
     }
   };
 
+  const colorScheme = useColorScheme();
+
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-white"
+      className="flex-1 bg-background"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent
+      />
+
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1 justify-center px-6 py-8">
-          {/* Logo and Header */}
-          <View className="items-center mb-8">
-            <View className="w-24 h-24 rounded-full items-center justify-center mb-4 overflow-hidden">
+        <View className="flex-1 px-6 py-8 justify-center">
+          {/* Logo Section */}
+          <View className="items-center mb-12">
+            <View className="w-28 h-28 rounded-3xl items-center justify-center mb-6 overflow-hidden shadow-2xl bg-card border-2 border-primary/20">
               <Image
                 source={require('@/images/pgn-logo.jpg')}
-                className="w-24 h-24 rounded-full"
+                className="w-24 h-24 rounded-2xl"
                 resizeMode="cover"
               />
             </View>
-            <Text className="text-2xl font-bold text-gray-900 text-center">
+            <Text className="text-4xl font-bold text-foreground text-center mb-2">
               Welcome Back
             </Text>
-            <Text className="text-gray-600 text-center mt-2">
-              Sign in to your account to continue
+            <Text className="text-muted-foreground text-center text-lg leading-6">
+              Sign in to access your account and continue your work
             </Text>
           </View>
 
-          {/* Login Form */}
-          <LoginForm
-            onSubmit={handleLogin}
-            isLoading={isLoading}
-            error={error}
-          />
-
-          {/* Forgot Password Link */}
-          <View className="items-center mt-6">
-            <TouchableOpacity
-              onPress={() => {
-                // Placeholder for forgot password functionality
-                Alert.alert(
-                  'Forgot Password',
-                  'Please contact your administrator to reset your password.',
-                  [{ text: 'OK' }]
-                );
-              }}
-            >
-              <Text className="text-blue-600 text-sm font-medium">
-                Forgot your password?
-              </Text>
-            </TouchableOpacity>
+          {/* Login Form Card */}
+          <View className="card-surface p-8 mb-6 shadow-2xl">
+            <LoginForm
+              onSubmit={handleLogin}
+              isLoading={isLoading}
+              error={error}
+            />
           </View>
 
           {/* Version Info */}
-          <View className="items-center mt-auto pt-8">
-            <Text className="text-gray-400 text-xs">
+          <View className="items-center mt-8">
+            <Text className="text-muted-foreground/60 text-sm font-medium">
               PGN Mobile v1.0.0
+            </Text>
+            <Text className="text-muted-foreground/40 text-xs mt-1">
+              Enterprise Attendance System
             </Text>
           </View>
         </View>

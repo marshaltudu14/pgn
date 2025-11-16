@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { LoginRequest } from '@pgn/shared';
 import { showToast } from '@/utils/toast';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginRequest) => void;
@@ -16,6 +18,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps) {
+  const colorScheme = useColorScheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -74,49 +77,61 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
   };
 
   return (
-    <View className="w-full max-w-sm">
+    <View className="w-full space-y-6">
       {/* Email Input */}
-      <View className="mb-4">
-        <Text className="text-gray-700 text-sm font-medium mb-2">
+      <View className="space-y-2">
+        <Text className="text-foreground font-semibold text-base ml-1">
           Email Address
         </Text>
-        <TextInput
-          className={`w-full px-4 py-3 border rounded-lg text-gray-900 ${
-            emailError
-              ? 'border-red-500 bg-red-50'
-              : 'border-gray-300 bg-gray-50'
-          } focus:border-blue-500 focus:bg-white`}
-          placeholder="Enter your email"
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            if (emailError) setEmailError('');
-          }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!isLoading}
-          accessibilityLabel="Email address"
-          accessibilityHint="Enter your company email address"
-        />
+        <View className="relative">
+          <View className="absolute left-4 top-4 z-10">
+            <Mail size={20} color="#9CA3AF" />
+          </View>
+          <TextInput
+            className={`input-field pl-12 pr-4 ${
+              emailError
+                ? 'border-red-500 bg-red-50/10 dark:bg-red-900/10'
+                : 'border-border bg-input'
+            } focus:border-primary focus:ring-2 focus:ring-primary/20`}
+            placeholder="Enter your email address"
+            placeholderTextColor="#9CA3AF"
+            value={email}
+            onChangeText={(text) => {
+              setEmail(text);
+              if (emailError) setEmailError('');
+            }}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!isLoading}
+            accessibilityLabel="Email address"
+            accessibilityHint="Enter your company email address"
+          />
+        </View>
         {emailError ? (
-          <Text className="text-red-500 text-xs mt-1">{emailError}</Text>
+          <View className="flex-row items-center mt-2 ml-1">
+            <Text className="text-red-500 text-sm font-medium">{emailError}</Text>
+          </View>
         ) : null}
       </View>
 
       {/* Password Input */}
-      <View className="mb-6">
-        <Text className="text-gray-700 text-sm font-medium mb-2">
+      <View className="space-y-2">
+        <Text className="text-foreground font-semibold text-base ml-1">
           Password
         </Text>
         <View className="relative">
+          <View className="absolute left-4 top-4 z-10">
+            <Lock size={20} color="#9CA3AF" />
+          </View>
           <TextInput
-            className={`w-full px-4 py-3 pr-12 border rounded-lg text-gray-900 ${
+            className={`input-field pl-12 pr-12 ${
               passwordError
-                ? 'border-red-500 bg-red-50'
-                : 'border-gray-300 bg-gray-50'
-            } focus:border-blue-500 focus:bg-white`}
+                ? 'border-red-500 bg-red-50/10 dark:bg-red-900/10'
+                : 'border-border bg-input'
+            } focus:border-primary focus:ring-2 focus:ring-primary/20`}
             placeholder="Enter your password"
+            placeholderTextColor="#9CA3AF"
             value={password}
             onChangeText={(text) => {
               setPassword(text);
@@ -130,35 +145,39 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
             accessibilityHint="Enter your password"
           />
           <TouchableOpacity
-            className="absolute right-3 top-3.5 p-1"
+            className="absolute right-4 top-4 p-1"
             onPress={() => setShowPassword(!showPassword)}
             disabled={isLoading}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
-            <Text className="text-gray-500 text-sm">
-              {showPassword ? '👁️' : '👁️‍🗨️'}
-            </Text>
+            {showPassword ? (
+              <EyeOff size={20} color="#9CA3AF" />
+            ) : (
+              <Eye size={20} color="#9CA3AF" />
+            )}
           </TouchableOpacity>
         </View>
         {passwordError ? (
-          <Text className="text-red-500 text-xs mt-1">{passwordError}</Text>
+          <View className="flex-row items-center mt-2 ml-1">
+            <Text className="text-red-500 text-sm font-medium">{passwordError}</Text>
+          </View>
         ) : null}
       </View>
 
       {/* Error Message */}
       {error ? (
-        <View className="mb-4 p-3 bg-red-100 border border-red-400 rounded-lg">
-          <Text className="text-red-700 text-sm">{error}</Text>
+        <View className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+          <Text className="text-red-700 dark:text-red-400 text-sm font-medium">{error}</Text>
         </View>
       ) : null}
 
       {/* Login Button */}
       <TouchableOpacity
-        className={`w-full py-3 px-4 rounded-lg flex flex-row items-center justify-center ${
-          isLoading
-            ? 'bg-blue-400'
-            : 'bg-blue-600 hover:bg-blue-700'
-        }`}
+        className={`primary-button ${
+          isLoading || !email.trim() || !password.trim()
+            ? 'opacity-50'
+            : 'opacity-100 active:scale-[0.98]'
+        } transition-all duration-200`}
         onPress={handleSubmit}
         disabled={isLoading || !email.trim() || !password.trim()}
         accessibilityLabel="Sign in"
@@ -166,37 +185,38 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
       >
         {isLoading ? (
           <>
-            <ActivityIndicator size="small" color="#ffffff" className="mr-2" />
-            <Text className="text-white font-medium">Signing in...</Text>
+            <ActivityIndicator size="small" color={colorScheme === 'dark' ? '#000000' : '#000000'} className="mr-3" />
+            <Text className="text-primary-foreground font-semibold text-base">Signing in...</Text>
           </>
         ) : (
-          <Text className="text-white font-medium text-center">Sign In</Text>
+          <Text className="text-primary-foreground font-semibold text-base">Sign In</Text>
         )}
       </TouchableOpacity>
 
       {/* Biometric Login Option */}
       {showBiometricLoginOption && (
-        <View className="mt-4 items-center">
-          <View className="flex-row items-center">
-            <View className="h-px bg-gray-300 flex-1" />
-            <Text className="px-4 text-gray-500 text-sm">or</Text>
-            <View className="h-px bg-gray-300 flex-1" />
+        <View className="items-center">
+          <View className="flex-row items-center py-2">
+            <View className="h-px bg-border flex-1" />
+            <Text className="px-4 text-muted-foreground text-sm font-medium">or</Text>
+            <View className="h-px bg-border flex-1" />
           </View>
 
           <TouchableOpacity
-            className="mt-4 px-6 py-3 border border-gray-300 rounded-lg flex flex-row items-center justify-center"
+            className="secondary-button active:scale-[0.98] transition-all duration-200"
             onPress={handleBiometricLogin}
             disabled={isLoading}
           >
-            <Text className="text-2xl mr-2">👆</Text>
-            <Text className="text-gray-700 font-medium">
+            <View className="w-8 h-8 rounded-full bg-primary/20 items-center justify-center mr-3">
+              <Lock size={18} color={colorScheme === 'dark' ? '#FFA726' : '#FFB74D'} />
+            </View>
+            <Text className="text-accent-foreground font-semibold text-base">
               Sign in with Biometrics
             </Text>
           </TouchableOpacity>
         </View>
       )}
-
-      </View>
+    </View>
   );
 }
 

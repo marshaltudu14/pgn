@@ -1,3 +1,63 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme Variables */
+:root {
+  --color-primary: #FFB74D; /* Saffron color for light theme */
+  --color-primary-foreground: #000000;
+  --color-background: #FFFFFF;
+  --color-foreground: #000000;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #000000;
+  --color-muted: #F5F5F5;
+  --color-muted-foreground: #666666;
+  --color-border: #E5E5E5;
+  --color-input: #E5E5E5;
+  --color-accent: #F5F5F5;
+  --color-accent-foreground: #000000;
+}
+
+.dark {
+  --color-primary: #FFA726; /* Saffron color for dark theme */
+  --color-primary-foreground: #000000;
+  --color-background: #121212;
+  --color-foreground: #FFFFFF;
+  --color-card: #1E1E1E;
+  --color-card-foreground: #FFFFFF;
+  --color-muted: #2A2A2A;
+  --color-muted-foreground: #AAAAAA;
+  --color-border: #333333;
+  --color-input: #2A2A2A;
+  --color-accent: #2A2A2A;
+  --color-accent-foreground: #FFFFFF;
+}
+
+/* Base Styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom Components */
+@layer components {
+  .primary-button {
+    @apply bg-primary text-primary-foreground font-semibold py-4 rounded-xl items-center justify-center shadow-lg;
+  }
+
+  .secondary-button {
+    @apply bg-accent text-accent-foreground font-semibold py-4 rounded-xl items-center justify-center border border-border;
+  }
+
+  .input-field {
+    @apply bg-input text-foreground border border-border rounded-xl px-4 py-4 text-base;
+  }
+
+  .card-surface {
+    @apply bg-card text-card-foreground rounded-2xl shadow-lg border border-border;
+  }
+}

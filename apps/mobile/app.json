@@ -1,17 +1,32 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "PGN Mobile",
+    "slug": "pgn-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "app",
+    "scheme": "pgnmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "linking": {
+      "prefixes": ["pgnmobile://"]
+    },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.pgn.mobile",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app uses location for attendance tracking and monitoring.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location for attendance tracking and monitoring.",
+        "NSCameraUsageDescription": "This app uses camera for face recognition attendance and profile photos.",
+        "NSPhotoLibraryUsageDescription": "This app uses photo library for profile photo selection.",
+        "NSMicrophoneUsageDescription": "This app uses microphone for camera functionality.",
+        "NSFaceIDUsageDescription": "This app uses Face ID for secure authentication."
+      }
     },
     "android": {
+      "package": "com.pgn.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -19,7 +34,21 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "pan",
+      "orientation": "portrait",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -31,6 +60,27 @@
         "expo-router",
         {
           "root": "./app"
+        }
+      ],
+      "expo-navigation-bar",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "This app uses location for attendance tracking and monitoring.",
+          "locationWhenInUsePermission": "This app uses location for attendance tracking and monitoring."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "This app uses photo library for profile photo selection.",
+          "cameraPermission": "This app uses camera for face recognition attendance and profile photos."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "This app uses camera for face recognition attendance and profile photos."
         }
       ],
       [

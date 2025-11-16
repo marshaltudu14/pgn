@@ -1,23 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { LoginRequest } from '@pgn/shared';
 import LoginForm from '@/components/LoginForm';
 
-const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();

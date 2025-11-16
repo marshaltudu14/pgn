@@ -11,7 +11,7 @@ import { showToast } from '@/utils/toast';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user, logout, biometricEnabled, canUseBiometricLogin } = useAuth();
+  const { user, logout, biometricEnabled } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -22,7 +22,7 @@ export default function DashboardScreen() {
         showToast.success('Logged out successfully');
       }
       // Navigation will be handled by auth guard
-    } catch (error) {
+    } catch {
       showToast.error('Failed to logout');
     }
   };

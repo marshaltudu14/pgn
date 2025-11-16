@@ -6,12 +6,10 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import {
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Briefcase,
@@ -22,14 +20,13 @@ import {
 import { showToast } from '@/utils/toast';
 
 export default function ProfileScreen() {
-  const router = useRouter();
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
     try {
       await logout();
       showToast.success('Logged out successfully');
-    } catch (error) {
+    } catch {
       showToast.error('Failed to logout');
     }
   };

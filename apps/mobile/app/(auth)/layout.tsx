@@ -4,7 +4,7 @@ import { useAuth } from '@/store/auth-store';
 import { AuthLoadingScreen } from '@/components/LoadingStates';
 
 export default function AuthLayout() {
-  const { isAuthenticated, isLoading, initializeAuth } = useAuth();
+  const { isLoading, initializeAuth } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {

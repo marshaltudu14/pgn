@@ -1,8 +1,6 @@
 'use client';
 
-import React from 'react';
 import { useAuthStore } from '@/app/lib/stores/authStore';
-import ErrorBoundary from './dashboard/components/ui/error-boundary';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
@@ -19,11 +17,13 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
-import { Home, Users, Calendar, Settings, LogOut, User } from 'lucide-react';
+import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
+import { Calendar, Home, LogOut, Settings, User, Users } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
-import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
+import React from 'react';
+import ErrorBoundary from './dashboard/components/ui/error-boundary';
 
 const navigationItems = [
   {
@@ -68,91 +68,93 @@ export default function DashboardLayout({
     <SidebarProvider>
       <ErrorBoundary>
         <SidebarSwipeWrapper>
-          <Sidebar className="bg-white dark:bg-black border-r border-border">
+          <Sidebar variant="inset" collapsible="icon">
             <SidebarHeader>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton size="lg" className="font-semibold">
-                  <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full">
-                    <Image
-                      src="/pgn-logo.jpg"
-                      alt="PGN System Logo"
-                      width={32}
-                      height={32}
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">PGN System</span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarHeader>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton size="lg" className="font-semibold">
+                    <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full">
+                      <Image
+                        src="/pgn-logo.jpg"
+                        alt="PGN System Logo"
+                        width={32}
+                        height={32}
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">PGN System</span>
+                    </div>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarHeader>
 
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {navigationItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname === item.url}
-                      >
-                        <Link href={item.url}>
-                          <item.icon />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navigationItems.map(item => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === item.url}
+                        >
+                          <Link href={item.url}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
 
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <User />
-                  <span>{user?.fullName || user?.email || 'User'}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={logout}>
-                  <LogOut />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
+            <SidebarFooter>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton>
+                    <User />
+                    <span>{user?.fullName || user?.email || 'User'}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={logout}>
+                    <LogOut />
+                    <span>Logout</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarFooter>
+          </Sidebar>
 
-        <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
-            <SidebarTrigger className="-ml-1" />
-            <div className="flex-1">
-              <h1 className="text-lg font-semibold text-foreground">
-                {navigationItems.find(item => item.url === pathname)?.title || 'Dashboard'}
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              <span className="text-sm font-medium text-foreground">
-                {user?.fullName || user?.email}
-              </span>
-            </div>
-          </header>
+          <SidebarInset className="md:rounded-xl md:shadow-sm md:ml-2 md:border md:border-sidebar-border">
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+              <SidebarTrigger className="-ml-1" />
+              <div className="flex-1">
+                <h1 className="text-lg font-semibold text-foreground">
+                  {navigationItems.find(item => item.url === pathname)?.title ||
+                    'Dashboard'}
+                </h1>
+              </div>
+              <div className="flex items-center gap-4">
+                <ThemeToggle />
+                <span className="text-sm font-medium text-foreground">
+                  {user?.fullName || user?.email}
+                </span>
+              </div>
+            </header>
 
-          <main className="flex-1 bg-white dark:bg-black p-6" suppressHydrationWarning>
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </main>
-        </SidebarInset>
+            <main
+              className="flex-1 bg-white dark:bg-black p-6"
+              suppressHydrationWarning
+            >
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
+          </SidebarInset>
         </SidebarSwipeWrapper>
       </ErrorBoundary>
     </SidebarProvider>

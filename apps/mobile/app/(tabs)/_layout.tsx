@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
@@ -10,12 +9,13 @@ import { Home, LayoutDashboard, User, MapPin } from 'lucide-react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const resolvedColorScheme = colorScheme === 'unspecified' ? 'light' : colorScheme ?? 'light';
 
   return (
     <AuthGuard requireAuth={true}>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+          tabBarActiveTintColor: Colors[resolvedColorScheme].tint,
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarStyle: {

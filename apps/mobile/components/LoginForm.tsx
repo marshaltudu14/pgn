@@ -64,14 +64,7 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
     }
   };
 
-  const handleForgotPassword = () => {
-    showToast.info(
-      'Forgot Password',
-      'Please contact your administrator to reset your password.',
-      4000
-    );
-  };
-
+  
   const handleBiometricLogin = () => {
     showToast.info(
       'Biometric Login',

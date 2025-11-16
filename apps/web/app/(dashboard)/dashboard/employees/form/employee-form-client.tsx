@@ -7,7 +7,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink,BreadcrumbList, BreadcrumbPa
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import Link from 'next/link';
 import { Employee } from '@pgn/shared';
 
@@ -72,15 +72,6 @@ export default function EmployeeFormClient() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/employees">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Employees
-            </Link>
-          </Button>
-        </div>
-
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -116,15 +107,6 @@ export default function EmployeeFormClient() {
   if (error && isEditMode) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/employees">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Employees
-            </Link>
-          </Button>
-        </div>
-
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -165,12 +147,6 @@ export default function EmployeeFormClient() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard/employees">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Employees
-            </Link>
-          </Button>
           {isEditMode && employee && (
             <Button variant="outline" size="sm" asChild>
               <Link href={`/dashboard/employees/${employeeId}`}>

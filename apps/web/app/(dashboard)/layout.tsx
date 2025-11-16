@@ -23,6 +23,7 @@ import { Home, Users, Calendar, Settings, LogOut, User } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
+import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
 
 const navigationItems = [
   {
@@ -47,6 +48,14 @@ const navigationItems = [
   },
 ];
 
+// Wrapper component to enable swipe gestures inside SidebarProvider
+function SidebarSwipeWrapper({ children }: { children: React.ReactNode }) {
+  // Enable swipe gesture for opening sidebar on mobile/tablet with real-time animation
+  useSidebarSwipe();
+
+  return <>{children}</>;
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -58,8 +67,9 @@ export default function DashboardLayout({
   return (
     <SidebarProvider>
       <ErrorBoundary>
-        <Sidebar className="bg-white dark:bg-black border-r border-border">
-          <SidebarHeader>
+        <SidebarSwipeWrapper>
+          <Sidebar className="bg-white dark:bg-black border-r border-border">
+            <SidebarHeader>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton size="lg" className="font-semibold">
@@ -143,6 +153,7 @@ export default function DashboardLayout({
             </ErrorBoundary>
           </main>
         </SidebarInset>
+        </SidebarSwipeWrapper>
       </ErrorBoundary>
     </SidebarProvider>
   );

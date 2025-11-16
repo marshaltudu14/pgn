@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { EmployeeForm } from '@/components/employee-form';
+import { EmployeeForm } from '@/components/EmployeeForm';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink,BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';

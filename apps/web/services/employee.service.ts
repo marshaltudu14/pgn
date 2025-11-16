@@ -118,8 +118,6 @@ export async function createEmployee(
       phone: createData.phone || null,
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
-      primary_region: createData.primary_region || null,
-      region_code: createData.region_code || null,
       assigned_regions: createData.assigned_regions || null
     };
 
@@ -327,8 +325,6 @@ export async function updateEmployee(
     if (updateData.phone !== undefined) employeeData.phone = updateData.phone;
     if (updateData.employment_status !== undefined) employeeData.employment_status = updateData.employment_status;
     if (updateData.can_login !== undefined) employeeData.can_login = updateData.can_login;
-    if (updateData.primary_region !== undefined) employeeData.primary_region = updateData.primary_region;
-    if (updateData.region_code !== undefined) employeeData.region_code = updateData.region_code;
     if (updateData.assigned_regions !== undefined) employeeData.assigned_regions = updateData.assigned_regions;
 
     const { data, error } = await supabase

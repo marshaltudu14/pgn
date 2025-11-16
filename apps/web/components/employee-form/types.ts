@@ -1,0 +1,17 @@
+/**
+ * Employee Form Types
+ */
+
+import { EmploymentStatus } from '@pgn/shared';
+
+export type EmployeeFormData = {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  employment_status: EmploymentStatus;
+  can_login: boolean;
+  assigned_regions: string[];
+  password?: string;
+  confirm_password?: string;
+};

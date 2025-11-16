@@ -147,7 +147,7 @@ export default function DashboardLayout({
             </div>
           </header>
 
-          <main className="flex-1 bg-white dark:bg-black p-6">
+          <main className="flex-1 bg-white dark:bg-black p-6" suppressHydrationWarning>
             <ErrorBoundary>
               {children}
             </ErrorBoundary>

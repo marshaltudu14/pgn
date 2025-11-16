@@ -2,6 +2,7 @@
 
 // Re-export from separate type files
 export * from './auth';
+export * from './attendance';
 export * from './ui';
 export * from './middleware';
 export * from './supabase';

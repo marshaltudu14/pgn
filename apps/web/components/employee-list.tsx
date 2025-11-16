@@ -231,7 +231,7 @@ export function EmployeeList({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{employee.primary_region || '-'}</div>
+                      <div className="text-sm">{employee.assigned_regions?.join(', ') || '-'}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -313,9 +313,9 @@ export function EmployeeList({
                   </div>
                 )}
 
-                {employee.primary_region && (
+                {employee.assigned_regions && employee.assigned_regions.length > 0 && (
                   <div className="text-sm">
-                    <span className="font-medium">Region:</span> {employee.primary_region}
+                    <span className="font-medium">Regions:</span> {employee.assigned_regions.join(', ')}
                   </div>
                 )}
               </div>

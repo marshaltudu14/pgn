@@ -60,6 +60,14 @@ export interface AuthenticatedUser {
   email: string;
   employmentStatus: EmploymentStatus;
   canLogin: boolean;
+  department?: string;
+  region?: string;
+  startDate?: string;
+  profilePhotoUrl?: string;
+  phone?: string;
+  primaryRegion?: string;
+  regionCode?: string;
+  assignedRegions?: string[];
 }
 
 // API Request/Response types (not database types)

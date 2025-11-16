@@ -152,7 +152,6 @@ export type Database = {
       }
       employees: {
         Row: {
-          account_locked_until: string | null
           assigned_regions: string[] | null
           can_login: boolean | null
           created_at: string | null
@@ -161,21 +160,16 @@ export type Database = {
           employment_status: string
           employment_status_changed_at: string | null
           employment_status_changed_by: string | null
-          face_embedding: string | null
-          failed_login_attempts: number | null
+          face_embedding: string
           first_name: string
           human_readable_user_id: string
           id: string
           last_name: string
           phone: string | null
-          primary_region: string | null
-          reference_photo_data: string | null
-          reference_photo_url: string | null
-          region_code: string | null
+          reference_photo_url: string
           updated_at: string | null
         }
         Insert: {
-          account_locked_until?: string | null
           assigned_regions?: string[] | null
           can_login?: boolean | null
           created_at?: string | null
@@ -184,21 +178,16 @@ export type Database = {
           employment_status?: string
           employment_status_changed_at?: string | null
           employment_status_changed_by?: string | null
-          face_embedding?: string | null
-          failed_login_attempts?: number | null
+          face_embedding?: string
           first_name: string
           human_readable_user_id: string
           id: string
           last_name: string
           phone?: string | null
-          primary_region?: string | null
-          reference_photo_data?: string | null
           reference_photo_url?: string | null
-          region_code?: string | null
           updated_at?: string | null
         }
         Update: {
-          account_locked_until?: string | null
           assigned_regions?: string[] | null
           can_login?: boolean | null
           created_at?: string | null
@@ -207,17 +196,13 @@ export type Database = {
           employment_status?: string
           employment_status_changed_at?: string | null
           employment_status_changed_by?: string | null
-          face_embedding?: string | null
-          failed_login_attempts?: number | null
+          face_embedding?: string
           first_name?: string
           human_readable_user_id?: string
           id?: string
           last_name?: string
           phone?: string | null
-          primary_region?: string | null
-          reference_photo_data?: string | null
           reference_photo_url?: string | null
-          region_code?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -354,6 +339,7 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
 
 export const Constants = {
   graphql_public: {

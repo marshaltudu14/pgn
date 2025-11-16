@@ -4,7 +4,11 @@
  * Shared between web and mobile applications
  */
 
-import { GeneratedUserId, UserIdSequence, Employee, EmployeeDatabase } from '../types/employee';
+import { Database, UserIdSequence, GeneratedUserId } from '../types';
+
+// Type aliases for cleaner code
+export type Employee = Database['public']['Tables']['employees']['Row'];
+export type EmployeeDatabase = Database['public']['Tables']['employees'];
 
 /**
  * Generate a human-readable user ID in PGN-YYYY-NNNN format

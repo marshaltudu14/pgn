@@ -55,10 +55,6 @@ export class SecureTokenStorage {
   private async initialize(): Promise<void> {
     try {
       this.isSecureStoreAvailable = await SecureStore.isAvailableAsync();
-      console.log(
-        '🔒 SecureStore available:',
-        this.isSecureStoreAvailable
-      );
     } catch (error) {
       console.error('❌ Failed to initialize SecureStore:', error);
       this.isSecureStoreAvailable = false;

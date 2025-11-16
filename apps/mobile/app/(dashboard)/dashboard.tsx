@@ -5,216 +5,243 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { showToast } from '@/utils/toast';
+import {
+  BarChart3,
+  TrendingUp,
+  Clock,
+  Users,
+  Calendar,
+  Activity
+} from 'lucide-react-native';
 
 export default function DashboardScreen() {
-  const router = useRouter();
-  const { user, logout, biometricEnabled } = useAuth();
+  const { user } = useAuth();
 
-  const handleLogout = async () => {
-    try {
-      const result = await logout();
-      if (!result.success) {
-        showToast.error(result.error || 'Failed to logout');
-      } else {
-        showToast.success('Logged out successfully');
-      }
-      // Navigation will be handled by auth guard
-    } catch {
-      showToast.error('Failed to logout');
-    }
+  // Mock data for demonstration
+  const weeklyStats = {
+    totalHours: 42,
+    daysPresent: 5,
+    averageHours: 8.4,
+    overtimeHours: 2,
   };
 
-  const handleProfilePress = () => {
-    router.push('/(dashboard)/profile');
-  };
+  const monthlyData = [
+    { day: 'Mon', hours: 8 },
+    { day: 'Tue', hours: 9 },
+    { day: 'Wed', hours: 7.5 },
+    { day: 'Thu', hours: 8 },
+    { day: 'Fri', hours: 9.5 },
+  ];
 
-  const handleAttendancePress = () => {
-    // This will be implemented in Phase 2
-    showToast.info(
-      'Coming Soon',
-      'Attendance tracking features will be available in Phase 2.',
-      4000
-    );
-  };
+  const recentActivities = [
+    {
+      type: 'check_in',
+      time: '09:00 AM',
+      location: 'Office',
+      date: 'Today'
+    },
+    {
+      type: 'break',
+      time: '01:00 PM',
+      location: 'Office',
+      date: 'Today'
+    },
+    {
+      type: 'check_out',
+      time: '06:00 PM',
+      location: 'Office',
+      date: 'Yesterday'
+    },
+  ];
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
       {/* Header */}
       <View className="bg-blue-600 pt-12 pb-6 px-6">
-        <View className="flex-row justify-between items-center mb-4">
-          <View>
-            <Text className="text-white text-2xl font-bold">
-              Welcome back!
-            </Text>
-            <Text className="text-blue-100 text-sm mt-1">
-              {user?.fullName || 'Employee'}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleProfilePress}
-            className="w-12 h-12 bg-blue-700 rounded-full items-center justify-center"
-          >
-            <Text className="text-white text-lg font-bold">
-              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* User Info Card */}
-        <View className="bg-blue-700 rounded-lg p-4">
-          <View className="flex-row justify-between items-center">
-            <View>
-              <Text className="text-blue-100 text-xs">Employee ID</Text>
-              <Text className="text-white font-semibold">
-                {user?.humanReadableId || 'N/A'}
-              </Text>
-            </View>
-            <View className="items-end">
-              <Text className="text-blue-100 text-xs">Status</Text>
-              <Text className="text-white font-semibold capitalize">
-                {user?.employmentStatus?.toLowerCase() || 'Active'}
-              </Text>
-            </View>
-          </View>
+        <View className="items-center">
+          <Text className="text-white text-2xl font-bold mb-2">
+            Dashboard
+          </Text>
+          <Text className="text-blue-100 text-sm">
+            {user?.fullName || 'Employee'} • {user?.humanReadableId || 'N/A'}
+          </Text>
         </View>
       </View>
 
-      {/* Quick Actions */}
+      {/* Stats Overview */}
       <View className="px-6 py-6">
         <Text className="text-gray-900 text-lg font-semibold mb-4">
-          Quick Actions
+          This Week&apos;s Overview
         </Text>
 
-        <View className="grid grid-cols-2 gap-4">
-          {/* Attendance Check-in */}
-          <TouchableOpacity
-            onPress={handleAttendancePress}
-            className="bg-white rounded-lg p-4 shadow-sm border border-gray-200"
-          >
-            <View className="w-12 h-12 bg-green-100 rounded-full items-center justify-center mb-3">
-              <Text className="text-2xl">📍</Text>
+        <View className="grid grid-cols-2 gap-4 mb-6">
+          <View className="bg-white rounded-lg p-4 shadow-sm">
+            <View className="flex-row items-center justify-between mb-2">
+              <Clock size={20} color="#3B82F6" />
+              <TrendingUp size={16} color="#10B981" />
             </View>
-            <Text className="text-gray-900 font-semibold text-sm">
-              Check In
+            <Text className="text-2xl font-bold text-gray-900">
+              {weeklyStats.totalHours}
             </Text>
-            <Text className="text-gray-500 text-xs mt-1">
-              Start your workday
-            </Text>
-          </TouchableOpacity>
+            <Text className="text-gray-500 text-xs">Total Hours</Text>
+          </View>
 
-          {/* Profile */}
-          <TouchableOpacity
-            onPress={handleProfilePress}
-            className="bg-white rounded-lg p-4 shadow-sm border border-gray-200"
-          >
-            <View className="w-12 h-12 bg-blue-100 rounded-full items-center justify-center mb-3">
-              <Text className="text-2xl">👤</Text>
+          <View className="bg-white rounded-lg p-4 shadow-sm">
+            <View className="flex-row items-center justify-between mb-2">
+              <Calendar size={20} color="#3B82F6" />
+              <TrendingUp size={16} color="#10B981" />
             </View>
-            <Text className="text-gray-900 font-semibold text-sm">
-              Profile
+            <Text className="text-2xl font-bold text-gray-900">
+              {weeklyStats.daysPresent}
             </Text>
-            <Text className="text-gray-500 text-xs mt-1">
-              View your information
+            <Text className="text-gray-500 text-xs">Days Present</Text>
+          </View>
+
+          <View className="bg-white rounded-lg p-4 shadow-sm">
+            <View className="flex-row items-center justify-between mb-2">
+              <BarChart3 size={20} color="#3B82F6" />
+              <Activity size={16} color="#F59E0B" />
+            </View>
+            <Text className="text-2xl font-bold text-gray-900">
+              {weeklyStats.averageHours}
             </Text>
-          </TouchableOpacity>
+            <Text className="text-gray-500 text-xs">Avg Hours/Day</Text>
+          </View>
+
+          <View className="bg-white rounded-lg p-4 shadow-sm">
+            <View className="flex-row items-center justify-between mb-2">
+              <Clock size={20} color="#3B82F6" />
+              <TrendingUp size={16} color="#F59E0B" />
+            </View>
+            <Text className="text-2xl font-bold text-gray-900">
+              {weeklyStats.overtimeHours}
+            </Text>
+            <Text className="text-gray-500 text-xs">Overtime Hours</Text>
+          </View>
         </View>
 
-        {/* Biometric Status */}
-        <View className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mt-4">
-          <View className="flex-row justify-between items-center">
-            <View className="flex-row items-center">
-              <Text className="text-2xl mr-3">👆</Text>
-              <View>
-                <Text className="text-gray-900 font-semibold text-sm">
-                  Biometric Login
-                </Text>
-                <Text className="text-gray-500 text-xs mt-1">
-                  {biometricEnabled
-                    ? 'Enabled for faster access'
-                    : 'Not configured'}
-                </Text>
+        {/* Weekly Chart */}
+        <View className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <Text className="text-gray-900 font-semibold mb-4">
+            Weekly Hours
+          </Text>
+          <View className="flex-row justify-between items-end h-32">
+            {monthlyData.map((item, index) => (
+              <View key={index} className="flex-1 items-center">
+                <View
+                  className="w-8 bg-blue-500 rounded-t"
+                  style={{ height: `${(item.hours / 10) * 100}%` }}
+                />
+                <Text className="text-xs text-gray-600 mt-2">{item.day}</Text>
+                <Text className="text-xs text-gray-900 font-medium">{item.hours}h</Text>
               </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                // This will be implemented in Task 4
-                showToast.info(
-                  'Biometric Settings',
-                  'Biometric configuration will be available in the next update.',
-                  4000
-                );
-              }}
-              className="bg-blue-600 px-3 py-1 rounded-full"
+            ))}
+          </View>
+        </View>
+
+        {/* Recent Activity */}
+        <View className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-gray-900 font-semibold">
+              Recent Activity
+            </Text>
+            <TouchableOpacity onPress={() => showToast.info('Activity', 'Full activity log coming soon!')}>
+              <Text className="text-blue-600 text-sm">View All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {recentActivities.map((activity, index) => (
+            <View
+              key={index}
+              className={`flex-row items-center py-3 ${
+                index !== recentActivities.length - 1 ? 'border-b border-gray-100' : ''
+              }`}
             >
-              <Text className="text-white text-xs font-medium">
-                {biometricEnabled ? 'Configure' : 'Setup'}
-              </Text>
+              <View className={`w-8 h-8 rounded-full items-center justify-center mr-3 ${
+                activity.type === 'check_in' ? 'bg-green-100' :
+                activity.type === 'check_out' ? 'bg-red-100' :
+                'bg-yellow-100'
+              }`}>
+                {activity.type === 'check_in' && <Text className="text-green-600">✓</Text>}
+                {activity.type === 'check_out' && <Text className="text-red-600">✗</Text>}
+                {activity.type === 'break' && <Text className="text-yellow-600">☕</Text>}
+              </View>
+              <View className="flex-1">
+                <Text className="text-gray-900 font-medium text-sm capitalize">
+                  {activity.type.replace('_', ' ')}
+                </Text>
+                <View className="flex-row items-center">
+                  <Text className="text-gray-500 text-xs mr-3">{activity.time}</Text>
+                  <Text className="text-gray-400 text-xs">{activity.location}</Text>
+                </View>
+              </View>
+              <Text className="text-gray-400 text-xs">{activity.date}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Team Status */}
+        <View className="bg-white rounded-lg shadow-sm p-4 mb-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-gray-900 font-semibold">
+              Team Status
+            </Text>
+            <Users size={20} color="#6B7280" />
+          </View>
+
+          <View className="space-y-3">
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                <Text className="text-gray-700 text-sm">Online</Text>
+              </View>
+              <Text className="text-gray-900 font-medium">12</Text>
+            </View>
+
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-yellow-500 rounded-full mr-2" />
+                <Text className="text-gray-700 text-sm">Away</Text>
+              </View>
+              <Text className="text-gray-900 font-medium">3</Text>
+            </View>
+
+            <View className="flex-row justify-between items-center">
+              <View className="flex-row items-center">
+                <View className="w-2 h-2 bg-gray-400 rounded-full mr-2" />
+                <Text className="text-gray-700 text-sm">Offline</Text>
+              </View>
+              <Text className="text-gray-900 font-medium">5</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <View className="bg-white rounded-lg shadow-sm p-4">
+          <Text className="text-gray-900 font-semibold mb-4">
+            Quick Actions
+          </Text>
+
+          <View className="grid grid-cols-2 gap-3">
+            <TouchableOpacity
+              onPress={() => showToast.info('Reports', 'Detailed reports coming soon!')}
+              className="bg-blue-50 rounded-lg p-3 items-center"
+            >
+              <BarChart3 size={20} color="#3B82F6" />
+              <Text className="text-blue-700 font-medium text-sm mt-1">View Reports</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => showToast.info('Schedule', 'Work schedule coming soon!')}
+              className="bg-green-50 rounded-lg p-3 items-center"
+            >
+              <Calendar size={20} color="#10B981" />
+              <Text className="text-green-700 font-medium text-sm mt-1">Schedule</Text>
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Coming Soon Features */}
-        <View className="mt-6">
-          <Text className="text-gray-900 text-lg font-semibold mb-4">
-            Coming Soon (Phase 2)
-          </Text>
-          <View className="space-y-3">
-            <View className="bg-gray-100 rounded-lg p-4 opacity-75">
-              <View className="flex-row items-center">
-                <Text className="text-xl mr-3">🗺️</Text>
-                <View className="flex-1">
-                  <Text className="text-gray-700 font-medium text-sm">
-                    Location Tracking
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    Real-time location monitoring
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View className="bg-gray-100 rounded-lg p-4 opacity-75">
-              <View className="flex-row items-center">
-                <Text className="text-xl mr-3">📊</Text>
-                <View className="flex-1">
-                  <Text className="text-gray-700 font-medium text-sm">
-                    Attendance Reports
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    View work history and statistics
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View className="bg-gray-100 rounded-lg p-4 opacity-75">
-              <View className="flex-row items-center">
-                <Text className="text-xl mr-3">⏰</Text>
-                <View className="flex-1">
-                  <Text className="text-gray-700 font-medium text-sm">
-                    Work Hours Tracking
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    Automatic time tracking
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          onPress={handleLogout}
-          className="bg-red-50 border border-red-200 rounded-lg p-4 mt-6"
-        >
-          <View className="flex-row items-center justify-center">
-            <Text className="text-red-600 font-medium">Logout</Text>
-          </View>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );

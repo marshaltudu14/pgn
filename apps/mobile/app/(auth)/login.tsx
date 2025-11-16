@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
@@ -21,7 +22,7 @@ export default function LoginScreen() {
   // Redirect to dashboard if already authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace('/(dashboard)/index');
     }
   }, [isAuthenticated, router]);
 
@@ -34,15 +35,14 @@ export default function LoginScreen() {
         if (result.requiresBiometricSetup) {
           // For now, just navigate to dashboard
           // In a real app, you might show a biometric setup screen
-          router.replace('/(tabs)');
+          router.replace('/(dashboard)/index');
         } else {
-          router.replace('/(tabs)');
+          router.replace('/(dashboard)/index');
         }
       }
       // Error handling is done in the auth store and LoginForm component
-    } catch (error) {
-      // This catch is for unexpected errors
-      console.error('Unexpected login error:', error);
+    } catch {
+      // This catch is for unexpected errors - silently handle
     }
   };
 
@@ -59,8 +59,12 @@ export default function LoginScreen() {
         <View className="flex-1 justify-center px-6 py-8">
           {/* Logo and Header */}
           <View className="items-center mb-8">
-            <View className="w-24 h-24 bg-blue-600 rounded-full items-center justify-center mb-4">
-              <Text className="text-white text-3xl font-bold">PGN</Text>
+            <View className="w-24 h-24 rounded-full items-center justify-center mb-4 overflow-hidden">
+              <Image
+                source={require('@/images/pgn-logo.jpg')}
+                className="w-24 h-24 rounded-full"
+                resizeMode="cover"
+              />
             </View>
             <Text className="text-2xl font-bold text-gray-900 text-center">
               Welcome Back

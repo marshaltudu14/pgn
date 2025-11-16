@@ -29,41 +29,30 @@ export class Toast {
           globalToastInstance.info(message);
           break;
       }
-    } else {
-      // Fallback to console logging if toast provider is not available
-      console.log(`[${type.toUpperCase()}] ${message}`);
     }
   }
 
   static success(message: string, description?: string, duration?: number) {
     if (globalToastInstance) {
       globalToastInstance.success(message, description, duration);
-    } else {
-      console.log(`[SUCCESS] ${message}${description ? ': ' + description : ''}`);
     }
   }
 
   static error(message: string, description?: string, duration?: number) {
     if (globalToastInstance) {
       globalToastInstance.error(message, description, duration);
-    } else {
-      console.log(`[ERROR] ${message}${description ? ': ' + description : ''}`);
     }
   }
 
   static warning(message: string, description?: string, duration?: number) {
     if (globalToastInstance) {
       globalToastInstance.warning(message, description, duration);
-    } else {
-      console.log(`[WARNING] ${message}${description ? ': ' + description : ''}`);
     }
   }
 
   static info(message: string, description?: string, duration?: number) {
     if (globalToastInstance) {
       globalToastInstance.info(message, description, duration);
-    } else {
-      console.log(`[INFO] ${message}${description ? ': ' + description : ''}`);
     }
   }
 }
@@ -93,7 +82,5 @@ export const showToast = {
   },
 };
 
-// Re-export the ToastProvider for usage in _layout
-export { ToastProvider } from '@/components/Toast';
 
 export default Toast;

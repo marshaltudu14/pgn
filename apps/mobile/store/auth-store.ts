@@ -50,8 +50,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Initialize authentication state on app start
   initializeAuth: async () => {
-    console.log('🔐 Auth Store: Initializing authentication...');
-    set({ isLoading: true, error: null });
+      set({ isLoading: true, error: null });
 
     try {
       const authState = await mobileAuthService.getCurrentAuthState();
@@ -64,12 +63,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         error: null,
         biometricEnabled: biometricPrefs?.enabled || false,
         lastActivity: Date.now(),
-      });
-
-      console.log('✅ Auth Store: Initialization complete', {
-        isAuthenticated: authState.isAuthenticated,
-        hasUser: !!authState.user,
-        biometricEnabled: biometricPrefs?.enabled || false,
       });
     } catch (error) {
       console.error('❌ Auth Store: Initialization failed', error);
@@ -86,7 +79,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Login with email and password
   login: async (credentials: LoginRequest): Promise<AuthenticationResult> => {
-    console.log('🔑 Auth Store: Starting login...');
     set({ isLoading: true, error: null });
 
     try {
@@ -99,11 +91,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           user: result.user,
           error: null,
           lastActivity: Date.now(),
-        });
-
-        console.log('✅ Auth Store: Login successful', {
-          userId: result.user.id,
-          humanReadableId: result.user.humanReadableId,
         });
 
         return result;
@@ -139,7 +126,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Biometric login
   biometricLogin: async (): Promise<AuthenticationResult> => {
-    console.log('👆 Auth Store: Starting biometric login...');
     set({ isLoading: true, error: null });
 
     try {
@@ -152,11 +138,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           user: result.user,
           error: null,
           lastActivity: Date.now(),
-        });
-
-        console.log('✅ Auth Store: Biometric login successful', {
-          userId: result.user.id,
-          humanReadableId: result.user.humanReadableId,
         });
 
         return result;
@@ -192,7 +173,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Logout
   logout: async (): Promise<{ success: boolean; error?: string }> => {
-    console.log('🚪 Auth Store: Starting logout...');
     set({ isLoading: true });
 
     try {
@@ -208,7 +188,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         lastActivity: Date.now(),
       });
 
-      console.log('✅ Auth Store: Logout complete');
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Logout failed';
@@ -234,18 +213,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // Refresh authentication token
   refreshToken: async () => {
     try {
-      console.log('🔄 Auth Store: Refreshing token...');
-
       const refreshToken = await secureStorage.getRefreshToken();
       if (!refreshToken) {
         return { success: false, error: 'No refresh token available' };
       }
 
       const result = await mobileAuthService.refreshAuthToken(refreshToken);
-
-      if (result.success) {
-        console.log('✅ Auth Store: Token refreshed successfully');
-      }
 
       return result;
     } catch (error) {
@@ -264,14 +237,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Enable biometric authentication
   enableBiometricAuthentication: async () => {
-    console.log('🔐 Auth Store: Enabling biometric authentication...');
-
     try {
       const result = await mobileAuthService.enableBiometricAuthentication();
 
       if (result.success) {
         set({ biometricEnabled: true });
-        console.log('✅ Auth Store: Biometric authentication enabled');
       }
 
       return result;
@@ -284,14 +254,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Disable biometric authentication
   disableBiometricAuthentication: async () => {
-    console.log('🔓 Auth Store: Disabling biometric authentication...');
-
     try {
       const result = await mobileAuthService.disableBiometricAuthentication();
 
       if (result.success) {
         set({ biometricEnabled: false });
-        console.log('✅ Auth Store: Biometric authentication disabled');
       }
 
       return result;
@@ -312,8 +279,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     try {
-      console.log('🔄 Auth Store: Refreshing user data...');
-
       const token = await get().getValidToken();
       if (!token) {
         console.error('❌ Auth Store: No valid token for refreshing user data');
@@ -326,8 +291,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user: refreshedUser,
         lastActivity: Date.now(),
       });
-
-      console.log('✅ Auth Store: User data refreshed successfully');
     } catch (error) {
       console.error('❌ Auth Store: Failed to refresh user data', error);
       // Don't update error state here as it's not a critical error

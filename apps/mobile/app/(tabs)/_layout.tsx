@@ -9,7 +9,7 @@ import { Home, LayoutDashboard, User, MapPin } from 'lucide-react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const resolvedColorScheme = colorScheme === 'unspecified' ? 'light' : colorScheme ?? 'light';
+  const resolvedColorScheme = colorScheme ?? 'light';
 
   return (
     <AuthGuard requireAuth={true}>

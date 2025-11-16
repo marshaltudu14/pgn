@@ -43,8 +43,7 @@ export class MobileAuthService {
   // Main Authentication Methods
   async login(credentials: LoginRequest): Promise<AuthenticationResult> {
     try {
-      console.log('🔐 Mobile Auth Service: Starting login process');
-
+      
       // Validate input
       if (!credentials.email || !credentials.password) {
         return {
@@ -55,8 +54,7 @@ export class MobileAuthService {
 
       // Call API
       const response: LoginResponse = await apiClient.login(credentials);
-      console.log('✅ Login successful:', { message: response.message });
-
+      
       // Store tokens securely
       await Promise.all([
         secureStorage.setAuthToken(response.token),
@@ -86,8 +84,7 @@ export class MobileAuthService {
 
   async biometricLogin(): Promise<AuthenticationResult> {
     try {
-      console.log('👆 Mobile Auth Service: Starting biometric login');
-
+      
       // Check if user has credentials stored
       const hasCredentials = await secureStorage.hasStoredCredentials();
       if (!hasCredentials) {
@@ -134,8 +131,7 @@ export class MobileAuthService {
       // Validate stored token with server
       try {
         const currentUser = await apiClient.getCurrentUser(authToken);
-        console.log('✅ Biometric login successful');
-
+        
         // Update stored user data in case it changed
         await secureStorage.setUserData({
           id: currentUser.id,
@@ -181,14 +177,12 @@ export class MobileAuthService {
 
   async logout(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🚪 Mobile Auth Service: Starting logout process');
-
+      
       const authToken = await secureStorage.getAuthToken();
       if (authToken) {
         try {
           // Notify server of logout
           await apiClient.logout(authToken);
-          console.log('✅ Server logout successful');
         } catch (error) {
           console.warn('⚠️ Server logout failed:', error);
           // Continue with local logout even if server call fails
@@ -204,8 +198,7 @@ export class MobileAuthService {
         this.tokenRefreshTimeout = null;
       }
 
-      console.log('✅ Local logout successful');
-      return { success: true };
+            return { success: true };
     } catch (error) {
       console.error('❌ Logout failed:', error);
       return {

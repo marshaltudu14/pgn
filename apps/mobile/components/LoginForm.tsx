@@ -77,22 +77,24 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
   };
 
   return (
-    <View className="w-full space-y-6">
-      {/* Email Input */}
-      <View className="space-y-2">
-        <Text className="text-foreground font-semibold text-base ml-1">
+    <View className="w-full px-2">
+      {/* Email Input Section */}
+      <View className="mb-8">
+        <Text className={`font-medium text-xs ml-1 mb-3 ${
+          colorScheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+        }`}>
           Email Address
         </Text>
         <View className="relative">
-          <View className="absolute left-4 top-4 z-10">
-            <Mail size={20} color="#9CA3AF" />
+          <View className="absolute left-3 top-3 z-10">
+            <Mail size={18} color="#9CA3AF" />
           </View>
           <TextInput
-            className={`input-field pl-12 pr-4 ${
+            className={`input-field pl-10 pr-3 text-sm ${
               emailError
-                ? 'border-red-500 bg-red-50/10 dark:bg-red-900/10'
-                : 'border-border bg-input'
-            } focus:border-primary focus:ring-2 focus:ring-primary/20`}
+                ? 'border-red-500'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}
             placeholder="Enter your email address"
             placeholderTextColor="#9CA3AF"
             value={email}
@@ -110,26 +112,28 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
         </View>
         {emailError ? (
           <View className="flex-row items-center mt-2 ml-1">
-            <Text className="text-red-500 text-sm font-medium">{emailError}</Text>
+            <Text className="text-red-500 text-xs font-medium">{emailError}</Text>
           </View>
         ) : null}
       </View>
 
-      {/* Password Input */}
-      <View className="space-y-2">
-        <Text className="text-foreground font-semibold text-base ml-1">
+      {/* Password Input Section */}
+      <View className="mb-8">
+        <Text className={`font-medium text-xs ml-1 mb-3 ${
+          colorScheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+        }`}>
           Password
         </Text>
         <View className="relative">
-          <View className="absolute left-4 top-4 z-10">
-            <Lock size={20} color="#9CA3AF" />
+          <View className="absolute left-3 top-3 z-10">
+            <Lock size={18} color="#9CA3AF" />
           </View>
           <TextInput
-            className={`input-field pl-12 pr-12 ${
+            className={`input-field pl-10 pr-10 text-sm ${
               passwordError
-                ? 'border-red-500 bg-red-50/10 dark:bg-red-900/10'
-                : 'border-border bg-input'
-            } focus:border-primary focus:ring-2 focus:ring-primary/20`}
+                ? 'border-red-500'
+                : 'border-gray-300 dark:border-gray-600'
+            }`}
             placeholder="Enter your password"
             placeholderTextColor="#9CA3AF"
             value={password}
@@ -145,72 +149,88 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
             accessibilityHint="Enter your password"
           />
           <TouchableOpacity
-            className="absolute right-4 top-4 p-1"
+            className="absolute right-3 top-3 p-1"
             onPress={() => setShowPassword(!showPassword)}
             disabled={isLoading}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
-              <EyeOff size={20} color="#9CA3AF" />
+              <EyeOff size={18} color="#9CA3AF" />
             ) : (
-              <Eye size={20} color="#9CA3AF" />
+              <Eye size={18} color="#9CA3AF" />
             )}
           </TouchableOpacity>
         </View>
         {passwordError ? (
           <View className="flex-row items-center mt-2 ml-1">
-            <Text className="text-red-500 text-sm font-medium">{passwordError}</Text>
+            <Text className="text-red-500 text-xs font-medium">{passwordError}</Text>
           </View>
         ) : null}
       </View>
 
-      {/* Error Message */}
+      {/* Error Message Section */}
       {error ? (
-        <View className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
-          <Text className="text-red-700 dark:text-red-400 text-sm font-medium">{error}</Text>
+        <View className={`border rounded-lg p-3 mb-8 ${
+          colorScheme === 'dark'
+            ? 'bg-red-900/20 border-red-800'
+            : 'bg-red-50 border-red-200'
+        }`}>
+          <Text className={`text-xs font-medium ${
+            colorScheme === 'dark' ? 'text-red-400' : 'text-red-700'
+          }`}>{error}</Text>
         </View>
       ) : null}
 
-      {/* Login Button */}
-      <TouchableOpacity
-        className={`primary-button ${
-          isLoading || !email.trim() || !password.trim()
-            ? 'opacity-50'
-            : 'opacity-100 active:scale-[0.98]'
-        } transition-all duration-200`}
-        onPress={handleSubmit}
-        disabled={isLoading || !email.trim() || !password.trim()}
-        accessibilityLabel="Sign in"
-        accessibilityRole="button"
-      >
-        {isLoading ? (
-          <>
-            <ActivityIndicator size="small" color={colorScheme === 'dark' ? '#000000' : '#000000'} className="mr-3" />
-            <Text className="text-primary-foreground font-semibold text-base">Signing in...</Text>
-          </>
-        ) : (
-          <Text className="text-primary-foreground font-semibold text-base">Sign In</Text>
-        )}
-      </TouchableOpacity>
+      {/* Login Button Section */}
+      <View className="mb-6">
+        <TouchableOpacity
+          className={`primary-button py-3 ${
+            isLoading || !email.trim() || !password.trim()
+              ? 'opacity-50'
+              : 'opacity-100 active:scale-[0.98]'
+          } transition-all duration-200`}
+          onPress={handleSubmit}
+          disabled={isLoading || !email.trim() || !password.trim()}
+          accessibilityLabel="Sign in"
+          accessibilityRole="button"
+        >
+          {isLoading ? (
+            <>
+              <ActivityIndicator size="small" color="#000000" className="mr-2" />
+              <Text className="text-black font-semibold text-sm">Signing in...</Text>
+            </>
+          ) : (
+            <Text className="text-black font-semibold text-sm">Sign In</Text>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* Biometric Login Option */}
       {showBiometricLoginOption && (
         <View className="items-center">
           <View className="flex-row items-center py-2">
-            <View className="h-px bg-border flex-1" />
-            <Text className="px-4 text-muted-foreground text-sm font-medium">or</Text>
-            <View className="h-px bg-border flex-1" />
+            <View className={`h-px flex-1 ${
+              colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'
+            }`} />
+            <Text className={`px-4 text-xs font-medium ${
+              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }`}>or</Text>
+            <View className={`h-px flex-1 ${
+              colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'
+            }`} />
           </View>
 
           <TouchableOpacity
-            className="secondary-button active:scale-[0.98] transition-all duration-200"
+            className="secondary-button active:scale-[0.98] transition-all duration-200 py-3"
             onPress={handleBiometricLogin}
             disabled={isLoading}
           >
-            <View className="w-8 h-8 rounded-full bg-primary/20 items-center justify-center mr-3">
-              <Lock size={18} color={colorScheme === 'dark' ? '#FFA726' : '#FFB74D'} />
+            <View className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 items-center justify-center mr-2">
+              <Lock size={14} color="#FFB74D" />
             </View>
-            <Text className="text-accent-foreground font-semibold text-base">
+            <Text className={`font-semibold text-sm ${
+              colorScheme === 'dark' ? 'text-white' : 'text-black'
+            }`}>
               Sign in with Biometrics
             </Text>
           </TouchableOpacity>

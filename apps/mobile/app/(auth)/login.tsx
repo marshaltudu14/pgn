@@ -50,7 +50,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-background"
+      className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar
@@ -67,39 +67,35 @@ export default function LoginScreen() {
       >
         <View className="flex-1 px-6 py-8 justify-center">
           {/* Logo Section */}
-          <View className="items-center mb-12">
-            <View className="w-28 h-28 rounded-3xl items-center justify-center mb-6 overflow-hidden shadow-2xl bg-card border-2 border-primary/20">
+          <View className="items-center mb-10">
+            <View className={`w-24 h-24 rounded-2xl items-center justify-center mb-5 overflow-hidden shadow-xl ${
+              colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            } border`}>
               <Image
                 source={require('@/images/pgn-logo.jpg')}
-                className="w-24 h-24 rounded-2xl"
+                className="w-20 h-20 rounded-xl"
                 resizeMode="cover"
               />
             </View>
-            <Text className="text-4xl font-bold text-foreground text-center mb-2">
-              Welcome Back
+            <Text className={`text-2xl font-bold text-center mb-2 ${
+              colorScheme === 'dark' ? 'text-white' : 'text-black'
+            }`}>
+              PGN Team
             </Text>
-            <Text className="text-muted-foreground text-center text-lg leading-6">
-              Sign in to access your account and continue your work
+            <Text className={`text-center text-sm leading-5 ${
+              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              Sign in to access your account
             </Text>
           </View>
 
-          {/* Login Form Card */}
-          <View className="card-surface p-8 mb-6 shadow-2xl">
+          {/* Login Form */}
+          <View className="w-full">
             <LoginForm
               onSubmit={handleLogin}
               isLoading={isLoading}
               error={error}
             />
-          </View>
-
-          {/* Version Info */}
-          <View className="items-center mt-8">
-            <Text className="text-muted-foreground/60 text-sm font-medium">
-              PGN Mobile v1.0.0
-            </Text>
-            <Text className="text-muted-foreground/40 text-xs mt-1">
-              Enterprise Attendance System
-            </Text>
           </View>
         </View>
       </ScrollView>

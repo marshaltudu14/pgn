@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthGuard } from '@/utils/auth-guard';
 import UnifiedBottomNavigation from '@/components/UnifiedBottomNavigation';
@@ -13,7 +13,6 @@ import ProfileScreen from './profile';
 export default function DashboardLayout() {
   const colorScheme = useColorScheme();
   const [activeTab, setActiveTab] = useState('home');
-  const insets = useSafeAreaInsets();
 
   // Handle tab changes
   const handleTabChange = (tab: string) => {
@@ -35,13 +34,7 @@ export default function DashboardLayout() {
 
   return (
     <AuthGuard requireAuth={true}>
-      <View style={[
-        styles.container,
-        {
-          backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-          paddingTop: insets.top
-        }
-      ]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' }]} edges={['top', 'left', 'right']}>
         <View style={styles.screenContainer}>
           {renderActiveScreen()}
         </View>
@@ -63,7 +56,7 @@ export default function DashboardLayout() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
-      </View>
+      </SafeAreaView>
     </AuthGuard>
   );
 }

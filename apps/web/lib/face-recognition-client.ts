@@ -1,115 +1,49 @@
 /**
  * Client-Side Face Recognition Service
- * Handles face detection and embedding generation in the browser using TensorFlow.js
+ * Handles face detection and embedding generation in the browser using ONNX Runtime Web + MediaPipe + ArcFace
  */
 
-import * as tf from '@tensorflow/tfjs';
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 import {
   FaceDetectionResult,
   FaceQualityResult,
   FaceRecognitionResult
 } from '@pgn/shared';
 
-let faceDetectionModel: faceLandmarksDetection.FaceLandmarksDetector | null = null;
-let embeddingModel: tf.LayersModel | null = null;
+let faceDetection: any = null;
+let arcFaceSession: any = null;
 
 /**
  * Initialize face recognition models (client-side)
  */
 export async function initializeClientModels(): Promise<void> {
   try {
-  
-    // Initialize face detection model
-    const modelConfig: faceLandmarksDetection.MediaPipeFaceMeshTfjsModelConfig = {
-      runtime: 'tfjs',
-      maxFaces: 1, // Only allow one face for security
-      refineLandmarks: false,
-    };
+    // Initialize MediaPipe Face Detection
+    const { FaceDetection } = await import('@mediapipe/face_detection');
+    const { Camera } = await import('@mediapipe/camera_utils');
 
-    faceDetectionModel = await faceLandmarksDetection.createDetector(
-      faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh,
-      modelConfig
-    );
+    faceDetection = new FaceDetection({
+      locateFile: (file: string) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+      }
+    });
 
-    // Create a lightweight embedding model (simplified FaceNet-like architecture)
-    embeddingModel = createLightweightEmbeddingModel();
+    faceDetection.setOptions({
+      model: 'short',
+      minDetectionConfidence: 0.5
+    });
 
-    } catch (error) {
+    // Initialize ONNX Runtime for ArcFace
+    const ort = await import('onnxruntime-web');
+
+    // Load ArcFace Mobile model (you'll need to download this)
+    const modelPath = '/models/arcface_mobile.onnx';
+    arcFaceSession = await ort.InferenceSession.create(modelPath);
+
+    console.log('Face recognition models initialized successfully');
+  } catch (error) {
     console.error('Failed to load client-side models:', error);
     throw new Error('Failed to initialize face recognition models');
   }
-}
-
-/**
- * Create a lightweight face embedding model
- */
-function createLightweightEmbeddingModel(): tf.LayersModel {
-  const model = tf.sequential({
-    layers: [
-      // Input layer (96x96 RGB image)
-      tf.layers.conv2d({
-        inputShape: [96, 96, 3],
-        filters: 32,
-        kernelSize: 3,
-        activation: 'relu',
-        padding: 'same'
-      }),
-      tf.layers.batchNormalization(),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
-      tf.layers.dropout({ rate: 0.25 }),
-
-      // Second convolutional block
-      tf.layers.conv2d({
-        filters: 64,
-        kernelSize: 3,
-        activation: 'relu',
-        padding: 'same'
-      }),
-      tf.layers.batchNormalization(),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
-      tf.layers.dropout({ rate: 0.25 }),
-
-      // Third convolutional block
-      tf.layers.conv2d({
-        filters: 128,
-        kernelSize: 3,
-        activation: 'relu',
-        padding: 'same'
-      }),
-      tf.layers.batchNormalization(),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
-      tf.layers.dropout({ rate: 0.25 }),
-
-      // Fourth convolutional block
-      tf.layers.conv2d({
-        filters: 256,
-        kernelSize: 3,
-        activation: 'relu',
-        padding: 'same'
-      }),
-      tf.layers.batchNormalization(),
-      tf.layers.maxPooling2d({ poolSize: 2 }),
-      tf.layers.dropout({ rate: 0.25 }),
-
-      // Flatten and dense layers
-      tf.layers.flatten(),
-      tf.layers.dense({ units: 512, activation: 'relu' }),
-      tf.layers.batchNormalization(),
-      tf.layers.dropout({ rate: 0.5 }),
-      tf.layers.dense({ units: 128, activation: 'linear' }), // 128-dimensional embedding
-      tf.layers.dense({ units: 128, activation: 'tanh' }) // Normalized embedding
-    ]
-  });
-
-  // Compile model
-  model.compile({
-    optimizer: 'adam',
-    loss: 'meanSquaredError',
-    metrics: ['accuracy']
-  });
-
-  return model;
 }
 
 /**
@@ -118,55 +52,66 @@ function createLightweightEmbeddingModel(): tf.LayersModel {
 export async function generateEmbeddingClientSide(imageFile: File): Promise<FaceRecognitionResult> {
   try {
     // Initialize models if not already loaded
-    if (!faceDetectionModel || !embeddingModel) {
+    if (!faceDetection || !arcFaceSession) {
       await initializeClientModels();
     }
 
-    // Convert image file to tensor
-    const imageTensor = await fileToTensor(imageFile);
+    // Convert image file to HTML image element
+    const img = await fileToImage(imageFile);
 
-    // Detect faces
-    const faces = await faceDetectionModel!.estimateFaces(imageTensor);
+    // Create a temporary video element for MediaPipe processing
+    const video = document.createElement('video');
+    video.srcObject = createVideoStreamFromImage(img);
+    video.play();
 
-    if (faces.length === 0) {
-      imageTensor.dispose();
+    // Process face detection
+    const results = await new Promise((resolve, reject) => {
+      faceDetection.onResults(resolve);
+      faceDetection.send({image: video});
+    });
+
+    if (!results.detections || results.detections.length === 0) {
       return {
         success: false,
         error: 'No face detected in the image'
       };
     }
 
-    if (faces.length > 1) {
-      imageTensor.dispose();
+    if (results.detections.length > 1) {
       return {
         success: false,
         error: 'Multiple faces detected. Please upload a photo with only one face.'
       };
     }
 
-    // Analyze face quality
-    const quality = analyzeImageQuality(imageTensor, faces[0]);
+    const detection = results.detections[0];
+
+    // Extract face region for ArcFace
+    const faceImageData = extractFaceRegion(img, detection.boundingBox);
+
+    // Generate embedding using ArcFace
+    const embedding = await generateArcFaceEmbedding(faceImageData);
+
+    // Analyze image quality
+    const quality = analyzeImageQuality(img, detection);
 
     if (quality.overall === 'unacceptable') {
-      imageTensor.dispose();
       return {
         success: false,
         error: `Image quality too poor: ${quality.issues.join(', ')}`
       };
     }
 
-  
-    // Generate embedding
-    const embedding = await generateEmbeddingFromFace(imageTensor, faces[0]);
-
-    // Clean up tensors
-    imageTensor.dispose();
-
     const detectionResult: FaceDetectionResult = {
       detected: true,
-      confidence: 0.85 + Math.random() * 0.14, // Simulate confidence score
-      boundingBox: extractBoundingBox(faces[0]),
-      landmarks: extractLandmarks(faces[0]),
+      confidence: detection.score || 0.85,
+      boundingBox: {
+        x: detection.boundingBox.xMin,
+        y: detection.boundingBox.yMin,
+        width: detection.boundingBox.width,
+        height: detection.boundingBox.height
+      },
+      landmarks: extractLandmarks(detection),
       faceCount: 1,
       quality
     };
@@ -188,29 +133,17 @@ export async function generateEmbeddingClientSide(imageFile: File): Promise<Face
 }
 
 /**
- * Convert image file to tensor
+ * Convert image file to HTML image element
  */
-async function fileToTensor(imageFile: File): Promise<tf.Tensor3D> {
+async function fileToImage(imageFile: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    reader.onload = async (event) => {
-      try {
-        const img = new Image();
-        img.onload = () => {
-          // Convert image to tensor
-          const tensor = tf.browser.fromPixels(img)
-            .resizeBilinear([96, 96]) // Resize to model input size
-            .toFloat()
-            .div(255.0) as tf.Tensor3D; // Normalize to [0, 1]
-
-          resolve(tensor);
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = event.target?.result as string;
-      } catch (error) {
-        reject(error);
-      }
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = event.target?.result as string;
     };
 
     reader.onerror = () => reject(new Error('Failed to read file'));
@@ -219,125 +152,130 @@ async function fileToTensor(imageFile: File): Promise<tf.Tensor3D> {
 }
 
 /**
- * Generate embedding from detected face
+ * Create video stream from image
  */
-async function generateEmbeddingFromFace(imageTensor: tf.Tensor3D, face: faceLandmarksDetection.Face): Promise<Float32Array> {
-  // Extract face region (simplified - in production would use proper face alignment)
-  const faceTensor = extractFaceRegion(imageTensor, face) as tf.Tensor3D;
+function createVideoStreamFromImage(img: HTMLImageElement): MediaStream {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
 
-  // Generate embedding using the model
-  const embeddingTensor = embeddingModel!.predict(faceTensor.expandDims(0)) as tf.Tensor;
-
-  // Convert to Float32Array
-  const embedding = await embeddingTensor.data() as Float32Array;
-
-  // Clean up tensors
-  faceTensor.dispose();
-  embeddingTensor.dispose();
-
-  return embedding;
+  // Create video stream from canvas
+  const stream = canvas.captureStream(30);
+  return stream;
 }
 
 /**
  * Extract face region from image
  */
-function extractFaceRegion(imageTensor: tf.Tensor3D, face: faceLandmarksDetection.Face): tf.Tensor3D {
-  // Simplified face extraction - in production would use proper landmarks
-  const boundingBox = extractBoundingBox(face);
+function extractFaceRegion(img: HTMLImageElement, boundingBox: any): ImageData {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d')!;
 
-  // Calculate face region coordinates
-  const [height, width] = imageTensor.shape.slice(0, 2);
-  const x = Math.max(0, Math.floor(boundingBox.x * width));
-  const y = Math.max(0, Math.floor(boundingBox.y * height));
-  const w = Math.min(width - x, Math.floor(boundingBox.width * width));
-  const h = Math.min(height - y, Math.floor(boundingBox.height * height));
+  // ArcFace typically expects 112x112 input
+  const faceSize = 112;
+  canvas.width = faceSize;
+  canvas.height = faceSize;
 
-  // Extract and resize face region
-  const faceRegion = tf.slice(imageTensor, [y, x, 0], [h, w, 3]);
-  return tf.image.resizeBilinear(faceRegion, [96, 96]) as tf.Tensor3D;
+  // Extract and draw face region
+  const x = boundingBox.xMin * img.width;
+  const y = boundingBox.yMin * img.height;
+  const width = boundingBox.width * img.width;
+  const height = boundingBox.height * img.height;
+
+  // Draw face region to canvas
+  ctx.drawImage(img, x, y, width, height, 0, 0, faceSize, faceSize);
+
+  return ctx.getImageData(0, 0, faceSize, faceSize);
 }
 
 /**
- * Extract bounding box from face detection result
+ * Generate ArcFace embedding from face image data
  */
-function extractBoundingBox(face: faceLandmarksDetection.Face): { x: number; y: number; width: number; height: number } {
-  if (face.box) {
-    return {
-      x: face.box.xMin,
-      y: face.box.yMin,
-      width: face.box.width,
-      height: face.box.height
-    };
+async function generateArcFaceEmbedding(imageData: ImageData): Promise<Float32Array> {
+  // Convert ImageData to tensor format expected by ArcFace
+  const { data, width, height } = imageData;
+
+  // ArcFace expects normalized float32 input [0, 1]
+  const input = new Float32Array(1 * 3 * height * width);
+
+  // Convert RGBA to RGB and normalize
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4; // RGBA
+    const outIdx = i;
+
+    // RGB channels
+    input[outIdx] = data[idx] / 255.0; // R
+    input[outIdx + width * height] = data[idx + 1] / 255.0; // G
+    input[outIdx + 2 * width * height] = data[idx + 2] / 255.0; // B
   }
 
-  // Fallback: calculate from keypoints
-  const keypoints = face.keypoints;
-  if (!keypoints || keypoints.length === 0) {
-    return { x: 0.25, y: 0.25, width: 0.5, height: 0.5 }; // Default centered
-  }
-
-  const xs = keypoints.map(kp => kp.x);
-  const ys = keypoints.map(kp => kp.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY
+  // Create input tensor
+  const inputTensor = {
+    dims: [1, 3, height, width],
+    data: input,
+    type: 'float32'
   };
+
+  // Run ArcFace inference
+  const outputMap = await arcFaceSession.run({ 'input': inputTensor });
+
+  // Get embedding output (typically named 'output' or similar)
+  const outputName = Object.keys(outputMap)[0];
+  const output = outputMap[outputName].data;
+
+  return new Float32Array(output);
 }
 
 /**
- * Extract facial landmarks
+ * Extract landmarks from MediaPipe face detection
  */
-function extractLandmarks(face: faceLandmarksDetection.Face): FaceDetectionResult['landmarks'] {
-  const keypoints = face.keypoints;
-  if (!keypoints || keypoints.length === 0) {
+function extractLandmarks(detection: any): FaceDetectionResult['landmarks'] {
+  if (!detection.landmarks || detection.landmarks.length === 0) {
     return undefined;
   }
 
-  // Extract key facial points (simplified)
+  // Map MediaPipe landmarks to our expected format
+  const landmarks = detection.landmarks[0]; // First face
+
   return {
-    leftEye: { x: keypoints[33]?.x || 0, y: keypoints[33]?.y || 0 },
-    rightEye: { x: keypoints[263]?.x || 0, y: keypoints[263]?.y || 0 },
-    nose: { x: keypoints[1]?.x || 0, y: keypoints[1]?.y || 0 },
-    mouth: { x: keypoints[13]?.x || 0, y: keypoints[13]?.y || 0 }
+    leftEye: { x: landmarks[33]?.x || 0, y: landmarks[33]?.y || 0 },
+    rightEye: { x: landmarks[263]?.x || 0, y: landmarks[263]?.y || 0 },
+    nose: { x: landmarks[1]?.x || 0, y: landmarks[1]?.y || 0 },
+    mouth: { x: landmarks[13]?.x || 0, y: landmarks[13]?.y || 0 }
   };
 }
 
 /**
  * Analyze image quality for face recognition
  */
-function analyzeImageQuality(imageTensor: tf.Tensor3D, face: faceLandmarksDetection.Face): FaceQualityResult {
+function analyzeImageQuality(img: HTMLImageElement, detection: any): FaceQualityResult {
   try {
-    // Get image data
-    const imageData = imageTensor.dataSync();
-    const [height, width] = imageTensor.shape.slice(0, 2);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
 
-    const issues: string[] = [];
+    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+    const data = imageData.data;
 
-    // Calculate brightness
     let brightness = 0;
-    for (let i = 0; i < imageData.length; i += 3) {
-      const r = imageData[i];
-      const g = imageData[i + 1];
-      const b = imageData[i + 2];
-      brightness += (r + g + b) / 3;
+    for (let i = 0; i < data.length; i += 4) {
+      brightness += (data[i] + data[i + 1] + data[i + 2]) / 3;
     }
-    brightness = brightness / (imageData.length / 3) / 255;
+    brightness = brightness / (data.length / 4) / 255;
 
     // Simulate other quality metrics
-    const sharpness = 0.6 + Math.random() * 0.4; // 60-100%
-    const contrast = 0.5 + Math.random() * 0.5; // 50-100%
+    const sharpness = 0.6 + Math.random() * 0.4;
+    const contrast = 0.5 + Math.random() * 0.5;
 
     // Calculate face size relative to image
-    const boundingBox = extractBoundingBox(face);
-    const faceSize = (boundingBox.width * boundingBox.height);
-    const faceResolution = Math.min(width, height) * Math.sqrt(faceSize);
+    const faceSize = detection.boundingBox.width * detection.boundingBox.height;
+    const faceResolution = Math.min(img.width, img.height) * Math.sqrt(faceSize);
+
+    const issues: string[] = [];
 
     // Quality checks
     if (brightness < 0.3) {
@@ -408,26 +346,23 @@ function analyzeImageQuality(imageTensor: tf.Tensor3D, face: faceLandmarksDetect
 }
 
 /**
- * Cleanup models and tensors
+ * Cleanup models and sessions
  */
 export function cleanupClientModels(): void {
-  if (embeddingModel) {
-    embeddingModel.dispose();
-    embeddingModel = null;
+  if (arcFaceSession) {
+    arcFaceSession.dispose();
+    arcFaceSession = null;
   }
 
-  if (faceDetectionModel) {
-    faceDetectionModel.dispose();
-    faceDetectionModel = null;
+  if (faceDetection) {
+    faceDetection.close();
+    faceDetection = null;
   }
-
-  // Dispose all backend tensors
-  tf.disposeVariables();
 }
 
 /**
  * Check if models are initialized
  */
 export function areModelsInitialized(): boolean {
-  return faceDetectionModel !== null && embeddingModel !== null;
+  return faceDetection !== null && arcFaceSession !== null;
 }

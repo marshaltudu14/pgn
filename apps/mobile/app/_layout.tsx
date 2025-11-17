@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Platform } from 'react-native';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -42,7 +42,6 @@ export default function RootLayout() {
 
 function RootLayoutContent() {
     return (
-    <SafeAreaView style={{ flex: 1 }} edges={["left", "right", "bottom"]}>
       <ToastProvider>
         <AuthGuard requireAuth={false}>
           <Stack screenOptions={{ headerShown: false }}>
@@ -53,6 +52,5 @@ function RootLayoutContent() {
           </Stack>
         </AuthGuard>
       </ToastProvider>
-    </SafeAreaView>
-  );
+    );
 }

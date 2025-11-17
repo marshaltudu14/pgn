@@ -82,7 +82,13 @@
       "Bash(npx expo doctor:*)",
       "Bash(npx:*)",
       "Bash(find:*)",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(npm run doctor:*)",
+      "Bash(npm run)",
+      "Bash(npm clean-install:*)",
+      "Bash(npm run clean:*)",
+      "Bash(rm:*)",
+      "Bash(move:*)"
     ],
     "deny": [],
     "ask": []

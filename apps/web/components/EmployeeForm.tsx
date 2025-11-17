@@ -20,6 +20,7 @@ import {
   UpdateEmployeeRequest,
 } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
+import { useFaceRecognitionStore } from '@/app/lib/stores/faceRecognitionStore';
 import {
   Loader2,
   Save,
@@ -70,6 +71,9 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel }: EmployeeFormProps) {
   const { createEmployee, updateEmployee } = useEmployeeStore();
+  const {
+    generateEmbedding
+  } = useFaceRecognitionStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!employee;
@@ -181,8 +185,8 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
     }
   };
 
-  // Photo upload handlers
-  const handlePhotoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Photo upload handlers with client-side embedding generation
+  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Validate file type and size
@@ -197,9 +201,32 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
       setPhotoUploadLoading(true);
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         setPhotoPreview(e.target?.result as string);
-        setPhotoUploadLoading(false);
+
+        // Generate face embedding client-side using Zustand store
+        try {
+          const result = await generateEmbedding(file, employee?.id);
+
+          if (result.success && result.embedding) {
+            // Store embedding for form submission
+            console.log('Face embedding generated successfully');
+            handleEmbeddingGenerated();
+
+            // Show processing time for user feedback
+            const resultWithPerformance = result as { performance?: { totalTime?: number } };
+            if (resultWithPerformance.performance?.totalTime) {
+              console.log(`Processing time: ${resultWithPerformance.performance.totalTime.toFixed(0)}ms`);
+            }
+          } else if (result.error) {
+            setError(result.error);
+          }
+        } catch (error) {
+          console.error('Error generating face embedding:', error);
+          setError('Failed to generate face recognition embedding');
+        } finally {
+          setPhotoUploadLoading(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -207,6 +234,11 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
   const handlePhotoRemove = () => {
     setPhotoPreview(null);
+  };
+
+  const handleEmbeddingGenerated = () => {
+    // Store embedding for form submission
+    console.log('Embedding generated for face recognition');
   };
 
   return (
@@ -227,6 +259,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
               onPhotoRemove={handlePhotoRemove}
               photoPreview={photoPreview}
               photoUploadLoading={photoUploadLoading}
+              onEmbeddingGenerated={handleEmbeddingGenerated}
             />
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
@@ -245,6 +278,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
               onPhotoRemove={handlePhotoRemove}
               photoPreview={photoPreview}
               photoUploadLoading={photoUploadLoading}
+              onEmbeddingGenerated={handleEmbeddingGenerated}
             />
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />

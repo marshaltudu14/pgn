@@ -52,10 +52,11 @@ describe('AuthService', () => {
   describe('login', () => {
     const mockEmployeeData = {
       id: '123e4567-e89b-12d3-a456-426614174000',
-      human_readable_id: 'PGN-2024-0001',
+      human_readable_user_id: 'PGN-2024-0001',
       employment_status: 'ACTIVE' as EmploymentStatus,
       can_login: true,
-      full_name: 'John Doe',
+      first_name: 'John',
+      last_name: 'Doe',
       email: 'john.doe@company.com',
     };
 
@@ -93,8 +94,8 @@ describe('AuthService', () => {
         token: mockToken,
         employee: {
           id: mockEmployeeData.id,
-          humanReadableId: mockEmployeeData.human_readable_id,
-          fullName: mockEmployeeData.full_name,
+          humanReadableId: mockEmployeeData.human_readable_user_id,
+          fullName: 'John Doe',
           email: mockEmployeeData.email,
           employmentStatus: mockEmployeeData.employment_status,
           canLogin: mockEmployeeData.can_login,
@@ -121,7 +122,7 @@ describe('AuthService', () => {
       mockSupabase.from.mockReturnValue({ select: mockSelect });
 
       await expect(authService.login(validLoginRequest)).rejects.toThrow(
-        'Invalid user ID or password'
+        'Employee account not found - contact administrator'
       );
     });
 
@@ -167,7 +168,7 @@ describe('AuthService', () => {
       });
 
       await expect(authService.login(validLoginRequest)).rejects.toThrow(
-        'Invalid user ID or password'
+        'Invalid email or password'
       );
     });
   });
@@ -187,10 +188,11 @@ describe('AuthService', () => {
 
       const mockEmployeeData = {
         id: '123e4567-e89b-12d3-a456-426614174000',
-        human_readable_id: 'PGN-2024-0001',
+        human_readable_user_id: 'PGN-2024-0001',
         employment_status: 'ACTIVE' as EmploymentStatus,
         can_login: true,
-        full_name: 'John Doe',
+        first_name: 'John',
+        last_name: 'Doe',
         email: 'john.doe@company.com',
       };
 

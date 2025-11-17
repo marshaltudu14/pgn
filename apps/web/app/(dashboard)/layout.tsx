@@ -18,7 +18,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
-import { Calendar, Home, LogOut, Settings, User, Users } from 'lucide-react';
+import { Calendar, Home, LogOut, Settings, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -73,13 +73,13 @@ export default function DashboardLayout({
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton size="lg" className="font-semibold">
-                    <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full">
+                    <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-full group-data-[collapsible=icon]:size-6">
                       <Image
                         src="/pgn-logo.jpg"
                         alt="PGN System Logo"
                         width={32}
                         height={32}
-                        className="object-cover"
+                        className="object-cover group-data-[collapsible=icon]:w-6 group-data-[collapsible=icon]:h-6"
                       />
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
@@ -115,12 +115,6 @@ export default function DashboardLayout({
 
             <SidebarFooter>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>
-                    <User />
-                    <span>{user?.fullName || user?.email || 'User'}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton onClick={logout}>
                     <LogOut />

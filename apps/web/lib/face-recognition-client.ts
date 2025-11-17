@@ -10,7 +10,7 @@ import {
 } from '@pgn/shared';
 import * as ort from 'onnxruntime-web';
 
-let faceDetection: any = null; // MediaPipe FaceDetection instance
+let faceDetection: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
 let arcFaceSession: ort.InferenceSession | null = null;
 
 /**
@@ -37,7 +37,7 @@ export async function initializeClientModels(): Promise<void> {
     try {
       const modelPath = '/models/arcface_mobile.onnx';
       arcFaceSession = await ort.InferenceSession.create(modelPath);
-    } catch (modelError) {
+    } catch {
       console.warn('ArcFace model not found, using fallback implementation');
       arcFaceSession = null;
     }
@@ -68,7 +68,7 @@ export async function generateEmbeddingClientSide(imageFile: File): Promise<Face
     video.play();
 
     // Process face detection
-    const results = await new Promise<any>((resolve) => {
+    const results = await new Promise<any>((resolve) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       faceDetection.onResults(resolve);
       faceDetection.send({image: video});
     });
@@ -230,13 +230,13 @@ async function generateArcFaceEmbedding(imageData: ImageData): Promise<Float32Ar
   const outputName = Object.keys(outputMap)[0];
   const output = outputMap[outputName].data;
 
-  return new Float32Array(output as number[]);
+  return new Float32Array(output as unknown as number[]);
 }
 
 /**
  * Extract landmarks from MediaPipe face detection
  */
-function extractLandmarks(detection: any): FaceDetectionResult['landmarks'] {
+function extractLandmarks(detection: any): FaceDetectionResult['landmarks'] { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (!detection.landmarks || detection.landmarks.length === 0) {
     return undefined;
   }

@@ -22,7 +22,7 @@ export const API_BASE_URL = getApiBaseUrl();
 
 /**
  * API endpoints for all application features
- * Only includes routes that exist in the PGN API
+ * Only includes routes that exist in the PGN API and are currently implemented
  */
 export const API_ENDPOINTS = {
   // Authentication endpoints
@@ -35,8 +35,8 @@ export const API_ENDPOINTS = {
   EMPLOYEES: "/employees",
   EMPLOYEE_BY_ID: "/employees", // Base for /employees/[id]
 
-  // Face recognition endpoints
-  GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding",
+  // Note: Face recognition endpoints will be added in Phase 4
+  // GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding", // TODO: Add in Phase 4
 } as const;
 
 /**

@@ -85,8 +85,7 @@ export class AuthService {
    * Employee users get JWT tokens for API access
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    console.log('🔐 Login attempt started:', { email: credentials.email });
-    const { email, password } = credentials;
+        const { email, password } = credentials;
 
     if (!email || !password) {
       throw new Error('Email and password are required');
@@ -96,27 +95,22 @@ export class AuthService {
     const authEmail = email.toLowerCase().trim();
 
     try {
-      console.log('🔑 Authenticating with Supabase...');
-      // Authenticate with Supabase using email and password
+            // Authenticate with Supabase using email and password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: authEmail,
         password: password,
       });
 
-      console.log('📊 Supabase auth result:', { authError: authError?.message, hasUser: !!authData?.user });
-
+      
       if (authError || !authData.user) {
-        console.log('❌ Authentication failed:', authError?.message);
-        throw new Error('Invalid email or password');
+                throw new Error('Invalid email or password');
       }
 
       // Check if user is admin by looking at user metadata
       const userMetadata = authData.user.user_metadata || {};
-      console.log('🔍 User metadata:', userMetadata);
-
+      
       if (userMetadata.role === 'admin') {
-        console.log('✅ Admin user verified');
-        // Admin users don't get JWT tokens since they only login via Next.js
+                // Admin users don't get JWT tokens since they only login via Next.js
         const authenticatedUser: AuthenticatedUser = {
           id: authData.user.id,
           humanReadableId: authEmail,
@@ -131,25 +125,17 @@ export class AuthService {
           token: '', // No JWT for admin users
           employee: authenticatedUser,
         };
-        console.log('✅ Admin login successful:', response);
-        return response;
+                return response;
       } else {
         // Employee login - check if they exist in employees table
-        console.log('👷 Attempting employee validation for:', authEmail);
-        const employee = await this.findEmployeeByEmail(authEmail);
+                const employee = await this.findEmployeeByEmail(authEmail);
 
         if (!employee) {
-          console.log('❌ Employee not found in employees table');
-          await supabase.auth.signOut();
+                    await supabase.auth.signOut();
           throw new Error('Employee account not found - contact administrator');
         }
 
-        console.log('👷 Employee found:', {
-          id: employee.id,
-          human_readable_id: employee.human_readable_id,
-          status: employee.employment_status
-        });
-
+        
         // Check if employee can login based on employment status
         if (!employee.can_login) {
           await supabase.auth.signOut();
@@ -180,8 +166,7 @@ export class AuthService {
           token,
           employee: authenticatedUser,
         };
-        console.log('✅ Employee login successful:', response);
-        return response;
+                return response;
       }
     } catch (error) {
       console.error('💥 Login error:', error);
@@ -363,8 +348,7 @@ export class AuthService {
    */
   async trackFailedLoginAttempt(userId: string, ipAddress: string): Promise<void> {
     try {
-      console.log(`Failed login attempt for user ${userId} from IP ${ipAddress} at ${new Date().toISOString()}`);
-    } catch (error) {
+          } catch (error) {
       console.error('Failed to track login attempt:', error);
     }
   }

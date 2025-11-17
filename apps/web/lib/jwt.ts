@@ -50,12 +50,9 @@ export class JWTService {
       return decoded;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        console.log('Token expired');
-      } else if (error instanceof jwt.JsonWebTokenError) {
-        console.log('Invalid token');
-      } else {
-        console.log('Token validation error:', error);
-      }
+        } else if (error instanceof jwt.JsonWebTokenError) {
+        } else {
+        }
       return null;
     }
   }
@@ -81,8 +78,7 @@ export class JWTService {
         canLogin: decoded.canLogin,
       });
     } catch (error) {
-      console.log('Token refresh error:', error);
-      return null;
+        return null;
     }
   }
 

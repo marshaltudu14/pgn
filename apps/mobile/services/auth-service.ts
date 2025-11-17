@@ -43,7 +43,6 @@ export class MobileAuthService {
   // Main Authentication Methods
   async login(credentials: LoginRequest): Promise<AuthenticationResult> {
     try {
-      
       // Validate input
       if (!credentials.email || !credentials.password) {
         return {
@@ -84,7 +83,6 @@ export class MobileAuthService {
 
   async biometricLogin(): Promise<AuthenticationResult> {
     try {
-      
       // Check if user has credentials stored
       const hasCredentials = await secureStorage.hasStoredCredentials();
       if (!hasCredentials) {
@@ -177,7 +175,6 @@ export class MobileAuthService {
 
   async logout(): Promise<{ success: boolean; error?: string }> {
     try {
-      
       const authToken = await secureStorage.getAuthToken();
       if (authToken) {
         try {
@@ -198,7 +195,7 @@ export class MobileAuthService {
         this.tokenRefreshTimeout = null;
       }
 
-            return { success: true };
+      return { success: true };
     } catch (error) {
       console.error('❌ Logout failed:', error);
       return {
@@ -238,8 +235,6 @@ export class MobileAuthService {
 
   async refreshAuthToken(refreshToken: string): Promise<{ success: boolean; token?: string; error?: string }> {
     try {
-      console.log('🔄 Mobile Auth Service: Refreshing auth token');
-
       // Prevent multiple concurrent refresh attempts
       if (this.tokenRefreshPromise) {
         const token = await this.tokenRefreshPromise;
@@ -275,8 +270,6 @@ export class MobileAuthService {
   // Biometric Authentication Methods
   async checkBiometricAvailability(): Promise<BiometricResult> {
     try {
-      console.log('🔍 Checking biometric availability...');
-
       const [hasHardware, isEnrolled] = await Promise.all([
         LocalAuthentication.hasHardwareAsync(),
         LocalAuthentication.isEnrolledAsync(),
@@ -297,7 +290,6 @@ export class MobileAuthService {
       }
 
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-      console.log('✅ Biometric available:', { supportedTypes });
 
       return {
         success: true,
@@ -314,8 +306,6 @@ export class MobileAuthService {
 
   async authenticateWithBiometrics(options?: LocalAuthentication.LocalAuthenticationOptions): Promise<BiometricResult> {
     try {
-      console.log('👆 Attempting biometric authentication...');
-
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: 'Authenticate to continue',
         cancelLabel: 'Cancel',
@@ -323,8 +313,6 @@ export class MobileAuthService {
         requireConfirmation: true,
         ...options,
       });
-
-      console.log('🔍 Biometric result:', { success: result.success });
 
       if (result.success) {
         return { success: true };
@@ -345,8 +333,6 @@ export class MobileAuthService {
 
   async enableBiometricAuthentication(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔐 Enabling biometric authentication...');
-
       // First, verify biometrics are available
       const availabilityCheck = await this.checkBiometricAvailability();
       if (!availabilityCheck.success) {
@@ -380,7 +366,6 @@ export class MobileAuthService {
 
       await secureStorage.setBiometricPreferences(biometricPrefs);
 
-      console.log('✅ Biometric authentication enabled successfully');
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to enable biometric authentication:', error);
@@ -393,8 +378,6 @@ export class MobileAuthService {
 
   async disableBiometricAuthentication(): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🔓 Disabling biometric authentication...');
-
       const biometricPrefs = await secureStorage.getBiometricPreferences() || {
         enabled: false,
         setupComplete: false,
@@ -404,7 +387,6 @@ export class MobileAuthService {
 
       await secureStorage.setBiometricPreferences(biometricPrefs);
 
-      console.log('✅ Biometric authentication disabled successfully');
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to disable biometric authentication:', error);
@@ -417,22 +399,13 @@ export class MobileAuthService {
 
   // State Management Methods
   async getCurrentAuthState(): Promise<AuthState> {
-    console.log('🔐 Auth Service: Getting current auth state...');
     try {
       const userData = await secureStorage.getUserData();
       const biometricPrefs = await secureStorage.getBiometricPreferences();
       const authToken = await secureStorage.getAuthToken();
 
-      console.log('🔐 Auth Service: Storage check:', {
-        hasToken: !!authToken,
-        hasUserData: !!userData,
-        hasBiometricPrefs: !!biometricPrefs,
-        userEmail: userData?.email
-      });
-
       // If no token or user data, not authenticated
       if (!authToken || !userData) {
-        console.log('🔐 Auth Service: No token or user data found - not authenticated');
         return {
           isAuthenticated: false,
           isLoading: false,
@@ -445,12 +418,9 @@ export class MobileAuthService {
 
       // Validate the token by making a lightweight API call
       // For now, we'll do basic token validation (in a real app, you might want to validate with the server)
-      console.log('🔐 Auth Service: Validating token...');
       const isValidToken = await this.validateToken(authToken);
-      console.log('🔐 Auth Service: Token validation result:', isValidToken);
 
       if (!isValidToken) {
-        console.log('🔐 Auth Service: Invalid token - clearing and returning not authenticated');
         // Clear invalid tokens
         await this.clearInvalidTokens();
         return {
@@ -497,11 +467,9 @@ export class MobileAuthService {
   // Private Methods
   private async validateToken(token: string): Promise<boolean> {
     try {
-      console.log('🔐 Auth Service: Validating token with API call...');
       // Use the existing apiClient to validate token by getting current user
       // If the token is valid, getCurrentUser will return user data
       const user = await apiClient.getCurrentUser(token);
-      console.log('🔐 Auth Service: Token validation successful - user:', user.email);
       return true;
     } catch (error) {
       console.error('❌ Auth Service: Token validation failed:', error);
@@ -528,7 +496,6 @@ export class MobileAuthService {
     const refreshInterval = 14 * 60 * 1000; // 14 minutes
 
     this.tokenRefreshTimeout = setTimeout(async () => {
-      console.log('⏰ Auto-refreshing token...');
       const refreshToken = await secureStorage.getRefreshToken();
       if (refreshToken) {
         await this.refreshAuthToken(refreshToken);
@@ -596,7 +563,6 @@ export class MobileAuthService {
 
   // Handle session expiration by clearing auth state
   async handleSessionExpiration(): Promise<void> {
-    console.log('🚪 Session expired, clearing authentication state');
     try {
       // Clear all auth data
       await secureStorage.clearAllAuthData();
@@ -609,8 +575,6 @@ export class MobileAuthService {
 
       // Clear any pending refresh promises
       this.tokenRefreshPromise = null;
-
-      console.log('✅ Session expiration handled successfully');
     } catch (error) {
       console.error('❌ Failed to handle session expiration:', error);
     }

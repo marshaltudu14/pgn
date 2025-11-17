@@ -210,14 +210,12 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
           if (result.success && result.embedding) {
             // Store embedding for form submission
-            console.log('Face embedding generated successfully');
-            handleEmbeddingGenerated();
+              handleEmbeddingGenerated();
 
             // Show processing time for user feedback
             const resultWithPerformance = result as { performance?: { totalTime?: number } };
             if (resultWithPerformance.performance?.totalTime) {
-              console.log(`Processing time: ${resultWithPerformance.performance.totalTime.toFixed(0)}ms`);
-            }
+              }
           } else if (result.error) {
             setError(result.error);
           }
@@ -238,8 +236,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
   const handleEmbeddingGenerated = () => {
     // Store embedding for form submission
-    console.log('Embedding generated for face recognition');
-  };
+    };
 
   return (
     <>

@@ -10,14 +10,11 @@ import { LoginRequest } from '@pgn/shared';
  * Authenticates an employee and returns a JWT token using Supabase
  */
 const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
-  console.log('🚀 Login API endpoint called');
-
+  
   try {
     // Parse request body first to get user identifier for rate limiting
-    console.log('📝 Parsing request body...');
-    const body = await req.json() as LoginRequest;
-    console.log('📋 Request body received:', { email: body.email, hasPassword: !!body.password });
-
+      const body = await req.json() as LoginRequest;
+  
     // Validate required fields
     if (!body.password || !body.email) {
       return AuthErrorService.validationError('Email and password are required');
@@ -48,11 +45,9 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
     const ipAddress = forwarded ? forwarded.split(',')[0] : 'unknown';
 
     try {
-      console.log('🔐 Calling authService.login()...');
-      // Attempt login using auth service
+        // Attempt login using auth service
       const loginResponse = await authService.login(body);
-      console.log('✅ authService.login() successful');
-
+  
       // Return success response
       const response = NextResponse.json(loginResponse);
 

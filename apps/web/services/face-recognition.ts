@@ -24,13 +24,11 @@ async function initializeModel(): Promise<void> {
     // Load face detection and recognition model
     // For now, we'll use a pre-trained model like FaceNet or similar
     // In production, you would load your custom face recognition model
-    console.log('Loading face recognition model...');
-
+    
     // Placeholder for model loading - replace with actual model
     // model = await tf.loadLayersModel('path/to/face-recognition-model');
 
-    console.log('Face recognition model loaded successfully');
-  } catch (error) {
+      } catch (error) {
     console.error('Failed to load face recognition model:', error);
     throw new Error('Failed to initialize face recognition model');
   }

@@ -14,8 +14,10 @@
     },
     "next-devtools": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "next-devtools-mcp@latest"],
-      "cwd": "C:\\Code\\pgn\\apps\\web"
+      "args": [
+        "/c",
+        "cd C:\\Code\\pgn\\apps\\web && npx -y next-devtools-mcp@latest"
+      ]
     },
     "shadcn": {
       "command": "cmd",

@@ -22,7 +22,6 @@ export default function UnifiedBottomNavigation({
   activeTab = 'home',
   onTabChange
 }: UnifiedBottomNavigationProps) {
-  console.log('🧭 UnifiedBottomNavigation: Rendering with activeTab:', activeTab);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
 

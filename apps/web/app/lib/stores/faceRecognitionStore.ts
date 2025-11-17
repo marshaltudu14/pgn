@@ -41,8 +41,7 @@ export const useFaceRecognitionStore = create<FaceRecognitionState>((set, get) =
       if (!areModelsInitialized()) {
         await initializeClientModels();
         set({ modelsInitialized: true });
-        console.log('Face recognition models initialized successfully');
-      }
+        }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to initialize face recognition models';
       set({ error: errorMessage, isInitializing: false });

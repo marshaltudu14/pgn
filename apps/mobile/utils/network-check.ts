@@ -29,8 +29,6 @@ export class NetworkMonitor {
   }
 
   private async initialize(): Promise<void> {
-    console.log('🌐 Network Monitor: Initializing...');
-
     // Get initial network status
     await this.updateNetworkStatus();
 
@@ -46,8 +44,6 @@ export class NetworkMonitor {
     this.checkInterval = setInterval(() => {
       this.performNetworkCheck();
     }, this.CHECK_INTERVAL);
-
-    console.log('✅ Network Monitor: Started monitoring');
   }
 
   private stopMonitoring(): void {
@@ -60,17 +56,9 @@ export class NetworkMonitor {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }
-
-    console.log('⏹️ Network Monitor: Stopped monitoring');
   }
 
   private handleNetworkChange = (state: NetInfoState): void => {
-    console.log('🔄 Network Monitor: Network state changed', {
-      isConnected: state.isConnected,
-      type: state.type,
-      isInternetReachable: state.isInternetReachable,
-    });
-
     this.updateNetworkStatus(state);
   };
 
@@ -91,8 +79,6 @@ export class NetworkMonitor {
 
       this.currentStatus = status;
       this.notifyListeners(status);
-
-      console.log('📊 Network Monitor: Status updated', status);
     } catch (error) {
       console.error('❌ Network Monitor: Failed to update status', error);
 
@@ -179,7 +165,6 @@ export class NetworkMonitor {
   // Public Methods
   async checkAPIConnectivity(): Promise<NetworkCheckResult> {
     try {
-      console.log('🔍 Network Monitor: Checking API connectivity...');
       const startTime = Date.now();
 
       // Get current network state
@@ -187,13 +172,6 @@ export class NetworkMonitor {
 
       const isOnline = await apiClient.checkConnectivity();
       const latency = Date.now() - startTime;
-
-      console.log('📡 Network Monitor: API check result', {
-        isOnline,
-        canReachAPI: isOnline,
-        connectionType: netInfoState.type,
-        latency,
-      });
 
       return {
         isOnline: netInfoState.isConnected || false,
@@ -339,7 +317,6 @@ export class NetworkMonitor {
     this.stopMonitoring();
     this.listeners.clear();
     this.currentStatus = null;
-    console.log('🗑️ Network Monitor: Destroyed');
   }
 }
 

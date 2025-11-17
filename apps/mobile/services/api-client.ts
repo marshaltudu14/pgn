@@ -48,8 +48,6 @@ class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      console.log(`🌐 API Request (attempt ${attempt}): ${options.method} ${url}`);
-
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
@@ -67,7 +65,6 @@ class ApiClient {
 
       // Retry logic for network errors
       if (attempt < this.retryAttempts && this.shouldRetry(error)) {
-        console.log(`🔄 Retrying API request (attempt ${attempt + 1}/${this.retryAttempts}): ${url}`);
         await this.delay(this.retryDelay * attempt); // Exponential backoff
         return this.fetchWithTimeout(url, options, attempt + 1);
       }
@@ -90,8 +87,6 @@ class ApiClient {
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
-    console.log(`📡 API Response: ${response.status} ${response.statusText}`);
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const apiError: ApiError = {
@@ -108,7 +103,6 @@ class ApiClient {
     }
 
     const data = await response.json();
-    console.log('✅ API Response Data:', data);
     return data;
   }
 
@@ -138,11 +132,6 @@ class ApiClient {
 
   // Authentication endpoints
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    console.log('🔐 Mobile API: Attempting login', {
-      email: credentials.email,
-      hasPassword: !!credentials.password
-    });
-
     return this.request<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
@@ -150,8 +139,6 @@ class ApiClient {
   }
 
   async refreshToken(refreshToken: string): Promise<RefreshResponse> {
-    console.log('🔄 Mobile API: Refreshing token');
-
     return this.request<RefreshResponse>('/auth/refresh', {
       method: 'POST',
       body: JSON.stringify({ token: refreshToken } as RefreshRequest),
@@ -159,8 +146,6 @@ class ApiClient {
   }
 
   async logout(authToken: string): Promise<LogoutResponse> {
-    console.log('🚪 Mobile API: Logging out');
-
     return this.request<LogoutResponse>('/auth/logout', {
       method: 'POST',
       body: JSON.stringify({ token: authToken } as LogoutRequest),
@@ -168,8 +153,6 @@ class ApiClient {
   }
 
   async getCurrentUser(authToken: string): Promise<AuthenticatedUser> {
-    console.log('👤 Mobile API: Getting current user');
-
     return this.request<AuthenticatedUser>('/auth/user', {
       method: 'GET',
       headers: {
@@ -179,8 +162,6 @@ class ApiClient {
   }
 
   async getEmployeeProfile(authToken: string): Promise<AuthenticatedUser> {
-    console.log('👨‍💼 Mobile API: Getting employee profile');
-
     return this.request<AuthenticatedUser>('/employees/me', {
       method: 'GET',
       headers: {
@@ -192,8 +173,6 @@ class ApiClient {
   // Utility methods for checking connectivity
   async checkConnectivity(): Promise<boolean> {
     try {
-      console.log('🌐 Checking API connectivity...');
-
       // Simple health check
       const response = await this.fetchWithTimeout(
         `${this.baseURL}/api/health`,
@@ -203,7 +182,6 @@ class ApiClient {
 
       return response.ok;
     } catch (error) {
-      console.log('❌ Connectivity check failed:', error);
       return false;
     }
   }

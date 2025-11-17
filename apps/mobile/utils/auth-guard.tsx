@@ -16,10 +16,8 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
   useEffect(() => {
     const init = async () => {
-      console.log('🔐 AuthGuard: Initializing auth...');
       await initializeAuth();
       setIsInitialized(true);
-      console.log('🔐 AuthGuard: Auth initialization complete');
     };
 
     init();
@@ -33,7 +31,6 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
       error.includes('SESSION_EXPIRED') ||
       error.includes('Your session has expired')
     )) {
-      console.log('🚪 AuthGuard: Detected session expiration, handling logout');
       handleSessionExpiration();
       // The handleSessionExpiration will update the auth state,
       // and the effect below will handle the redirect
@@ -42,16 +39,7 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
   // Redirect to login when authentication is lost
   useEffect(() => {
-    console.log('🔐 AuthGuard State:', {
-      isInitialized,
-      isLoading,
-      isAuthenticated,
-      requireAuth,
-      error: error ? 'YES' : 'NO'
-    });
-
     if (isInitialized && !isLoading && !isAuthenticated && requireAuth) {
-      console.log('🚪 AuthGuard: User not authenticated, redirecting to login');
       router.replace(redirectTo as any);
     }
   }, [isInitialized, isLoading, isAuthenticated, requireAuth, router, redirectTo]);
@@ -67,7 +55,6 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
   // If user is authenticated but trying to access auth pages, redirect to dashboard
   if (!requireAuth && isAuthenticated) {
-    console.log('🚪 AuthGuard: User authenticated but accessing auth pages, redirecting to dashboard');
     router.replace('/(dashboard)/index' as any);
     return (
       <View className="flex-1 justify-center items-center bg-white">

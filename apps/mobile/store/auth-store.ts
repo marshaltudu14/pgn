@@ -51,21 +51,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Initialize authentication state on app start
   initializeAuth: async () => {
-      console.log('🔐 Auth Store: Starting initialization...');
-      set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null });
 
     try {
       const authState = await mobileAuthService.getCurrentAuthState();
-      console.log('🔐 Auth Store: Auth state retrieved:', {
-        isAuthenticated: authState.isAuthenticated,
-        hasUser: !!authState.user,
-        userEmail: authState.user?.email
-      });
-
       const biometricPrefs = await secureStorage.getBiometricPreferences();
-      console.log('🔐 Auth Store: Biometric preferences:', {
-        enabled: biometricPrefs?.enabled || false
-      });
 
       set({
         isAuthenticated: authState.isAuthenticated,
@@ -75,8 +65,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         biometricEnabled: biometricPrefs?.enabled || false,
         lastActivity: Date.now(),
       });
-
-      console.log('🔐 Auth Store: Initialization complete - Authenticated:', authState.isAuthenticated);
     } catch (error) {
       console.error('❌ Auth Store: Initialization failed', error);
       set({
@@ -287,7 +275,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const { isAuthenticated, user } = get();
 
     if (!isAuthenticated || !user) {
-      console.warn('⚠️ Auth Store: Cannot refresh user data - not authenticated');
       return;
     }
 
@@ -339,8 +326,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Handle session expiration
   handleSessionExpiration: async (): Promise<void> => {
-    console.log('🚪 Auth Store: Handling session expiration');
-
     // Clear all auth state
     set({
       isAuthenticated: false,

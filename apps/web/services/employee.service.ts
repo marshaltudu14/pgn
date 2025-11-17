@@ -365,10 +365,7 @@ export async function changeEmploymentStatus(
     const employee = await updateEmployee(id, updateData);
 
     // Log the status change
-    console.log(
-      `Employee ${id} status changed to ${statusChange.employment_status} by ${statusChange.changed_by}. Reason: ${statusChange.reason || 'Not specified'}`
-    );
-
+    
     return employee;
   } catch (error) {
     console.error('Error in changeEmploymentStatus:', error);
@@ -476,8 +473,7 @@ export async function resetEmployeePassword(employeeId: string, newPassword: str
       return { success: false, error: authResult.error as string || 'Failed to reset password' };
     }
 
-    console.log(`Password reset successfully for employee ${employeeId} (${employee.email})`);
-    return { success: true };
+        return { success: true };
   } catch (error) {
     console.error('Error in resetEmployeePassword:', error);
     return { success: false, error: 'An unexpected error occurred' };

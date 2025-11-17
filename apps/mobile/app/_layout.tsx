@@ -41,8 +41,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutContent() {
-  console.log('🏗️ RootLayoutContent: Rendering app structure');
-  return (
+    return (
     <SafeAreaView style={{ flex: 1 }} edges={["left", "right", "bottom"]}>
       <ToastProvider>
         <AuthGuard requireAuth={false}>

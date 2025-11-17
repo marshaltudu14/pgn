@@ -4,17 +4,14 @@ import { useAuth } from '@/store/auth-store';
 import { AuthLoadingScreen } from '@/components/LoadingStates';
 
 export default function AuthLayout() {
-  console.log('🔐 AuthLayout: Rendering auth layout');
-  const { isLoading, initializeAuth, isAuthenticated } = useAuth();
+    const { isLoading, initializeAuth, isAuthenticated } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    console.log('🔐 AuthLayout: Initializing auth...');
-    const init = async () => {
+      const init = async () => {
       await initializeAuth();
       setIsInitialized(true);
-      console.log('🔐 AuthLayout: Auth initialized, is authenticated:', isAuthenticated);
-    };
+        };
 
     init();
   }, [initializeAuth, isAuthenticated]);

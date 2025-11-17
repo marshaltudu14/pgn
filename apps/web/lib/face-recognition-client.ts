@@ -19,8 +19,7 @@ let embeddingModel: tf.LayersModel | null = null;
  */
 export async function initializeClientModels(): Promise<void> {
   try {
-    console.log('Loading client-side face recognition models...');
-
+  
     // Initialize face detection model
     const modelConfig: faceLandmarksDetection.MediaPipeFaceMeshTfjsModelConfig = {
       runtime: 'tfjs',
@@ -36,8 +35,7 @@ export async function initializeClientModels(): Promise<void> {
     // Create a lightweight embedding model (simplified FaceNet-like architecture)
     embeddingModel = createLightweightEmbeddingModel();
 
-    console.log('Client-side face recognition models loaded successfully');
-  } catch (error) {
+    } catch (error) {
     console.error('Failed to load client-side models:', error);
     throw new Error('Failed to initialize face recognition models');
   }

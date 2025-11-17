@@ -19,8 +19,7 @@ import {
 } from 'lucide-react-native';
 
 export default function HomeScreen() {
-  console.log('🏠 HomeScreen: Rendering - You are seeing the INDEX screen directly, not the layout!');
-  const { user, logout } = useAuth();
+    const { user, logout } = useAuth();
   const router = useRouter();
   const colorScheme = useColorScheme();
 

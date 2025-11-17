@@ -9,33 +9,26 @@ export default function IndexScreen() {
   const { isAuthenticated, isLoading, initializeAuth } = useAuth();
   const colorScheme = useColorScheme();
 
-  console.log('🏠 IndexScreen: Entry point - Optimistic navigation');
-
+  
   useEffect(() => {
     const init = async () => {
-      console.log('🏠 IndexScreen: Initializing auth for navigation...');
-      await initializeAuth();
-      console.log('🏠 IndexScreen: Auth initialized, navigating...');
-    };
+        await initializeAuth();
+      };
 
     init();
   }, [initializeAuth]);
 
   useEffect(() => {
     if (isLoading) {
-      console.log('🏠 IndexScreen: Still loading...');
-      return;
+        return;
     }
 
-    console.log('🏠 IndexScreen: Auth state determined, isAuthenticated:', isAuthenticated);
-
+  
     // Optimistic navigation based on auth state
     if (isAuthenticated) {
-      console.log('🏠 IndexScreen: User authenticated, redirecting to dashboard');
-      router.replace('/(dashboard)');
+          router.replace('/(dashboard)');
     } else {
-      console.log('🏠 IndexScreen: User not authenticated, redirecting to login');
-      router.replace('/(auth)/login');
+          router.replace('/(auth)/login');
     }
   }, [isAuthenticated, isLoading, router]);
 

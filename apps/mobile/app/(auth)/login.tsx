@@ -29,8 +29,10 @@ export default function LoginScreen() {
     }
   }, [isAuthenticated, router]);
 
-  const handleLogin = async (credentials: LoginRequest) => {
+  const handleLogin = async (credentials: LoginRequest): Promise<void> => {
     try {
+      // The login function will handle loading states and update the auth store
+      // The useEffect below will handle the redirection when isAuthenticated changes
       const result = await login(credentials);
 
       if (result.success) {
@@ -44,12 +46,13 @@ export default function LoginScreen() {
           }
         }
 
-        // Navigate to dashboard after successful login (or no biometrics available)
-        router.replace('/(dashboard)');
+        // If biometrics are not available or already enabled, the useEffect will handle navigation
+        // when isAuthenticated state changes
       }
       // Error handling is done in the auth store and LoginForm component
-    } catch {
-      // This catch is for unexpected errors - silently handle
+    } catch (error) {
+      console.error('❌ Login: Unexpected error during login', error);
+      // The auth store handles the error state, no need to do anything here
     }
   };
 

@@ -4,16 +4,16 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { LoginRequest } from '@pgn/shared';
 import { showToast } from '@/utils/toast';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/store/auth-store';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import Spinner from '@/components/Spinner';
 
 interface LoginFormProps {
-  onSubmit: (credentials: LoginRequest) => void;
+  onSubmit: (credentials: LoginRequest) => Promise<void>;
   isLoading?: boolean;
   error?: string | null;
 }
@@ -60,9 +60,9 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
     return isValid;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onSubmit({
+      await onSubmit({
         email: email.trim().toLowerCase(),
         password: password.trim(),
       });
@@ -217,7 +217,7 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
         >
           {isLoading ? (
             <>
-              <ActivityIndicator size="small" color="#000000" className="mr-2" />
+              <Spinner size={16} color="#000000" className="mr-2" />
               <Text className="text-black font-semibold text-sm">Signing in...</Text>
             </>
           ) : (

@@ -8,9 +8,12 @@ import {
   AuthenticatedUser
 } from '@pgn/shared';
 import { Platform } from 'react-native';
-
-// API Configuration
-const API_BASE_URL = __DEV__ ? 'http://192.168.31.23:3000' : 'https://pgnwork.com';
+import {
+  API_BASE_URL,
+  API_ENDPOINTS,
+  buildApiUrl,
+  getApiHeaders
+} from '@/constants/api';
 
 export interface ApiError {
   error: string;
@@ -33,7 +36,7 @@ class ApiClient {
   private retryDelay: number;
 
   constructor(config: Partial<NetworkConfig> = {}) {
-    this.baseURL = config.baseURL || API_BASE_URL || 'http://localhost:3000';
+    this.baseURL = config.baseURL || API_BASE_URL;
     this.timeout = config.timeout || 15000; // 15 seconds for mobile
     this.retryAttempts = config.retryAttempts || 3;
     this.retryDelay = config.retryDelay || 1000; // 1 second
@@ -52,8 +55,7 @@ class ApiClient {
         ...options,
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'PGN-Mobile/1.0',
+          ...getApiHeaders(),
           ...options.headers,
         },
       });
@@ -110,7 +112,7 @@ class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const url = `${this.baseURL}/api${endpoint}`;
+    const url = buildApiUrl(endpoint);
 
     try {
       const response = await this.fetchWithTimeout(url, options);
@@ -132,28 +134,28 @@ class ApiClient {
 
   // Authentication endpoints
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>('/auth/login', {
+    return this.request<LoginResponse>(API_ENDPOINTS.LOGIN, {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
   }
 
   async refreshToken(refreshToken: string): Promise<RefreshResponse> {
-    return this.request<RefreshResponse>('/auth/refresh', {
+    return this.request<RefreshResponse>(API_ENDPOINTS.REFRESH_TOKEN, {
       method: 'POST',
       body: JSON.stringify({ token: refreshToken } as RefreshRequest),
     });
   }
 
   async logout(authToken: string): Promise<LogoutResponse> {
-    return this.request<LogoutResponse>('/auth/logout', {
+    return this.request<LogoutResponse>(API_ENDPOINTS.LOGOUT, {
       method: 'POST',
       body: JSON.stringify({ token: authToken } as LogoutRequest),
     });
   }
 
   async getCurrentUser(authToken: string): Promise<AuthenticatedUser> {
-    return this.request<AuthenticatedUser>('/auth/user', {
+    return this.request<AuthenticatedUser>(API_ENDPOINTS.GET_USER, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -162,7 +164,7 @@ class ApiClient {
   }
 
   async getEmployeeProfile(authToken: string): Promise<AuthenticatedUser> {
-    return this.request<AuthenticatedUser>('/employees/me', {
+    return this.request<AuthenticatedUser>(`${API_ENDPOINTS.EMPLOYEES}/me`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -173,14 +175,14 @@ class ApiClient {
   // Utility methods for checking connectivity
   async checkConnectivity(): Promise<boolean> {
     try {
-      // Simple health check
+      // Simple connectivity check by attempting to reach the auth endpoint
       const response = await this.fetchWithTimeout(
-        `${this.baseURL}/api/health`,
-        { method: 'GET' },
+        buildApiUrl(API_ENDPOINTS.LOGIN),
+        { method: 'GET' }, // Will get 405 Method Not Allowed, but that's fine for connectivity check
         1 // No retries for connectivity check
       );
 
-      return response.ok;
+      return response.status === 405; // 405 means server is reachable
     } catch (error) {
       return false;
     }

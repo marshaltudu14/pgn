@@ -11,42 +11,64 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/login' }: AuthGuardProps) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, initializeAuth } = useAuth();
+  const { isAuthenticated, isLoading, initializeAuth, error, handleSessionExpiration } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const init = async () => {
+      console.log('🔐 AuthGuard: Initializing auth...');
       await initializeAuth();
       setIsInitialized(true);
+      console.log('🔐 AuthGuard: Auth initialization complete');
     };
 
     init();
   }, [initializeAuth]);
 
-  // Show loading screen while initializing
-  if (!isInitialized || isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-600">Loading...</Text>
-      </View>
-    );
-  }
+  // Monitor for session expiration errors and handle automatic logout
+  useEffect(() => {
+    if (error && (
+      error.includes('session has expired') ||
+      error.includes('token has expired') ||
+      error.includes('SESSION_EXPIRED') ||
+      error.includes('Your session has expired')
+    )) {
+      console.log('🚪 AuthGuard: Detected session expiration, handling logout');
+      handleSessionExpiration();
+      // The handleSessionExpiration will update the auth state,
+      // and the effect below will handle the redirect
+    }
+  }, [error, handleSessionExpiration]);
 
-  // If authentication is required and user is not authenticated, redirect to login
-  if (requireAuth && !isAuthenticated) {
-    router.replace(redirectTo as any);
+  // Redirect to login when authentication is lost
+  useEffect(() => {
+    console.log('🔐 AuthGuard State:', {
+      isInitialized,
+      isLoading,
+      isAuthenticated,
+      requireAuth,
+      error: error ? 'YES' : 'NO'
+    });
+
+    if (isInitialized && !isLoading && !isAuthenticated && requireAuth) {
+      console.log('🚪 AuthGuard: User not authenticated, redirecting to login');
+      router.replace(redirectTo as any);
+    }
+  }, [isInitialized, isLoading, isAuthenticated, requireAuth, router, redirectTo]);
+
+  // Show loading screen while initializing or redirecting
+  if (!isInitialized || isLoading || (requireAuth && !isAuthenticated)) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text className="mt-4 text-gray-600">Redirecting...</Text>
       </View>
     );
   }
 
   // If user is authenticated but trying to access auth pages, redirect to dashboard
   if (!requireAuth && isAuthenticated) {
-    router.replace('/(tabs)' as any);
+    console.log('🚪 AuthGuard: User authenticated but accessing auth pages, redirecting to dashboard');
+    router.replace('/(dashboard)/index' as any);
     return (
       <View className="flex-1 justify-center items-center bg-white">
         <ActivityIndicator size="large" color="#3B82F6" />

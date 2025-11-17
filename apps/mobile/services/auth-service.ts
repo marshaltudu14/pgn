@@ -417,23 +417,64 @@ export class MobileAuthService {
 
   // State Management Methods
   async getCurrentAuthState(): Promise<AuthState> {
+    console.log('🔐 Auth Service: Getting current auth state...');
     try {
       const userData = await secureStorage.getUserData();
       const biometricPrefs = await secureStorage.getBiometricPreferences();
-      const hasCredentials = await secureStorage.hasStoredCredentials();
+      const authToken = await secureStorage.getAuthToken();
+
+      console.log('🔐 Auth Service: Storage check:', {
+        hasToken: !!authToken,
+        hasUserData: !!userData,
+        hasBiometricPrefs: !!biometricPrefs,
+        userEmail: userData?.email
+      });
+
+      // If no token or user data, not authenticated
+      if (!authToken || !userData) {
+        console.log('🔐 Auth Service: No token or user data found - not authenticated');
+        return {
+          isAuthenticated: false,
+          isLoading: false,
+          user: null,
+          error: null,
+          biometricEnabled: false,
+          lastActivity: Date.now(),
+        };
+      }
+
+      // Validate the token by making a lightweight API call
+      // For now, we'll do basic token validation (in a real app, you might want to validate with the server)
+      console.log('🔐 Auth Service: Validating token...');
+      const isValidToken = await this.validateToken(authToken);
+      console.log('🔐 Auth Service: Token validation result:', isValidToken);
+
+      if (!isValidToken) {
+        console.log('🔐 Auth Service: Invalid token - clearing and returning not authenticated');
+        // Clear invalid tokens
+        await this.clearInvalidTokens();
+        return {
+          isAuthenticated: false,
+          isLoading: false,
+          user: null,
+          error: 'Session expired. Please login again.',
+          biometricEnabled: false,
+          lastActivity: Date.now(),
+        };
+      }
 
       // Convert StoredUser to AuthenticatedUser if needed
-      const user: AuthenticatedUser | null = userData ? {
+      const user: AuthenticatedUser = {
         id: userData.id,
         humanReadableId: userData.humanReadableId,
         fullName: userData.fullName,
         email: userData.email,
         employmentStatus: userData.employmentStatus as any,
         canLogin: userData.canLogin,
-      } : null;
+      };
 
       return {
-        isAuthenticated: hasCredentials,
+        isAuthenticated: true,
         isLoading: false,
         user,
         error: null,
@@ -454,6 +495,29 @@ export class MobileAuthService {
   }
 
   // Private Methods
+  private async validateToken(token: string): Promise<boolean> {
+    try {
+      console.log('🔐 Auth Service: Validating token with API call...');
+      // Use the existing apiClient to validate token by getting current user
+      // If the token is valid, getCurrentUser will return user data
+      const user = await apiClient.getCurrentUser(token);
+      console.log('🔐 Auth Service: Token validation successful - user:', user.email);
+      return true;
+    } catch (error) {
+      console.error('❌ Auth Service: Token validation failed:', error);
+      // If getCurrentUser fails, token is invalid
+      return false;
+    }
+  }
+
+  private async clearInvalidTokens(): Promise<void> {
+    try {
+      await secureStorage.clearAllAuthData();
+    } catch (error) {
+      console.error('❌ Failed to clear invalid tokens:', error);
+    }
+  }
+
   private setupTokenRefresh(token: string): void {
     if (this.tokenRefreshTimeout) {
       clearTimeout(this.tokenRefreshTimeout);
@@ -485,9 +549,23 @@ export class MobileAuthService {
     if (error instanceof Error) {
       const message = error.message;
 
+      // Session expiration errors - these should trigger automatic logout
+      if (message.includes('TOKEN_EXPIRED') ||
+          message.includes('SESSION_EXPIRED') ||
+          message.includes('TOKEN_REVOKED') ||
+          message.includes('SESSION_TIMEOUT') ||
+          message.toLowerCase().includes('session has expired') ||
+          message.toLowerCase().includes('token has expired')) {
+        return 'SESSION_EXPIRED';
+      }
+
       // Common error patterns
       if (message.includes('401') || message.includes('unauthorized')) {
-        return 'Invalid email or password';
+        // Check if it's a session expiration vs invalid credentials
+        if (message.includes('invalid') || message.includes('Invalid')) {
+          return 'Invalid email or password';
+        }
+        return 'SESSION_EXPIRED'; // Assume session timeout for other 401s
       }
       if (message.includes('403') || message.includes('forbidden')) {
         return 'Access denied. Your account may be suspended.';
@@ -506,6 +584,36 @@ export class MobileAuthService {
     }
 
     return 'An unexpected error occurred';
+  }
+
+  // Check if an error indicates session expiration
+  private isSessionExpiredError(error: string): boolean {
+    return error === 'SESSION_EXPIRED' ||
+           error.toLowerCase().includes('session has expired') ||
+           error.toLowerCase().includes('token has expired') ||
+           error.toLowerCase().includes('session timeout');
+  }
+
+  // Handle session expiration by clearing auth state
+  async handleSessionExpiration(): Promise<void> {
+    console.log('🚪 Session expired, clearing authentication state');
+    try {
+      // Clear all auth data
+      await secureStorage.clearAllAuthData();
+
+      // Clear token refresh timeout
+      if (this.tokenRefreshTimeout) {
+        clearTimeout(this.tokenRefreshTimeout);
+        this.tokenRefreshTimeout = null;
+      }
+
+      // Clear any pending refresh promises
+      this.tokenRefreshPromise = null;
+
+      console.log('✅ Session expiration handled successfully');
+    } catch (error) {
+      console.error('❌ Failed to handle session expiration:', error);
+    }
   }
 }
 

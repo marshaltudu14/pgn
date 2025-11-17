@@ -81,7 +81,8 @@
       "Bash(nul:*)",
       "Bash(npx expo doctor:*)",
       "Bash(npx:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "mcp__playwright__browser_take_screenshot"
     ],
     "deny": [],
     "ask": []

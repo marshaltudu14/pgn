@@ -9,6 +9,7 @@ import {
 import { LoginRequest } from '@pgn/shared';
 import { showToast } from '@/utils/toast';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/store/auth-store';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 
 interface LoginFormProps {
@@ -19,6 +20,7 @@ interface LoginFormProps {
 
 export default function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps) {
   const colorScheme = useColorScheme();
+  const { canUseBiometricLogin, biometricLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,12 +70,31 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
   };
 
   
-  const handleBiometricLogin = () => {
-    showToast.info(
-      'Biometric Login',
-      'Biometric authentication will be available in the next update.',
-      4000
-    );
+  const handleBiometricLogin = async () => {
+    try {
+      const result = await biometricLogin();
+
+      if (result.success) {
+        // The auth store will handle the success state
+        showToast.success(
+          'Biometric Login',
+          'Successfully logged in with biometrics',
+          3000
+        );
+      } else {
+        showToast.error(
+          'Biometric Login Failed',
+          result.error || 'Failed to authenticate with biometrics',
+          4000
+        );
+      }
+    } catch {
+      showToast.error(
+        'Biometric Login Error',
+        'An unexpected error occurred during biometric login',
+        4000
+      );
+    }
   };
 
   return (
@@ -206,7 +227,7 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
       </View>
 
       {/* Biometric Login Option */}
-      {showBiometricLoginOption && (
+      {canUseBiometricLogin && (
         <View className="items-center">
           <View className="flex-row items-center py-2">
             <View className={`h-px flex-1 ${
@@ -240,6 +261,3 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
   );
 }
 
-// Temporary flag for biometric login option
-// This will be controlled by auth state in the future
-const showBiometricLoginOption = false;

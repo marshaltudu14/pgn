@@ -37,6 +37,7 @@ export interface AuthStore extends AuthState {
   getValidToken: () => Promise<string | null>;
   isAuthenticatedUser: () => boolean;
   canUseBiometricLogin: () => boolean;
+  handleSessionExpiration: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -50,11 +51,21 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Initialize authentication state on app start
   initializeAuth: async () => {
+      console.log('🔐 Auth Store: Starting initialization...');
       set({ isLoading: true, error: null });
 
     try {
       const authState = await mobileAuthService.getCurrentAuthState();
+      console.log('🔐 Auth Store: Auth state retrieved:', {
+        isAuthenticated: authState.isAuthenticated,
+        hasUser: !!authState.user,
+        userEmail: authState.user?.email
+      });
+
       const biometricPrefs = await secureStorage.getBiometricPreferences();
+      console.log('🔐 Auth Store: Biometric preferences:', {
+        enabled: biometricPrefs?.enabled || false
+      });
 
       set({
         isAuthenticated: authState.isAuthenticated,
@@ -64,6 +75,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         biometricEnabled: biometricPrefs?.enabled || false,
         lastActivity: Date.now(),
       });
+
+      console.log('🔐 Auth Store: Initialization complete - Authenticated:', authState.isAuthenticated);
     } catch (error) {
       console.error('❌ Auth Store: Initialization failed', error);
       set({
@@ -323,6 +336,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   setLoading: (loading: boolean) => {
     set({ isLoading: loading });
   },
+
+  // Handle session expiration
+  handleSessionExpiration: async (): Promise<void> => {
+    console.log('🚪 Auth Store: Handling session expiration');
+
+    // Clear all auth state
+    set({
+      isAuthenticated: false,
+      isLoading: false,
+      user: null,
+      error: 'Your session has expired. Please login again.',
+      biometricEnabled: false,
+      lastActivity: Date.now(),
+    });
+
+    // Call the auth service to handle cleanup
+    await mobileAuthService.handleSessionExpiration();
+  },
 }));
 
 // Utility functions for components
@@ -346,11 +377,12 @@ export const useAuth = () => {
     biometricLogin: authStore.biometricLogin,
     logout: authStore.logout,
     refreshToken: authStore.refreshToken,
-    enableBiometric: authStore.enableBiometricAuthentication,
-    disableBiometric: authStore.disableBiometricAuthentication,
-    checkBiometric: authStore.checkBiometricAvailability,
+    enableBiometricAuthentication: authStore.enableBiometricAuthentication,
+    disableBiometricAuthentication: authStore.disableBiometricAuthentication,
+    checkBiometricAvailability: authStore.checkBiometricAvailability,
     refreshUserData: authStore.refreshUserData,
     clearError: authStore.clearError,
+    handleSessionExpiration: authStore.handleSessionExpiration,
 
     // Initialize
     initializeAuth: authStore.initializeAuth,

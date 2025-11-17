@@ -80,12 +80,10 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, token, options);
-        console.log('✅ Auth token stored securely');
       } else {
         // Fallback to localStorage for web development
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem(key, token);
-          console.log('⚠️ Auth token stored in localStorage (fallback)');
         } else {
           throw new Error('No secure storage available');
         }
@@ -102,13 +100,11 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         const token = await SecureStore.getItemAsync(key, this.getSecureOptions('TOKENS'));
-        console.log(token ? '✅ Auth token retrieved' : 'ℹ️ No auth token found');
         return token;
       } else {
         // Fallback to localStorage
         if (typeof window !== 'undefined' && window.localStorage) {
           const token = window.localStorage.getItem(key);
-          console.log(token ? '⚠️ Auth token retrieved from localStorage' : 'ℹ️ No auth token found');
           return token;
         }
         return null;
@@ -125,12 +121,10 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.deleteItemAsync(key);
-        console.log('✅ Auth token removed from secure storage');
       } else {
         // Fallback to localStorage
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.removeItem(key);
-          console.log('⚠️ Auth token removed from localStorage');
         }
       }
     } catch (error) {
@@ -147,11 +141,9 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, token, options);
-        console.log('✅ Refresh token stored securely');
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem(key, token);
-          console.log('⚠️ Refresh token stored in localStorage (fallback)');
         }
       }
     } catch (error) {
@@ -188,11 +180,9 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, userJson, options);
-        console.log('✅ User data stored securely');
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem(key, userJson);
-          console.log('⚠️ User data stored in localStorage (fallback)');
         }
       }
     } catch (error) {
@@ -230,11 +220,9 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, prefsJson, options);
-        console.log('✅ Biometric preferences stored securely');
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem(key, prefsJson);
-          console.log('⚠️ Biometric preferences stored in localStorage (fallback)');
         }
       }
     } catch (error) {
@@ -266,8 +254,6 @@ export class SecureTokenStorage {
   // Utility Methods
   async clearAllAuthData(): Promise<void> {
     try {
-      console.log('🧹 Clearing all authentication data...');
-
       const keys = Object.values(STORAGE_KEYS);
 
       if (this.isSecureStoreAvailable) {
@@ -276,11 +262,9 @@ export class SecureTokenStorage {
             console.warn(`Failed to delete ${key}:`, error)
           )
         ));
-        console.log('✅ All auth data cleared from secure storage');
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
           keys.forEach(key => window.localStorage.removeItem(this.getStorageKey(key)));
-          console.log('⚠️ All auth data cleared from localStorage');
         }
       }
     } catch (error) {
@@ -327,11 +311,9 @@ export class SecureTokenStorage {
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(backupKey, backupJson, options);
-        console.log('✅ Credentials backed up successfully');
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem(backupKey, backupJson);
-          console.log('⚠️ Credentials backed up to localStorage');
         }
       }
 

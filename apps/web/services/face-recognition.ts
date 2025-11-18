@@ -150,7 +150,7 @@ async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResult> {
 /**
  * Analyze image quality for face recognition
  */
-function analyzeImageQuality(imageBuffer: Buffer): FaceQualityResult {
+function analyzeImageQuality(): FaceQualityResult {
   try {
     const issues: string[] = [];
 
@@ -403,7 +403,7 @@ export async function validateImageDimensions(file: File): Promise<{ valid: bool
         }
 
         resolve({ valid: true });
-      } catch (error) {
+      } catch {
         resolve({ valid: false, error: 'Failed to validate image dimensions' });
       }
     };

@@ -170,7 +170,7 @@ async function fileToImage(imageFile: File): Promise<HTMLImageElement> {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      const img = new Image();
+      const img = document.createElement('img') as HTMLImageElement;
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error('Failed to load image'));
       img.src = event.target?.result as string;

@@ -4,10 +4,9 @@
     "slug": "pgn-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./images/pg-logo-white-bg.jpg",
+    "icon": "./images/pgn-logo-white-bg.jpg",
     "scheme": "pgnmobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
       "ios": {
       "bundleIdentifier": "com.pgn.mobile",
       "buildNumber": "1",
@@ -26,7 +25,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./images/pg-logo-transparent.png"
+        "foregroundImage": "./images/pgn-logo-transparent.png"
       },
       "splash": {
         "image": "./images/pg-logo-transparent.png",
@@ -37,8 +36,6 @@
           "backgroundColor": "#000000"
         }
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -55,7 +52,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./images/pg-logo-white-bg.jpg",
+      "favicon": "./images/pgn-logo-white-bg.jpg",
       "bundler": "metro"
     },
     "plugins": [

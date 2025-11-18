@@ -77,7 +77,7 @@ export class JWTService {
         employmentStatus: decoded.employmentStatus,
         canLogin: decoded.canLogin,
       });
-    } catch (error) {
+    } catch {
         return null;
     }
   }

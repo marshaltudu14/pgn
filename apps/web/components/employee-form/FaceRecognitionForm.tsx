@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, Upload, Info, CheckCircle, Scan, Loader2, Trash2, RefreshCw, Brain, XCircle, Square } from 'lucide-react';
+import { Camera, Upload, Info, CheckCircle, Scan, Loader2, Trash2, RefreshCw, Brain, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Employee } from '@pgn/shared';
 import { useFaceRecognitionStore } from '@/app/lib/stores/faceRecognitionStore';
@@ -94,21 +94,150 @@ export function FaceRecognitionForm({
     return { isValid: true };
   }, []);
 
-  // Validate aspect ratio after loading image
-  const validateImageAspectRatio = useCallback((width: number, height: number): { isValid: boolean; error?: string } => {
-    const aspectRatio = width / height;
-    const targetRatio = 7 / 9; // 7:9 aspect ratio
-    const tolerance = 0.1; // 10% tolerance
+  // Crop image to face region with proper aspect ratio
+  const cropImageToFace = useCallback(async (img: HTMLImageElement, boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
 
-    if (Math.abs(aspectRatio - targetRatio) > tolerance) {
-      return {
-        isValid: false,
-        error: `Invalid aspect ratio. Expected 7:9 (portrait), got ${width}:${height} (~${aspectRatio.toFixed(2)}:1)`
-      };
-    }
+      // Target aspect ratio 7:9
+      const targetAspectRatio = 7 / 9;
+      let cropWidth = boundingBox.width * img.width;
+      let cropHeight = boundingBox.height * img.height;
+      let cropX = boundingBox.x * img.width;
+      let cropY = boundingBox.y * img.height;
 
-    return { isValid: true };
+      // Add padding around face (20% of face size)
+      const paddingX = cropWidth * 0.2;
+      const paddingY = cropHeight * 0.2;
+
+      cropX = Math.max(0, cropX - paddingX);
+      cropY = Math.max(0, cropY - paddingY);
+      cropWidth = Math.min(img.width - cropX, cropWidth + paddingX * 2);
+      cropHeight = Math.min(img.height - cropY, cropHeight + paddingY * 2);
+
+      // Adjust to maintain 7:9 aspect ratio
+      const currentRatio = cropWidth / cropHeight;
+      if (currentRatio > targetAspectRatio) {
+        // Too wide, reduce width
+        const newWidth = cropHeight * targetAspectRatio;
+        cropX += (cropWidth - newWidth) / 2;
+        cropWidth = newWidth;
+      } else {
+        // Too tall, reduce height
+        const newHeight = cropWidth / targetAspectRatio;
+        cropY += (cropHeight - newHeight) / 2;
+        cropHeight = newHeight;
+      }
+
+      // Set canvas size to target dimensions (high quality)
+      const outputSize = 400; // 400px width for high quality
+      canvas.width = outputSize;
+      canvas.height = Math.round(outputSize / targetAspectRatio);
+
+      // Draw cropped and resized image
+      ctx.drawImage(
+        img,
+        cropX, cropY, cropWidth, cropHeight,
+        0, 0, canvas.width, canvas.height
+      );
+
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    });
   }, []);
+
+  // Perform face detection and automatic cropping
+  const performFaceDetectionAndCropping = useCallback(async (file: File): Promise<{
+    success: boolean;
+    croppedImage?: string;
+    boundingBox?: { x: number; y: number; width: number; height: number };
+    error?: string;
+  }> => {
+    try {
+      setScanProgress(20);
+      setScanMessage('Loading image...');
+
+      // Load image to validate aspect ratio and get dimensions
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = e.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      setScanProgress(30);
+      setScanMessage('Detecting face...');
+
+      // Use face recognition client-side utility to detect face
+      const result = await generateEmbeddingClientSide(file);
+
+      if (!result.success || !result.detection) {
+        return {
+          success: false,
+          error: result.error || 'No face detected in the image. Please upload a clear photo showing your face.'
+        };
+      }
+
+      // Get the bounding box from the detection
+      const bbox = {
+        x: result.detection.boundingBox.xMin,
+        y: result.detection.boundingBox.yMin,
+        width: result.detection.boundingBox.xMax - result.detection.boundingBox.xMin,
+        height: result.detection.boundingBox.yMax - result.detection.boundingBox.yMin
+      };
+
+      // Validate face detection
+      if (bbox.width < 0.1 || bbox.height < 0.1) {
+        return {
+          success: false,
+          error: 'Face detected but too small. Please upload a photo with a larger, clearer face.'
+        };
+      }
+
+      // Check if face is reasonably centered (within 30% of center)
+      const faceCenterX = bbox.x + bbox.width / 2;
+      const faceCenterY = bbox.y + bbox.height / 2;
+      const maxDeviation = 0.3;
+
+      if (Math.abs(faceCenterX - 0.5) > maxDeviation || Math.abs(faceCenterY - 0.5) > maxDeviation) {
+        return {
+          success: false,
+          error: 'Face detected but not well-centered. Please upload a photo with your face more centered in the frame.'
+        };
+      }
+
+      setFaceBoundingBox(bbox);
+      setDetectionProgress(100);
+      setScanProgress(60);
+      setScanMessage('Cropping to face...');
+
+      // Crop image to face with padding
+      const croppedImage = await cropImageToFace(img, bbox);
+
+      setScanProgress(80);
+      setScanMessage('Face cropped successfully');
+
+      return {
+        success: true,
+        croppedImage,
+        boundingBox: bbox
+      };
+
+    } catch (error) {
+      console.error('Face detection and cropping error:', error);
+      return { success: false, error: 'Face detection failed: ' + (error as Error).message };
+    }
+  }, [cropImageToFace]);
 
   // Reset alert state when processing new image
   const resetAlertState = useCallback(() => {
@@ -266,7 +395,7 @@ export function FaceRecognitionForm({
       setScanStatus('error');
       setScanProgress(100);
     }
-  }, [resetAlertState, validateImageFile, onPhotoSelect, performFaceScanning]);
+  }, [resetAlertState, validateImageFile, onPhotoSelect, performFaceScanning, performFaceDetectionAndCropping]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -282,142 +411,6 @@ export function FaceRecognitionForm({
       }
     }
   }, [processImageFile, modelsInitialized]);
-
-  // Perform face detection and automatic cropping
-  const performFaceDetectionAndCropping = useCallback(async (file: File): Promise<{
-    success: boolean;
-    croppedImage?: string;
-    boundingBox?: { x: number; y: number; width: number; height: number };
-    error?: string;
-  }> => {
-    try {
-      setScanProgress(20);
-      setScanMessage('Loading image...');
-
-      // Load image to validate aspect ratio and get dimensions
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const image = document.createElement('img') as HTMLImageElement;
-          image.onload = () => resolve(image);
-          image.onerror = () => reject(new Error('Failed to load image'));
-          image.src = e.target?.result as string;
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-        reader.readAsDataURL(file);
-      });
-
-      // Validate aspect ratio
-      const aspectValidation = validateImageAspectRatio(img.width, img.height);
-      if (!aspectValidation.isValid) {
-        return { success: false, error: aspectValidation.error };
-      }
-
-      setOriginalImageSize({ width: img.width, height: img.height });
-      setScanProgress(40);
-      setScanMessage('Detecting faces...');
-
-      // Perform face detection
-      const result = await generateEmbeddingClientSide(file);
-
-      if (!result.success) {
-        return { success: false, error: result.error };
-      }
-
-      if (!result.detection) {
-        return { success: false, error: 'No face detected in the image' };
-      }
-
-      // Check for multiple faces
-      if (result.detection.faceCount && result.detection.faceCount > 1) {
-        return { success: false, error: 'Multiple faces detected. Please upload a photo with only one face.' };
-      }
-
-      // Get face bounding box
-      const bbox = result.detection.boundingBox;
-      if (!bbox) {
-        return { success: false, error: 'Could not determine face position' };
-      }
-
-      setFaceBoundingBox(bbox);
-      setDetectionProgress(100);
-      setScanProgress(60);
-      setScanMessage('Cropping to face...');
-
-      // Crop image to face with padding
-      const croppedImage = await cropImageToFace(img, bbox);
-
-      setScanProgress(80);
-      setScanMessage('Face cropped successfully');
-
-      return {
-        success: true,
-        croppedImage,
-        boundingBox: bbox
-      };
-
-    } catch (error) {
-      console.error('Face detection and cropping error:', error);
-      return { success: false, error: 'Face detection failed: ' + (error as Error).message };
-    }
-  }, [validateImageAspectRatio]);
-
-  // Crop image to face region with proper aspect ratio
-  const cropImageToFace = useCallback(async (img: HTMLImageElement, boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }): Promise<string> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d')!;
-
-      // Target aspect ratio 7:9
-      const targetAspectRatio = 7 / 9;
-      let cropWidth = boundingBox.width * img.width;
-      let cropHeight = boundingBox.height * img.height;
-      let cropX = boundingBox.x * img.width;
-      let cropY = boundingBox.y * img.height;
-
-      // Add padding around face (20% of face size)
-      const paddingX = cropWidth * 0.2;
-      const paddingY = cropHeight * 0.2;
-
-      cropX = Math.max(0, cropX - paddingX);
-      cropY = Math.max(0, cropY - paddingY);
-      cropWidth = Math.min(img.width - cropX, cropWidth + paddingX * 2);
-      cropHeight = Math.min(img.height - cropY, cropHeight + paddingY * 2);
-
-      // Adjust to maintain 7:9 aspect ratio
-      const currentRatio = cropWidth / cropHeight;
-      if (currentRatio > targetAspectRatio) {
-        // Too wide, reduce width
-        const newWidth = cropHeight * targetAspectRatio;
-        cropX += (cropWidth - newWidth) / 2;
-        cropWidth = newWidth;
-      } else {
-        // Too tall, reduce height
-        const newHeight = cropWidth / targetAspectRatio;
-        cropY += (cropHeight - newHeight) / 2;
-        cropHeight = newHeight;
-      }
-
-      // Set canvas size to target dimensions (high quality)
-      const outputSize = 400; // 400px width for high quality
-      canvas.width = outputSize;
-      canvas.height = Math.round(outputSize / targetAspectRatio);
-
-      // Draw cropped and resized image
-      ctx.drawImage(
-        img,
-        cropX, cropY, cropWidth, cropHeight,
-        0, 0, canvas.width, canvas.height
-      );
-
-      resolve(canvas.toDataURL('image/jpeg', 0.95));
-    });
-  }, []);
 
   const currentImage = photoPreview || employee?.reference_photo_url;
   const hasEmbedding = !!employee?.face_embedding;

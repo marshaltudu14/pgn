@@ -346,7 +346,7 @@ export class AuthService {
    * Track failed login attempt for rate limiting
    * Simple implementation using console logging for internal company use
    */
-  async trackFailedLoginAttempt(userId: string, ipAddress: string): Promise<void> {
+  async trackFailedLoginAttempt(): Promise<void> {
     try {
           } catch (error) {
       console.error('Failed to track login attempt:', error);

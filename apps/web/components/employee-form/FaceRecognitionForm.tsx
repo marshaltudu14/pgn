@@ -9,11 +9,13 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Camera, Upload, Info, CheckCircle, Scan, Loader2, Trash2, Crop, Brain } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Camera, Upload, Info, CheckCircle, Scan, Loader2, Trash2, Crop, Brain, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Employee } from '@pgn/shared';
 import { useFaceRecognitionStore } from '@/app/lib/stores/faceRecognitionStore';
+import { generateEmbeddingClientSide } from '@/lib/face-recognition-client';
 
 interface FaceRecognitionFormProps {
   employee?: Employee | null;
@@ -39,6 +41,10 @@ export function FaceRecognitionForm({
   const [scanMessage, setScanMessage] = useState('');
   const [showCropper, setShowCropper] = useState(false);
   const [cropImage, setCropImage] = useState<string | null>(null);
+  const [faceDetectionError, setFaceDetectionError] = useState<string | null>(null);
+  const [detectionProgress, setDetectionProgress] = useState(0);
+  const [embeddingProgress, setEmbeddingProgress] = useState(0);
+  const [qualityProgress, setQualityProgress] = useState(0);
 
   // Client-side face recognition state
   const {
@@ -57,16 +63,28 @@ export function FaceRecognitionForm({
   // Handle drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    if (!modelsInitialized) return;
     setIsDragOver(true);
-  }, []);
+  }, [modelsInitialized]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
   }, []);
 
+  // Reset alert state when processing new image
+  const resetAlertState = useCallback(() => {
+    setFaceDetectionError(null);
+    setDetectionProgress(0);
+    setEmbeddingProgress(0);
+    setQualityProgress(0);
+    setScanStatus('idle');
+    setScanProgress(0);
+  }, []);
+
   // Process image file
   const processImageFile = useCallback((file: File) => {
+    resetAlertState();
     // Read file as data URL for preview and cropping
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -75,11 +93,13 @@ export function FaceRecognitionForm({
       setShowCropper(true);
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [resetAlertState]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+
+    if (!modelsInitialized) return;
 
     const files = e.dataTransfer.files;
     if (files.length > 0) {
@@ -88,78 +108,126 @@ export function FaceRecognitionForm({
         processImageFile(file);
       }
     }
-  }, [processImageFile]);
+  }, [processImageFile, modelsInitialized]);
 
-  // Simulate face scanning process
-  const simulateFaceScanning = useCallback(async () => {
+  // Real face detection and embedding generation
+  const performFaceScanning = useCallback(async (imageFile: File) => {
     setScanStatus('scanning');
     setScanProgress(0);
+    setFaceDetectionError(null);
 
-    const steps = [
-      { progress: 20, message: 'Detecting face in photo...' },
-      { progress: 40, message: 'Analyzing facial features...' },
-      { progress: 60, message: 'Extracting biometric data...' },
-      { progress: 80, message: 'Generating recognition embedding...' },
-      { progress: 100, message: 'Face recognition ready!' }
-    ];
+    try {
+      // Step 1: Detect face
+      setScanProgress(20);
+      setScanMessage('Detecting face in photo...');
+      setDetectionProgress(50);
 
-    for (const step of steps) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setScanProgress(step.progress);
-      setScanMessage(step.message);
-    }
+      const result = await generateEmbeddingClientSide(imageFile);
 
-    setScanStatus('complete');
+      if (!result.success) {
+        setDetectionProgress(100);
+        setScanStatus('error');
+        setScanProgress(100);
+        setFaceDetectionError(result.error || 'Face detection failed');
+        return;
+      }
 
-    // Simulate embedding generation (in real implementation, this would call face recognition API)
-    if (onEmbeddingGenerated) {
-      const mockEmbedding = new Float32Array(128).map(() => Math.random());
-      onEmbeddingGenerated(mockEmbedding);
+      setDetectionProgress(100);
+      setScanProgress(50);
+      setScanMessage('Face detected successfully');
+
+      // Step 2: Check face quality and confidence
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      if (!result.detection?.confidence || result.detection.confidence < 0.8) {
+        setScanStatus('error');
+        setScanProgress(100);
+        setFaceDetectionError('Face not clearly visible or confidence too low. Please upload a clear, well-lit frontal photo showing the full face.');
+        return;
+      }
+
+      if (result.quality && (result.quality.overall === 'unacceptable' || result.quality.overall === 'poor' || result.quality.overall === 'fair')) {
+        setScanStatus('error');
+        setScanProgress(100);
+        const qualityIssues = result.quality.issues.length > 0 ? result.quality.issues.join(', ') : 'Insufficient image quality';
+        setFaceDetectionError(`Image quality not sufficient for face recognition: ${qualityIssues}. Please provide a clear, well-lit photo with good contrast and sharpness.`);
+        return;
+      }
+
+      // Step 3: Generate embedding
+      setScanProgress(75);
+      setScanMessage('Generating face embedding...');
+      setEmbeddingProgress(75);
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setEmbeddingProgress(100);
+
+      // Step 4: Complete
+      setQualityProgress(100);
+      setScanProgress(100);
+      setScanMessage('Face recognition ready!');
+      setScanStatus('complete');
+
+      if (onEmbeddingGenerated && result.embedding) {
+        onEmbeddingGenerated(result.embedding);
+      }
+
+    } catch (error) {
+      console.error('Face scanning error:', error);
+      setScanStatus('error');
+      setScanProgress(100);
+      setFaceDetectionError('Face scanning failed: ' + (error as Error).message);
     }
   }, [onEmbeddingGenerated]);
 
   // Handle crop complete
-  const handleCropComplete = useCallback((croppedDataUrl: string) => {
+  const handleCropComplete = useCallback(async (croppedDataUrl: string) => {
     setCropImage(null);
     setShowCropper(false);
 
-    // Convert data URL to File for the parent component
-    fetch(croppedDataUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], 'cropped-photo.jpg', { type: 'image/jpeg' });
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.files = new DataTransfer().files;
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        input.files = dataTransfer.files;
+    try {
+      // Convert data URL to File for the parent component
+      const response = await fetch(croppedDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'cropped-photo.jpg', { type: 'image/jpeg' });
 
-        const event = {
-          target: input,
-          currentTarget: input,
-          type: 'change',
-          bubbles: true,
-          cancelable: true,
-          defaultPrevented: false,
-          eventPhase: 2,
-          isTrusted: true,
-          nativeEvent: new Event('change'),
-          timeStamp: Date.now(),
-          preventDefault: () => {},
-          stopPropagation: () => {},
-          persist: () => {},
-          isDefaultPrevented: () => false,
-          isPropagationStopped: () => false
-        } as unknown as React.ChangeEvent<HTMLInputElement>;
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.files = new DataTransfer().files;
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      input.files = dataTransfer.files;
 
-        onPhotoSelect(event);
-        // Start scanning simulation after a short delay
-        setTimeout(() => {
-          simulateFaceScanning();
-        }, 1000);
-      });
-  }, [onPhotoSelect, simulateFaceScanning]);
+      const event = {
+        target: input,
+        currentTarget: input,
+        type: 'change',
+        bubbles: true,
+        cancelable: true,
+        defaultPrevented: false,
+        eventPhase: 2,
+        isTrusted: true,
+        nativeEvent: new Event('change'),
+        timeStamp: Date.now(),
+        preventDefault: () => {},
+        stopPropagation: () => {},
+        persist: () => {},
+        isDefaultPrevented: () => false,
+        isPropagationStopped: () => false
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+      onPhotoSelect(event);
+
+      // Start real face scanning after a short delay
+      setTimeout(() => {
+        performFaceScanning(file);
+      }, 1000);
+    } catch (error) {
+      console.error('Error processing cropped image:', error);
+      setFaceDetectionError('Failed to process image. Please try again.');
+      setScanStatus('error');
+    }
+  }, [onPhotoSelect, performFaceScanning]);
 
   const currentImage = photoPreview || employee?.reference_photo_url;
   const hasEmbedding = !!employee?.face_embedding;
@@ -190,6 +258,9 @@ export function FaceRecognitionForm({
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Photo Requirements</DialogTitle>
+                    <DialogDescription>
+                      Guidelines for uploading a suitable reference photo for face recognition
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-3 text-sm">
                     <div className="flex items-start gap-2">
@@ -225,11 +296,12 @@ export function FaceRecognitionForm({
             <div
               className={cn(
                 "relative border-2 border-dashed rounded-lg p-4 text-center transition-all flex items-center justify-center",
-                isDragOver
+                isDragOver && modelsInitialized
                   ? "border-primary bg-primary/5 scale-[1.02]"
                   : "border-muted-foreground/25 hover:border-muted-foreground/50",
                 "h-64 w-48 mx-auto", // Passport photo aspect ratio (2:2.5)
-                currentImage && "p-2"
+                currentImage && "p-2",
+                (!modelsInitialized || isModelInitializing) && "opacity-50 cursor-not-allowed"
               )}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -248,7 +320,10 @@ export function FaceRecognitionForm({
                     variant="destructive"
                     size="sm"
                     className="absolute top-1 right-1 h-6 w-6 p-0 rounded-full"
-                    onClick={onPhotoRemove}
+                    onClick={() => {
+                      resetAlertState();
+                      onPhotoRemove();
+                    }}
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -257,28 +332,55 @@ export function FaceRecognitionForm({
                     variant="outline"
                     size="sm"
                     className="absolute bottom-1 right-1 h-6 w-6 p-0 rounded-full"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => {
+                      resetAlertState();
+                      fileInputRef.current?.click();
+                    }}
+                    disabled={!modelsInitialized || isModelInitializing}
                   >
                     <Crop className="h-3 w-3" />
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3 flex flex-col items-center justify-center h-full">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Drop photo here</p>
-                    <p className="text-xs text-muted-foreground">or click to upload</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={photoUploadLoading}
-                  >
-                    <Upload className="h-3 w-3 mr-1" />
-                    Select Photo
-                  </Button>
+                  {isModelInitializing ? (
+                    <>
+                      <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
+                      <div>
+                        <p className="text-sm font-medium">Loading face recognition models...</p>
+                        <p className="text-xs text-muted-foreground">Please wait</p>
+                      </div>
+                    </>
+                  ) : !modelsInitialized ? (
+                    <>
+                      <Brain className="h-8 w-8 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Models failed to load</p>
+                        <p className="text-xs text-muted-foreground">Please refresh the page</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Drop photo here</p>
+                        <p className="text-xs text-muted-foreground">or click to upload</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          resetAlertState();
+                          fileInputRef.current?.click();
+                        }}
+                        disabled={photoUploadLoading}
+                      >
+                        <Upload className="h-3 w-3 mr-1" />
+                        Select Photo
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -312,6 +414,9 @@ export function FaceRecognitionForm({
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Face Recognition Status</DialogTitle>
+                      <DialogDescription>
+                        Information about how the face recognition system processes photos
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 text-sm">
                       <p>The scanner analyzes your photo to:</p>
@@ -386,6 +491,16 @@ export function FaceRecognitionForm({
               </div>
             </div>
 
+            {/* Face Detection Alert */}
+            {faceDetectionError && (
+              <Alert variant="destructive" className="mb-4">
+                <XCircle className="h-4 w-4" />
+                <AlertDescription>
+                  {faceDetectionError}
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Recognition Status Progress */}
             <div className="bg-muted/30 rounded-lg p-4">
               <div className="space-y-3">
@@ -393,31 +508,73 @@ export function FaceRecognitionForm({
                   <span>Face Detection</span>
                   {hasEmbedding || scanStatus === 'complete' ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : scanStatus === 'error' ? (
+                    <XCircle className="h-4 w-4 text-red-500" />
                   ) : (
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                   )}
                 </div>
-                <Progress value={hasEmbedding || scanStatus === 'complete' ? 100 : 0} className="h-1" />
+                <Progress
+                  value={scanStatus === 'error' ? 100 : (hasEmbedding || scanStatus === 'complete' ? 100 : detectionProgress)}
+                  className={cn(
+                    "h-1",
+                    scanStatus === 'error' && "[&>div]:bg-red-500"
+                  )}
+                />
 
                 <div className="flex items-center justify-between text-sm">
                   <span>Embedding Generated</span>
                   {hasEmbedding ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : scanStatus === 'error' ? (
+                    <XCircle className="h-4 w-4 text-red-500" />
                   ) : (
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                   )}
                 </div>
-                <Progress value={hasEmbedding ? 100 : 0} className="h-1" />
+                <Progress
+                  value={scanStatus === 'error' ? 100 : (hasEmbedding ? 100 : embeddingProgress)}
+                  className={cn(
+                    "h-1",
+                    scanStatus === 'error' && "[&>div]:bg-red-500"
+                  )}
+                />
+
+                <div className="flex items-center justify-between text-sm">
+                  <span>Quality Check</span>
+                  {hasEmbedding ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : scanStatus === 'error' ? (
+                    <XCircle className="h-4 w-4 text-red-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
+                  )}
+                </div>
+                <Progress
+                  value={scanStatus === 'error' ? 100 : (hasEmbedding ? 100 : qualityProgress)}
+                  className={cn(
+                    "h-1",
+                    scanStatus === 'error' && "[&>div]:bg-red-500"
+                  )}
+                />
 
                 <div className="flex items-center justify-between text-sm">
                   <span>Ready for Attendance</span>
                   {hasEmbedding ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : scanStatus === 'error' ? (
+                    <XCircle className="h-4 w-4 text-red-500" />
                   ) : (
                     <div className="h-4 w-4 rounded-full border-2 border-muted-foreground" />
                   )}
                 </div>
-                <Progress value={hasEmbedding ? 100 : 0} className="h-1" />
+                <Progress
+                  value={scanStatus === 'error' ? 100 : (hasEmbedding ? 100 : scanProgress)}
+                  className={cn(
+                    "h-1",
+                    scanStatus === 'error' && "[&>div]:bg-red-500"
+                  )}
+                />
               </div>
             </div>
           </div>
@@ -454,6 +611,9 @@ function ImageCropper({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Crop Photo (Passport Size)</DialogTitle>
+          <DialogDescription>
+            Adjust the photo to ensure proper framing and composition for face recognition
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="relative bg-muted rounded-lg p-4">

@@ -33,12 +33,33 @@ export async function initializeClientModels(): Promise<void> {
     });
 
     // Initialize ONNX Runtime for ArcFace
-    // Load ArcFace Mobile model (you'll need to download this)
     try {
-      const modelPath = '/models/arcface_mobile.onnx';
-      arcFaceSession = await ort.InferenceSession.create(modelPath);
-    } catch {
-      console.warn('ArcFace model not found, using fallback implementation');
+      // Load ArcFace Mobile model
+      const modelResponse = await fetch('/models/arcface_mobile.onnx');
+      if (!modelResponse.ok) {
+        throw new Error(`Failed to fetch model: ${modelResponse.statusText}`);
+      }
+
+      const modelArrayBuffer = await modelResponse.arrayBuffer();
+      const modelUint8Array = new Uint8Array(modelArrayBuffer);
+
+      // Configure session options for better browser performance
+      const sessionOptions = {
+        executionProviders: ['wasm', 'cpu'],
+        graphOptimizationLevel: 'all' as const,
+        enableCpuMemArena: true,
+        enableMemPattern: true,
+        executionMode: 'sequential' as const,
+        logSeverityLevel: 0 as const,
+        extraOptions: {
+          enableStrictMode: false
+        }
+      };
+
+      arcFaceSession = await ort.InferenceSession.create(modelUint8Array, sessionOptions);
+      console.log('ArcFace model loaded successfully');
+    } catch (error) {
+      console.warn('ArcFace model loading failed, using fallback implementation:', error);
       arcFaceSession = null;
     }
 
@@ -223,11 +244,20 @@ async function generateArcFaceEmbedding(imageData: ImageData): Promise<Float32Ar
   // Create input tensor - using proper ONNX Runtime tensor format
   const inputTensor = new ort.Tensor('float32', input, [1, 3, height, width]);
 
-  // Run ArcFace inference
-  const outputMap = await arcFaceSession!.run({ 'input': inputTensor });
+  // Try different possible input names
+  const possibleInputNames = arcFaceSession!.inputNames;
+  const inputName = possibleInputNames.includes('input') ? 'input' : possibleInputNames[0];
 
-  // Get embedding output (typically named 'output' or similar)
-  const outputName = Object.keys(outputMap)[0];
+  if (!inputName) {
+    throw new Error('No valid input names found in ArcFace model');
+  }
+
+  // Run ArcFace inference
+  const outputMap = await arcFaceSession!.run({ [inputName]: inputTensor });
+
+  // Get embedding output
+  const outputNames = arcFaceSession!.outputNames;
+  const outputName = outputNames.length > 0 ? outputNames[0] : Object.keys(outputMap)[0];
   const output = outputMap[outputName].data;
 
   return new Float32Array(output as unknown as number[]);
@@ -259,11 +289,13 @@ function analyzeImageQuality(img: HTMLImageElement, detection: { score?: number;
   try {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
-    canvas.width = img.width;
-    canvas.height = img.height;
+    const width = img.width;
+    const height = img.height;
+    canvas.width = width;
+    canvas.height = height;
     ctx.drawImage(img, 0, 0);
 
-    const imageData = ctx.getImageData(0, 0, img.width, img.height);
+    const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
     let brightness = 0;
@@ -272,9 +304,37 @@ function analyzeImageQuality(img: HTMLImageElement, detection: { score?: number;
     }
     brightness = brightness / (data.length / 4) / 255;
 
-    // Simulate other quality metrics
-    const sharpness = 0.6 + Math.random() * 0.4;
-    const contrast = 0.5 + Math.random() * 0.5;
+    // Calculate actual quality metrics
+    let sharpness = 0;
+    let contrast = 0;
+
+    // Simple sharpness detection using edge detection
+    const grayData = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      grayData[i / 4] = gray;
+    }
+
+    // Simple edge detection for sharpness
+    let edgeCount = 0;
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        const sobelX = -grayData[idx - width - 1] + grayData[idx - width + 1] +
+                      -2 * grayData[idx - 1] + 2 * grayData[idx + 1] +
+                      -grayData[idx + width - 1] + grayData[idx + width + 1];
+        const sobelY = -grayData[idx - width - 1] - 2 * grayData[idx - width] - grayData[idx - width + 1] +
+                      grayData[idx + width - 1] + 2 * grayData[idx + width] + grayData[idx + width + 1];
+        const magnitude = Math.sqrt(sobelX * sobelX + sobelY * sobelY);
+        if (magnitude > 30) edgeCount++;
+      }
+    }
+    sharpness = Math.min(1, edgeCount / (width * height * 0.1));
+
+    // Calculate contrast using standard deviation
+    const mean = grayData.reduce((sum, val) => sum + val, 0) / grayData.length;
+    const variance = grayData.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / grayData.length;
+    contrast = Math.min(1, Math.sqrt(variance) / 64);
 
     // Calculate face size relative to image
     const faceSize = detection.boundingBox.width * detection.boundingBox.height;
@@ -282,37 +342,37 @@ function analyzeImageQuality(img: HTMLImageElement, detection: { score?: number;
 
     const issues: string[] = [];
 
-    // Quality checks
-    if (brightness < 0.3) {
-      issues.push('Image too dark');
-    } else if (brightness > 0.8) {
-      issues.push('Image too bright');
+    // Stricter quality checks for clear face detection
+    if (brightness < 0.4) {
+      issues.push('Image too dark - face not clearly visible');
+    } else if (brightness > 0.75) {
+      issues.push('Image too bright - face features washed out');
     }
 
-    if (contrast < 0.3) {
-      issues.push('Low contrast');
+    if (contrast < 0.4) {
+      issues.push('Low contrast - facial features not distinct');
     }
 
-    if (sharpness < 0.4) {
-      issues.push('Image blurry');
+    if (sharpness < 0.5) {
+      issues.push('Image blurry - face features not sharp enough');
     }
 
-    if (faceSize < 0.05) {
-      issues.push('Face too small');
-    } else if (faceSize > 0.7) {
-      issues.push('Face too large/cropped');
+    if (faceSize < 0.08) {
+      issues.push('Face too small - difficult to recognize');
+    } else if (faceSize > 0.6) {
+      issues.push('Face too large or cropped - full face not visible');
     }
 
-    if (faceResolution < 64) {
-      issues.push('Face resolution too low');
+    if (faceResolution < 80) {
+      issues.push('Face resolution too low - insufficient detail for recognition');
     }
 
-    // Determine overall quality
-    const qualityScore = (brightness >= 0.3 && brightness <= 0.8 ? 1 : 0) +
-                         (contrast >= 0.5 ? 1 : 0) +
-                         (sharpness >= 0.6 ? 1 : 0) +
-                         (faceSize >= 0.1 && faceSize <= 0.6 ? 1 : 0) +
-                         (faceResolution >= 64 ? 1 : 0);
+    // Determine overall quality with stricter thresholds
+    const qualityScore = (brightness >= 0.4 && brightness <= 0.75 ? 1 : 0) +
+                         (contrast >= 0.4 ? 1 : 0) +
+                         (sharpness >= 0.5 ? 1 : 0) +
+                         (faceSize >= 0.08 && faceSize <= 0.6 ? 1 : 0) +
+                         (faceResolution >= 80 ? 1 : 0);
 
     let overall: 'excellent' | 'good' | 'fair' | 'poor' | 'unacceptable';
     if (qualityScore >= 5) {
@@ -369,5 +429,5 @@ export function cleanupClientModels(): void {
  * Check if models are initialized
  */
 export function areModelsInitialized(): boolean {
-  return faceDetection !== null && arcFaceSession !== null;
+  return faceDetection !== null; // ArcFace can be null and still use fallback embedding
 }

@@ -38,6 +38,5 @@ yarn-error.*
 
 app-example
 
-# generated native folders
+# generated native folders - Android contains business-critical configurations
 /ios
-/android

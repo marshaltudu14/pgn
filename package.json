@@ -37,23 +37,11 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "prettier": "^3.0.0",
-    "shadcn": "^3.5.0"
+    "shadcn": "^3.5.0",
+    "typescript": "^5.9.2"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  },
-  "dependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.19",
-    "@types/jsonwebtoken": "^9.0.10",
-    "bcryptjs": "^3.0.3",
-    "cors": "^2.8.5",
-    "express-rate-limit": "^8.2.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "react-native": "0.81.5"
   }
 }

@@ -4,7 +4,7 @@
     "slug": "pgn-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./images/pgn-logo-white-bg.jpg",
+    "icon": "./images/pgn-logo-white-bg.png",
     "scheme": "pgnmobile",
     "userInterfaceStyle": "automatic",
       "ios": {
@@ -25,14 +25,14 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./images/pgn-logo-transparent.png"
+        "foregroundImage": "./images/pgn-logo-white-bg.png"
       },
       "splash": {
-        "image": "./images/pg-logo-transparent.png",
+        "image": "./images/pgn-logo-transparent.png",
         "resizeMode": "contain",
         "backgroundColor": "#ffffff",
         "dark": {
-          "image": "./images/pg-logo-transparent.png",
+          "image": "./images/pgn-logo-transparent.png",
           "backgroundColor": "#000000"
         }
       },
@@ -86,12 +86,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./images/pg-logo-transparent.png",
+          "image": "./images/pgn-logo-transparent.png",
           "imageWidth": 250,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
-            "image": "./images/pg-logo-transparent.png",
+            "image": "./images/pgn-logo-transparent.png",
             "backgroundColor": "#000000"
           }
         }

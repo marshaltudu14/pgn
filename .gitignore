@@ -65,9 +65,7 @@ apps/mobile/*.mobileprovision
 apps/mobile/.metro-health-check*
 apps/mobile/app-example
 
-# Generated native folders
-apps/mobile/ios/
-apps/mobile/android/
+# Generated native folders - Android contains business-critical configurations
 
 # Vercel
 .vercel

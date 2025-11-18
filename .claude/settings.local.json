@@ -93,7 +93,13 @@
       "Bash(cp:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(tasklist:*)",
+      "Bash(git check-ignore:*)",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_file_upload",
+      "mcp__playwright__browser_close",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

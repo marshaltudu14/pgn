@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -65,14 +65,20 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header Section */}
         <DialogHeader className="pb-4 border-b border-border">
+          <DialogTitle className="sr-only">
+            {employee.first_name} {employee.last_name} - Employee Details
+          </DialogTitle>
+          <DialogDescription>
+            Complete employee profile information including contact details, employment status, and timeline
+          </DialogDescription>
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
               <StatusIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold text-foreground">
+              <h2 className="text-xl font-bold text-foreground">
                 {employee.first_name} {employee.last_name}
-              </DialogTitle>
+              </h2>
               <p className="text-muted-foreground text-sm mt-1">
                 {employee.human_readable_user_id}
               </p>

@@ -374,6 +374,55 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   return { valid: true };
 }
 
+export async function validateImageDimensions(file: File): Promise<{ valid: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        // Validate aspect ratio (7:9)
+        const aspectRatio = img.width / img.height;
+        const targetRatio = 7 / 9; // 7:9 aspect ratio
+        const tolerance = 0.1; // 10% tolerance
+
+        if (Math.abs(aspectRatio - targetRatio) > tolerance) {
+          resolve({
+            valid: false,
+            error: `Invalid aspect ratio. Expected 7:9 (portrait), got ${img.width}:${img.height} (~${aspectRatio.toFixed(2)}:1)`
+          });
+          return;
+        }
+
+        // Check minimum dimensions for face recognition
+        if (img.width < 200 || img.height < 200) {
+          resolve({
+            valid: false,
+            error: `Image too small. Minimum 200x200 pixels required, got ${img.width}x${img.height}`
+          });
+          return;
+        }
+
+        resolve({ valid: true });
+      } catch (error) {
+        resolve({ valid: false, error: 'Failed to validate image dimensions' });
+      }
+    };
+
+    img.onerror = () => {
+      resolve({ valid: false, error: 'Failed to load image for validation' });
+    };
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => {
+      resolve({ valid: false, error: 'Failed to read image file' });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export function processImageForEmbedding(file: File): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

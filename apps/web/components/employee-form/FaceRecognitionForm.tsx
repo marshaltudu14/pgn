@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, Upload, Info, CheckCircle, Scan, Loader2, Trash2, Crop, Brain, XCircle } from 'lucide-react';
+import { Camera, Upload, Info, CheckCircle, Scan, Loader2, Trash2, RefreshCw, Brain, XCircle, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Employee } from '@pgn/shared';
 import { useFaceRecognitionStore } from '@/app/lib/stores/faceRecognitionStore';
@@ -39,12 +39,20 @@ export function FaceRecognitionForm({
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'complete' | 'error'>('idle');
   const [scanMessage, setScanMessage] = useState('');
-  const [showCropper, setShowCropper] = useState(false);
-  const [cropImage, setCropImage] = useState<string | null>(null);
   const [faceDetectionError, setFaceDetectionError] = useState<string | null>(null);
   const [detectionProgress, setDetectionProgress] = useState(0);
   const [embeddingProgress, setEmbeddingProgress] = useState(0);
   const [qualityProgress, setQualityProgress] = useState(0);
+  const [faceBoundingBox, setFaceBoundingBox] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [originalImageSize, setOriginalImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Client-side face recognition state
   const {
@@ -72,6 +80,36 @@ export function FaceRecognitionForm({
     setIsDragOver(false);
   }, []);
 
+  // Validate file size and aspect ratio
+  const validateImageFile = useCallback((file: File): { isValid: boolean; error?: string } => {
+    // Check file size (5MB limit)
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        isValid: false,
+        error: `File too large. Maximum size is 5MB, got ${(file.size / 1024 / 1024).toFixed(1)}MB`
+      };
+    }
+
+    return { isValid: true };
+  }, []);
+
+  // Validate aspect ratio after loading image
+  const validateImageAspectRatio = useCallback((width: number, height: number): { isValid: boolean; error?: string } => {
+    const aspectRatio = width / height;
+    const targetRatio = 7 / 9; // 7:9 aspect ratio
+    const tolerance = 0.1; // 10% tolerance
+
+    if (Math.abs(aspectRatio - targetRatio) > tolerance) {
+      return {
+        isValid: false,
+        error: `Invalid aspect ratio. Expected 7:9 (portrait), got ${width}:${height} (~${aspectRatio.toFixed(2)}:1)`
+      };
+    }
+
+    return { isValid: true };
+  }, []);
+
   // Reset alert state when processing new image
   const resetAlertState = useCallback(() => {
     setFaceDetectionError(null);
@@ -80,35 +118,9 @@ export function FaceRecognitionForm({
     setQualityProgress(0);
     setScanStatus('idle');
     setScanProgress(0);
+    setFaceBoundingBox(null);
+    setOriginalImageSize(null);
   }, []);
-
-  // Process image file
-  const processImageFile = useCallback((file: File) => {
-    resetAlertState();
-    // Read file as data URL for preview and cropping
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setCropImage(dataUrl);
-      setShowCropper(true);
-    };
-    reader.readAsDataURL(file);
-  }, [resetAlertState]);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-
-    if (!modelsInitialized) return;
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      const file = files[0];
-      if (file.type.startsWith('image/')) {
-        processImageFile(file);
-      }
-    }
-  }, [processImageFile, modelsInitialized]);
 
   // Real face detection and embedding generation
   const performFaceScanning = useCallback(async (imageFile: File) => {
@@ -180,54 +192,232 @@ export function FaceRecognitionForm({
     }
   }, [onEmbeddingGenerated]);
 
-  // Handle crop complete
-  const handleCropComplete = useCallback(async (croppedDataUrl: string) => {
-    setCropImage(null);
-    setShowCropper(false);
+  // Process image file with automatic face detection and cropping
+  const processImageFile = useCallback(async (file: File) => {
+    resetAlertState();
+
+    // Validate file size and type
+    const validation = validateImageFile(file);
+    if (!validation.isValid) {
+      setFaceDetectionError(validation.error || 'File validation failed');
+      setScanStatus('error');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setFaceDetectionError('Invalid file type. Please upload an image file.');
+      setScanStatus('error');
+      return;
+    }
+
+    setScanStatus('scanning');
+    setScanProgress(10);
+    setScanMessage('Validating image...');
 
     try {
-      // Convert data URL to File for the parent component
-      const response = await fetch(croppedDataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], 'cropped-photo.jpg', { type: 'image/jpeg' });
+      // Validate aspect ratio and perform face detection
+      const result = await performFaceDetectionAndCropping(file);
 
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.files = new DataTransfer().files;
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      input.files = dataTransfer.files;
+      if (result.success && result.croppedImage) {
+        // Convert cropped data URL to File
+        const response = await fetch(result.croppedImage);
+        const blob = await response.blob();
+        const croppedFile = new File([blob], 'face-cropped.jpg', { type: 'image/jpeg' });
 
-      const event = {
-        target: input,
-        currentTarget: input,
-        type: 'change',
-        bubbles: true,
-        cancelable: true,
-        defaultPrevented: false,
-        eventPhase: 2,
-        isTrusted: true,
-        nativeEvent: new Event('change'),
-        timeStamp: Date.now(),
-        preventDefault: () => {},
-        stopPropagation: () => {},
-        persist: () => {},
-        isDefaultPrevented: () => false,
-        isPropagationStopped: () => false
-      } as unknown as React.ChangeEvent<HTMLInputElement>;
+        // Create the event for parent component
+        const input = document.createElement('input');
+        input.type = 'file';
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(croppedFile);
+        input.files = dataTransfer.files;
 
-      onPhotoSelect(event);
+        const event = {
+          target: input,
+          currentTarget: input,
+          type: 'change',
+          bubbles: true,
+          cancelable: true,
+          defaultPrevented: false,
+          eventPhase: 2,
+          isTrusted: true,
+          nativeEvent: new Event('change', { bubbles: true }),
+          timeStamp: Date.now(),
+          preventDefault: () => {},
+          stopPropagation: () => {},
+          persist: () => {},
+          isDefaultPrevented: () => false,
+          isPropagationStopped: () => false
+        } as unknown as React.ChangeEvent<HTMLInputElement>;
 
-      // Start real face scanning after a short delay
-      setTimeout(() => {
-        performFaceScanning(file);
-      }, 1000);
+        onPhotoSelect(event);
+
+        // Start face recognition scanning
+        setTimeout(() => {
+          performFaceScanning(croppedFile);
+        }, 500);
+      } else {
+        setFaceDetectionError(result.error || 'Face detection failed');
+        setScanStatus('error');
+        setScanProgress(100);
+      }
     } catch (error) {
-      console.error('Error processing cropped image:', error);
+      console.error('Error processing image:', error);
       setFaceDetectionError('Failed to process image. Please try again.');
       setScanStatus('error');
+      setScanProgress(100);
     }
-  }, [onPhotoSelect, performFaceScanning]);
+  }, [resetAlertState, validateImageFile, onPhotoSelect, performFaceScanning]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    if (!modelsInitialized) return;
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        processImageFile(file);
+      }
+    }
+  }, [processImageFile, modelsInitialized]);
+
+  // Perform face detection and automatic cropping
+  const performFaceDetectionAndCropping = useCallback(async (file: File): Promise<{
+    success: boolean;
+    croppedImage?: string;
+    boundingBox?: { x: number; y: number; width: number; height: number };
+    error?: string;
+  }> => {
+    try {
+      setScanProgress(20);
+      setScanMessage('Loading image...');
+
+      // Load image to validate aspect ratio and get dimensions
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const image = document.createElement('img') as HTMLImageElement;
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('Failed to load image'));
+          image.src = e.target?.result as string;
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+
+      // Validate aspect ratio
+      const aspectValidation = validateImageAspectRatio(img.width, img.height);
+      if (!aspectValidation.isValid) {
+        return { success: false, error: aspectValidation.error };
+      }
+
+      setOriginalImageSize({ width: img.width, height: img.height });
+      setScanProgress(40);
+      setScanMessage('Detecting faces...');
+
+      // Perform face detection
+      const result = await generateEmbeddingClientSide(file);
+
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      if (!result.detection) {
+        return { success: false, error: 'No face detected in the image' };
+      }
+
+      // Check for multiple faces
+      if (result.detection.faceCount && result.detection.faceCount > 1) {
+        return { success: false, error: 'Multiple faces detected. Please upload a photo with only one face.' };
+      }
+
+      // Get face bounding box
+      const bbox = result.detection.boundingBox;
+      if (!bbox) {
+        return { success: false, error: 'Could not determine face position' };
+      }
+
+      setFaceBoundingBox(bbox);
+      setDetectionProgress(100);
+      setScanProgress(60);
+      setScanMessage('Cropping to face...');
+
+      // Crop image to face with padding
+      const croppedImage = await cropImageToFace(img, bbox);
+
+      setScanProgress(80);
+      setScanMessage('Face cropped successfully');
+
+      return {
+        success: true,
+        croppedImage,
+        boundingBox: bbox
+      };
+
+    } catch (error) {
+      console.error('Face detection and cropping error:', error);
+      return { success: false, error: 'Face detection failed: ' + (error as Error).message };
+    }
+  }, [validateImageAspectRatio]);
+
+  // Crop image to face region with proper aspect ratio
+  const cropImageToFace = useCallback(async (img: HTMLImageElement, boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+
+      // Target aspect ratio 7:9
+      const targetAspectRatio = 7 / 9;
+      let cropWidth = boundingBox.width * img.width;
+      let cropHeight = boundingBox.height * img.height;
+      let cropX = boundingBox.x * img.width;
+      let cropY = boundingBox.y * img.height;
+
+      // Add padding around face (20% of face size)
+      const paddingX = cropWidth * 0.2;
+      const paddingY = cropHeight * 0.2;
+
+      cropX = Math.max(0, cropX - paddingX);
+      cropY = Math.max(0, cropY - paddingY);
+      cropWidth = Math.min(img.width - cropX, cropWidth + paddingX * 2);
+      cropHeight = Math.min(img.height - cropY, cropHeight + paddingY * 2);
+
+      // Adjust to maintain 7:9 aspect ratio
+      const currentRatio = cropWidth / cropHeight;
+      if (currentRatio > targetAspectRatio) {
+        // Too wide, reduce width
+        const newWidth = cropHeight * targetAspectRatio;
+        cropX += (cropWidth - newWidth) / 2;
+        cropWidth = newWidth;
+      } else {
+        // Too tall, reduce height
+        const newHeight = cropWidth / targetAspectRatio;
+        cropY += (cropHeight - newHeight) / 2;
+        cropHeight = newHeight;
+      }
+
+      // Set canvas size to target dimensions (high quality)
+      const outputSize = 400; // 400px width for high quality
+      canvas.width = outputSize;
+      canvas.height = Math.round(outputSize / targetAspectRatio);
+
+      // Draw cropped and resized image
+      ctx.drawImage(
+        img,
+        cropX, cropY, cropWidth, cropHeight,
+        0, 0, canvas.width, canvas.height
+      );
+
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
+    });
+  }, []);
 
   const currentImage = photoPreview || employee?.reference_photo_url;
   const hasEmbedding = !!employee?.face_embedding;
@@ -259,25 +449,25 @@ export function FaceRecognitionForm({
                   <DialogHeader>
                     <DialogTitle>Photo Requirements</DialogTitle>
                     <DialogDescription>
-                      Guidelines for uploading a suitable reference photo for face recognition
+                      Automatic face detection and cropping will be applied to your photo
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-3 text-sm">
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">•</span>
-                      <span>Clear frontal face photo</span>
+                      <span>Maximum file size: 5MB (high quality preferred)</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">•</span>
-                      <span>Good lighting, no shadows</span>
+                      <span>Aspect ratio: 7:9 portrait recommended</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">•</span>
-                      <span>Plain background preferred</span>
+                      <span>Clear frontal face with good lighting</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">•</span>
-                      <span>Eyes open and visible</span>
+                      <span>Only one face should be visible (auto-detected)</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">•</span>
@@ -285,7 +475,7 @@ export function FaceRecognitionForm({
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">•</span>
-                      <span>Passport photo aspect ratio recommended</span>
+                      <span>Automatic cropping to face region will be applied</span>
                     </div>
                   </div>
                 </DialogContent>
@@ -299,7 +489,7 @@ export function FaceRecognitionForm({
                 isDragOver && modelsInitialized
                   ? "border-primary bg-primary/5 scale-[1.02]"
                   : "border-muted-foreground/25 hover:border-muted-foreground/50",
-                "h-64 w-48 mx-auto", // Passport photo aspect ratio (2:2.5)
+                "h-80 w-60 mx-auto", // 7:9 aspect ratio (320:400 ≈ 4:5)
                 currentImage && "p-2",
                 (!modelsInitialized || isModelInitializing) && "opacity-50 cursor-not-allowed"
               )}
@@ -315,6 +505,33 @@ export function FaceRecognitionForm({
                     fill
                     className="object-cover rounded"
                   />
+
+                  {/* Face Detection Markers */}
+                  {faceBoundingBox && originalImageSize && (
+                    <div className="absolute inset-0 pointer-events-none">
+                      <div
+                        className="absolute border-2 border-green-500 rounded"
+                        style={{
+                          left: `${(faceBoundingBox.x * 100)}%`,
+                          top: `${(faceBoundingBox.y * 100)}%`,
+                          width: `${(faceBoundingBox.width * 100)}%`,
+                          height: `${(faceBoundingBox.height * 100)}%`,
+                        }}
+                      >
+                        {/* Corner markers */}
+                        <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-green-500" />
+                        <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-green-500" />
+                        <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-green-500" />
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-green-500" />
+
+                        {/* Confidence indicator */}
+                        <div className="absolute -top-6 left-0 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                          Face detected
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     type="button"
                     variant="destructive"
@@ -337,8 +554,9 @@ export function FaceRecognitionForm({
                       fileInputRef.current?.click();
                     }}
                     disabled={!modelsInitialized || isModelInitializing}
+                    title="Replace photo"
                   >
-                    <Crop className="h-3 w-3" />
+                    <RefreshCw className="h-3 w-3" />
                   </Button>
                 </div>
               ) : (
@@ -580,63 +798,6 @@ export function FaceRecognitionForm({
           </div>
         </div>
       </div>
-
-      {/* Image Cropper Dialog */}
-      {showCropper && cropImage && (
-        <ImageCropper
-          image={cropImage}
-          onComplete={handleCropComplete}
-          onCancel={() => {
-            setShowCropper(false);
-            setCropImage(null);
-          }}
-        />
-      )}
     </div>
-  );
-}
-
-// Simple Image Cropper Component (placeholder)
-function ImageCropper({
-  image,
-  onComplete,
-  onCancel
-}: {
-  image: string;
-  onComplete: (croppedImage: string) => void;
-  onCancel: () => void;
-}) {
-  return (
-    <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Crop Photo (Passport Size)</DialogTitle>
-          <DialogDescription>
-            Adjust the photo to ensure proper framing and composition for face recognition
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="relative bg-muted rounded-lg p-4">
-            <div className="relative w-full h-64">
-              <Image
-                src={image}
-                alt="Crop"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <div className="absolute inset-4 border-2 border-primary border-dashed rounded pointer-events-none" />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button onClick={() => onComplete(image)}>
-              Use This Photo
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }

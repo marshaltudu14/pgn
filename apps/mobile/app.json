@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "PGN Mobile",
+    "name": "PGN",
     "slug": "pgn-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./images/pg-logo-white-bg.jpg",
     "scheme": "pgnmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -25,17 +25,15 @@
       "package": "com.pgn.mobile",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./images/pg-logo-transparent.png"
       },
       "splash": {
-        "image": "./assets/images/pgn-logo-rounded.png",
+        "image": "./images/pg-logo-transparent.png",
         "resizeMode": "contain",
         "backgroundColor": "#ffffff",
         "dark": {
-          "image": "./assets/images/pgn-logo-rounded.png",
+          "image": "./images/pg-logo-transparent.png",
           "backgroundColor": "#000000"
         }
       },
@@ -57,7 +55,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png",
+      "favicon": "./images/pg-logo-white-bg.jpg",
       "bundler": "metro"
     },
     "plugins": [
@@ -91,11 +89,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/pgn-logo-rounded.png",
-          "imageWidth": 200,
+          "image": "./images/pg-logo-transparent.png",
+          "imageWidth": 250,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
+            "image": "./images/pg-logo-transparent.png",
             "backgroundColor": "#000000"
           }
         }

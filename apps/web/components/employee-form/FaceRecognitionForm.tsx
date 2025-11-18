@@ -38,7 +38,6 @@ export function FaceRecognitionForm({
   const [isDragOver, setIsDragOver] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'complete' | 'error'>('idle');
-  const [scanMessage, setScanMessage] = useState('');
   const [faceDetectionError, setFaceDetectionError] = useState<string | null>(null);
   const [detectionProgress, setDetectionProgress] = useState(0);
   const [embeddingProgress, setEmbeddingProgress] = useState(0);
@@ -53,6 +52,9 @@ export function FaceRecognitionForm({
     width: number;
     height: number;
   } | null>(null);
+
+  // Local preview state for immediate feedback
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
 
   // Client-side face recognition state
   const {
@@ -152,93 +154,7 @@ export function FaceRecognitionForm({
   }, []);
 
   // Perform face detection and automatic cropping
-  const performFaceDetectionAndCropping = useCallback(async (file: File): Promise<{
-    success: boolean;
-    croppedImage?: string;
-    boundingBox?: { x: number; y: number; width: number; height: number };
-    error?: string;
-  }> => {
-    try {
-      setScanProgress(20);
-      setScanMessage('Loading image...');
-
-      // Load image to validate aspect ratio and get dimensions
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const image = new Image();
-          image.onload = () => resolve(image);
-          image.onerror = reject;
-          image.src = e.target?.result as string;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      setScanProgress(30);
-      setScanMessage('Detecting face...');
-
-      // Use face recognition client-side utility to detect face
-      const result = await generateEmbeddingClientSide(file);
-
-      if (!result.success || !result.detection) {
-        return {
-          success: false,
-          error: result.error || 'No face detected in the image. Please upload a clear photo showing your face.'
-        };
-      }
-
-      // Get the bounding box from the detection
-      const bbox = {
-        x: result.detection.boundingBox.xMin,
-        y: result.detection.boundingBox.yMin,
-        width: result.detection.boundingBox.xMax - result.detection.boundingBox.xMin,
-        height: result.detection.boundingBox.yMax - result.detection.boundingBox.yMin
-      };
-
-      // Validate face detection
-      if (bbox.width < 0.1 || bbox.height < 0.1) {
-        return {
-          success: false,
-          error: 'Face detected but too small. Please upload a photo with a larger, clearer face.'
-        };
-      }
-
-      // Check if face is reasonably centered (within 30% of center)
-      const faceCenterX = bbox.x + bbox.width / 2;
-      const faceCenterY = bbox.y + bbox.height / 2;
-      const maxDeviation = 0.3;
-
-      if (Math.abs(faceCenterX - 0.5) > maxDeviation || Math.abs(faceCenterY - 0.5) > maxDeviation) {
-        return {
-          success: false,
-          error: 'Face detected but not well-centered. Please upload a photo with your face more centered in the frame.'
-        };
-      }
-
-      setFaceBoundingBox(bbox);
-      setDetectionProgress(100);
-      setScanProgress(60);
-      setScanMessage('Cropping to face...');
-
-      // Crop image to face with padding
-      const croppedImage = await cropImageToFace(img, bbox);
-
-      setScanProgress(80);
-      setScanMessage('Face cropped successfully');
-
-      return {
-        success: true,
-        croppedImage,
-        boundingBox: bbox
-      };
-
-    } catch (error) {
-      console.error('Face detection and cropping error:', error);
-      return { success: false, error: 'Face detection failed: ' + (error as Error).message };
-    }
-  }, [cropImageToFace]);
-
+  
   // Reset alert state when processing new image
   const resetAlertState = useCallback(() => {
     setFaceDetectionError(null);
@@ -251,76 +167,7 @@ export function FaceRecognitionForm({
     setOriginalImageSize(null);
   }, []);
 
-  // Real face detection and embedding generation
-  const performFaceScanning = useCallback(async (imageFile: File) => {
-    setScanStatus('scanning');
-    setScanProgress(0);
-    setFaceDetectionError(null);
-
-    try {
-      // Step 1: Detect face
-      setScanProgress(20);
-      setScanMessage('Detecting face in photo...');
-      setDetectionProgress(50);
-
-      const result = await generateEmbeddingClientSide(imageFile);
-
-      if (!result.success) {
-        setDetectionProgress(100);
-        setScanStatus('error');
-        setScanProgress(100);
-        setFaceDetectionError(result.error || 'Face detection failed');
-        return;
-      }
-
-      setDetectionProgress(100);
-      setScanProgress(50);
-      setScanMessage('Face detected successfully');
-
-      // Step 2: Check face quality and confidence
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      if (!result.detection?.confidence || result.detection.confidence < 0.8) {
-        setScanStatus('error');
-        setScanProgress(100);
-        setFaceDetectionError('Face not clearly visible or confidence too low. Please upload a clear, well-lit frontal photo showing the full face.');
-        return;
-      }
-
-      if (result.quality && (result.quality.overall === 'unacceptable' || result.quality.overall === 'poor' || result.quality.overall === 'fair')) {
-        setScanStatus('error');
-        setScanProgress(100);
-        const qualityIssues = result.quality.issues.length > 0 ? result.quality.issues.join(', ') : 'Insufficient image quality';
-        setFaceDetectionError(`Image quality not sufficient for face recognition: ${qualityIssues}. Please provide a clear, well-lit photo with good contrast and sharpness.`);
-        return;
-      }
-
-      // Step 3: Generate embedding
-      setScanProgress(75);
-      setScanMessage('Generating face embedding...');
-      setEmbeddingProgress(75);
-
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setEmbeddingProgress(100);
-
-      // Step 4: Complete
-      setQualityProgress(100);
-      setScanProgress(100);
-      setScanMessage('Face recognition ready!');
-      setScanStatus('complete');
-
-      if (onEmbeddingGenerated && result.embedding) {
-        onEmbeddingGenerated(result.embedding);
-      }
-
-    } catch (error) {
-      console.error('Face scanning error:', error);
-      setScanStatus('error');
-      setScanProgress(100);
-      setFaceDetectionError('Face scanning failed: ' + (error as Error).message);
-    }
-  }, [onEmbeddingGenerated]);
-
+  
   // Process image file with automatic face detection and cropping
   const processImageFile = useCallback(async (file: File) => {
     resetAlertState();
@@ -339,25 +186,120 @@ export function FaceRecognitionForm({
       return;
     }
 
+    // Create preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    setLocalPreview(previewUrl);
     setScanStatus('scanning');
-    setScanProgress(10);
-    setScanMessage('Validating image...');
+    setDetectionProgress(20);
+    setEmbeddingProgress(0);
 
     try {
-      // Validate aspect ratio and perform face detection
-      const result = await performFaceDetectionAndCropping(file);
+      // Perform face detection and embedding generation using client-side service
+      setDetectionProgress(40);
+      const result = await generateEmbeddingClientSide(file);
 
-      if (result.success && result.croppedImage) {
-        // Convert cropped data URL to File
-        const response = await fetch(result.croppedImage);
-        const blob = await response.blob();
-        const croppedFile = new File([blob], 'face-cropped.jpg', { type: 'image/jpeg' });
+      if (!result.success || !result.detection?.detected) {
+        setFaceDetectionError(result.error || 'No face detected in the image. Please upload a clear photo showing your face.');
+        setScanStatus('error');
+        setDetectionProgress(100);
+        setEmbeddingProgress(0);
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
 
+      setDetectionProgress(60);
+      setEmbeddingProgress(30);
+
+      // Validate face size and quality
+      if (!result.detection.boundingBox) {
+        setFaceDetectionError('No face bounding box detected');
+        setScanStatus('error');
+        setDetectionProgress(100);
+        setEmbeddingProgress(0);
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+
+      const faceSize = result.detection.boundingBox.width * result.detection.boundingBox.height;
+      if (faceSize < 0.08) {
+        setFaceDetectionError('Face too small. Please upload a photo with a larger, clearer face.');
+        setScanStatus('error');
+        setDetectionProgress(100);
+        setEmbeddingProgress(0);
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+
+      // Check for multiple faces
+      if (result.detection.faceCount && result.detection.faceCount > 1) {
+        setFaceDetectionError('Multiple faces detected. Please upload a photo with only one face.');
+        setScanStatus('error');
+        setDetectionProgress(100);
+        setEmbeddingProgress(0);
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+
+      // Check face quality
+      if (result.quality?.overall === 'unacceptable' || result.quality?.overall === 'poor') {
+        const issues = result.quality?.issues?.join(', ') || 'Image quality too poor';
+        setFaceDetectionError(`Image quality issues: ${issues}. Please upload a clearer photo.`);
+        setScanStatus('error');
+        setDetectionProgress(100);
+        setEmbeddingProgress(0);
+        URL.revokeObjectURL(previewUrl);
+        return;
+      }
+
+      // Set face detection marker for visualization
+      if (result.detection.boundingBox) {
+        setFaceBoundingBox({
+          x: result.detection.boundingBox.x || 0,
+          y: result.detection.boundingBox.y || 0,
+          width: result.detection.boundingBox.width,
+          height: result.detection.boundingBox.height
+        });
+      }
+
+      setDetectionProgress(80);
+      setEmbeddingProgress(60);
+
+      // Crop image to face region if we have a valid detection
+      let finalFile = file;
+      let finalPreview = previewUrl;
+
+      if (result.detection.boundingBox) {
+        // Load image to HTML element for cropping
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const image = document.createElement('img') as HTMLImageElement;
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = previewUrl;
+        });
+
+        const croppedDataUrl = await cropImageToFace(img, result.detection.boundingBox);
+        if (croppedDataUrl) {
+          // Convert data URL to File
+          const response = await fetch(croppedDataUrl);
+          const blob = await response.blob();
+          finalFile = new File([blob], 'face-cropped.jpg', { type: 'image/jpeg' });
+          finalPreview = URL.createObjectURL(finalFile);
+          setLocalPreview(finalPreview);
+          URL.revokeObjectURL(previewUrl); // Clean up original preview
+        }
+      }
+
+      setDetectionProgress(100);
+      setEmbeddingProgress(80);
+
+      // Final validation with cropped image
+      const finalResult = await generateEmbeddingClientSide(finalFile);
+      if (finalResult.success && finalResult.embedding) {
         // Create the event for parent component
         const input = document.createElement('input');
         input.type = 'file';
         const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(croppedFile);
+        dataTransfer.items.add(finalFile);
         input.files = dataTransfer.files;
 
         const event = {
@@ -380,22 +322,65 @@ export function FaceRecognitionForm({
 
         onPhotoSelect(event);
 
-        // Start face recognition scanning
-        setTimeout(() => {
-          performFaceScanning(croppedFile);
-        }, 500);
+        // Also call embedding callback if provided
+        if (onEmbeddingGenerated) {
+          onEmbeddingGenerated(finalResult.embedding);
+        }
+
+        setEmbeddingProgress(100);
+        setScanStatus('complete');
       } else {
-        setFaceDetectionError(result.error || 'Face detection failed');
-        setScanStatus('error');
-        setScanProgress(100);
+        // Fallback to original result if cropped validation fails
+        if (result.embedding) {
+          const input = document.createElement('input');
+          input.type = 'file';
+          const dataTransfer = new DataTransfer();
+          dataTransfer.items.add(finalFile);
+          input.files = dataTransfer.files;
+
+          const event = {
+            target: input,
+            currentTarget: input,
+            type: 'change',
+            bubbles: true,
+            cancelable: true,
+            defaultPrevented: false,
+            eventPhase: 2,
+            isTrusted: true,
+            nativeEvent: new Event('change', { bubbles: true }),
+            timeStamp: Date.now(),
+            preventDefault: () => {},
+            stopPropagation: () => {},
+            persist: () => {},
+            isDefaultPrevented: () => false,
+            isPropagationStopped: () => false
+          } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+          onPhotoSelect(event);
+
+          if (onEmbeddingGenerated) {
+            onEmbeddingGenerated(result.embedding);
+          }
+
+          setEmbeddingProgress(100);
+          setScanStatus('complete');
+        } else {
+          setFaceDetectionError('Failed to generate face embedding from processed image.');
+          setScanStatus('error');
+          setDetectionProgress(100);
+          setEmbeddingProgress(0);
+        }
       }
+
     } catch (error) {
       console.error('Error processing image:', error);
       setFaceDetectionError('Failed to process image. Please try again.');
       setScanStatus('error');
-      setScanProgress(100);
+      setDetectionProgress(100);
+      setEmbeddingProgress(0);
+      URL.revokeObjectURL(previewUrl);
     }
-  }, [resetAlertState, validateImageFile, onPhotoSelect, performFaceScanning, performFaceDetectionAndCropping]);
+  }, [resetAlertState, validateImageFile, setFaceDetectionError, onPhotoSelect, onEmbeddingGenerated, cropImageToFace]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -412,7 +397,7 @@ export function FaceRecognitionForm({
     }
   }, [processImageFile, modelsInitialized]);
 
-  const currentImage = photoPreview || employee?.reference_photo_url;
+  const currentImage = localPreview || photoPreview || employee?.reference_photo_url;
   const hasEmbedding = !!employee?.face_embedding;
 
   return (

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, ClipboardList, User } from 'lucide-react-native';
+import { Home, ClipboardList, User, Calendar } from 'lucide-react-native';
 
 interface TabItem {
   key: string;
@@ -37,9 +37,21 @@ export default function UnifiedBottomNavigation({
     }
   };
 
+  const handleTasksPress = () => {
+    if (onTabChange) {
+      onTabChange('tasks');
+    }
+  };
+
   const handleProfilePress = () => {
     if (onTabChange) {
       onTabChange('profile');
+    }
+  };
+
+  const handleAttendancePress = () => {
+    if (onTabChange) {
+      onTabChange('attendance');
     }
   };
 
@@ -57,6 +69,13 @@ export default function UnifiedBottomNavigation({
       label: 'Tasks',
       onPress: handleTasksPress,
       isActive: activeTab === 'tasks',
+    },
+    {
+      key: 'attendance',
+      icon: Calendar,
+      label: 'Attendance',
+      onPress: handleAttendancePress,
+      isActive: activeTab === 'attendance',
     },
     {
       key: 'profile',

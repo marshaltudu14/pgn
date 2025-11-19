@@ -82,9 +82,12 @@ export default function HomeScreen() {
   ];
 
   return (
-    <ScrollView className={`flex-1 ${
-      colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'
-    }`}>
+    <ScrollView
+      className={`flex-1 ${
+        colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'
+      }`}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
       <View className={`pt-12 pb-6 px-6 ${
         colorScheme === 'dark' ? 'bg-primary-900' : 'bg-gradient-to-b from-primary to-primary-600'

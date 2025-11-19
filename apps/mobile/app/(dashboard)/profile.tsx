@@ -94,6 +94,7 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`}
+      showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

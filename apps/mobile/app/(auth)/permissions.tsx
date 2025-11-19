@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StatusBar,
   AppState,
 } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -88,12 +87,6 @@ export default function PermissionsScreen({
 
   return (
     <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
-      <StatusBar
-        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
-      />
-
       {/* Header with icon and title */}
       <View className="flex-1 px-8 pt-20 justify-center">
         <View className="items-center mb-12">

@@ -201,6 +201,7 @@ export default function TasksScreen() {
       {/* Tasks List */}
       <ScrollView
         className="flex-1 px-6 py-4"
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

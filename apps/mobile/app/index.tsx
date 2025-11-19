@@ -40,7 +40,7 @@ export default function IndexScreen() {
   return (
     <SafeAreaView className={`flex-1 justify-center items-center ${
       colorScheme === 'dark' ? 'bg-black' : 'bg-white'
-    }`} edges={['top', 'left', 'right']}>
+    }`} edges={['top', 'left', 'right', 'bottom']}>
       <ActivityIndicator size="large" color="#FFB74D" />
       <Text className={`mt-4 ${
         colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'

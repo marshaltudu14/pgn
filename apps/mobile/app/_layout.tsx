@@ -72,7 +72,10 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <RootLayoutContent />
-          <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+          <StatusBar
+            style={colorScheme === 'dark' ? 'light' : 'dark'}
+            translucent={true}
+          />
         </GestureHandlerRootView>
       </ThemeProvider>
     </SafeAreaProvider>

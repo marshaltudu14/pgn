@@ -25,14 +25,14 @@ const TabButton: React.FC<{
   const getIconColor = () => {
     if (item.disabled) return '#9ca3af';
     return item.isActive
-      ? colorScheme === 'dark' ? '#ffffff' : '#1e40af'
+      ? '#FFB74D' // Saffron color for active state
       : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
   };
 
   const getTextColor = () => {
     if (item.disabled) return '#9ca3af';
     return item.isActive
-      ? colorScheme === 'dark' ? '#ffffff' : '#1e40af'
+      ? '#FFB74D' // Saffron color for active state
       : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
   };
 

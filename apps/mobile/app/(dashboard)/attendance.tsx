@@ -43,7 +43,7 @@ export default function AttendanceScreen() {
   ];
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <ScrollView className="flex-1 bg-gray-50" showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View className="bg-green-600 pt-12 pb-6 px-6">
         <View className="items-center">

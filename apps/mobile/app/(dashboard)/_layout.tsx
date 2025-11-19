@@ -1,4 +1,4 @@
-import { Slot, useRouter } from 'expo-router';
+import { Slot, useRouter, usePathname } from 'expo-router';
 import { View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthGuard } from '@/utils/auth-guard';
@@ -22,6 +22,7 @@ function ScreenContentWrapper({ children }: { children: React.ReactNode }) {
 
 function DashboardLayoutContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const [permissionsChecked, setPermissionsChecked] = useState(false);
   const [showPermissionsScreen, setShowPermissionsScreen] = useState(false);
   const [permissions, setPermissions] = useState<AppPermissions | null>(null);
@@ -54,6 +55,19 @@ function DashboardLayoutContent() {
     } finally {
       setPermissionsChecked(true);
     }
+  };
+
+  const getActiveTab = (currentPath: string): string => {
+    if (currentPath === '/(dashboard)' || currentPath === '/(dashboard)/') {
+      return 'home';
+    } else if (currentPath.includes('/tasks')) {
+      return 'tasks';
+    } else if (currentPath.includes('/attendance')) {
+      return 'attendance';
+    } else if (currentPath.includes('/profile')) {
+      return 'profile';
+    }
+    return 'home'; // Default fallback
   };
 
   const handlePermissionsGranted = () => {
@@ -101,7 +115,10 @@ function DashboardLayoutContent() {
       <ScreenContentWrapper>
         <Slot />
       </ScreenContentWrapper>
-      <UnifiedBottomNavigation onTabChange={handleTabChange} />
+      <UnifiedBottomNavigation
+        activeTab={getActiveTab(pathname)}
+        onTabChange={handleTabChange}
+      />
     </SafeAreaView>
   );
 }

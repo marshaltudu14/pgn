@@ -142,12 +142,14 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Biometric login
   biometricLogin: async (): Promise<AuthenticationResult> => {
+    console.log('🔍 Auth Store: biometricLogin called');
     set({ isLoggingIn: true, error: null });
 
     try {
       const result = await mobileAuthService.biometricLogin();
 
       if (result.success && result.user) {
+        console.log('🔍 Auth Store: Biometric login successful, updating state');
         set({
           isAuthenticated: true,
           isLoggingIn: false,

@@ -1,7 +1,6 @@
 import { Slot, Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/store/auth-store';
-import { AuthLoadingScreen } from '@/components/LoadingStates';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AuthLayout() {
@@ -17,9 +16,9 @@ export default function AuthLayout() {
     init();
   }, [initializeAuth, isAuthenticated]);
 
-  // Show loading screen while initializing
+  // Don't show loading screen - let redirect happen in background
   if (!isInitialized || isLoading) {
-    return <AuthLoadingScreen message="Authenticating..." />;
+    return null;
   }
 
   // If authenticated, redirect to dashboard

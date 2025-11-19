@@ -65,7 +65,7 @@ export default function IndexScreen() {
     };
 
     handleAuthFlow();
-  }, [isAuthenticated, isLoading, router, canUseBiometricAutoLogin, biometricLogin]);
+  }, [isAuthenticated, isLoading]);
 
   return (
     <SafeAreaView className={`flex-1 justify-center items-center ${

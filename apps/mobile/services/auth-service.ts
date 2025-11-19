@@ -51,20 +51,26 @@ export class MobileAuthService {
         };
       }
 
+      console.log('🔍 Auth Service: Starting login API call...');
       // Call API
       const response: LoginResponse = await apiClient.login(credentials);
-      
+      console.log('🔍 Auth Service: Login API call successful');
+
+      console.log('🔍 Auth Service: Storing tokens securely...');
       // Store tokens securely
       await Promise.all([
         secureStorage.setAuthToken(response.token),
         secureStorage.setUserData(response.employee),
       ]);
+      console.log('🔍 Auth Service: Tokens stored successfully');
 
       // Setup token refresh
       this.setupTokenRefresh(response.token);
 
+      console.log('🔍 Auth Service: Checking biometric availability...');
       // Check if biometric setup should be offered
       const biometricResult = await this.checkBiometricAvailability();
+      console.log('🔍 Auth Service: Biometric availability check complete:', biometricResult);
       const shouldOfferBiometric = biometricResult.success && biometricResult.type && biometricResult.type.length > 0;
 
       return {

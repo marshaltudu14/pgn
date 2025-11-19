@@ -16,9 +16,6 @@ import {
   Shield,
   Clock,
   Smartphone,
-  ChevronRight,
-  Check,
-  X,
   AlertCircle
 } from 'lucide-react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -27,11 +24,9 @@ export default function BiometricSetupScreen() {
   const router = useRouter();
   const { user, enableBiometricAuthentication } = useAuth();
   const colorScheme = useColorScheme();
-  const params = useLocalSearchParams<{ fromLogin?: string }>();
-  const isFromLogin = params.fromLogin === 'true';
 
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [supportedTypes, setSupportedTypes] = useState<LocalAuthentication.AuthenticationType[]>([]);
+  const [_supportedTypes, setSupportedTypes] = useState<LocalAuthentication.AuthenticationType[]>([]);
   const [isChecking, setIsChecking] = useState(true);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -80,7 +75,7 @@ export default function BiometricSetupScreen() {
       } else {
         setSetupError(result.error || 'Failed to enable biometric authentication');
       }
-    } catch (error) {
+    } catch {
       setSetupError('An unexpected error occurred while setting up biometrics');
     } finally {
       setIsSettingUp(false);
@@ -151,7 +146,7 @@ export default function BiometricSetupScreen() {
         <Text className={`text-center mb-8 ${
           colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
         }`}>
-          Your device doesn't support biometric authentication or it's not set up.
+          Your device doesn&apos;t support biometric authentication or it&apos;s not set up.
           You can continue using your email and password to login.
         </Text>
         <TouchableOpacity
@@ -210,7 +205,7 @@ export default function BiometricSetupScreen() {
           <Text className={`text-center text-sm ${
             colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
           }`}>
-            You're successfully logged in. Now let's make your future logins faster and easier.
+            You&apos;re successfully logged in. Now let&apos;s make your future logins faster and easier.
           </Text>
         </View>
 
@@ -258,7 +253,7 @@ export default function BiometricSetupScreen() {
                 <Text className={`text-sm ${
                   colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
                 }`}>
-                  Biometric data never leaves your device and is protected by your device's security.
+                  Biometric data never leaves your device and is protected by your device&apos;s security.
                 </Text>
               </View>
             </View>

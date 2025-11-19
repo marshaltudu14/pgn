@@ -294,7 +294,7 @@ describe('useEmployeeStore', () => {
         ok: false,
         json: async () => ({
           success: false,
-          error: 'AuthApiError: A user with this email address has already been registered'
+          error: 'An employee with this email address already exists. Please use the Edit Employee page to update their information instead.'
         }),
       });
 
@@ -302,8 +302,8 @@ describe('useEmployeeStore', () => {
       const result = await store.createEmployee(mockCreateEmployeeData);
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('An employee with this email address already exists. Please use a different email address.');
-      expect(mockShowNotification).toHaveBeenCalledWith('An employee with this email address already exists. Please use a different email address.', 'error');
+      expect(result.error).toBe('An employee with this email address already exists. Please use the Edit Employee page to update their information instead.');
+      expect(mockShowNotification).toHaveBeenCalledWith('An employee with this email address already exists. Please use the Edit Employee page to update their information instead.', 'error');
     });
 
     it('should handle create employee error with insufficient permissions', async () => {

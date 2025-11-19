@@ -10,14 +10,9 @@ function getUserFriendlyErrorMessage(error: string): string {
   const cleanError = error.replace(/AuthApiError:\s*/, '').replace(/DatabaseError:\s*/, '').trim();
 
   // Handle common Supabase Auth errors
-  if (cleanError.includes('A user with this email address has already been registered') ||
-      error.includes('A user with this email address has already been registered')) {
-    return 'An employee with this email address already exists. Please use a different email address.';
-  }
-
-  if (cleanError.includes('An employee with this email address already exists in the authentication system') ||
-      error.includes('An employee with this email address already exists in the authentication system')) {
-    return 'An employee with this email address already exists. Please use a different email address.';
+  if (cleanError.includes('An employee with this email address already exists') ||
+      error.includes('An employee with this email address already exists')) {
+    return 'An employee with this email address already exists. Please use the Edit Employee page to update their information instead.';
   }
 
   if (cleanError.includes('You do not have permission to create employees') ||

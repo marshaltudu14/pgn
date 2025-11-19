@@ -64,10 +64,12 @@ jest.mock('../../utils/supabase/server', () => ({
 jest.mock('../../utils/supabase/admin', () => ({
   createAuthUser: jest.fn(),
   resetUserPassword: jest.fn(),
+  getUserByEmail: jest.fn(),
+  updateUserPasswordByEmail: jest.fn(),
 }));
 
 import { createClient } from '../../utils/supabase/server';
-import { createAuthUser, resetUserPassword } from '../../utils/supabase/admin';
+import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../../utils/supabase/admin';
 
 describe('Employee Service', () => {
   let mockSupabaseClient: ReturnType<typeof createMockSupabaseClient>;
@@ -240,6 +242,12 @@ describe('Employee Service', () => {
     };
 
     it('should create a new employee successfully with all fields', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       // Mock auth user creation success
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
@@ -365,6 +373,12 @@ describe('Employee Service', () => {
     });
 
     it('should throw error if auth user creation fails with specific error', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: false,
         error: 'Email already exists in auth system'
@@ -376,6 +390,12 @@ describe('Employee Service', () => {
     });
 
     it('should throw error if auth user creation fails without specific error', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: false,
         error: null
@@ -387,6 +407,12 @@ describe('Employee Service', () => {
     });
 
     it('should throw error if auth user creation returns no user object', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
         data: { user: null },
@@ -399,6 +425,12 @@ describe('Employee Service', () => {
     });
 
     it('should throw error if auth user creation returns user without id', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
         data: { user: { email: 'test@example.com' } },
@@ -411,6 +443,12 @@ describe('Employee Service', () => {
     });
 
     it('should handle database errors during employee creation and not delete auth user', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
         data: { user: { id: 'auth-user-id' } },
@@ -444,11 +482,13 @@ describe('Employee Service', () => {
       );
 
       // Verify auth user creation was attempted but not rolled back (as per policy)
+      expect(getUserByEmail).toHaveBeenCalledTimes(1);
       expect(createAuthUser).toHaveBeenCalledTimes(1);
     });
 
     it('should handle auth service exceptions', async () => {
-      (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockRejectedValue(new Error('Auth service unavailable'));
+      // Mock getUserByEmail to throw an exception
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockRejectedValue(new Error('Auth service unavailable'));
 
       await expect(createEmployee(validCreateRequest)).rejects.toThrow(
         'Auth service unavailable'
@@ -456,6 +496,12 @@ describe('Employee Service', () => {
     });
 
     it('should handle generateHumanReadableUserId errors', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
         data: { user: { id: 'auth-user-id' } },
@@ -476,6 +522,191 @@ describe('Employee Service', () => {
       await expect(createEmployee(validCreateRequest)).rejects.toThrow(
         'Database unavailable for ID generation'
       );
+    });
+
+    it('should create employee profile for existing auth user with updated password', async () => {
+      // Mock existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: {
+          id: 'existing-auth-user-id',
+          email: 'existing.user@example.com',
+          created_at: '2023-01-01T00:00:00Z'
+        }
+      } as any);
+
+      // Mock password update success
+      (updateUserPasswordByEmail as jest.MockedFunction<typeof updateUserPasswordByEmail>).mockResolvedValue({
+        success: true,
+        data: { user: { id: 'existing-auth-user-id' } }
+      } as any);
+
+      jest.spyOn({ generateHumanReadableUserId }, 'generateHumanReadableUserId')
+        .mockResolvedValue('PGN-2024-0002');
+
+      // Mock successful employee creation
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          like: jest.fn().mockReturnValue({
+            order: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue({ data: [], error: null })
+            })
+          })
+        }),
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: {
+                id: 'existing-auth-user-id',
+                human_readable_user_id: 'PGN-2024-0002',
+                first_name: 'Jane',
+                last_name: 'Smith',
+                email: 'existing.user@example.com',
+                phone: '+1234567890',
+                employment_status: 'ACTIVE',
+                can_login: true,
+                assigned_regions: ['Region1'],
+                created_at: '2024-01-01T00:00:00Z',
+                updated_at: '2024-01-01T00:00:00Z'
+              },
+              error: null
+            })
+          })
+        })
+      });
+
+      const result = await createEmployee({
+        ...validCreateRequest,
+        email: 'existing.user@example.com',
+        first_name: 'Jane',
+        last_name: 'Smith',
+        password: 'newPassword123'
+      });
+
+      expect(result).toEqual({
+        id: 'existing-auth-user-id',
+        human_readable_user_id: 'PGN-2024-0002',
+        first_name: 'Jane',
+        last_name: 'Smith',
+        email: 'existing.user@example.com',
+        phone: '+1234567890',
+        employment_status: 'ACTIVE',
+        can_login: true,
+        assigned_regions: ['Region1'],
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      });
+
+      // Verify existing auth user was found and password updated
+      expect(getUserByEmail).toHaveBeenCalledWith('existing.user@example.com');
+      expect(updateUserPasswordByEmail).toHaveBeenCalledWith('existing.user@example.com', 'newPassword123');
+      // Verify no new auth user was created
+      expect(createAuthUser).not.toHaveBeenCalled();
+    });
+
+    it('should throw error if password update fails for existing auth user', async () => {
+      // Mock existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: {
+          id: 'existing-auth-user-id',
+          email: 'existing.user@example.com',
+          created_at: '2023-01-01T00:00:00Z'
+        }
+      } as any);
+
+      // Mock password update failure
+      (updateUserPasswordByEmail as jest.MockedFunction<typeof updateUserPasswordByEmail>).mockResolvedValue({
+        success: false,
+        error: 'Failed to update password'
+      } as any);
+
+      await expect(createEmployee({
+        ...validCreateRequest,
+        email: 'existing.user@example.com',
+        password: 'newPassword123'
+      })).rejects.toThrow('Failed to update existing auth user password: Failed to update password');
+
+      // Verify existing auth user was found and password update was attempted
+      expect(getUserByEmail).toHaveBeenCalledWith('existing.user@example.com');
+      expect(updateUserPasswordByEmail).toHaveBeenCalledWith('existing.user@example.com', 'newPassword123');
+      // Verify no new auth user was created
+      expect(createAuthUser).not.toHaveBeenCalled();
+    });
+
+    it('should create new auth user when none exists', async () => {
+      // Mock no existing auth user found
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: true,
+        data: null
+      } as any);
+
+      // Mock new auth user creation
+      (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
+        success: true,
+        data: { user: { id: 'new-auth-user-id' } },
+        error: undefined
+      } as any);
+
+      jest.spyOn({ generateHumanReadableUserId }, 'generateHumanReadableUserId')
+        .mockResolvedValue('PGN-2024-0003');
+
+      // Mock successful employee creation
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          like: jest.fn().mockReturnValue({
+            order: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue({ data: [], error: null })
+            })
+          })
+        }),
+        insert: jest.fn().mockReturnValue({
+          select: jest.fn().mockReturnValue({
+            single: jest.fn().mockResolvedValue({
+              data: {
+                id: 'new-auth-user-id',
+                human_readable_user_id: 'PGN-2024-0003',
+                first_name: 'Alice',
+                last_name: 'Johnson',
+                email: 'alice.johnson@example.com',
+                phone: '+1234567890',
+                employment_status: 'ACTIVE',
+                can_login: true,
+                assigned_regions: ['Region1'],
+                created_at: '2024-01-01T00:00:00Z',
+                updated_at: '2024-01-01T00:00:00Z'
+              },
+              error: null
+            })
+          })
+        })
+      });
+
+      const result = await createEmployee({
+        ...validCreateRequest,
+        first_name: 'Alice',
+        last_name: 'Johnson',
+        email: 'alice.johnson@example.com'
+      });
+
+      expect(result).toEqual({
+        id: 'new-auth-user-id',
+        human_readable_user_id: 'PGN-2024-0003',
+        first_name: 'Alice',
+        last_name: 'Johnson',
+        email: 'alice.johnson@example.com',
+        phone: '+1234567890',
+        employment_status: 'ACTIVE',
+        can_login: true,
+        assigned_regions: ['Region1'],
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      });
+
+      // Verify no existing auth user was searched for initially
+      expect(getUserByEmail).toHaveBeenCalledWith('alice.johnson@example.com');
+      // Verify new auth user was created
+      expect(createAuthUser).toHaveBeenCalledWith('alice.johnson@example.com', 'securePassword123');
     });
   });
 

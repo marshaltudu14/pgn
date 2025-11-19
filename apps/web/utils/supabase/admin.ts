@@ -98,3 +98,66 @@ export async function updateUserEmail(userId: string, newEmail: string) {
     return { success: false, error };
   }
 }
+
+/**
+ * Get user by email
+ * This should only be called from validated server-side services
+ */
+export async function getUserByEmail(email: string) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      filters: {
+        email: email.toLowerCase().trim()
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // Return the first user if found, otherwise return null
+    return { success: true, data: data.users.length > 0 ? data.users[0] : null };
+  } catch (error) {
+    console.error('Error getting user by email:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update user password by email
+ * This should only be called from validated server-side services
+ */
+export async function updateUserPasswordByEmail(email: string, newPassword: string) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // First get the user by email
+    const userResult = await getUserByEmail(email);
+
+    if (!userResult.success) {
+      return { success: false, error: userResult.error as string };
+    }
+
+    if (!userResult.data) {
+      return { success: false, error: 'User not found with this email' };
+    }
+
+    // Update the password using the user ID
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userResult.data.id,
+      {
+        password: newPassword,
+      }
+    );
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error updating user password by email:', error);
+    return { success: false, error };
+  }
+}

@@ -76,6 +76,13 @@ export interface AuthenticationResult {
   error?: string;
 }
 
+// City-District-State assignment for regional assignments
+export interface CityAssignment {
+  city: string;
+  district: string;
+  state: string;
+}
+
 // API Request/Response types (not database types)
 export interface CreateEmployeeRequest {
   first_name: string;
@@ -84,9 +91,7 @@ export interface CreateEmployeeRequest {
   phone?: string;
   employment_status?: EmploymentStatus;
   can_login?: boolean;
-  primary_region?: string;
-  region_code?: string;
-  assigned_regions?: string[];
+  assigned_cities?: CityAssignment[];
   password?: string;
 }
 
@@ -97,9 +102,7 @@ export interface UpdateEmployeeRequest {
   phone?: string;
   employment_status?: EmploymentStatus;
   can_login?: boolean;
-  primary_region?: string;
-  region_code?: string;
-  assigned_regions?: string[];
+  assigned_cities?: CityAssignment[];
 }
 
 export interface ChangeEmploymentStatusRequest {

@@ -69,13 +69,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email is already taken
+    // Check if email is already taken by an existing employee
     const existingEmployee = await getEmployeeByEmail(body.email);
     if (existingEmployee) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Email is already taken'
+          error: 'An employee with this email address already exists. Please use the Edit Employee page to update their information instead.'
         },
         { status: 409 }
       );
@@ -108,14 +108,16 @@ export async function POST(request: NextRequest) {
 
     // Handle specific error cases and pass through the actual error message
     if (error instanceof Error) {
-      // Handle duplicate user error
+      // Handle duplicate user error - but now we'll allow it since we can update existing auth users
       if (error.message.includes('A user with this email address has already been registered')) {
+        // This shouldn't happen anymore since we handle existing auth users
+        // but keeping it as a fallback
         return NextResponse.json(
           {
             success: false,
-            error: 'An employee with this email address already exists in the authentication system. Please use a different email address.'
+            error: 'An error occurred while processing the auth user. Please try again.'
           },
-          { status: 409 }
+          { status: 500 }
         );
       }
 

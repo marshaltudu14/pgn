@@ -6,4 +6,4 @@ export * from './attendance';
 export * from './ui';
 export * from './middleware';
 export * from './supabase';
-export * from './face-recognition';
+export * from './regions';

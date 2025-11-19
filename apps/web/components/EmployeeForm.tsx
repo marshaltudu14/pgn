@@ -20,7 +20,6 @@ import {
   UpdateEmployeeRequest,
 } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
-import { useFaceRecognitionStore } from '@/app/lib/stores/faceRecognitionStore';
 import {
   Loader2,
   Save,
@@ -31,7 +30,6 @@ import {
 import { PersonalInfoForm } from './employee-form/PersonalInfoForm';
 import { EmploymentDetailsForm } from './employee-form/EmploymentDetailsForm';
 import { RegionalAssignmentForm } from './employee-form/RegionalAssignmentForm';
-import { FaceRecognitionForm } from './employee-form/FaceRecognitionForm';
 import { AuditInfoForm } from './employee-form/AuditInfoForm';
 
 // Form validation schema
@@ -52,7 +50,11 @@ const employeeFormSchema = z.object({
     .refine((val) => !val || /^[\d\s-()]+$/.test(val), 'Invalid phone number format'),
   employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']),
   can_login: z.boolean(),
-  assigned_regions: z.array(z.string()),
+  assigned_cities: z.array(z.object({
+    city: z.string(),
+    district: z.string(),
+    state: z.string()
+  })).default([]),
   password: z.string()
     .min(6, 'Password must be at least 6 characters')
     .optional(), // Optional for editing, but we'll validate it manually for creation
@@ -71,16 +73,9 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel }: EmployeeFormProps) {
   const { createEmployee, updateEmployee } = useEmployeeStore();
-  const {
-    generateEmbedding
-  } = useFaceRecognitionStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!employee;
-
-  // Enhanced features state
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoUploadLoading, setPhotoUploadLoading] = useState(false);
 
   // Use a key to force re-rendering of form when editing different employees
   // This helps prevent hydration mismatches by ensuring clean state
@@ -95,7 +90,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       phone: '',
       employment_status: 'ACTIVE',
       can_login: true,
-      assigned_regions: [],
+      assigned_cities: [],
       password: '',
       confirm_password: '',
     },
@@ -110,12 +105,22 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         phone: employee.phone || '',
         employment_status: employee.employment_status as EmploymentStatus,
         can_login: employee.can_login ?? true,
-        assigned_regions: employee.assigned_regions || [],
+        assigned_cities: (employee as any).assigned_cities || [],
         password: '', // Don't pre-fill password
         confirm_password: '', // Don't pre-fill confirm password
       });
     } else if (!employee && open) {
-      form.reset();
+      form.reset({
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        employment_status: 'ACTIVE',
+        can_login: true,
+        assigned_cities: [],
+        password: '',
+        confirm_password: '',
+      });
     }
   }, [employee, open, form]);
 
@@ -144,26 +149,26 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       let result;
 
       if (isEditing && employee) {
-        const updateData: UpdateEmployeeRequest = {
+        const updateData: any = {
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
           phone: cleanPhone,
           employment_status: data.employment_status,
           can_login: data.can_login,
-          assigned_regions: data.assigned_regions,
+          assigned_cities: data.assigned_cities,
         };
 
         result = await updateEmployee(employee.id, updateData);
       } else {
-        const createData: CreateEmployeeRequest = {
+        const createData: any = {
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
           phone: cleanPhone,
           employment_status: data.employment_status,
           can_login: data.can_login,
-          assigned_regions: data.assigned_regions,
+          assigned_cities: data.assigned_cities,
           password: data.password, // Password only required for creation
         };
 
@@ -185,59 +190,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
     }
   };
 
-  // Photo upload handlers with client-side embedding generation
-  const handlePhotoSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type and size
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('Photo must be less than 5MB');
-        return;
-      }
-
-      setPhotoUploadLoading(true);
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        setPhotoPreview(e.target?.result as string);
-
-        // Generate face embedding client-side using Zustand store
-        try {
-          const result = await generateEmbedding(file, employee?.id);
-
-          if (result.success && result.embedding) {
-            // Store embedding for form submission
-              handleEmbeddingGenerated();
-
-            // Show processing time for user feedback
-            const resultWithPerformance = result as { performance?: { totalTime?: number } };
-            if (resultWithPerformance.performance?.totalTime) {
-              }
-          } else if (result.error) {
-            setError(result.error);
-          }
-        } catch (error) {
-          console.error('Error generating face embedding:', error);
-          setError('Failed to generate face recognition embedding');
-        } finally {
-          setPhotoUploadLoading(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePhotoRemove = () => {
-    setPhotoPreview(null);
-  };
-
-  const handleEmbeddingGenerated = () => {
-    // Store embedding for form submission
-    };
-
   return (
     <>
       {error && (
@@ -250,14 +202,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
           {/* Desktop/Tablet View */}
           <div className="hidden lg:block space-y-8">
-            <FaceRecognitionForm
-              employee={employee}
-              onPhotoSelect={handlePhotoSelect}
-              onPhotoRemove={handlePhotoRemove}
-              photoPreview={photoPreview}
-              photoUploadLoading={photoUploadLoading}
-              onEmbeddingGenerated={handleEmbeddingGenerated}
-            />
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
             <RegionalAssignmentForm form={form} />
@@ -266,17 +210,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
           {/* Mobile View - Simplified */}
           <div className="lg:hidden space-y-4">
-            <div className="text-sm text-muted-foreground">
-              Mobile view components will be implemented here
-            </div>
-            <FaceRecognitionForm
-              employee={employee}
-              onPhotoSelect={handlePhotoSelect}
-              onPhotoRemove={handlePhotoRemove}
-              photoPreview={photoPreview}
-              photoUploadLoading={photoUploadLoading}
-              onEmbeddingGenerated={handleEmbeddingGenerated}
-            />
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
             <RegionalAssignmentForm form={form} />

@@ -152,7 +152,7 @@ export type Database = {
       }
       employees: {
         Row: {
-          assigned_regions: string[] | null
+          assigned_cities: Json | null
           can_login: boolean | null
           created_at: string | null
           device_info: Json | null
@@ -170,7 +170,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          assigned_regions?: string[] | null
+          assigned_cities?: Json | null
           can_login?: boolean | null
           created_at?: string | null
           device_info?: Json | null
@@ -188,7 +188,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          assigned_regions?: string[] | null
+          assigned_cities?: Json | null
           can_login?: boolean | null
           created_at?: string | null
           device_info?: Json | null

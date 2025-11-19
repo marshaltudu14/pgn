@@ -101,7 +101,8 @@
       "mcp__playwright__browser_close",
       "Bash(node:*)",
       "Bash(powershell:*)",
-      "Bash(cmd:*)"
+      "Bash(cmd:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

@@ -16,7 +16,7 @@ type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
 import { createClient } from '../utils/supabase/server';
-import { createAuthUser, resetUserPassword } from '../utils/supabase/admin';
+import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
 
 /**
  * Get the next user ID sequence for the current year
@@ -68,7 +68,7 @@ export async function generateHumanReadableUserId(): Promise<string> {
 export async function createEmployee(
   createData: CreateEmployeeRequest
 ): Promise<Employee> {
-  // Password is required for creating auth users
+  // Password is required for both creating new auth users and updating existing ones
   if (!createData.password) {
     throw new Error('Password is required for creating new employee');
   }
@@ -76,24 +76,44 @@ export async function createEmployee(
   let authUserId: string | null = null;
 
   try {
-    // Step 1: Create auth user first
-    const authResult = await createAuthUser(
-      createData.email,
-      createData.password
-    );
+    // Step 1: Check if auth user already exists
+    const existingAuthUser = await getUserByEmail(createData.email);
 
-    if (!authResult.success) {
-      throw new Error(`Failed to create auth user: ${authResult.error || 'Unknown error'}`);
-    }
+    if (existingAuthUser.success && existingAuthUser.data) {
+      // Auth user exists, update their password and use their ID
+      authUserId = existingAuthUser.data.id;
 
-    authUserId = authResult.data?.user?.id || null;
+      // Update the existing user's password
+      const updateResult = await updateUserPasswordByEmail(
+        createData.email,
+        createData.password
+      );
 
-    if (!authUserId) {
-      throw new Error('Failed to get auth user ID');
+      if (!updateResult.success) {
+        throw new Error(`Failed to update existing auth user password: ${updateResult.error || 'Unknown error'}`);
+      }
+
+      console.log(`Updated password for existing auth user: ${createData.email}`);
+    } else {
+      // Create new auth user
+      const authResult = await createAuthUser(
+        createData.email,
+        createData.password
+      );
+
+      if (!authResult.success) {
+        throw new Error(`Failed to create auth user: ${authResult.error || 'Unknown error'}`);
+      }
+
+      authUserId = authResult.data?.user?.id || null;
+
+      if (!authUserId) {
+        throw new Error('Failed to get auth user ID');
+      }
     }
 
   } catch (error) {
-    console.error('Error creating auth user:', error);
+    console.error('Error creating/updating auth user:', error);
     throw error; // Re-throw to let caller handle
   }
 
@@ -104,7 +124,7 @@ export async function createEmployee(
     const humanReadableUserId = await generateHumanReadableUserId();
 
     // Step 2: Create employee record with auth user ID as the primary key
-    const employeeData: EmployeeInsert = {
+    const employeeData: any = {
       id: authUserId, // Use auth user ID directly as employee ID
       human_readable_user_id: humanReadableUserId,
       first_name: createData.first_name,
@@ -113,7 +133,7 @@ export async function createEmployee(
       phone: createData.phone || null,
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
-      assigned_regions: createData.assigned_regions || null
+      assigned_cities: createData.assigned_cities || []
     };
 
     const { data, error } = await supabase
@@ -310,7 +330,7 @@ export async function updateEmployee(
     const supabase = await createClient();
 
     // Prepare update data for database using proper types
-    const employeeData: EmployeeUpdate = {
+    const employeeData: any = {
       updated_at: new Date().toISOString()
     };
 
@@ -320,7 +340,7 @@ export async function updateEmployee(
     if (updateData.phone !== undefined) employeeData.phone = updateData.phone;
     if (updateData.employment_status !== undefined) employeeData.employment_status = updateData.employment_status;
     if (updateData.can_login !== undefined) employeeData.can_login = updateData.can_login;
-    if (updateData.assigned_regions !== undefined) employeeData.assigned_regions = updateData.assigned_regions;
+    if (updateData.assigned_cities !== undefined) employeeData.assigned_cities = updateData.assigned_cities;
 
     const { data, error } = await supabase
       .from('employees')

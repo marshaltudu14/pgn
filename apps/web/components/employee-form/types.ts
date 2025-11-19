@@ -2,7 +2,7 @@
  * Employee Form Types
  */
 
-import { EmploymentStatus } from '@pgn/shared';
+import { EmploymentStatus, CityAssignment } from '@pgn/shared';
 
 export type EmployeeFormData = {
   first_name: string;
@@ -11,7 +11,7 @@ export type EmployeeFormData = {
   phone?: string;
   employment_status: EmploymentStatus;
   can_login: boolean;
-  assigned_regions: string[];
+  assigned_cities: CityAssignment[];
   password?: string;
   confirm_password?: string;
 };

@@ -107,7 +107,7 @@ export default function LoginScreen() {
               colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
             } border`}>
               <Image
-                source={require('@/images/pg-logo-transparent.png')}
+                source={require('@/images/pgn-logo-transparent.png')}
                 className="w-20 h-20 rounded-xl"
                 resizeMode="cover"
               />

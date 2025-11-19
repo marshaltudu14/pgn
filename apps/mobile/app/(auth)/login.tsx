@@ -100,37 +100,37 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1 px-6 py-8 justify-center">
-          {/* Logo Section */}
-          <View className="items-center mb-10">
-            <View className={`w-24 h-24 rounded-2xl items-center justify-center mb-5 overflow-hidden shadow-xl ${
-              colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-            } border`}>
+        <View className="flex-1">
+          {/* Header Section - Top row with image and text */}
+          <View className="flex-[3] justify-start items-center px-6 pt-16">
+            <View className="items-center mb-8">
               <Image
                 source={require('@/images/pgn-logo-transparent.png')}
-                className="w-20 h-20 rounded-xl"
-                resizeMode="cover"
+                className="w-32 h-32 mb-2"
+                resizeMode="contain"
               />
+              <Text className={`text-4xl font-bold text-center mb-2 ${
+                colorScheme === 'dark' ? 'text-white' : 'text-black'
+              }`}>
+                PGN
+              </Text>
+              <Text className={`text-sm text-center ${
+                colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                Employee Portal
+              </Text>
             </View>
-            <Text className={`text-2xl font-bold text-center mb-2 ${
-              colorScheme === 'dark' ? 'text-white' : 'text-black'
-            }`}>
-              PGN
-            </Text>
-            <Text className={`text-center text-sm leading-5 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              Sign in to access your account
-            </Text>
           </View>
 
-          {/* Login Form */}
-          <View className="w-full">
-            <LoginForm
-              onSubmit={handleLogin}
-              isLoading={isLoading}
-              error={error}
-            />
+          {/* Login Form Section - Bottom 20-30% of screen */}
+          <View className="flex-[1] justify-start items-center px-6 pb-8">
+            <View className="w-full max-w-sm">
+              <LoginForm
+                onSubmit={handleLogin}
+                isLoading={isLoading}
+                error={error}
+              />
+            </View>
           </View>
         </View>
       </ScrollView>

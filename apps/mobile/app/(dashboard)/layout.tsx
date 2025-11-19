@@ -1,13 +1,9 @@
 import { Slot, useRouter } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthGuard } from '@/utils/auth-guard';
-import { useEffect } from 'react';
 import UnifiedBottomNavigation from '@/components/UnifiedBottomNavigation';
 
 export default function DashboardLayout() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
 
   const handleTabChange = (tab: string) => {
@@ -29,23 +25,10 @@ export default function DashboardLayout() {
 
   return (
     <AuthGuard requireAuth={true}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' }]} edges={['top', 'left', 'right']}>
-        <View style={styles.content}>
-          <Slot />
-        </View>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+        <Slot />
         <UnifiedBottomNavigation onTabChange={handleTabChange} />
       </SafeAreaView>
     </AuthGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    position: 'relative',
-  },
-  content: {
-    flex: 1,
-    paddingBottom: 80, // Space for bottom navigation
-  },
-});

@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   Image,
-  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
@@ -49,12 +48,6 @@ export default function LoginScreen() {
       className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar
-        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
-      />
-
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ flexGrow: 1 }}

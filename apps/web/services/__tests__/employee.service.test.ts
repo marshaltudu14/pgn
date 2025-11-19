@@ -1290,8 +1290,8 @@ describe('Employee Service', () => {
 
     it('should update with null values when explicitly provided', async () => {
       const updateWithNulls: UpdateEmployeeRequest = {
-        phone: undefined,
-        assigned_regions: undefined
+        phone: null as any,
+        assigned_regions: null as any
       };
 
       mockSupabaseClient.from.mockReturnValue({

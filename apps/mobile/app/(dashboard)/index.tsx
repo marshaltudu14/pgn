@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -17,54 +17,11 @@ import {
   Calendar,
   Activity
 } from 'lucide-react-native';
-import { permissionService, AppPermissions } from '@/services/permissions';
-import PermissionsScreen from '../(auth)/permissions';
 
 export default function HomeScreen() {
     const { user, logout } = useAuth();
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const [permissionsChecked, setPermissionsChecked] = useState(false);
-  const [showPermissionsScreen, setShowPermissionsScreen] = useState(false);
-  const [permissions, setPermissions] = useState<AppPermissions | null>(null);
-
-  // Permission checking logic
-  useEffect(() => {
-    checkPermissions();
-  }, []);
-
-  const checkPermissions = async () => {
-    try {
-      const result = await permissionService.checkAllPermissions();
-      setPermissions(result.permissions);
-
-      if (!result.allGranted) {
-        // Check if any permissions are denied or undetermined
-        if (result.deniedPermissions.length > 0 || result.undeterminedPermissions.length > 0) {
-          // Try to request permissions
-          const requestResult = await permissionService.requestAllPermissions();
-          setPermissions(requestResult.permissions);
-
-          if (!requestResult.allGranted) {
-            // Still not granted, show permission screen
-            setShowPermissionsScreen(true);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking permissions:', error);
-      showToast.error('Failed to check permissions');
-    } finally {
-      setPermissionsChecked(true);
-    }
-  };
-
-  const handlePermissionsGranted = () => {
-    setShowPermissionsScreen(false);
-    setPermissionsChecked(true);
-    // Refresh permissions
-    checkPermissions();
-  };
 
   const handleLogout = async () => {
     try {
@@ -123,21 +80,6 @@ export default function HomeScreen() {
       date: 'Yesterday'
     },
   ];
-
-  // Show permission screen if permissions are not granted
-  if (showPermissionsScreen && permissions) {
-    return (
-      <PermissionsScreen
-        permissions={permissions}
-        onPermissionsGranted={handlePermissionsGranted}
-      />
-    );
-  }
-
-  // If permissions are not checked yet, don't show anything - checking happens in background
-  if (!permissionsChecked) {
-    return null;
-  }
 
   return (
     <ScrollView className={`flex-1 ${

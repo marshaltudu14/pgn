@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Home, ClipboardList, User, Calendar } from 'lucide-react-native';
 
@@ -58,6 +59,7 @@ export default function UnifiedBottomNavigation({
   onTabChange
 }: UnifiedBottomNavigationProps) {
   const colorScheme = useColorScheme();
+  const insets = useSafeAreaInsets();
 
   const handleHomePress = () => {
     if (onTabChange) onTabChange('home');
@@ -111,7 +113,7 @@ export default function UnifiedBottomNavigation({
       styles.container,
       {
         backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-        paddingBottom: 8, // Only minimal internal padding
+        paddingBottom: Math.max(insets.bottom, 8), // Use safe area inset or minimum padding
         position: 'absolute',
         bottom: 0,
         left: 0,

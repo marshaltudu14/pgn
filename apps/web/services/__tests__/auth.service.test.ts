@@ -66,22 +66,27 @@ describe('AuthService', () => {
     };
 
     it('should successfully authenticate valid credentials', async () => {
-      // Mock employee lookup
+      // Mock Supabase auth success for employee
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: 'auth-user-id',
+            user_metadata: { role: undefined } // No admin role
+          }
+        },
+        error: null,
+      });
+
+      // Mock employee lookup by auth user ID
       const mockSelect = jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
+          maybeSingle: jest.fn().mockResolvedValue({
             data: mockEmployeeData,
             error: null,
           }),
         }),
       });
       mockSupabase.from.mockReturnValue({ select: mockSelect });
-
-      // Mock Supabase auth
-      mockSupabase.auth.signInWithPassword.mockResolvedValue({
-        data: { user: { id: 'user-id' } },
-        error: null,
-      });
 
       // Mock JWT generation
       const mockToken = 'mock.jwt.token';
@@ -96,7 +101,7 @@ describe('AuthService', () => {
           id: mockEmployeeData.id,
           humanReadableId: mockEmployeeData.human_readable_user_id,
           fullName: 'John Doe',
-          email: mockEmployeeData.email,
+          email: validLoginRequest.email,
           employmentStatus: mockEmployeeData.employment_status,
           canLogin: mockEmployeeData.can_login,
         },
@@ -109,13 +114,24 @@ describe('AuthService', () => {
       });
     });
 
-    it('should throw error for invalid user ID', async () => {
-      // Mock employee lookup for non-existent user
+    it('should throw error for employee not found in database', async () => {
+      // Mock Supabase auth success for employee
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: 'auth-user-id',
+            user_metadata: { role: undefined }
+          }
+        },
+        error: null,
+      });
+
+      // Mock employee lookup returning null (employee not found)
       const mockSelect = jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
+          maybeSingle: jest.fn().mockResolvedValue({
             data: null,
-            error: { message: 'No rows returned' },
+            error: null,
           }),
         }),
       });
@@ -133,10 +149,21 @@ describe('AuthService', () => {
         can_login: false,
       };
 
-      // Mock employee lookup
+      // Mock Supabase auth success for employee
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: 'auth-user-id',
+            user_metadata: { role: undefined }
+          }
+        },
+        error: null,
+      });
+
+      // Mock employee lookup for suspended employee
       const mockSelect = jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
+          maybeSingle: jest.fn().mockResolvedValue({
             data: suspendedEmployee,
             error: null,
           }),
@@ -150,26 +177,52 @@ describe('AuthService', () => {
     });
 
     it('should throw error for Supabase auth failure', async () => {
-      // Mock employee lookup
-      const mockSelect = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
-            data: mockEmployeeData,
-            error: null,
-          }),
-        }),
-      });
-      mockSupabase.from.mockReturnValue({ select: mockSelect });
-
       // Mock Supabase auth failure
       mockSupabase.auth.signInWithPassword.mockResolvedValue({
         data: null,
-        error: { message: 'Invalid credentials' },
+        error: { message: 'Invalid login credentials' },
       });
 
       await expect(authService.login(validLoginRequest)).rejects.toThrow(
         'Invalid email or password'
       );
+    });
+
+    it('should successfully authenticate admin users without JWT token', async () => {
+      // Mock Supabase auth success for admin
+      mockSupabase.auth.signInWithPassword.mockResolvedValue({
+        data: {
+          user: {
+            id: 'admin-auth-id',
+            user_metadata: {
+              role: 'admin',
+              full_name: 'Admin User'
+            }
+          }
+        },
+        error: null,
+      });
+
+      const result = await authService.login({
+        email: 'admin@company.com',
+        password: 'adminpassword'
+      });
+
+      expect(result).toEqual({
+        message: 'Login successful',
+        token: '', // No JWT for admin users
+        employee: {
+          id: 'admin-auth-id',
+          humanReadableId: 'admin@company.com',
+          fullName: 'Admin User',
+          email: 'admin@company.com',
+          employmentStatus: 'ACTIVE',
+          canLogin: true,
+        },
+      });
+
+      // Should not query employees table for admin users
+      expect(mockSupabase.from).not.toHaveBeenCalledWith('employees');
     });
   });
 
@@ -199,10 +252,10 @@ describe('AuthService', () => {
       // Mock token validation
       (jwtService.validateToken as jest.Mock).mockReturnValue(mockPayload);
 
-      // Mock employee lookup
+      // Mock employee lookup by human readable ID
       const mockSelect = jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
+          maybeSingle: jest.fn().mockResolvedValue({
             data: mockEmployeeData,
             error: null,
           }),
@@ -246,9 +299,9 @@ describe('AuthService', () => {
       // Mock employee lookup for user who can no longer login
       const mockSelect = jest.fn().mockReturnValue({
         eq: jest.fn().mockReturnValue({
-          single: jest.fn().mockResolvedValue({
+          maybeSingle: jest.fn().mockResolvedValue({
             data: null,
-            error: { message: 'No rows returned' },
+            error: null,
           }),
         }),
       });

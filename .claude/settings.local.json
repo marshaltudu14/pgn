@@ -100,7 +100,8 @@
       "mcp__playwright__browser_file_upload",
       "mcp__playwright__browser_close",
       "Bash(node:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(cmd:*)"
     ],
     "deny": [],
     "ask": []

@@ -163,15 +163,6 @@ class ApiClient {
     });
   }
 
-  async getEmployeeProfile(authToken: string): Promise<AuthenticatedUser> {
-    return this.request<AuthenticatedUser>(`${API_ENDPOINTS.EMPLOYEES}/me`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
-    });
-  }
-
   // Utility methods for checking connectivity
   async checkConnectivity(): Promise<boolean> {
     try {

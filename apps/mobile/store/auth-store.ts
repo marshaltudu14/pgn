@@ -60,6 +60,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const authState = await mobileAuthService.getCurrentAuthState();
       const biometricPrefs = await secureStorage.getBiometricPreferences();
 
+      console.log('🔍 Auth initializeAuth:', {
+        authState,
+        biometricPrefs,
+        biometricEnabled: biometricPrefs?.enabled || false,
+      });
+
       set({
         isAuthenticated: authState.isAuthenticated,
         isLoading: false,
@@ -89,6 +95,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const result = await mobileAuthService.login(credentials);
 
       if (result.success && result.user) {
+        console.log('🔍 Login successful, updating auth state:', {
+          result,
+          user: result.user,
+        });
+
         set({
           isAuthenticated: true,
           isLoggingIn: false,
@@ -97,6 +108,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
           lastActivity: Date.now(),
         });
 
+        console.log('🔍 Auth state updated, login function returning success');
         return result;
       } else {
         set({

@@ -22,30 +22,50 @@ export default function LoginScreen() {
   // Handle post-login redirection
   React.useEffect(() => {
     const handlePostLoginRedirect = async () => {
+      console.log('🔍 Login redirect useEffect triggered:', {
+        isAuthenticated,
+        biometricEnabled,
+      });
+
       if (isAuthenticated) {
+        console.log('🔍 User is authenticated, checking biometric status...');
+
         // Check if biometrics are already enabled
         if (!biometricEnabled) {
+          console.log('🔍 Biometrics not enabled, checking preferences...');
+
           // Check if user has previously declined biometric setup
           try {
             const biometricPrefs = await secureStorage.getBiometricPreferences();
             const hasDeclined = biometricPrefs?.hasDeclined === true;
 
+            console.log('🔍 Biometric preferences check:', {
+              biometricPrefs,
+              hasDeclined,
+            });
+
             if (hasDeclined) {
+              console.log('🔍 User previously declined, going to dashboard');
               // User previously declined, go directly to dashboard
               router.replace('/(dashboard)');
             } else {
+              console.log('🔍 Redirecting to biometric setup screen for first-time users');
               // Redirect to biometric setup screen for first-time users
               router.replace('/(auth)/biometric-setup?fromLogin=true');
             }
           } catch (error) {
-            console.error('Error checking biometric preferences:', error);
+            console.error('❌ Error checking biometric preferences:', error);
+            console.log('🔍 Defaulting to dashboard due to error');
             // Default to dashboard if there's an error
             router.replace('/(dashboard)');
           }
         } else {
+          console.log('🔍 Biometrics already set up, going to dashboard');
           // Biometrics already set up, go to dashboard
           router.replace('/(dashboard)');
         }
+      } else {
+        console.log('🔍 User not authenticated, staying on login screen');
       }
     };
 

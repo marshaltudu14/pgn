@@ -29,7 +29,7 @@ export const API_ENDPOINTS = {
   LOGIN: "/auth/login",
   REFRESH_TOKEN: "/auth/refresh",
   LOGOUT: "/auth/logout",
-  GET_USER: "/auth/user",
+  GET_USER: "/employees/me",
 
   // Employee endpoints
   EMPLOYEES: "/employees",

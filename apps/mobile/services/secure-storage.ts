@@ -1,14 +1,22 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+// Check if expo-secure-store is available
+const isSecureStoreLibraryAvailable = (): boolean => {
+  try {
+    return !!SecureStore.isAvailableAsync;
+  } catch (error) {
+    console.error('❌ expo-secure-store library not available:', error);
+    return false;
+  }
+};
+
 // Storage keys
 const STORAGE_KEYS = {
   AUTH_TOKEN: 'pgn_auth_token',
   REFRESH_TOKEN: 'pgn_refresh_token',
   USER_ID: 'pgn_user_id',
   EMPLOYEE_DATA: 'pgn_employee_data',
-  BIOMETRIC_ENABLED: 'pgn_biometric_enabled',
-  BIOMETRIC_SETUP: 'pgn_biometric_setup',
   LAST_LOGIN: 'pgn_last_login',
   APP_VERSION: 'pgn_app_version',
 } as const;
@@ -17,7 +25,7 @@ const STORAGE_KEYS = {
 const SECURE_OPTIONS = {
   // For authentication tokens - highest security
   TOKENS: {
-    requireAuthentication: true, // Require biometric/passcode to access
+    requireAuthentication: false, // Don't require biometrics for token access
     keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   },
   // For user preferences - medium security
@@ -35,27 +43,36 @@ export interface StoredUser {
   humanReadableId: string;
   fullName: string;
   email: string;
-  employmentStatus: string;
+  employmentStatus: string; // Keep as string for storage compatibility
   canLogin: boolean;
-}
-
-export interface BiometricPreferences {
-  enabled: boolean;
-  setupComplete: boolean;
-  hasDeclined?: boolean; // User explicitly declined biometric setup
-  declinedAt?: number;   // When user declined (to potentially re-prompt later)
-  lastUsed?: number;
+  department?: string;
+  region?: string;
+  startDate?: string;
+  profilePhotoUrl?: string;
+  phone?: string;
+  primaryRegion?: string;
+  regionCode?: string;
+  assignedRegions?: string[];
 }
 
 export class SecureTokenStorage {
-  private isSecureStoreAvailable: boolean = false;
+  private isSecureStoreAvailable: boolean | null = null;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initialize();
+    this.initializationPromise = this.initialize();
   }
 
   private async initialize(): Promise<void> {
     try {
+      // First check if the library is available
+      if (!isSecureStoreLibraryAvailable()) {
+        console.warn('⚠️ expo-secure-store library not available, using fallback');
+        this.isSecureStoreAvailable = false;
+        return;
+      }
+
+      // Check if SecureStore is available on this platform
       this.isSecureStoreAvailable = await SecureStore.isAvailableAsync();
     } catch (error) {
       console.error('❌ Failed to initialize SecureStore:', error);
@@ -63,11 +80,18 @@ export class SecureTokenStorage {
     }
   }
 
+  private async ensureInitialized(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+    }
+  }
+
   private getStorageKey(key: string): string {
     return key;
   }
 
-  private getSecureOptions(type: keyof typeof SECURE_OPTIONS) {
+  private async getSecureOptions(type: keyof typeof SECURE_OPTIONS) {
+    await this.ensureInitialized();
     if (!this.isSecureStoreAvailable) {
       return {};
     }
@@ -77,8 +101,9 @@ export class SecureTokenStorage {
   // Authentication Token Management
   async setAuthToken(token: string): Promise<void> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.AUTH_TOKEN);
-      const options = this.getSecureOptions('TOKENS');
+      const options = await this.getSecureOptions('TOKENS');
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, token, options);
@@ -98,10 +123,11 @@ export class SecureTokenStorage {
 
   async getAuthToken(): Promise<string | null> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.AUTH_TOKEN);
 
       if (this.isSecureStoreAvailable) {
-        const token = await SecureStore.getItemAsync(key, this.getSecureOptions('TOKENS'));
+        const token = await SecureStore.getItemAsync(key, await this.getSecureOptions('TOKENS'));
         return token;
       } else {
         // Fallback to localStorage
@@ -119,6 +145,7 @@ export class SecureTokenStorage {
 
   async removeAuthToken(): Promise<void> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.AUTH_TOKEN);
 
       if (this.isSecureStoreAvailable) {
@@ -138,8 +165,9 @@ export class SecureTokenStorage {
   // Refresh Token Management
   async setRefreshToken(token: string): Promise<void> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.REFRESH_TOKEN);
-      const options = this.getSecureOptions('TOKENS');
+      const options = await this.getSecureOptions('TOKENS');
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, token, options);
@@ -156,10 +184,11 @@ export class SecureTokenStorage {
 
   async getRefreshToken(): Promise<string | null> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.REFRESH_TOKEN);
 
       if (this.isSecureStoreAvailable) {
-        const token = await SecureStore.getItemAsync(key, this.getSecureOptions('TOKENS'));
+        const token = await SecureStore.getItemAsync(key, await this.getSecureOptions('TOKENS'));
         return token;
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
@@ -176,9 +205,10 @@ export class SecureTokenStorage {
   // User Data Management
   async setUserData(user: StoredUser): Promise<void> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.EMPLOYEE_DATA);
       const userJson = JSON.stringify(user);
-      const options = this.getSecureOptions('PREFERENCES');
+      const options = await this.getSecureOptions('PREFERENCES');
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(key, userJson, options);
@@ -195,10 +225,11 @@ export class SecureTokenStorage {
 
   async getUserData(): Promise<StoredUser | null> {
     try {
+      await this.ensureInitialized();
       const key = this.getStorageKey(STORAGE_KEYS.EMPLOYEE_DATA);
 
       if (this.isSecureStoreAvailable) {
-        const userData = await SecureStore.getItemAsync(key, this.getSecureOptions('PREFERENCES'));
+        const userData = await SecureStore.getItemAsync(key, await this.getSecureOptions('PREFERENCES'));
         return userData ? JSON.parse(userData) : null;
       } else {
         if (typeof window !== 'undefined' && window.localStorage) {
@@ -213,63 +244,11 @@ export class SecureTokenStorage {
     }
   }
 
-  // Biometric Preferences Management
-  async setBiometricPreferences(preferences: BiometricPreferences): Promise<void> {
-    try {
-      const key = this.getStorageKey(STORAGE_KEYS.BIOMETRIC_ENABLED);
-      const prefsJson = JSON.stringify(preferences);
-      const options = this.getSecureOptions('PREFERENCES');
-
-      if (this.isSecureStoreAvailable) {
-        await SecureStore.setItemAsync(key, prefsJson, options);
-      } else {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.setItem(key, prefsJson);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Failed to store biometric preferences:', error);
-      throw new Error('Failed to store biometric preferences');
-    }
-  }
-
-  async getBiometricPreferences(): Promise<BiometricPreferences | null> {
-    try {
-      const key = this.getStorageKey(STORAGE_KEYS.BIOMETRIC_ENABLED);
-
-      if (this.isSecureStoreAvailable) {
-        const prefs = await SecureStore.getItemAsync(key, this.getSecureOptions('PREFERENCES'));
-        return prefs ? JSON.parse(prefs) : null;
-      } else {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const prefs = window.localStorage.getItem(key);
-          return prefs ? JSON.parse(prefs) : null;
-        }
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Failed to retrieve biometric preferences:', error);
-      return null;
-    }
-  }
-
-  async setBiometricDeclined(): Promise<void> {
-    try {
-      const preferences: BiometricPreferences = {
-        enabled: false,
-        setupComplete: false,
-        hasDeclined: true,
-        declinedAt: Date.now(),
-      };
-      await this.setBiometricPreferences(preferences);
-    } catch (error) {
-      console.error('❌ Failed to set biometric declined:', error);
-    }
-  }
-
+  
   // Utility Methods
   async clearAllAuthData(): Promise<void> {
     try {
+      await this.ensureInitialized();
       const keys = Object.values(STORAGE_KEYS);
 
       if (this.isSecureStoreAvailable) {
@@ -305,7 +284,6 @@ export class SecureTokenStorage {
     try {
       const authToken = await this.getAuthToken();
       const userData = await this.getUserData();
-      const biometricPrefs = await this.getBiometricPreferences();
 
       if (!authToken || !userData) {
         return { success: false, error: 'No credentials to backup' };
@@ -315,7 +293,6 @@ export class SecureTokenStorage {
       const backup = {
         authToken,
         userData,
-        biometricPrefs,
         timestamp: Date.now(),
         version: '1.0',
       };
@@ -323,7 +300,7 @@ export class SecureTokenStorage {
       // Store with backup key
       const backupKey = `${STORAGE_KEYS.AUTH_TOKEN}_backup`;
       const backupJson = JSON.stringify(backup);
-      const options = this.getSecureOptions('TOKENS');
+      const options = await this.getSecureOptions('TOKENS');
 
       if (this.isSecureStoreAvailable) {
         await SecureStore.setItemAsync(backupKey, backupJson, options);
@@ -341,7 +318,8 @@ export class SecureTokenStorage {
   }
 
   async isAvailable(): Promise<boolean> {
-    return this.isSecureStoreAvailable;
+    await this.ensureInitialized();
+    return this.isSecureStoreAvailable || false;
   }
 
   async getStorageInfo(): Promise<{
@@ -349,8 +327,9 @@ export class SecureTokenStorage {
     platform: string;
     hasStoredCredentials: boolean;
   }> {
+    await this.ensureInitialized();
     return {
-      available: this.isSecureStoreAvailable,
+      available: this.isSecureStoreAvailable || false,
       platform: Platform.OS,
       hasStoredCredentials: await this.hasStoredCredentials(),
     };

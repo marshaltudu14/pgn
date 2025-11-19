@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,66 +11,19 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { secureStorage } from '@/services/secure-storage';
 import { LoginRequest } from '@pgn/shared';
 import LoginForm from '@/components/LoginForm';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoggingIn, error, isAuthenticated, biometricEnabled } = useAuth();
+  const { login, isLoggingIn, error, isAuthenticated } = useAuth();
 
   // Handle post-login redirection
   React.useEffect(() => {
-    const handlePostLoginRedirect = async () => {
-      console.log('🔍 Login redirect useEffect triggered:', {
-        isAuthenticated,
-        biometricEnabled,
-      });
-
-      if (isAuthenticated) {
-        console.log('🔍 User is authenticated, checking biometric status...');
-
-        // Check if biometrics are already enabled
-        if (!biometricEnabled) {
-          console.log('🔍 Biometrics not enabled, checking preferences...');
-
-          // Check if user has previously declined biometric setup
-          try {
-            const biometricPrefs = await secureStorage.getBiometricPreferences();
-            const hasDeclined = biometricPrefs?.hasDeclined === true;
-
-            console.log('🔍 Biometric preferences check:', {
-              biometricPrefs,
-              hasDeclined,
-            });
-
-            if (hasDeclined) {
-              console.log('🔍 User previously declined, going to dashboard');
-              // User previously declined, go directly to dashboard
-              router.replace('/(dashboard)');
-            } else {
-              console.log('🔍 Redirecting to biometric setup screen for first-time users');
-              // Redirect to biometric setup screen for first-time users
-              router.replace('/(auth)/biometric-setup?fromLogin=true');
-            }
-          } catch (error) {
-            console.error('❌ Error checking biometric preferences:', error);
-            console.log('🔍 Defaulting to dashboard due to error');
-            // Default to dashboard if there's an error
-            router.replace('/(dashboard)');
-          }
-        } else {
-          console.log('🔍 Biometrics already set up, going to dashboard');
-          // Biometrics already set up, go to dashboard
-          router.replace('/(dashboard)');
-        }
-      } else {
-        console.log('🔍 User not authenticated, staying on login screen');
-      }
-    };
-
-    handlePostLoginRedirect();
-  }, [isAuthenticated, router, biometricEnabled]);
+    if (isAuthenticated) {
+      router.replace('/(dashboard)');
+    }
+  }, [isAuthenticated, router]);
 
   const handleLogin = async (credentials: LoginRequest): Promise<void> => {
     try {
@@ -79,8 +32,7 @@ export default function LoginScreen() {
       const result = await login(credentials);
 
       if (result.success) {
-        // If biometrics are already enabled, let the useEffect handle normal navigation
-        // If not enabled, we'll redirect to biometric setup screen in the useEffect
+        // Authentication successful, useEffect will handle navigation
       }
       // Error handling is done in the auth store and LoginForm component
     } catch (error) {

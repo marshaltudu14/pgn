@@ -1,14 +1,14 @@
-import { createClient } from '@/utils/supabase/server';
 import { jwtService } from '@/lib/jwt';
+import { createClient } from '@/utils/supabase/server';
 import {
+  AuthenticatedUser,
+  EmploymentStatus,
   LoginRequest,
   LoginResponse,
-  RefreshRequest,
-  RefreshResponse,
   LogoutRequest,
   LogoutResponse,
-  AuthenticatedUser,
-  EmploymentStatus
+  RefreshRequest,
+  RefreshResponse
 } from '@pgn/shared';
 
 export class AuthService {
@@ -76,7 +76,7 @@ export class AuthService {
         first_name: data.first_name,
         last_name: data.last_name
       };
-    } catch (error) {
+    } catch {
       // Handle unexpected errors gracefully
       return null;
     }
@@ -114,7 +114,7 @@ export class AuthService {
         first_name: data.first_name,
         last_name: data.last_name
       };
-    } catch (error) {
+    } catch {
       // Handle unexpected errors gracefully
       return null;
     }
@@ -218,38 +218,11 @@ export class AuthService {
           token,
           employee: authenticatedUser,
         };
-                return response;
+        return response;
       }
     } catch (error) {
-      // Re-throw the error without console logging for cleaner production logs
       throw error;
     }
-  }
-
-  
-  /**
-   * Refresh JWT token (extracts user ID from current token)
-      employeeId: employee?.id || 'admin',
-      humanReadableId: employee?.human_readable_id || authEmail,
-      employmentStatus: employee?.employment_status || 'ACTIVE',
-      canLogin: employee?.can_login ?? true,
-    });
-
-    // Create authenticated user object
-    const authenticatedUser: AuthenticatedUser = {
-      id: employee?.id || 'admin',
-      humanReadableId: employee?.human_readable_id || authEmail,
-      fullName: employee?.full_name || authEmail,
-      email: authEmail,
-      employmentStatus: employee?.employment_status || 'ACTIVE',
-      canLogin: employee?.can_login ?? true,
-    };
-
-    return {
-      message: 'Login successful',
-      token,
-      employee: authenticatedUser,
-    };
   }
 
   /**
@@ -285,9 +258,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Logout user (extracts user ID from JWT for Supabase logout)
-   */
   async logout(request: LogoutRequest): Promise<LogoutResponse> {
     const { token } = request;
     const supabase = await createClient();

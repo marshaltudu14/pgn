@@ -377,8 +377,6 @@ export async function updateRegionalAssignments(
 ): Promise<Employee> {
   try {
     const updateData: UpdateEmployeeRequest = {
-      primary_region: regionalAssignment.primary_region,
-      region_code: regionalAssignment.region_code,
       assigned_regions: regionalAssignment.assigned_regions
     };
 

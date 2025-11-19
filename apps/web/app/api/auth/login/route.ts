@@ -40,9 +40,8 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
       }
     }
 
-    // Get client IP for logging
-    const forwarded = req.headers.get('x-forwarded-for');
-    const ipAddress = forwarded ? forwarded.split(',')[0] : 'unknown';
+    // Get client IP for logging (currently not used but kept for future implementation)
+    req.headers.get('x-forwarded-for');
 
     try {
         // Attempt login using auth service
@@ -101,7 +100,7 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
       return AuthErrorService.authError('Login failed. Please check your credentials and try again');
     }
 
-  } catch (error) {
+  } catch {
     // Handle unexpected errors gracefully without exposing internal details
     return AuthErrorService.serverError('Login service temporarily unavailable. Please try again later');
   }

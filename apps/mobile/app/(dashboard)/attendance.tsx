@@ -204,7 +204,7 @@ export default function AttendanceScreen() {
                     Face Recognition Check-in
                   </Text>
                   <Text className="text-gray-500 text-xs">
-                    Secure biometric attendance
+                    Secure attendance verification
                   </Text>
                 </View>
               </View>

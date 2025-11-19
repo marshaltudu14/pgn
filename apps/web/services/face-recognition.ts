@@ -83,7 +83,8 @@ export async function processClientEmbedding(embedding: Float32Array, detection:
 /**
  * Detect face in image buffer with comprehensive quality checks
  */
-async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResult> {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function detectFace(_imageBuffer: Buffer): Promise<FaceDetectionResult> {
   try {
     // Simulate face detection with multiple faces scenario
     const faceCount = Math.floor(Math.random() * 3) + 1; // 1-3 faces

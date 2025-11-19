@@ -1,12 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Linking,
-  Alert,
 } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
@@ -33,13 +31,7 @@ export default function PermissionsScreen({
   );
   const [isChecking, setIsChecking] = useState(false);
 
-  useEffect(() => {
-    if (!initialPermissions) {
-      checkPermissions();
-    }
-  }, [initialPermissions]);
-
-  const checkPermissions = async () => {
+  const checkPermissions = useCallback(async () => {
     setIsChecking(true);
     try {
       const result = await permissionService.checkAllPermissions();
@@ -54,7 +46,13 @@ export default function PermissionsScreen({
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [onPermissionsGranted]);
+
+  useEffect(() => {
+    if (!initialPermissions) {
+      checkPermissions();
+    }
+  }, [initialPermissions, checkPermissions]);
 
   const openSettings = async () => {
     try {

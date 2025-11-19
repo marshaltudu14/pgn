@@ -1,39 +1,25 @@
 import { apiClient, ApiError } from './api-client';
 import { secureStorage } from './secure-storage';
-import * as LocalAuthentication from 'expo-local-authentication';
 import {
   LoginRequest,
   LoginResponse,
   AuthenticatedUser,
   RefreshResponse,
   EmploymentStatus,
+  AuthenticationResult,
 } from '@pgn/shared';
-
-export interface AuthenticationResult {
-  success: boolean;
-  user?: AuthenticatedUser;
-  error?: string;
-  requiresBiometricSetup?: boolean;
-}
-
-export interface BiometricResult {
-  success: boolean;
-  error?: string;
-  type?: LocalAuthentication.AuthenticationType[];
-}
 
 export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   user: AuthenticatedUser | null;
   error: string | null;
-  biometricEnabled: boolean;
   lastActivity: number;
 }
 
 export class MobileAuthService {
   private tokenRefreshPromise: Promise<string> | null = null;
-  private tokenRefreshTimeout: NodeJS.Timeout | null = null;
+  private tokenRefreshTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly TOKEN_REFRESH_BUFFER = 5 * 60 * 1000; // 5 minutes before expiration
 
   constructor() {
@@ -51,32 +37,21 @@ export class MobileAuthService {
         };
       }
 
-      console.log('🔍 Auth Service: Starting login API call...');
       // Call API
       const response: LoginResponse = await apiClient.login(credentials);
-      console.log('🔍 Auth Service: Login API call successful');
 
-      console.log('🔍 Auth Service: Storing tokens securely...');
       // Store tokens securely
       await Promise.all([
         secureStorage.setAuthToken(response.token),
         secureStorage.setUserData(response.employee),
       ]);
-      console.log('🔍 Auth Service: Tokens stored successfully');
 
       // Setup token refresh
       this.setupTokenRefresh(response.token);
 
-      console.log('🔍 Auth Service: Checking biometric availability...');
-      // Check if biometric setup should be offered
-      const biometricResult = await this.checkBiometricAvailability();
-      console.log('🔍 Auth Service: Biometric availability check complete:', biometricResult);
-      const shouldOfferBiometric = biometricResult.success && biometricResult.type && biometricResult.type.length > 0;
-
       return {
         success: true,
         user: response.employee,
-        requiresBiometricSetup: shouldOfferBiometric,
       };
     } catch (error) {
       console.error('❌ Login failed:', error);
@@ -87,319 +62,31 @@ export class MobileAuthService {
     }
   }
 
-  async biometricLogin(): Promise<AuthenticationResult> {
+  async refreshToken(refreshToken: string): Promise<RefreshResponse> {
     try {
-      // Check if user has credentials stored
-      const hasCredentials = await secureStorage.hasStoredCredentials();
-      if (!hasCredentials) {
-        return {
-          success: false,
-          error: 'No stored credentials found. Please login with password first.',
-        };
-      }
+      const response: RefreshResponse = await apiClient.refreshToken(refreshToken);
 
-      // Attempt biometric authentication
-      const biometricResult = await this.authenticateWithBiometrics({
-        promptMessage: 'Use your fingerprint or face to login',
-        disableDeviceFallback: false,
-      });
+      // Store new tokens
+      await secureStorage.setAuthToken(response.token);
 
-      if (!biometricResult.success) {
-        return {
-          success: false,
-          error: biometricResult.error || 'Biometric authentication failed',
-        };
-      }
+      this.setupTokenRefresh(response.token);
 
-      // Retrieve stored user data
-      const userData = await secureStorage.getUserData();
-      const authToken = await secureStorage.getAuthToken();
-
-      if (!userData || !authToken) {
-        return {
-          success: false,
-          error: 'Stored credentials are incomplete. Please login again.',
-        };
-      }
-
-      // Convert StoredUser to AuthenticatedUser
-      const authenticatedUser: AuthenticatedUser = {
-        id: userData.id,
-        humanReadableId: userData.humanReadableId,
-        fullName: userData.fullName,
-        email: userData.email,
-        employmentStatus: userData.employmentStatus as any,
-        canLogin: userData.canLogin,
-      };
-
-      // Validate stored token with server
-      try {
-        const currentUser = await apiClient.getCurrentUser(authToken);
-        
-        // Update stored user data in case it changed
-        await secureStorage.setUserData({
-          id: currentUser.id,
-          humanReadableId: currentUser.humanReadableId,
-          fullName: currentUser.fullName,
-          email: currentUser.email,
-          employmentStatus: currentUser.employmentStatus,
-          canLogin: currentUser.canLogin,
-        });
-
-        // Setup token refresh
-        this.setupTokenRefresh(authToken);
-
-        return {
-          success: true,
-          user: currentUser,
-        };
-      } catch (tokenError) {
-        console.warn('⚠️ Stored token is invalid, attempting refresh...');
-
-        const refreshToken = await secureStorage.getRefreshToken();
-        if (refreshToken) {
-          const refreshResult = await this.refreshAuthToken(refreshToken);
-          if (refreshResult.success) {
-            // Retry biometric login with new token
-            return this.biometricLogin();
-          }
-        }
-
-        return {
-          success: false,
-          error: 'Your session has expired. Please login with password.',
-        };
-      }
-    } catch (error) {
-      console.error('❌ Biometric login failed:', error);
-      return {
-        success: false,
-        error: this.parseAuthError(error),
-      };
-    }
-  }
-
-  async logout(): Promise<{ success: boolean; error?: string }> {
-    try {
-      const authToken = await secureStorage.getAuthToken();
-      if (authToken) {
-        try {
-          // Notify server of logout
-          await apiClient.logout(authToken);
-        } catch (error) {
-          console.warn('⚠️ Server logout failed:', error);
-          // Continue with local logout even if server call fails
-        }
-      }
-
-      // Clear local storage
-      await secureStorage.clearAllAuthData();
-
-      // Clear token refresh
-      if (this.tokenRefreshTimeout) {
-        clearTimeout(this.tokenRefreshTimeout);
-        this.tokenRefreshTimeout = null;
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Logout failed:', error);
-      return {
-        success: false,
-        error: this.parseAuthError(error),
-      };
-    }
-  }
-
-  // Token Management
-  async getValidToken(): Promise<string | null> {
-    try {
-      const currentToken = await secureStorage.getAuthToken();
-      if (!currentToken) {
-        return null;
-      }
-
-      // Simple validation - in production, you might want to decode JWT and check expiration
-      try {
-        const user = await apiClient.getCurrentUser(currentToken);
-        return currentToken; // Token is valid
-      } catch (error) {
-        console.warn('⚠️ Token validation failed, attempting refresh...');
-
-        const refreshToken = await secureStorage.getRefreshToken();
-        if (refreshToken) {
-          const refreshResult = await this.refreshAuthToken(refreshToken);
-          return refreshResult.success && refreshResult.token ? refreshResult.token : null;
-        }
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Failed to get valid token:', error);
-      return null;
-    }
-  }
-
-  async refreshAuthToken(refreshToken: string): Promise<{ success: boolean; token?: string; error?: string }> {
-    try {
-      // Prevent multiple concurrent refresh attempts
-      if (this.tokenRefreshPromise) {
-        const token = await this.tokenRefreshPromise;
-        return { success: true, token };
-      }
-
-      this.tokenRefreshPromise = (async () => {
-        const response: RefreshResponse = await apiClient.refreshToken(refreshToken);
-
-        // Store new token
-        await secureStorage.setAuthToken(response.token);
-
-        // Setup refresh for new token
-        this.setupTokenRefresh(response.token);
-
-        return response.token;
-      })();
-
-      const newToken = await this.tokenRefreshPromise;
-      this.tokenRefreshPromise = null;
-
-      return { success: true, token: newToken };
+      return response;
     } catch (error) {
       console.error('❌ Token refresh failed:', error);
-      this.tokenRefreshPromise = null;
-      return {
-        success: false,
-        error: this.parseAuthError(error),
-      };
+      throw new Error('Failed to refresh token');
     }
   }
 
-  // Biometric Authentication Methods
-  async checkBiometricAvailability(): Promise<BiometricResult> {
+  async logout(authToken: string): Promise<void> {
     try {
-      const [hasHardware, isEnrolled] = await Promise.all([
-        LocalAuthentication.hasHardwareAsync(),
-        LocalAuthentication.isEnrolledAsync(),
-      ]);
-
-      if (!hasHardware) {
-        return {
-          success: false,
-          error: 'Biometric hardware not available on this device',
-        };
-      }
-
-      if (!isEnrolled) {
-        return {
-          success: false,
-          error: 'No biometric data enrolled on this device',
-        };
-      }
-
-      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-
-      return {
-        success: true,
-        type: supportedTypes,
-      };
+      // Call API to logout
+      await apiClient.logout(authToken);
     } catch (error) {
-      console.error('❌ Failed to check biometric availability:', error);
-      return {
-        success: false,
-        error: 'Failed to check biometric availability',
-      };
-    }
-  }
-
-  async authenticateWithBiometrics(options?: LocalAuthentication.LocalAuthenticationOptions): Promise<BiometricResult> {
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to continue',
-        cancelLabel: 'Cancel',
-        disableDeviceFallback: false,
-        requireConfirmation: true,
-        ...options,
-      });
-
-      if (result.success) {
-        return { success: true };
-      } else {
-        return {
-          success: false,
-          error: 'Biometric authentication failed',
-        };
-      }
-    } catch (error) {
-      console.error('❌ Biometric authentication error:', error);
-      return {
-        success: false,
-        error: 'Biometric authentication error occurred',
-      };
-    }
-  }
-
-  async enableBiometricAuthentication(): Promise<{ success: boolean; error?: string }> {
-    try {
-      // First, verify biometrics are available
-      const availabilityCheck = await this.checkBiometricAvailability();
-      if (!availabilityCheck.success) {
-        return {
-          success: false,
-          error: availabilityCheck.error,
-        };
-      }
-
-      // Test authentication to ensure user can use biometrics
-      const authTest = await this.authenticateWithBiometrics({
-        promptMessage: 'Setup biometric authentication for PGN Mobile',
-      });
-
-      if (!authTest.success) {
-        return {
-          success: false,
-          error: authTest.error || 'Biometric authentication test failed',
-        };
-      }
-
-      // Store biometric preferences
-      const biometricPrefs = await secureStorage.getBiometricPreferences() || {
-        enabled: false,
-        setupComplete: false,
-      };
-
-      biometricPrefs.enabled = true;
-      biometricPrefs.setupComplete = true;
-      biometricPrefs.lastUsed = Date.now();
-
-      await secureStorage.setBiometricPreferences(biometricPrefs);
-
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Failed to enable biometric authentication:', error);
-      return {
-        success: false,
-        error: this.parseAuthError(error),
-      };
-    }
-  }
-
-  async disableBiometricAuthentication(): Promise<{ success: boolean; error?: string }> {
-    try {
-      const biometricPrefs = await secureStorage.getBiometricPreferences() || {
-        enabled: false,
-        setupComplete: false,
-      };
-
-      biometricPrefs.enabled = false;
-
-      await secureStorage.setBiometricPreferences(biometricPrefs);
-
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Failed to disable biometric authentication:', error);
-      return {
-        success: false,
-        error: this.parseAuthError(error),
-      };
+      console.error('❌ Logout API call failed:', error);
+    } finally {
+      // Always clear local tokens regardless of API success
+      await this.clearLocalTokens();
     }
   }
 
@@ -407,7 +94,6 @@ export class MobileAuthService {
   async getCurrentAuthState(): Promise<AuthState> {
     try {
       const userData = await secureStorage.getUserData();
-      const biometricPrefs = await secureStorage.getBiometricPreferences();
       const authToken = await secureStorage.getAuthToken();
 
       // If no token or user data, not authenticated
@@ -417,7 +103,6 @@ export class MobileAuthService {
           isLoading: false,
           user: null,
           error: null,
-          biometricEnabled: false,
           lastActivity: Date.now(),
         };
       }
@@ -433,28 +118,16 @@ export class MobileAuthService {
           isAuthenticated: false,
           isLoading: false,
           user: null,
-          error: 'Session expired. Please login again.',
-          biometricEnabled: false,
+          error: null,
           lastActivity: Date.now(),
         };
       }
 
-      // Convert StoredUser to AuthenticatedUser if needed
-      const user: AuthenticatedUser = {
-        id: userData.id,
-        humanReadableId: userData.humanReadableId,
-        fullName: userData.fullName,
-        email: userData.email,
-        employmentStatus: userData.employmentStatus as any,
-        canLogin: userData.canLogin,
-      };
-
       return {
         isAuthenticated: true,
         isLoading: false,
-        user,
+        user: userData as AuthenticatedUser,
         error: null,
-        biometricEnabled: biometricPrefs?.enabled || false,
         lastActivity: Date.now(),
       };
     } catch (error) {
@@ -463,129 +136,126 @@ export class MobileAuthService {
         isAuthenticated: false,
         isLoading: false,
         user: null,
-        error: this.parseAuthError(error),
-        biometricEnabled: false,
+        error: 'Failed to check authentication status',
         lastActivity: Date.now(),
       };
     }
   }
 
-  // Private Methods
-  private async validateToken(token: string): Promise<boolean> {
+  // Utility Methods
+  private parseAuthError(error: any): string {
+    if (error && typeof error === 'object' && 'message' in error) {
+      return error.message;
+    }
+
+    if (error instanceof Error) {
+      // Handle specific error cases
+      if (error.message.includes('NETWORK_ERROR')) {
+        return 'Network error. Please check your internet connection.';
+      }
+
+      if (error.message.includes('TIMEOUT')) {
+        return 'Request timed out. Please try again.';
+      }
+
+      if (error.message.includes('UNAUTHORIZED')) {
+        return 'Invalid email or password.';
+      }
+
+      if (error.message.includes('FORBIDDEN')) {
+        return 'Access denied. You may not have permission to login.';
+      }
+
+      return error.message;
+    }
+
+    return 'An unexpected error occurred. Please try again.';
+  }
+
+  async validateToken(token: string): Promise<boolean> {
     try {
-      // Use the existing apiClient to validate token by getting current user
-      // If the token is valid, getCurrentUser will return user data
-      const user = await apiClient.getCurrentUser(token);
-      return true;
-    } catch (error) {
-      console.error('❌ Auth Service: Token validation failed:', error);
-      // If getCurrentUser fails, token is invalid
+      // Basic token structure validation
+      if (!token || token.length < 10) {
+        return false;
+      }
+
+      // In a production app, you would validate the JWT token here
+      // For now, we'll just check if the token format looks reasonable
+      const parts = token.split('.');
+      return parts.length === 3; // JWT should have 3 parts
+    } catch {
       return false;
     }
   }
 
-  private async clearInvalidTokens(): Promise<void> {
+  async getUserDataFromToken(token: string): Promise<AuthenticatedUser | null> {
     try {
-      await secureStorage.clearAllAuthData();
+      // Get user data from API using the token
+      const user = await apiClient.getCurrentUser(token);
+
+      if (user) {
+        return user;
+      }
+
+      return null;
     } catch (error) {
-      console.error('❌ Failed to clear invalid tokens:', error);
+      console.error('❌ Failed to get user data from token:', error);
+      return null;
     }
   }
 
   private setupTokenRefresh(token: string): void {
-    if (this.tokenRefreshTimeout) {
-      clearTimeout(this.tokenRefreshTimeout);
-    }
-
-    // In a real implementation, you would decode the JWT to get the expiration
-    // For now, we'll set a refresh interval of 14 minutes (tokens expire in 15)
-    const refreshInterval = 14 * 60 * 1000; // 14 minutes
-
-    this.tokenRefreshTimeout = setTimeout(async () => {
-      const refreshToken = await secureStorage.getRefreshToken();
-      if (refreshToken) {
-        await this.refreshAuthToken(refreshToken);
+    try {
+      // Clear any existing timeout
+      if (this.tokenRefreshTimeout) {
+        clearTimeout(this.tokenRefreshTimeout);
       }
-    }, refreshInterval) as any;
+
+      // Schedule token refresh
+      // This is a simplified implementation - in production you'd parse the JWT to get expiration time
+      const refreshTime = 14 * 60 * 1000; // Refresh every 14 minutes
+
+      this.tokenRefreshTimeout = setTimeout(async () => {
+        try {
+          const currentToken = await secureStorage.getRefreshToken();
+          if (currentToken) {
+            await this.refreshToken(currentToken);
+          }
+        } catch (error) {
+          console.error('❌ Automatic token refresh failed:', error);
+        }
+      }, refreshTime);
+
+    } catch (error) {
+      console.error('❌ Failed to setup token refresh:', error);
+    }
+  }
+
+  private async clearLocalTokens(): Promise<void> {
+    try {
+      await secureStorage.clearAllAuthData();
+    } catch (error) {
+      console.error('❌ Failed to clear local tokens:', error);
+    }
+  }
+
+  private async clearInvalidTokens(): Promise<void> {
+    await this.clearLocalTokens();
   }
 
   private initializeTokenRefresh(): void {
-    // Initialize token refresh on app start
-    this.getValidToken().then(token => {
-      if (token) {
-        this.setupTokenRefresh(token);
-      }
-    });
+    // Token refresh will be setup on the first successful login
   }
 
-  private parseAuthError(error: any): string {
-    if (error instanceof Error) {
-      const message = error.message;
-
-      // Session expiration errors - these should trigger automatic logout
-      if (message.includes('TOKEN_EXPIRED') ||
-          message.includes('SESSION_EXPIRED') ||
-          message.includes('TOKEN_REVOKED') ||
-          message.includes('SESSION_TIMEOUT') ||
-          message.toLowerCase().includes('session has expired') ||
-          message.toLowerCase().includes('token has expired')) {
-        return 'SESSION_EXPIRED';
-      }
-
-      // Common error patterns
-      if (message.includes('401') || message.includes('unauthorized')) {
-        // Check if it's a session expiration vs invalid credentials
-        if (message.includes('invalid') || message.includes('Invalid')) {
-          return 'Invalid email or password';
-        }
-        return 'SESSION_EXPIRED'; // Assume session timeout for other 401s
-      }
-      if (message.includes('403') || message.includes('forbidden')) {
-        return 'Access denied. Your account may be suspended.';
-      }
-      if (message.includes('429') || message.includes('rate limit')) {
-        return 'Too many attempts. Please try again later.';
-      }
-      if (message.includes('Network') || message.includes('timeout')) {
-        return 'Network error. Please check your connection.';
-      }
-      if (message.includes('employment_status')) {
-        return 'Your employment status does not allow login.';
-      }
-
-      return message;
+  // Cleanup method
+  destroy(): void {
+    if (this.tokenRefreshTimeout) {
+      clearTimeout(this.tokenRefreshTimeout);
+      this.tokenRefreshTimeout = null;
     }
-
-    return 'An unexpected error occurred';
-  }
-
-  // Check if an error indicates session expiration
-  private isSessionExpiredError(error: string): boolean {
-    return error === 'SESSION_EXPIRED' ||
-           error.toLowerCase().includes('session has expired') ||
-           error.toLowerCase().includes('token has expired') ||
-           error.toLowerCase().includes('session timeout');
-  }
-
-  // Handle session expiration by clearing auth state
-  async handleSessionExpiration(): Promise<void> {
-    try {
-      // Clear all auth data
-      await secureStorage.clearAllAuthData();
-
-      // Clear token refresh timeout
-      if (this.tokenRefreshTimeout) {
-        clearTimeout(this.tokenRefreshTimeout);
-        this.tokenRefreshTimeout = null;
-      }
-
-      // Clear any pending refresh promises
-      this.tokenRefreshPromise = null;
-    } catch (error) {
-      console.error('❌ Failed to handle session expiration:', error);
-    }
+    this.tokenRefreshPromise = null;
   }
 }
 
-// Create singleton instance
+// Export singleton instance
 export const mobileAuthService = new MobileAuthService();

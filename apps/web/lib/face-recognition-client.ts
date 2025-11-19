@@ -57,13 +57,11 @@ export async function initializeClientModels(): Promise<void> {
       };
 
       arcFaceSession = await ort.InferenceSession.create(modelUint8Array, sessionOptions);
-      console.log('ArcFace model loaded successfully');
     } catch (error) {
       console.warn('ArcFace model loading failed, using fallback implementation:', error);
       arcFaceSession = null;
     }
 
-    console.log('Face recognition models initialized successfully');
   } catch (error) {
     console.error('Failed to load client-side models:', error);
     throw new Error('Failed to initialize face recognition models');

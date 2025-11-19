@@ -117,7 +117,14 @@ export function createAuthMiddleware(options: AuthMiddlewareOptions = {}) {
     requestHeaders.set('x-user-employment-status', payload.employmentStatus);
     requestHeaders.set('x-user-can-login', payload.canLogin.toString());
 
-    // Create a new request with the modified headers
+    // When used in API routes (withAuth), we need to return null to allow the handler to be called
+    // The withAuth wrapper will read the headers we just set and create the user object
+    if (request.headers.get('x-middleware-context') === 'withAuth') {
+      // Return null to allow withAuth to proceed - headers are passed via the tempRequest
+      return null;
+    }
+
+    // For Next.js middleware usage, create a new request with the modified headers
     const response = NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -142,16 +149,36 @@ export function withAuth<T extends unknown[]>(
   const middleware = createAuthMiddleware(options);
 
   return async (req: NextRequest, ...args: T): Promise<NextResponse> => {
-    const result = await middleware(req);
+    // Add context header to indicate this is being called from withAuth
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-middleware-context', 'withAuth');
+
+    // Create a temporary request with the context header
+    const tempRequest = new Request(req.url, {
+      method: req.method,
+      headers: requestHeaders,
+      body: req.body,
+    }) as NextRequest;
+    const result = await middleware(tempRequest);
 
     // If middleware returned a response (error), return it
     if (result) {
       return result;
     }
 
+    // Copy headers from tempRequest back to original request
+    const authHeaders = tempRequest.headers;
+    const originalHeaders = req.headers as Headers;
+
+    // Update original headers with any new ones from tempRequest
+    authHeaders.forEach((value, key) => {
+      if (key.startsWith('x-user-')) {
+        originalHeaders.set(key, value);
+      }
+    });
+
     // Extract user info from headers and attach to request
     const authenticatedReq = req as AuthenticatedRequest;
-    const authHeaders = req.headers;
 
     if (authHeaders.get('x-user-id')) {
       authenticatedReq.user = {

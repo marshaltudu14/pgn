@@ -70,6 +70,12 @@ export interface AuthenticatedUser {
   assignedRegions?: string[];
 }
 
+export interface AuthenticationResult {
+  success: boolean;
+  user?: AuthenticatedUser;
+  error?: string;
+}
+
 // API Request/Response types (not database types)
 export interface CreateEmployeeRequest {
   first_name: string;
@@ -103,8 +109,6 @@ export interface ChangeEmploymentStatusRequest {
 }
 
 export interface RegionalAssignmentRequest {
-  primary_region?: string;
-  region_code?: string;
   assigned_regions?: string[];
 }
 

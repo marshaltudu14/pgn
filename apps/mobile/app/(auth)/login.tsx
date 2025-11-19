@@ -11,23 +11,46 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { secureStorage } from '@/services/secure-storage';
 import { LoginRequest } from '@pgn/shared';
 import LoginForm from '@/components/LoginForm';
-import BiometricPrompt from '@/components/BiometricPrompt';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoggingIn, error, isAuthenticated, checkBiometricAvailability, enableBiometricAuthentication, biometricEnabled } = useAuth();
-  const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
-  const [isSettingUpBiometric, setIsSettingUpBiometric] = useState(false);
-  const [biometricError, setBiometricError] = useState<string | null>(null);
+  const { login, isLoggingIn, error, isAuthenticated, biometricEnabled } = useAuth();
 
-  // Redirect to dashboard if already authenticated
+  // Handle post-login redirection
   React.useEffect(() => {
-    if (isAuthenticated) {
-      router.replace('/(dashboard)');
-    }
-  }, [isAuthenticated, router]);
+    const handlePostLoginRedirect = async () => {
+      if (isAuthenticated) {
+        // Check if biometrics are already enabled
+        if (!biometricEnabled) {
+          // Check if user has previously declined biometric setup
+          try {
+            const biometricPrefs = await secureStorage.getBiometricPreferences();
+            const hasDeclined = biometricPrefs?.hasDeclined === true;
+
+            if (hasDeclined) {
+              // User previously declined, go directly to dashboard
+              router.replace('/(dashboard)');
+            } else {
+              // Redirect to biometric setup screen for first-time users
+              router.replace('/(auth)/biometric-setup?fromLogin=true');
+            }
+          } catch (error) {
+            console.error('Error checking biometric preferences:', error);
+            // Default to dashboard if there's an error
+            router.replace('/(dashboard)');
+          }
+        } else {
+          // Biometrics already set up, go to dashboard
+          router.replace('/(dashboard)');
+        }
+      }
+    };
+
+    handlePostLoginRedirect();
+  }, [isAuthenticated, router, biometricEnabled]);
 
   const handleLogin = async (credentials: LoginRequest): Promise<void> => {
     try {
@@ -36,18 +59,8 @@ export default function LoginScreen() {
       const result = await login(credentials);
 
       if (result.success) {
-        // Check if biometrics are available and not already enabled
-        if (!biometricEnabled) {
-          const biometricCheck = await checkBiometricAvailability();
-          if (biometricCheck.success && biometricCheck.type && biometricCheck.type.length > 0) {
-            // Show biometric setup prompt
-            setShowBiometricPrompt(true);
-            return; // Don't navigate yet, wait for biometric setup decision
-          }
-        }
-
-        // If biometrics are not available or already enabled, the useEffect will handle navigation
-        // when isAuthenticated state changes
+        // If biometrics are already enabled, let the useEffect handle normal navigation
+        // If not enabled, we'll redirect to biometric setup screen in the useEffect
       }
       // Error handling is done in the auth store and LoginForm component
     } catch (error) {
@@ -56,31 +69,7 @@ export default function LoginScreen() {
     }
   };
 
-  const handleBiometricSetup = async () => {
-    setIsSettingUpBiometric(true);
-    setBiometricError(null);
-
-    try {
-      const result = await enableBiometricAuthentication();
-      if (result.success) {
-        // Successfully set up biometrics
-        setShowBiometricPrompt(false);
-        router.replace('/(dashboard)');
-      } else {
-        setBiometricError(result.error || 'Failed to set up biometric authentication');
-      }
-    } catch {
-      setBiometricError('An unexpected error occurred while setting up biometrics');
-    } finally {
-      setIsSettingUpBiometric(false);
-    }
-  };
-
-  const handleSkipBiometric = () => {
-    setShowBiometricPrompt(false);
-    router.replace('/(dashboard)');
-  };
-
+  
   const colorScheme = useColorScheme();
 
   return (
@@ -134,16 +123,6 @@ export default function LoginScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Biometric Setup Prompt */}
-      <BiometricPrompt
-        visible={showBiometricPrompt}
-        onClose={handleSkipBiometric}
-        onSetup={handleBiometricSetup}
-        onSkip={handleSkipBiometric}
-        isLoading={isSettingUpBiometric}
-        error={biometricError}
-      />
     </KeyboardAvoidingView>
   );
 }

@@ -6,9 +6,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { LoginRequest } from '@pgn/shared';
-import { showToast } from '@/utils/toast';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuth } from '@/store/auth-store';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import Spinner from '@/components/Spinner';
 
@@ -20,7 +18,6 @@ interface LoginFormProps {
 
 export default function LoginForm({ onSubmit, isLoggingIn = false, error }: LoginFormProps) {
   const colorScheme = useColorScheme();
-  const { canUseBiometricLogin, biometricLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -66,34 +63,6 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
         email: email.trim().toLowerCase(),
         password: password.trim(),
       });
-    }
-  };
-
-  
-  const handleBiometricLogin = async () => {
-    try {
-      const result = await biometricLogin();
-
-      if (result.success) {
-        // The auth store will handle the success state
-        showToast.success(
-          'Biometric Login',
-          'Successfully logged in with biometrics',
-          3000
-        );
-      } else {
-        showToast.error(
-          'Biometric Login Failed',
-          result.error || 'Failed to authenticate with biometrics',
-          4000
-        );
-      }
-    } catch {
-      showToast.error(
-        'Biometric Login Error',
-        'An unexpected error occurred during biometric login',
-        4000
-      );
     }
   };
 
@@ -225,38 +194,6 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
           )}
         </TouchableOpacity>
       </View>
-
-      {/* Biometric Login Option */}
-      {canUseBiometricLogin && (
-        <View className="items-center">
-          <View className="flex-row items-center py-2">
-            <View className={`h-px flex-1 ${
-              colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'
-            }`} />
-            <Text className={`px-4 text-xs font-medium ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-            }`}>or</Text>
-            <View className={`h-px flex-1 ${
-              colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-300'
-            }`} />
-          </View>
-
-          <TouchableOpacity
-            className="secondary-button active:scale-[0.98] transition-all duration-200 py-3"
-            onPress={handleBiometricLogin}
-            disabled={isLoggingIn}
-          >
-            <View className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 items-center justify-center mr-2">
-              <Lock size={14} color="#FFB74D" />
-            </View>
-            <Text className={`font-semibold text-sm ${
-              colorScheme === 'dark' ? 'text-white' : 'text-black'
-            }`}>
-              Sign in with Biometrics
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 }

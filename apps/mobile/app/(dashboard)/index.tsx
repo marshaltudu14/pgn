@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
@@ -17,11 +18,54 @@ import {
   Calendar,
   Activity
 } from 'lucide-react-native';
+import { permissionService, AppPermissions } from '@/services/permissions';
+import PermissionsScreen from '../(auth)/permissions';
 
 export default function HomeScreen() {
     const { user, logout } = useAuth();
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const [permissionsChecked, setPermissionsChecked] = useState(false);
+  const [showPermissionsScreen, setShowPermissionsScreen] = useState(false);
+  const [permissions, setPermissions] = useState<AppPermissions | null>(null);
+
+  // Permission checking logic
+  useEffect(() => {
+    checkPermissions();
+  }, []);
+
+  const checkPermissions = async () => {
+    try {
+      const result = await permissionService.checkAllPermissions();
+      setPermissions(result.permissions);
+
+      if (!result.allGranted) {
+        // Check if any permissions are denied or undetermined
+        if (result.deniedPermissions.length > 0 || result.undeterminedPermissions.length > 0) {
+          // Try to request permissions
+          const requestResult = await permissionService.requestAllPermissions();
+          setPermissions(requestResult.permissions);
+
+          if (!requestResult.allGranted) {
+            // Still not granted, show permission screen
+            setShowPermissionsScreen(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      showToast.error('Failed to check permissions');
+    } finally {
+      setPermissionsChecked(true);
+    }
+  };
+
+  const handlePermissionsGranted = () => {
+    setShowPermissionsScreen(false);
+    setPermissionsChecked(true);
+    // Refresh permissions
+    checkPermissions();
+  };
 
   const handleLogout = async () => {
     try {
@@ -81,13 +125,28 @@ export default function HomeScreen() {
     },
   ];
 
+  // Show permission screen if permissions are not granted
+  if (showPermissionsScreen && permissions) {
+    return (
+      <PermissionsScreen
+        permissions={permissions}
+        onPermissionsGranted={handlePermissionsGranted}
+      />
+    );
+  }
+
+  // If permissions are not checked yet, don't show anything - checking happens in background
+  if (!permissionsChecked) {
+    return null;
+  }
+
   return (
     <ScrollView className={`flex-1 ${
       colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'
     }`}>
       {/* Header */}
       <View className={`pt-12 pb-6 px-6 ${
-        colorScheme === 'dark' ? 'bg-gray-900' : 'bg-gradient-to-b from-blue-600 to-blue-500'
+        colorScheme === 'dark' ? 'bg-primary-900' : 'bg-gradient-to-b from-primary to-primary-600'
       }`}>
         <View className="flex-row justify-between items-center mb-4">
           <View>
@@ -96,14 +155,14 @@ export default function HomeScreen() {
             }`}>
               Welcome back!
             </Text>
-            <Text className={colorScheme === 'dark' ? 'text-gray-300' : 'text-blue-100'}>
+            <Text className={colorScheme === 'dark' ? 'text-gray-300' : 'text-primary-100'}>
               {user?.fullName || 'Employee'}
             </Text>
           </View>
           <TouchableOpacity
             onPress={handleProfilePress}
             className={`w-12 h-12 rounded-full items-center justify-center ${
-              colorScheme === 'dark' ? 'bg-gray-800' : 'bg-blue-700'
+              colorScheme === 'dark' ? 'bg-primary-800' : 'bg-primary-700'
             }`}
           >
             <Text className="text-white text-lg font-bold">
@@ -114,12 +173,12 @@ export default function HomeScreen() {
 
         {/* User Info Card */}
         <View className={`rounded-lg p-4 ${
-          colorScheme === 'dark' ? 'bg-gray-800' : 'bg-blue-700'
+          colorScheme === 'dark' ? 'bg-primary-800' : 'bg-primary-700'
         }`}>
           <View className="flex-row justify-between items-center">
             <View>
               <Text className={`text-xs ${
-                colorScheme === 'dark' ? 'text-gray-400' : 'text-blue-100'
+                colorScheme === 'dark' ? 'text-gray-400' : 'text-primary-100'
               }`}>
                 Employee ID
               </Text>
@@ -131,7 +190,7 @@ export default function HomeScreen() {
             </View>
             <View className="items-end">
               <Text className={`text-xs ${
-                colorScheme === 'dark' ? 'text-gray-400' : 'text-blue-100'
+                colorScheme === 'dark' ? 'text-gray-400' : 'text-primary-100'
               }`}>
                 Status
               </Text>
@@ -155,10 +214,10 @@ export default function HomeScreen() {
 
         <View className="grid grid-cols-2 gap-4 mb-6">
           <View className={`rounded-lg p-4 shadow-sm border ${
-            colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
           }`}>
             <View className="flex-row items-center justify-between mb-2">
-              <Clock size={20} color="#3B82F6" />
+              <Clock size={20} color="#FFB74D" />
               <TrendingUp size={16} color="#10B981" />
             </View>
             <Text className={`text-2xl font-bold ${
@@ -174,10 +233,10 @@ export default function HomeScreen() {
           </View>
 
           <View className={`rounded-lg p-4 shadow-sm border ${
-            colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
           }`}>
             <View className="flex-row items-center justify-between mb-2">
-              <Calendar size={20} color="#3B82F6" />
+              <Calendar size={20} color="#FFB74D" />
               <TrendingUp size={16} color="#10B981" />
             </View>
             <Text className={`text-2xl font-bold ${
@@ -193,10 +252,10 @@ export default function HomeScreen() {
           </View>
 
           <View className={`rounded-lg p-4 shadow-sm border ${
-            colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
           }`}>
             <View className="flex-row items-center justify-between mb-2">
-              <BarChart3 size={20} color="#3B82F6" />
+              <BarChart3 size={20} color="#FFB74D" />
               <Activity size={16} color="#F59E0B" />
             </View>
             <Text className={`text-2xl font-bold ${
@@ -212,10 +271,10 @@ export default function HomeScreen() {
           </View>
 
           <View className={`rounded-lg p-4 shadow-sm border ${
-            colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+            colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
           }`}>
             <View className="flex-row items-center justify-between mb-2">
-              <Clock size={20} color="#3B82F6" />
+              <Clock size={20} color="#FFB74D" />
               <TrendingUp size={16} color="#F59E0B" />
             </View>
             <Text className={`text-2xl font-bold ${
@@ -233,7 +292,7 @@ export default function HomeScreen() {
 
         {/* Weekly Chart */}
         <View className={`rounded-lg shadow-sm p-4 mb-6 border ${
-          colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+          colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
         }`}>
           <Text className={`font-semibold mb-4 ${
             colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -244,7 +303,7 @@ export default function HomeScreen() {
             {monthlyData.map((item, index) => (
               <View key={index} className="flex-1 items-center">
                 <View
-                  className="w-8 bg-blue-500 rounded-t"
+                  className="w-8 bg-primary-500 rounded-t"
                   style={{ height: `${(item.hours / 10) * 100}%` }}
                 />
                 <Text className={`text-xs mt-2 ${
@@ -264,7 +323,7 @@ export default function HomeScreen() {
 
         {/* Recent Activity */}
         <View className={`rounded-lg shadow-sm p-4 mb-6 border ${
-          colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+          colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
         }`}>
           <View className="flex-row justify-between items-center mb-4">
             <Text className={`font-semibold ${
@@ -273,7 +332,7 @@ export default function HomeScreen() {
               Recent Activity
             </Text>
             <TouchableOpacity onPress={() => showToast.info('Activity', 'Full activity log coming soon!')}>
-              <Text className="text-blue-600 text-sm">View All</Text>
+              <Text className="text-primary-600 text-sm">View All</Text>
             </TouchableOpacity>
           </View>
 
@@ -282,7 +341,7 @@ export default function HomeScreen() {
               key={index}
               className={`flex-row items-center py-3 ${
                 index !== recentActivities.length - 1
-                  ? colorScheme === 'dark' ? 'border-b border-gray-800' : 'border-b border-gray-100'
+                  ? colorScheme === 'dark' ? 'border-b border-primary-800' : 'border-b border-gray-100'
                   : ''
               }`}
             >
@@ -325,7 +384,7 @@ export default function HomeScreen() {
 
         {/* Team Status */}
         <View className={`rounded-lg shadow-sm p-4 mb-6 border ${
-          colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+          colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
         }`}>
           <View className="flex-row justify-between items-center mb-4">
             <Text className={`font-semibold ${
@@ -389,7 +448,7 @@ export default function HomeScreen() {
 
         {/* Quick Actions */}
         <View className={`rounded-lg shadow-sm p-4 border ${
-          colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
+          colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-white border-primary-200'
         }`}>
           <Text className={`font-semibold mb-4 ${
             colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -401,17 +460,17 @@ export default function HomeScreen() {
             <TouchableOpacity
               onPress={handleTasksPress}
               className={`rounded-lg p-3 items-center ${
-                colorScheme === 'dark' ? 'bg-gray-800' : 'bg-blue-50'
+                colorScheme === 'dark' ? 'bg-primary-800' : 'bg-primary-50'
               }`}
             >
-              <BarChart3 size={20} color="#3B82F6" />
-              <Text className="text-blue-700 font-medium text-sm mt-1">View Tasks</Text>
+              <BarChart3 size={20} color="#FFB74D" />
+              <Text className="text-primary-700 font-medium text-sm mt-1">View Tasks</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => showToast.info('Reports', 'Detailed reports coming soon!')}
               className={`rounded-lg p-3 items-center ${
-                colorScheme === 'dark' ? 'bg-gray-800' : 'bg-green-50'
+                colorScheme === 'dark' ? 'bg-primary-800' : 'bg-green-50'
               }`}
             >
               <Calendar size={20} color="#10B981" />
@@ -429,7 +488,7 @@ export default function HomeScreen() {
           </Text>
           <View className="space-y-3">
             <View className={`rounded-lg p-4 border ${
-              colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-100'
+              colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-gray-100'
             }`}>
               <View className="flex-row items-center opacity-75">
                 <Text className="text-xl mr-3">🗺️</Text>
@@ -449,7 +508,7 @@ export default function HomeScreen() {
             </View>
 
             <View className={`rounded-lg p-4 border ${
-              colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-100'
+              colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-gray-100'
             }`}>
               <View className="flex-row items-center opacity-75">
                 <Text className="text-xl mr-3">📊</Text>
@@ -469,7 +528,7 @@ export default function HomeScreen() {
             </View>
 
             <View className={`rounded-lg p-4 border ${
-              colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-gray-100'
+              colorScheme === 'dark' ? 'bg-primary-900 border-primary-800' : 'bg-gray-100'
             }`}>
               <View className="flex-row items-center opacity-75">
                 <Text className="text-xl mr-3">⏰</Text>

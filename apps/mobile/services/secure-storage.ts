@@ -42,6 +42,8 @@ export interface StoredUser {
 export interface BiometricPreferences {
   enabled: boolean;
   setupComplete: boolean;
+  hasDeclined?: boolean; // User explicitly declined biometric setup
+  declinedAt?: number;   // When user declined (to potentially re-prompt later)
   lastUsed?: number;
 }
 
@@ -248,6 +250,20 @@ export class SecureTokenStorage {
     } catch (error) {
       console.error('❌ Failed to retrieve biometric preferences:', error);
       return null;
+    }
+  }
+
+  async setBiometricDeclined(): Promise<void> {
+    try {
+      const preferences: BiometricPreferences = {
+        enabled: false,
+        setupComplete: false,
+        hasDeclined: true,
+        declinedAt: Date.now(),
+      };
+      await this.setBiometricPreferences(preferences);
+    } catch (error) {
+      console.error('❌ Failed to set biometric declined:', error);
     }
   }
 

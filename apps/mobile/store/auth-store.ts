@@ -38,6 +38,7 @@ export interface AuthStore extends AuthState {
   getValidToken: () => Promise<string | null>;
   isAuthenticatedUser: () => boolean;
   canUseBiometricLogin: () => boolean;
+  canUseBiometricAutoLogin: () => Promise<boolean>;
   handleSessionExpiration: () => Promise<void>;
 }
 
@@ -310,10 +311,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return isAuthenticated && user !== null;
   },
 
-  // Check if biometric login is available
+  // Check if biometric login is available (for authenticated users)
   canUseBiometricLogin: (): boolean => {
     const { isAuthenticated, biometricEnabled } = get();
     return isAuthenticated && biometricEnabled;
+  },
+
+  // Check if biometric login is available for auto-login (even when not authenticated)
+  canUseBiometricAutoLogin: async (): Promise<boolean> => {
+    try {
+      const biometricPrefs = await secureStorage.getBiometricPreferences();
+      const userData = await secureStorage.getUserData();
+
+      // Check if user has previously enabled biometric and has stored credentials
+      return !!(biometricPrefs?.enabled && userData);
+    } catch (error) {
+      console.error('Error checking biometric auto-login availability:', error);
+      return false;
+    }
   },
 
   // Clear error state
@@ -359,6 +374,7 @@ export const useAuth = () => {
     // Computed values
     canLogin: !authStore.isLoading && !authStore.isAuthenticated,
     canUseBiometricLogin: authStore.canUseBiometricLogin(),
+    canUseBiometricAutoLogin: authStore.canUseBiometricAutoLogin,
 
     // Actions
     login: authStore.login,

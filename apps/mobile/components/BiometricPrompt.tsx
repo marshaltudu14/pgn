@@ -33,53 +33,22 @@ export default function BiometricPrompt({
   const colorScheme = useColorScheme();
 
   const getBiometricIcon = () => {
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-      return (
-        <View className={`w-20 h-20 rounded-full items-center justify-center ${
-          colorScheme === 'dark' ? 'bg-green-900/30' : 'bg-green-100'
-        }`}>
-          <User size={40} color="#10B981" />
-        </View>
-      );
-    }
-
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-      return (
-        <View className={`w-20 h-20 rounded-full items-center justify-center ${
-          colorScheme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-100'
-        }`}>
-          <Fingerprint size={40} color="#3B82F6" />
-        </View>
-      );
-    }
-
+    // Only fingerprint is supported
     return (
       <View className={`w-20 h-20 rounded-full items-center justify-center ${
-        colorScheme === 'dark' ? 'bg-purple-900/30' : 'bg-purple-100'
+        colorScheme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-100'
       }`}>
-        <Fingerprint size={40} color="#8B5CF6" />
+        <Fingerprint size={40} color="#3B82F6" />
       </View>
     );
   };
 
   const getBiometricTitle = () => {
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-      return 'Face ID Available';
-    }
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-      return 'Fingerprint Available';
-    }
-    return 'Biometric Authentication Available';
+    return 'Fingerprint Authentication';
   };
 
   const getBiometricDescription = () => {
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-      return 'Use Face ID for quick and secure access to your PGN account. No need to remember passwords.';
-    }
-    if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
-      return 'Use your fingerprint for quick and secure access to your PGN account. No need to remember passwords.';
-    }
-    return 'Use biometric authentication for quick and secure access to your PGN account. No need to remember passwords.';
+    return 'Use your fingerprint for quick and secure access to your PGN account. No need to remember passwords.';
   };
 
   if (!visible) return null;
@@ -192,7 +161,7 @@ export default function BiometricPrompt({
             {/* Loading State */}
             {isLoading ? (
               <View className="items-center py-4">
-                <ActivityIndicator size="large" color="#3B82F6" />
+                <ActivityIndicator size="large" color="#FFB74D" />
                 <Text className={`text-sm mt-3 ${
                   colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
                 }`}>

@@ -323,8 +323,31 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const biometricPrefs = await secureStorage.getBiometricPreferences();
       const userData = await secureStorage.getUserData();
 
-      // Check if user has previously enabled biometric and has stored credentials
-      return !!(biometricPrefs?.enabled && userData);
+      console.log('🔍 canUseBiometricAutoLogin check:', {
+        biometricPrefs,
+        hasUserData: !!userData,
+      });
+
+      // Check if user has:
+      // 1. Previously enabled biometric (enabled === true)
+      // 2. Completed biometric setup (setupComplete === true)
+      // 3. Has stored credentials for auto-login
+      // 4. Has not declined biometric setup
+      const hasBiometricEnabled = biometricPrefs?.enabled === true;
+      const hasSetupComplete = biometricPrefs?.setupComplete === true;
+      const hasStoredCredentials = !!userData;
+      const hasNotDeclined = biometricPrefs?.hasDeclined !== true;
+
+      const canUseAutoLogin = !!(hasBiometricEnabled && hasSetupComplete && hasStoredCredentials && hasNotDeclined);
+      console.log('🔍 canUseBiometricAutoLogin result:', {
+        hasBiometricEnabled,
+        hasSetupComplete,
+        hasStoredCredentials,
+        hasNotDeclined,
+        canUseAutoLogin,
+      });
+
+      return canUseAutoLogin;
     } catch (error) {
       console.error('Error checking biometric auto-login availability:', error);
       return false;

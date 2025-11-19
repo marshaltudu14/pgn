@@ -61,7 +61,7 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
     } catch (loginError) {
       // Track failed login attempt for rate limiting (only for non-admin users)
       if (!email.includes('admin')) {
-        await authService.trackFailedLoginAttempt(email, ipAddress);
+        await authService.trackFailedLoginAttempt();
       }
 
       // Handle specific employment status errors
@@ -80,18 +80,30 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
         return AuthErrorService.accessDeniedError(errorMessage);
       }
 
-      // Handle credential errors
-      if (errorMessage === 'Invalid user ID or password') {
+      // Handle credential errors with user-friendly messages
+      const credentialErrors = [
+        'Invalid email or password',
+        'Login failed. Please check your credentials',
+        'Please confirm your email address',
+        'Too many login attempts. Please try again later'
+      ];
+
+      if (credentialErrors.some(err => errorMessage === err)) {
         return AuthErrorService.authError(errorMessage);
       }
 
-      // Handle other errors
-      return AuthErrorService.serverError(errorMessage);
+      // Handle employee not found errors
+      if (errorMessage.includes('Employee account not found')) {
+        return AuthErrorService.authError('Employee account not found - contact administrator');
+      }
+
+      // Handle other errors with a generic message for security
+      return AuthErrorService.authError('Login failed. Please check your credentials and try again');
     }
 
   } catch (error) {
-    console.error('Login API error:', error);
-    return AuthErrorService.serverError('An unexpected error occurred during login');
+    // Handle unexpected errors gracefully without exposing internal details
+    return AuthErrorService.serverError('Login service temporarily unavailable. Please try again later');
   }
 };
 

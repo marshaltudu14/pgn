@@ -348,7 +348,7 @@ describe('AuthService', () => {
   describe('trackFailedLoginAttempt', () => {
     it('should track failed login attempt', async () => {
       // This method just logs the attempt, so we expect no errors
-      await expect(authService.trackFailedLoginAttempt('PGN-2024-0001', '192.168.1.1')).resolves.toBeUndefined();
+      await expect(authService.trackFailedLoginAttempt()).resolves.toBeUndefined();
     });
   });
 

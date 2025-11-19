@@ -90,7 +90,7 @@ async function detectFace(imageBuffer: Buffer): Promise<FaceDetectionResult> {
     const confidence = 0.85 + Math.random() * 0.14; // 85-99% confidence
 
     // Simulate face quality analysis
-    const quality = analyzeImageQuality(imageBuffer);
+    const quality = analyzeImageQuality();
 
     // Check for multiple faces
     if (faceCount > 1) {

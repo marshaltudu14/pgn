@@ -45,19 +45,24 @@ export class AuthService {
   }
 
   /**
-   * Find employee by human readable ID in employees table
+   * Find employee by auth user ID in employees table
    */
-  private async findEmployeeByHumanReadableId(userId: string) {
+  private async findEmployeeById(authUserId: string) {
     try {
       const supabase = await createClient();
       const { data, error } = await supabase
         .from('employees')
         .select('id, human_readable_user_id, employment_status, can_login, email, first_name, last_name')
-        .eq('human_readable_user_id', userId)
-        .single();
+        .eq('id', authUserId)
+        .maybeSingle();
 
-      if (error || !data) {
-        console.error('Employee lookup error:', error);
+      if (error) {
+        // Log the error for debugging but don't expose it
+        return null;
+      }
+
+      if (!data) {
+        // Employee not found - this is expected for admin users or invalid IDs
         return null;
       }
 
@@ -72,7 +77,45 @@ export class AuthService {
         last_name: data.last_name
       };
     } catch (error) {
-      console.error('Database query error:', error);
+      // Handle unexpected errors gracefully
+      return null;
+    }
+  }
+
+  /**
+   * Find employee by human readable ID in employees table
+   */
+  private async findEmployeeByHumanReadableId(userId: string) {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, human_readable_user_id, employment_status, can_login, email, first_name, last_name')
+        .eq('human_readable_user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        // Log the error for debugging but don't expose it
+        return null;
+      }
+
+      if (!data) {
+        // Employee not found - this is expected for admin users or invalid IDs
+        return null;
+      }
+
+      return {
+        id: data.id,
+        human_readable_id: data.human_readable_user_id,
+        employment_status: data.employment_status,
+        can_login: data.can_login,
+        full_name: `${data.first_name || ''} ${data.last_name || ''}`,
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name
+      };
+    } catch (error) {
+      // Handle unexpected errors gracefully
       return null;
     }
   }
@@ -103,7 +146,16 @@ export class AuthService {
 
       
       if (authError || !authData.user) {
-                throw new Error('Invalid email or password');
+        // Provide more specific error messages based on the error code
+        if (authError?.message?.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password');
+        } else if (authError?.message?.includes('Email not confirmed')) {
+          throw new Error('Please confirm your email address');
+        } else if (authError?.message?.includes('Too many requests')) {
+          throw new Error('Too many login attempts. Please try again later');
+        } else {
+          throw new Error('Login failed. Please check your credentials');
+        }
       }
 
       // Check if user is admin by looking at user metadata
@@ -127,8 +179,8 @@ export class AuthService {
         };
                 return response;
       } else {
-        // Employee login - check if they exist in employees table
-                const employee = await this.findEmployeeByEmail(authEmail);
+        // Employee login - check if they exist in employees table using auth user ID
+                const employee = await this.findEmployeeById(authData.user.id);
 
         if (!employee) {
                     await supabase.auth.signOut();
@@ -169,44 +221,12 @@ export class AuthService {
                 return response;
       }
     } catch (error) {
-      console.error('💥 Login error:', error);
+      // Re-throw the error without console logging for cleaner production logs
       throw error;
     }
   }
 
-  /**
-   * Find employee by email in employees table
-   */
-  private async findEmployeeByEmail(email: string) {
-    try {
-      const supabase = await createClient();
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, human_readable_user_id, employment_status, can_login, email, first_name, last_name')
-        .eq('email', email.toLowerCase().trim())
-        .single();
-
-      if (error || !data) {
-        console.error('Employee lookup error:', error);
-        return null;
-      }
-
-      return {
-        id: data.id,
-        human_readable_id: data.human_readable_user_id,
-        employment_status: data.employment_status,
-        can_login: data.can_login,
-        full_name: `${data.first_name || ''} ${data.last_name || ''}`.trim(),
-        email: data.email,
-        first_name: data.first_name,
-        last_name: data.last_name
-      };
-    } catch (error) {
-      console.error('Database query error:', error);
-      return null;
-    }
-  }
-
+  
   /**
    * Refresh JWT token (extracts user ID from current token)
       employeeId: employee?.id || 'admin',

@@ -29,6 +29,7 @@ export interface AuthStore extends AuthState {
   initializeAuth: () => Promise<void>;
   clearError: () => void;
   setLoading: (loading: boolean) => void;
+  isLoggingIn: boolean; // Separate loading state for login process
 
   // User data management
   refreshUserData: () => Promise<void>;
@@ -48,6 +49,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   error: null,
   biometricEnabled: false,
   lastActivity: Date.now(),
+  isLoggingIn: false,
 
   // Initialize authentication state on app start
   initializeAuth: async () => {
@@ -80,7 +82,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Login with email and password
   login: async (credentials: LoginRequest): Promise<AuthenticationResult> => {
-    set({ isLoading: true, error: null });
+    set({ isLoggingIn: true, error: null });
 
     try {
       const result = await mobileAuthService.login(credentials);
@@ -88,7 +90,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (result.success && result.user) {
         set({
           isAuthenticated: true,
-          isLoading: false,
+          isLoggingIn: false,
           user: result.user,
           error: null,
           lastActivity: Date.now(),
@@ -98,7 +100,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       } else {
         set({
           isAuthenticated: false,
-          isLoading: false,
+          isLoggingIn: false,
           user: null,
           error: result.error || 'Login failed',
           lastActivity: Date.now(),
@@ -112,7 +114,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       set({
         isAuthenticated: false,
-        isLoading: false,
+        isLoggingIn: false,
         user: null,
         error: errorMessage,
         lastActivity: Date.now(),
@@ -127,7 +129,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // Biometric login
   biometricLogin: async (): Promise<AuthenticationResult> => {
-    set({ isLoading: true, error: null });
+    set({ isLoggingIn: true, error: null });
 
     try {
       const result = await mobileAuthService.biometricLogin();
@@ -135,7 +137,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       if (result.success && result.user) {
         set({
           isAuthenticated: true,
-          isLoading: false,
+          isLoggingIn: false,
           user: result.user,
           error: null,
           lastActivity: Date.now(),
@@ -145,7 +147,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       } else {
         set({
           isAuthenticated: false,
-          isLoading: false,
+          isLoggingIn: false,
           user: null,
           error: result.error || 'Biometric login failed',
           lastActivity: Date.now(),
@@ -159,7 +161,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       set({
         isAuthenticated: false,
-        isLoading: false,
+        isLoggingIn: false,
         user: null,
         error: errorMessage,
         lastActivity: Date.now(),
@@ -349,6 +351,7 @@ export const useAuth = () => {
     // State
     isAuthenticated: authStore.isAuthenticated,
     isLoading: authStore.isLoading,
+    isLoggingIn: authStore.isLoggingIn,
     user: authStore.user,
     error: authStore.error,
     biometricEnabled: authStore.biometricEnabled,

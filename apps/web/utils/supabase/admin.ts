@@ -27,8 +27,7 @@ function getSupabaseAdmin() {
  */
 export async function createAuthUser(
   email: string,
-  password: string,
-  userMetadata?: Record<string, unknown>
+  password: string
 ) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -36,11 +35,6 @@ export async function createAuthUser(
       email,
       password,
       email_confirm: true, // Auto-confirm for employee creation
-      user_metadata: {
-        ...userMetadata,
-        is_employee: true,
-        created_by: 'admin',
-      },
     });
 
     if (error) {

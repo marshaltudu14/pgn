@@ -667,7 +667,7 @@ export function FaceRecognitionForm({
                       {isModelInitializing && 'Downloading face recognition models...'}
                       {!modelsInitialized && !isModelInitializing && 'Preparing face scanner...'}
                       {modelsInitialized && scanStatus === 'idle' && 'Client-side processing ready'}
-                      {scanStatus === 'scanning' && scanMessage}
+                      {scanStatus === 'scanning' && 'Scanning face...'}
                       {scanStatus === 'complete' && 'Face embedding generated locally'}
                       {scanStatus === 'error' && 'Try a different photo'}
                     </p>

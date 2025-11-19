@@ -79,12 +79,7 @@ export async function createEmployee(
     // Step 1: Create auth user first
     const authResult = await createAuthUser(
       createData.email,
-      createData.password,
-      {
-        first_name: createData.first_name,
-        last_name: createData.last_name,
-        employee_type: 'staff'
-      }
+      createData.password
     );
 
     if (!authResult.success) {

@@ -17,7 +17,7 @@ import BiometricPrompt from '@/components/BiometricPrompt';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading, error, isAuthenticated, checkBiometricAvailability, enableBiometricAuthentication, biometricEnabled } = useAuth();
+  const { login, isLoggingIn, error, isAuthenticated, checkBiometricAvailability, enableBiometricAuthentication, biometricEnabled } = useAuth();
   const [showBiometricPrompt, setShowBiometricPrompt] = useState(false);
   const [isSettingUpBiometric, setIsSettingUpBiometric] = useState(false);
   const [biometricError, setBiometricError] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export default function LoginScreen() {
             <View className="w-full max-w-sm">
               <LoginForm
                 onSubmit={handleLogin}
-                isLoading={isLoading}
+                isLoggingIn={isLoggingIn}
                 error={error}
               />
             </View>

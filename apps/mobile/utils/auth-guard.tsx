@@ -48,7 +48,7 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
   if (!isInitialized || isLoading || (requireAuth && !isAuthenticated)) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#FFB74D" />
       </View>
     );
   }
@@ -58,7 +58,7 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
     router.replace('/(dashboard)/index' as any);
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color="#FFB74D" />
         <Text className="mt-4 text-gray-600">Loading...</Text>
       </View>
     );

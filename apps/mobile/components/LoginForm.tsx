@@ -14,11 +14,11 @@ import Spinner from '@/components/Spinner';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginRequest) => Promise<void>;
-  isLoading?: boolean;
+  isLoggingIn?: boolean;
   error?: string | null;
 }
 
-export default function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps) {
+export default function LoginForm({ onSubmit, isLoggingIn = false, error }: LoginFormProps) {
   const colorScheme = useColorScheme();
   const { canUseBiometricLogin, biometricLogin } = useAuth();
   const [email, setEmail] = useState('');
@@ -126,7 +126,7 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
-            editable={!isLoading}
+            editable={!isLoggingIn}
             accessibilityLabel="Email address"
             accessibilityHint="Enter your company email address"
           />
@@ -165,14 +165,14 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
-            editable={!isLoading}
+            editable={!isLoggingIn}
             accessibilityLabel="Password"
             accessibilityHint="Enter your password"
           />
           <TouchableOpacity
             className="absolute right-3 top-3 p-1"
             onPress={() => setShowPassword(!showPassword)}
-            disabled={isLoading}
+            disabled={isLoggingIn}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
@@ -206,22 +206,22 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
       <View className="mb-6">
         <TouchableOpacity
           className={`primary-button py-3 ${
-            isLoading || !email.trim() || !password.trim()
+            isLoggingIn || !email.trim() || !password.trim()
               ? 'opacity-50'
               : 'opacity-100 active:scale-[0.98]'
           } transition-all duration-200`}
           onPress={handleSubmit}
-          disabled={isLoading || !email.trim() || !password.trim()}
+          disabled={isLoggingIn || !email.trim() || !password.trim()}
           accessibilityLabel="Sign in"
           accessibilityRole="button"
         >
-          {isLoading ? (
-            <>
-              <Spinner size={16} color="#000000" className="mr-2" />
-              <Text className="text-black font-semibold text-sm">Signing in...</Text>
-            </>
+          {isLoggingIn ? (
+            <View className="flex-row items-center justify-center">
+              <Spinner size={16} color="#000000" />
+              <Text className="text-black font-semibold text-sm ml-2">Signing in...</Text>
+            </View>
           ) : (
-            <Text className="text-black font-semibold text-sm">Sign In</Text>
+            <Text className="text-black font-semibold text-sm text-center">Sign In</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -244,7 +244,7 @@ export default function LoginForm({ onSubmit, isLoading = false, error }: LoginF
           <TouchableOpacity
             className="secondary-button active:scale-[0.98] transition-all duration-200 py-3"
             onPress={handleBiometricLogin}
-            disabled={isLoading}
+            disabled={isLoggingIn}
           >
             <View className="w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/30 items-center justify-center mr-2">
               <Lock size={14} color="#FFB74D" />

@@ -10,7 +10,6 @@ import {
   ReanimatedLogLevel,
 } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import "../global.css";
 import { ToastProvider } from '@/components/Toast';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect, useState } from 'react';

@@ -2,75 +2,50 @@ import React from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { showToast } from '@/utils/toast';
-import { Clock } from 'lucide-react-native';
+import { createHomeScreenStyles } from './_styles';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const router = useRouter();
   const colorScheme = useColorScheme();
-
-  const handleCheckIn = () => {
-    router.push('/(dashboard)/attendance');
-  };
+  const styles = createHomeScreenStyles(colorScheme);
 
   return (
-    <View className={`flex-1 ${
-      colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'
-    }`}>
+    <View style={styles.container}>
       {/* Header with Primary Color Background */}
-      <View className={`pt-12 pb-8 px-6 bg-primary`}>
-        <View className="items-center mb-6">
-          <Text className="text-3xl font-bold text-white mb-2">
+      <View style={styles.header}>
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.welcomeText}>
             Welcome back!
           </Text>
-          <Text className="text-white/90 text-lg">
+          <Text style={styles.userNameText}>
             {user?.fullName || 'Employee'}
           </Text>
         </View>
 
         {/* Employee Basic Details Card */}
-        <View className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-          <View className="flex-row justify-between items-center">
-            <View>
-              <Text className="text-white/80 text-sm mb-1">
+        <View style={styles.detailsCard}>
+          <View style={styles.detailsRow}>
+            <View style={styles.detailColumn}>
+              <Text style={styles.detailLabel}>
                 Employee ID
               </Text>
-              <Text className="text-white font-semibold text-lg">
+              <Text style={styles.detailValue}>
                 {user?.humanReadableId || 'N/A'}
               </Text>
             </View>
-            <View className="items-end">
-              <Text className="text-white/80 text-sm mb-1">
+            <View style={[styles.detailColumn, styles.detailColumnEnd]}>
+              <Text style={styles.detailLabel}>
                 Status
               </Text>
-              <Text className="text-white font-semibold text-lg capitalize">
+              <Text style={styles.detailValue}>
                 {user?.employmentStatus?.toLowerCase() || 'Active'}
               </Text>
             </View>
           </View>
         </View>
-      </View>
-
-      {/* Check In Button */}
-      <View className="px-6 pt-8">
-        <TouchableOpacity
-          onPress={handleCheckIn}
-          className="bg-primary rounded-lg p-6"
-        >
-          <View className="flex-row items-center justify-center">
-            <Clock size={24} color="white" />
-            <Text className="text-white font-bold text-xl ml-3">
-              Check In
-            </Text>
-          </View>
-        </TouchableOpacity>
       </View>
     </View>
   );

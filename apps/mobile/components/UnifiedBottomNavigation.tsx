@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Home, ClipboardList, User, Calendar } from 'lucide-react-native';
+import { Home, ClipboardList, User, Calendar, CheckCircle, XCircle } from 'lucide-react-native';
 
 interface TabItem {
   key: string;
@@ -16,6 +16,8 @@ interface TabItem {
 interface UnifiedBottomNavigationProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  isCheckedIn?: boolean;
+  onCheckInOut?: () => void;
 }
 
 const TabButton: React.FC<{
@@ -25,14 +27,14 @@ const TabButton: React.FC<{
   const getIconColor = () => {
     if (item.disabled) return '#9ca3af';
     return item.isActive
-      ? '#FFB74D' // Saffron color for active state
+      ? '#FF9933' // Saffron color for active state
       : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
   };
 
   const getTextColor = () => {
     if (item.disabled) return '#9ca3af';
     return item.isActive
-      ? '#FFB74D' // Saffron color for active state
+      ? '#FF9933' // Saffron color for active state
       : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
   };
 
@@ -56,7 +58,9 @@ const TabButton: React.FC<{
 
 export default function UnifiedBottomNavigation({
   activeTab = 'home',
-  onTabChange
+  onTabChange,
+  isCheckedIn = false,
+  onCheckInOut,
 }: UnifiedBottomNavigationProps) {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
@@ -121,7 +125,28 @@ export default function UnifiedBottomNavigation({
         borderTopColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb',
       }
     ]}>
-      {tabs.map((tab) => (
+      {tabs.slice(0, 2).map((tab) => (
+        <TabButton key={tab.key} item={tab} colorScheme={colorScheme} />
+      ))}
+
+      {/* Check In/Out Button in Center */}
+      <TouchableOpacity
+        style={[
+          styles.checkInOutButton,
+          {
+            backgroundColor: isCheckedIn ? '#ef4444' : '#10b981', // Red for checkout, green for checkin
+          },
+        ]}
+        onPress={onCheckInOut}
+      >
+        {isCheckedIn ? (
+          <XCircle size={28} color="white" />
+        ) : (
+          <CheckCircle size={28} color="white" />
+        )}
+      </TouchableOpacity>
+
+      {tabs.slice(2).map((tab) => (
         <TabButton key={tab.key} item={tab} colorScheme={colorScheme} />
       ))}
     </View>
@@ -158,5 +183,13 @@ const styles = StyleSheet.create({
   },
   disabledTab: {
     opacity: 0.5,
+  },
+  checkInOutButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -20, // Make it float above the nav bar
   },
 });

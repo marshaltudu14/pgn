@@ -1,14 +1,25 @@
-const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
-const path = require('path');
+const path = require("path");
+const { getDefaultConfig } = require("expo/metro-config");
 
 const projectRoot = __dirname;
+const workspaceRoot = path.resolve(__dirname, "../..");
 
 const config = getDefaultConfig(projectRoot);
 
-// Configure resolver for monorepo
-config.resolver.alias = {
-  '@': path.resolve(projectRoot, '.'),
+// Only watch specific package folders, not the whole repo root
+config.watchFolders = [
+  path.resolve(workspaceRoot, "packages/shared"),
+];
+
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, "node_modules"),
+  path.resolve(workspaceRoot, "node_modules"),
+];
+
+// nativewind compatible transformer
+config.transformer = {
+  ...config.transformer,
+  babelTransformerPath: require.resolve("react-native-css-transformer")
 };
 
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = config;

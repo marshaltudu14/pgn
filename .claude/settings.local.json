@@ -103,7 +103,11 @@
       "Bash(powershell:*)",
       "Bash(cmd:*)",
       "Bash(python:*)",
-      "Bash(set NODE_ENV=test:*)"
+      "Bash(set NODE_ENV=test:*)",
+      "Bash(git restore:*)",
+      "Bash(NODE_PATH=/c/Code/pgn/node_modules node -p \"require(''./metro.config.js'')\":*)",
+      "Bash(mv:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

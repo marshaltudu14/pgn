@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -33,33 +34,51 @@ import { EmploymentDetailsForm } from './employee-form/EmploymentDetailsForm';
 import { RegionalAssignmentForm } from './employee-form/RegionalAssignmentForm';
 import { AuditInfoForm } from './employee-form/AuditInfoForm';
 
-// Form validation schema
+// Enhanced form validation schema with comprehensive error messages
 const employeeFormSchema = z.object({
   first_name: z.string()
-    .min(1, 'First name is required')
+    .min(2, 'First name must be at least 2 characters')
     .max(50, 'First name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes'),
+    .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes')
+    .transform(val => val.trim()),
   last_name: z.string()
-    .min(1, 'Last name is required')
+    .min(2, 'Last name must be at least 2 characters')
     .max(50, 'Last name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes'),
+    .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes')
+    .transform(val => val.trim()),
   email: z.string()
-    .email('Invalid email address')
-    .max(100, 'Email must be less than 100 characters'),
+    .email('Please enter a valid email address')
+    .max(100, 'Email must be less than 100 characters')
+    .transform(val => val.toLowerCase().trim()),
   phone: z.string()
     .optional()
-    .refine((val) => !val || /^[\d\s-()]+$/.test(val), 'Invalid phone number format'),
-  employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']),
+    .refine((val) => !val || /^[\d\s-()]+$/.test(val), 'Phone number can only contain digits, spaces, hyphens, and parentheses')
+    .transform(val => val ? val.replace(/\s+/g, ' ').trim() : val),
+  employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'], {
+    errorMap: () => ({ message: 'Please select a valid employment status' })
+  }),
   can_login: z.boolean(),
   assigned_cities: z.array(z.object({
-    city: z.string(),
-    district: z.string(),
-    state: z.string()
-  })),
+    city: z.string().min(1, 'City name is required'),
+    district: z.string().min(1, 'District name is required'),
+    state: z.string().min(1, 'State name is required')
+  })).min(1, 'At least one city must be assigned'),
   password: z.string()
-    .min(6, 'Password must be at least 6 characters')
+    .min(8, 'Password must be at least 8 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number')
     .optional(), // Optional for editing, but we'll validate it manually for creation
   confirm_password: z.string().optional(),
+}).refine((data) => {
+  // Custom validation for password confirmation
+  if (data.password && data.password !== data.confirm_password) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Passwords do not match',
+  path: ['confirm_password']
 });
 
 type EmployeeFormData = z.infer<typeof employeeFormSchema>;
@@ -95,6 +114,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       password: '',
       confirm_password: '',
     },
+    mode: 'onBlur', // Validate on blur for better UX
   });
 
   useEffect(() => {
@@ -132,19 +152,13 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
       // For new employees, password is required
       if (!isEditing && !data.password) {
-        setError('Password is required for creating new employees');
+        toast.error('Password is required for creating new employees');
         return;
       }
 
-      // Validate password match
-      if (data.password && data.password !== data.confirm_password) {
-        setError('Passwords do not match');
-        return;
-      }
-
-      // Clean phone number - remove +91 prefix, spaces, hyphens, parentheses, ensure 10 digits
+      // Clean phone number - remove formatting, keep digits only
       const cleanPhone = data.phone
-        ? data.phone.replace(/^[\+91]|[\s\-\(\)]/g, '').replace(/^91/, '').slice(0, 10).padEnd(10, '0')
+        ? data.phone.replace(/\D/g, '').slice(-10) // Keep only last 10 digits
         : undefined;
 
       let result;
@@ -161,6 +175,14 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         };
 
         result = await updateEmployee(employee.id, updateData);
+
+        if (result.success) {
+          toast.success('Employee updated successfully!');
+          onOpenChange(false);
+          onSuccess?.(result.data!);
+        } else {
+          toast.error(result.error || 'Failed to update employee');
+        }
       } else {
         const createData: CreateEmployeeRequest = {
           first_name: data.first_name,
@@ -170,22 +192,23 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           employment_status: data.employment_status,
           can_login: data.can_login,
           assigned_cities: data.assigned_cities,
-          password: data.password, // Password only required for creation
+          password: data.password!,
         };
 
         result = await createEmployee(createData);
-      }
 
-      if (result.success) {
-        onOpenChange(false);
-        onSuccess?.(result.data!);
-        form.reset();
-      } else {
-        setError(result.error || `Failed to ${isEditing ? 'update' : 'create'} employee`);
+        if (result.success) {
+          toast.success('Employee created successfully!');
+          onOpenChange(false);
+          onSuccess?.(result.data!);
+          form.reset();
+        } else {
+          toast.error(result.error || 'Failed to create employee');
+        }
       }
     } catch (err) {
-      setError(`An error occurred while ${isEditing ? 'updating' : 'creating'} employee`);
       console.error('Error submitting form:', err);
+      toast.error(`An error occurred while ${isEditing ? 'updating' : 'creating'} employee`);
     } finally {
       setLoading(false);
     }

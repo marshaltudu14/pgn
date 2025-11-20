@@ -3,6 +3,7 @@ import {
   View,
   Text,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { createHomeScreenStyles } from './_styles';
@@ -10,7 +11,8 @@ import { createHomeScreenStyles } from './_styles';
 export default function HomeScreen() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
-  const styles = createHomeScreenStyles(colorScheme);
+  const insets = useSafeAreaInsets();
+  const styles = createHomeScreenStyles(colorScheme, insets.top);
 
   return (
     <View style={styles.container}>

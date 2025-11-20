@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
 
-export const createHomeScreenStyles = (colorScheme: 'light' | 'dark' | null | undefined) => StyleSheet.create({
+export const createHomeScreenStyles = (colorScheme: 'light' | 'dark' | null | undefined, topInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colorScheme === 'dark' ? '#000000' : '#f9fafb',
   },
   header: {
-    paddingTop: 48, // pt-12 (12 * 4)
+    paddingTop: topInset + 48, // Safe area top + pt-12 (12 * 4)
     paddingBottom: 32, // pb-8 (8 * 4)
     paddingHorizontal: 24, // px-6 (6 * 4)
     backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',

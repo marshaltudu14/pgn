@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Home, ClipboardList, User, Calendar, CheckCircle, XCircle } from 'lucide-react-native';
+import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown } from 'lucide-react-native';
 
 interface TabItem {
   key: string;
@@ -140,9 +140,9 @@ export default function UnifiedBottomNavigation({
         onPress={onCheckInOut}
       >
         {isCheckedIn ? (
-          <XCircle size={28} color="white" />
+          <ArrowDown size={28} color="white" />
         ) : (
-          <CheckCircle size={28} color="white" />
+          <ArrowUp size={28} color="white" />
         )}
       </TouchableOpacity>
 

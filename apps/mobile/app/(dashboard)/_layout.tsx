@@ -1,20 +1,25 @@
-import { Slot, useRouter, usePathname } from 'expo-router';
-import { View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AuthGuard } from '@/utils/auth-guard';
 import UnifiedBottomNavigation from '@/components/UnifiedBottomNavigation';
-import { permissionService, AppPermissions } from '@/services/permissions';
-import { useState, useEffect } from 'react';
+import { AppPermissions, permissionService } from '@/services/permissions';
+import { AuthGuard } from '@/utils/auth-guard';
+import { Slot, usePathname, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import PermissionsScreen from '../(auth)/permissions';
 
 function ScreenContentWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={{
-      flex: 1,
-      paddingBottom: insets.bottom + 70 // Account for bottom nav height + safe area
-    }}>
+    <View
+      style={{
+        flex: 1,
+        paddingBottom: insets.bottom + 60, // Account for bottom nav height + safe area (removed the extra 10)
+      }}
+    >
       {children}
     </View>
   );
@@ -39,7 +44,10 @@ function DashboardLayoutContent() {
 
       if (!result.allGranted) {
         // Check if any permissions are denied or undetermined
-        if (result.deniedPermissions.length > 0 || result.undeterminedPermissions.length > 0) {
+        if (
+          result.deniedPermissions.length > 0 ||
+          result.undeterminedPermissions.length > 0
+        ) {
           // Try to request permissions
           const requestResult = await permissionService.requestAllPermissions();
           setPermissions(requestResult.permissions);
@@ -101,7 +109,10 @@ function DashboardLayoutContent() {
   // Show permission screen if permissions are not granted
   if (showPermissionsScreen && permissions) {
     return (
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}>
+      <SafeAreaView
+        style={{ flex: 1 }}
+        edges={['top', 'left', 'right', 'bottom']}
+      >
         <PermissionsScreen
           permissions={permissions}
           onPermissionsGranted={handlePermissionsGranted}
@@ -111,7 +122,7 @@ function DashboardLayoutContent() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
       <ScreenContentWrapper>
         <Slot />
       </ScreenContentWrapper>

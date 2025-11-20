@@ -5,8 +5,8 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#FF9933'; // Saffron color
+const tintColorDark = '#FF9933'; // Saffron color
 
 export const Colors = {
   light: {

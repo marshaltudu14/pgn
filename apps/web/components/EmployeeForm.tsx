@@ -60,7 +60,6 @@ const employeeFormSchema = z.object({
   can_login: z.boolean(),
   assigned_cities: z.array(z.object({
     city: z.string().min(1, 'City name is required'),
-    district: z.string().min(1, 'District name is required'),
     state: z.string().min(1, 'State name is required')
   })).min(1, 'At least one city must be assigned'),
   password: z.string()

@@ -317,7 +317,7 @@ export function EmployeeList({
 
                 {employee.assigned_cities && (employee.assigned_cities as unknown as CityAssignment[]).length > 0 && (
                   <div className="text-sm">
-                    <span className="font-medium">Cities:</span> {(employee.assigned_cities as unknown as CityAssignment[]).map((city: CityAssignment) => `${city.city}, ${city.district}, ${city.state}`).join('; ')}
+                    <span className="font-medium">Cities:</span> {(employee.assigned_cities as unknown as CityAssignment[]).map((city: CityAssignment) => `${city.city}, ${city.state}`).join('; ')}
                   </div>
                 )}
               </div>

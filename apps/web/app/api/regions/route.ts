@@ -14,7 +14,6 @@ export async function GET(request: NextRequest) {
     // Extract filters and pagination
     const filters = {
       state: query.state,
-      district: query.district,
       city: query.city,
     };
 

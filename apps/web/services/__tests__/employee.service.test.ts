@@ -222,7 +222,7 @@ describe('Employee Service', () => {
       phone: '+1234567890',
       employment_status: 'ACTIVE' as EmploymentStatus,
       can_login: true,
-      assigned_cities: [{ city: 'Test City', district: 'Test District', state: 'Test State' }],
+      assigned_cities: [{ city: 'Test City', state: 'Test State' }],
       password: 'securePassword123',
     };
 

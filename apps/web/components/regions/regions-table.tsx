@@ -18,7 +18,6 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Edit, Trash2, MapPin } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -145,7 +144,6 @@ export function RegionsTable({
                 {[...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-28" /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -187,7 +185,6 @@ export function RegionsTable({
             <TableHeader>
               <TableRow>
                 <TableHead>State</TableHead>
-                <TableHead>District</TableHead>
                 <TableHead>City</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -196,13 +193,8 @@ export function RegionsTable({
               {regions.data.map((region) => (
                 <TableRow key={region.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {region.state}
-                      </Badge>
-                    </div>
+                    {region.state}
                   </TableCell>
-                  <TableCell>{region.district}</TableCell>
                   <TableCell>{region.city}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -232,7 +224,7 @@ export function RegionsTable({
                           <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete the region &quot;{region.city}, {region.district}, {region.state}&quot;.
+                              This will permanently delete the region &quot;{region.city}, {region.state}&quot;.
                               This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>

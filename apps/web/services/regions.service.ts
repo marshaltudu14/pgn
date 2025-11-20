@@ -7,7 +7,6 @@ import {
   type PaginationParams,
   type RegionsResponse,
   type StateOption,
-  type DistrictOption,
   type CityOption,
 } from '@pgn/shared';
 
@@ -18,17 +17,16 @@ import {
 export async function createRegion(data: CreateRegionRequest): Promise<Region> {
   const supabase = await createClient();
 
-  // Check for exact duplicates (same state, district, and city)
+  // Check for exact duplicates (same state and city)
   const { data: existingRegion } = await supabase
     .from('regions')
     .select('id')
     .eq('state', data.state)
-    .eq('district', data.district)
     .eq('city', data.city)
     .single();
 
   if (existingRegion) {
-    throw new Error('Region with this state, district, and city already exists');
+    throw new Error('Region with this state and city already exists');
   }
 
   // Create region - Supabase trigger will generate slugs automatically
@@ -36,7 +34,6 @@ export async function createRegion(data: CreateRegionRequest): Promise<Region> {
     .from('regions')
     .insert({
       state: data.state,
-      district: data.district,
       city: data.city,
     })
     .select()
@@ -66,15 +63,11 @@ export async function getRegions(
     .from('regions')
     .select('*', { count: 'exact' })
     .order('state', { ascending: true })
-    .order('district', { ascending: true })
     .order('city', { ascending: true });
 
   // Apply filters
   if (filters.state) {
     query = query.eq('state', filters.state);
-  }
-  if (filters.district) {
-    query = query.eq('district', filters.district);
   }
   if (filters.city) {
     query = query.ilike('city', `%${filters.city}%`);
@@ -137,10 +130,6 @@ export async function updateRegion(
   // Prepare update data - Supabase trigger will update slugs automatically
   const updateData: Partial<UpdateRegionRequest> = {};
 
-  if (data.district) {
-    updateData.district = data.district;
-  }
-
   if (data.city) {
     updateData.city = data.city;
   }
@@ -150,13 +139,12 @@ export async function updateRegion(
     .from('regions')
     .select('id')
     .eq('state', existingRegion.state)
-    .eq('district', data.district || existingRegion.district)
     .eq('city', data.city || existingRegion.city)
     .neq('id', id)
     .single();
 
   if (duplicateCheck) {
-    throw new Error('Region with this combination already exists');
+    throw new Error('Region with this state and city already exists');
   }
 
   // Update region
@@ -219,38 +207,10 @@ export async function getStates(): Promise<StateOption[]> {
 }
 
 /**
- * Get districts by state
+ * Get cities by state
  */
-export async function getDistrictsByState(
+export async function getCitiesByState(
   state: string
-): Promise<DistrictOption[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from('regions')
-    .select('district, district_slug')
-    .eq('state', state)
-    .not('district', 'is', null);
-
-  if (error) {
-    console.error('Error fetching districts:', error);
-    throw new Error('Failed to fetch districts');
-  }
-
-  // Remove duplicates
-  const uniqueDistricts = Array.from(
-    new Map((data || []).map(item => [item.district, item])).values()
-  );
-
-  return uniqueDistricts;
-}
-
-/**
- * Get cities by district and state
- */
-export async function getCitiesByDistrict(
-  state: string,
-  district: string
 ): Promise<CityOption[]> {
   const supabase = await createClient();
 
@@ -258,7 +218,6 @@ export async function getCitiesByDistrict(
     .from('regions')
     .select('city, city_slug')
     .eq('state', state)
-    .eq('district', district)
     .not('city', 'is', null);
 
   if (error) {
@@ -266,11 +225,16 @@ export async function getCitiesByDistrict(
     throw new Error('Failed to fetch cities');
   }
 
-  return data || [];
+  // Remove duplicates
+  const uniqueCities = Array.from(
+    new Map((data || []).map(item => [item.city, item])).values()
+  );
+
+  return uniqueCities;
 }
 
 /**
- * Search regions by text (searches across all fields)
+ * Search regions by text (searches across state and city)
  */
 export async function searchRegions(
   searchTerm: string,
@@ -284,9 +248,8 @@ export async function searchRegions(
   const { data, error, count } = await supabase
     .from('regions')
     .select('*', { count: 'exact' })
-    .or(`state.ilike.%${searchTerm}%,district.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
+    .or(`state.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
     .order('state', { ascending: true })
-    .order('district', { ascending: true })
     .order('city', { ascending: true })
     .range(offset, offset + limit - 1);
 

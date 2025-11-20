@@ -8,7 +8,6 @@ import {
   PaginationParams,
   RegionsResponse,
   StateOption,
-  DistrictOption,
   CityOption,
 } from '@pgn/shared';
 
@@ -16,7 +15,6 @@ interface RegionsStore {
   // State
   regions: RegionsResponse;
   states: StateOption[];
-  districts: DistrictOption[];
   cities: CityOption[];
   isLoading: boolean;
   isCreating: boolean;
@@ -32,8 +30,7 @@ interface RegionsStore {
   updateRegion: (id: string, data: UpdateRegionRequest) => Promise<Region>;
   deleteRegion: (id: string) => Promise<void>;
   fetchStates: () => Promise<void>;
-  fetchDistricts: (state: string) => Promise<void>;
-  fetchCities: (state: string, district: string) => Promise<void>;
+  fetchCities: (state: string) => Promise<void>;
   searchRegions: (searchTerm: string, pagination?: PaginationParams) => Promise<void>;
   setFilter: (filter: Partial<RegionFilter>) => void;
   setPagination: (pagination: Partial<PaginationParams>) => void;
@@ -55,7 +52,6 @@ export const useRegionsStore = create<RegionsStore>()(
       // Initial state
       regions: initialState,
       states: [],
-      districts: [],
       cities: [],
       isLoading: false,
       isCreating: false,
@@ -75,7 +71,6 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const queryParams = new URLSearchParams();
           if (filters.state) queryParams.append('state', filters.state);
-          if (filters.district) queryParams.append('district', filters.district);
           if (filters.city) queryParams.append('city', filters.city);
           if (pagination.page) queryParams.append('page', pagination.page.toString());
           if (pagination.limit) queryParams.append('limit', pagination.limit.toString());
@@ -222,26 +217,10 @@ export const useRegionsStore = create<RegionsStore>()(
         }
       },
 
-      // Fetch districts by state
-      fetchDistricts: async (state: string) => {
+      // Fetch cities by state
+      fetchCities: async (state: string) => {
         try {
-          const response = await fetch(`/api/regions/districts/${encodeURIComponent(state)}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch districts');
-          }
-          const districts = await response.json();
-          set({ districts });
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Failed to fetch districts' });
-        }
-      },
-
-      // Fetch cities by state and district
-      fetchCities: async (state: string, district: string) => {
-        try {
-          const response = await fetch(
-            `/api/regions/cities/${encodeURIComponent(state)}/${encodeURIComponent(district)}`
-          );
+          const response = await fetch(`/api/regions/cities/${encodeURIComponent(state)}`);
           if (!response.ok) {
             throw new Error('Failed to fetch cities');
           }
@@ -306,7 +285,6 @@ export const useRegionsStore = create<RegionsStore>()(
         set({
           regions: initialState,
           states: [],
-          districts: [],
           cities: [],
           isLoading: false,
           isCreating: false,

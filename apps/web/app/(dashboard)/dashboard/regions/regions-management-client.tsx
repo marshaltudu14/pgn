@@ -91,16 +91,15 @@ export default function RegionsManagementClient() {
   const handleCreateRegion = async (data: CreateRegionRequest | UpdateRegionRequest) => {
     try {
       // Ensure we have all required fields for creation
-      if ('state' in data && data.state && data.district && data.city) {
+      if ('state' in data && data.state && data.city) {
         await createRegion({
           state: data.state,
-          district: data.district,
           city: data.city
         });
         setShowCreateModal(false);
         toast.success('Region created successfully');
       } else {
-        toast.error('State, district, and city are required');
+        toast.error('State and city are required');
       }
     } catch (error) {
       console.error('Failed to create region:', error);
@@ -217,14 +216,12 @@ export default function RegionsManagementClient() {
         open={!!editingRegion}
         onOpenChange={(open) => !open && setEditingRegion(null)}
         onSubmit={(data) => editingRegion && handleUpdateRegion(editingRegion.id, {
-          district: data.district,
           city: data.city
         })}
         isSubmitting={isUpdating}
         states={states}
         initialData={editingRegion ? {
           state: editingRegion.state,
-          district: editingRegion.district,
           city: editingRegion.city,
         } : undefined}
         title="Edit Region"

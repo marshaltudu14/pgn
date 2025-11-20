@@ -59,15 +59,14 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   const allCityDistrictPairs = useMemo(() => {
     if (!regions.data || !regions.data.length) return [];
 
-    const pairs: Array<{id: string, city: string, district: string, state: string, display: string}> = [];
+    const pairs: Array<{id: string, city: string, state: string, display: string}> = [];
 
     regions.data.forEach((region, index) => {
       pairs.push({
         id: `city-${index}`,
         city: region.city,
-        district: region.district,
         state: region.state,
-        display: `${region.city}, ${region.district}, ${region.state}`
+        display: `${region.city}, ${region.state}`
       });
     });
 
@@ -85,9 +84,9 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       const searchTerms = query.split(/\s+/).filter(term => term.length > 0);
 
       filtered = allCityDistrictPairs.filter(pair => {
-        const fullText = `${pair.city} ${pair.district} ${pair.state}`.toLowerCase();
+        const fullText = `${pair.city} ${pair.state}`.toLowerCase();
 
-        // Check if all search terms appear in the full text (city, district, state)
+        // Check if all search terms appear in the full text (city, state)
         return searchTerms.every(term => fullText.includes(term));
       });
     }
@@ -96,10 +95,10 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   }, [regions.data, allCityDistrictPairs, searchQuery, displayLimit]);
 
   // Handle city selection
-  const handleCitySelect = (city: string, district: string, state: string) => {
+  const handleCitySelect = (city: string, state: string) => {
     const currentCities = [...selectedCities];
     const existingIndex = currentCities.findIndex(
-      c => c.city === city && c.district === district
+      c => c.city === city
     );
 
     if (existingIndex >= 0) {
@@ -107,7 +106,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       currentCities.splice(existingIndex, 1);
     } else {
       // Add if not selected
-      currentCities.push({ city, district, state });
+      currentCities.push({ city, state });
     }
 
     form.setValue('assigned_cities', currentCities);
@@ -195,14 +194,14 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                         <CommandGroup>
                           {filteredCities.map((pair) => {
                             const isSelected = selectedCities.some(
-                              c => c.city === pair.city && c.district === pair.district
+                              c => c.city === pair.city
                             );
 
                             return (
                               <CommandItem
                                 key={pair.id}
                                 value={pair.display}
-                                onSelect={() => handleCitySelect(pair.city, pair.district, pair.state)}
+                                onSelect={() => handleCitySelect(pair.city, pair.state)}
                               >
                                 <div className={cn(
                                   "mr-2 h-4 w-4 rounded-sm border border-primary",
@@ -233,11 +232,11 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
                   {selectedCities.map((cityAssignment, index) => (
                     <Badge
-                      key={`${cityAssignment.city}-${cityAssignment.district}-${cityAssignment.state}-${index}`}
+                      key={`${cityAssignment.city}-${cityAssignment.state}-${index}`}
                       variant="secondary"
                       className="text-xs justify-between items-center gap-1 px-2 py-1"
                     >
-                      <span className="truncate flex-1">{cityAssignment.city}, {cityAssignment.district}, {cityAssignment.state}</span>
+                      <span className="truncate flex-1">{cityAssignment.city}, {cityAssignment.state}</span>
                       <button
                         type="button"
                         className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-secondary-80"

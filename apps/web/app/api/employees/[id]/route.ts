@@ -87,9 +87,7 @@ export async function PUT(
       phone: body.phone?.trim(),
       employment_status: body.employment_status,
       can_login: body.can_login,
-      primary_region: body.primary_region?.trim(),
-      region_code: body.region_code?.trim(),
-      assigned_regions: body.assigned_regions
+      assigned_cities: body.assigned_cities
     };
 
     // Update employee
@@ -236,9 +234,7 @@ export async function PATCH(
       email: body.email?.trim(),
       phone: body.phone?.trim(),
       can_login: body.can_login,
-      primary_region: body.primary_region?.trim(),
-      region_code: body.region_code?.trim(),
-      assigned_regions: body.assigned_regions
+      assigned_cities: body.assigned_cities
     };
 
     // Update employee

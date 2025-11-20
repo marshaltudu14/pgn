@@ -22,7 +22,6 @@ import {
   CreateEmployeeRequest,
   UpdateEmployeeRequest,
   ChangeEmploymentStatusRequest,
-  RegionalAssignmentRequest,
   EmployeeListParams,
   EmploymentStatus
 } from '@pgn/shared';
@@ -223,7 +222,7 @@ describe('Employee Service', () => {
       phone: '+1234567890',
       employment_status: 'ACTIVE' as EmploymentStatus,
       can_login: true,
-      assigned_regions: ['Region1', 'Region2'],
+      assigned_cities: [{ city: 'Test City', district: 'Test District', state: 'Test State' }],
       password: 'securePassword123',
     };
 
@@ -309,6 +308,11 @@ describe('Employee Service', () => {
         error: undefined
       } as any);
 
+      (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
+        success: false,
+        data: null
+      });
+
       jest.spyOn({ generateHumanReadableUserId }, 'generateHumanReadableUserId')
         .mockResolvedValue('PGN-2024-0002');
 
@@ -350,7 +354,7 @@ describe('Employee Service', () => {
           phone: null,
           employment_status: 'ACTIVE',
           can_login: true,
-          assigned_regions: null
+          assigned_cities: []
         })
       );
     });
@@ -1522,7 +1526,7 @@ describe('Employee Service', () => {
     it('should update with null values when explicitly provided', async () => {
       const updateWithNulls: UpdateEmployeeRequest = {
         phone: null as any,
-        assigned_regions: null as any
+        assigned_cities: null as any
       };
 
       mockSupabaseClient.from.mockReturnValue({
@@ -1530,7 +1534,7 @@ describe('Employee Service', () => {
           eq: jest.fn().mockReturnValue({
             select: jest.fn().mockReturnValue({
               single: jest.fn().mockResolvedValue({
-                data: { ...updatedEmployee, phone: null, assigned_regions: null },
+                data: { ...updatedEmployee, phone: null, assigned_cities: null },
                 error: null
               })
             })
@@ -1544,7 +1548,7 @@ describe('Employee Service', () => {
       const updateDataCalled = updateCall.mock.calls[0][0];
 
       expect(updateDataCalled.phone).toBeNull();
-      expect(updateDataCalled.assigned_regions).toBeNull();
+      expect(updateDataCalled.assigned_cities).toBeNull();
     });
 
     it('should handle empty update object', async () => {
@@ -1825,15 +1829,15 @@ describe('Employee Service', () => {
   });
 
   describe('updateRegionalAssignments', () => {
-    const regionalAssignment: RegionalAssignmentRequest = {
-      assigned_regions: ['North', 'South'],
+    const regionalAssignment = {
+      assigned_cities: [{ city: 'North City', district: 'North District', state: 'North State' }],
     };
 
     it('should update assigned_regions field', async () => {
       // Mock the database response for updateEmployee called within updateRegionalAssignments
       const mockUpdatedEmployee = {
         id: 'emp-123',
-        assigned_regions: ['North', 'South'],
+        assigned_cities: [{ city: 'North City', district: 'North District', state: 'North State' }],
         updated_at: new Date().toISOString()
       };
 
@@ -1858,21 +1862,21 @@ describe('Employee Service', () => {
       const updateCall = mockSupabaseClient.from().update;
       expect(updateCall).toHaveBeenCalledWith(
         expect.objectContaining({
-          assigned_regions: ['North', 'South'],
+          assigned_cities: [{ city: 'North City', district: 'North District', state: 'North State' }],
           updated_at: expect.any(String)
         })
       );
     });
 
     it('should handle partial regional assignment updates', async () => {
-      const partialAssignment: RegionalAssignmentRequest = {
-        assigned_regions: ['East']
+      const partialAssignment = {
+        assigned_cities: [{ city: 'East City', district: 'East District', state: 'East State' }]
       };
 
       // Mock the database response
       const mockUpdatedEmployee = {
         id: 'emp-123',
-        assigned_regions: ['East'],
+        assigned_cities: [{ city: 'East City', district: 'East District', state: 'East State' }],
         updated_at: new Date().toISOString()
       };
 
@@ -1897,15 +1901,15 @@ describe('Employee Service', () => {
       const updateCall = mockSupabaseClient.from().update;
       expect(updateCall).toHaveBeenCalledWith(
         expect.objectContaining({
-          assigned_regions: ['East'],
+          assigned_cities: [{ city: 'East City', district: 'East District', state: 'East State' }],
           updated_at: expect.any(String)
         })
       );
     });
 
     it('should handle empty assigned_regions array', async () => {
-      const emptyRegionsAssignment: RegionalAssignmentRequest = {
-        assigned_regions: []
+      const emptyRegionsAssignment = {
+        assigned_cities: []
       };
 
       const mockUpdate = jest.fn().mockReturnValue({
@@ -1914,7 +1918,7 @@ describe('Employee Service', () => {
             single: jest.fn().mockResolvedValue({
               data: {
                 id: 'emp-123',
-                assigned_regions: [],
+                assigned_cities: [],
                 updated_at: new Date().toISOString()
               },
               error: null
@@ -1929,7 +1933,7 @@ describe('Employee Service', () => {
 
       const result = await updateRegionalAssignments('emp-123', emptyRegionsAssignment);
 
-      expect(result.assigned_regions).toEqual([]);
+      expect(result.assigned_cities).toEqual([]);
     });
   });
 

@@ -59,11 +59,7 @@ describe('Supabase Admin Utility Functions', () => {
         data: mockUser
       });
 
-      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith({
-        filters: {
-          email: 'test@example.com'
-        }
-      });
+      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith();
     });
 
     it('should return null when user not found', async () => {
@@ -81,11 +77,7 @@ describe('Supabase Admin Utility Functions', () => {
         data: null
       });
 
-      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith({
-        filters: {
-          email: 'notfound@example.com'
-        }
-      });
+      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith();
     });
 
     it('should handle errors', async () => {
@@ -110,11 +102,7 @@ describe('Supabase Admin Utility Functions', () => {
 
       await getUserByEmail('  Test@Example.COM  ');
 
-      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith({
-        filters: {
-          email: 'test@example.com'
-        }
-      });
+      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith();
     });
   });
 
@@ -148,11 +136,7 @@ describe('Supabase Admin Utility Functions', () => {
       });
 
       // Verify user was found
-      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith({
-        filters: {
-          email: 'test@example.com'
-        }
-      });
+      expect(mockSupabaseAdmin.auth.admin.listUsers).toHaveBeenCalledWith();
 
       // Verify password was updated with correct user ID
       expect(mockSupabaseAdmin.auth.admin.updateUserById).toHaveBeenCalledWith(

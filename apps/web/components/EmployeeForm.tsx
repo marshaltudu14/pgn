@@ -16,8 +16,9 @@ import {
 import {
   Employee,
   EmploymentStatus,
-  CreateEmployeeRequest,
   UpdateEmployeeRequest,
+  CreateEmployeeRequest,
+  CityAssignment,
 } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import {
@@ -54,14 +55,14 @@ const employeeFormSchema = z.object({
     city: z.string(),
     district: z.string(),
     state: z.string()
-  })).default([]),
+  })),
   password: z.string()
     .min(6, 'Password must be at least 6 characters')
     .optional(), // Optional for editing, but we'll validate it manually for creation
   confirm_password: z.string().optional(),
 });
 
-type EmployeeFormDataType = z.infer<typeof employeeFormSchema>;
+type EmployeeFormData = z.infer<typeof employeeFormSchema>;
 
 interface EmployeeFormProps {
   open: boolean;
@@ -81,7 +82,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
   // This helps prevent hydration mismatches by ensuring clean state
   const formKey = isEditing ? employee?.id || 'edit' : 'create';
 
-  const form = useForm<EmployeeFormDataType>({
+  const form = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeFormSchema),
     defaultValues: {
       first_name: '',
@@ -105,7 +106,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         phone: employee.phone || '',
         employment_status: employee.employment_status as EmploymentStatus,
         can_login: employee.can_login ?? true,
-        assigned_cities: (employee as any).assigned_cities || [],
+        assigned_cities: (employee.assigned_cities as unknown as CityAssignment[]) || [],
         password: '', // Don't pre-fill password
         confirm_password: '', // Don't pre-fill confirm password
       });
@@ -124,7 +125,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
     }
   }, [employee, open, form]);
 
-  const onSubmit = async (data: EmployeeFormDataType) => {
+  const onSubmit = async (data: EmployeeFormData) => {
     try {
       setLoading(true);
       setError(null);
@@ -149,7 +150,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       let result;
 
       if (isEditing && employee) {
-        const updateData: any = {
+        const updateData: UpdateEmployeeRequest = {
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,
@@ -161,7 +162,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
         result = await updateEmployee(employee.id, updateData);
       } else {
-        const createData: any = {
+        const createData: CreateEmployeeRequest = {
           first_name: data.first_name,
           last_name: data.last_name,
           email: data.email,

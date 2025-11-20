@@ -21,7 +21,6 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from '@/components/ui/command';
 import {
   Popover,
@@ -30,10 +29,9 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, X, ChevronDown, Check } from 'lucide-react';
 import { EmployeeFormData } from './types';
-import { RegionsData, getAllStates, getAllDistricts, getAllCities, getDistrictsByState, getCitiesByDistrict } from '@pgn/shared';
+import { RegionsData } from '@pgn/shared';
 import { cn } from '@/lib/utils';
 
 interface RegionalAssignmentFormProps {
@@ -102,9 +100,6 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       const searchTerms = query.split(/\s+/).filter(term => term.length > 0);
 
       filtered = allCityDistrictPairs.filter(pair => {
-        const cityLower = pair.city.toLowerCase();
-        const districtLower = pair.district.toLowerCase();
-        const stateLower = pair.state.toLowerCase();
         const fullText = `${pair.city} ${pair.district} ${pair.state}`.toLowerCase();
 
         // Check if all search terms appear in the full text (city, district, state)
@@ -184,7 +179,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
         <FormField
           control={form.control}
           name="assigned_cities"
-          render={({ field }) => (
+          render={({ field: _field }) => (
             <FormItem>
               <FormLabel>Assigned Cities</FormLabel>
               <FormControl>

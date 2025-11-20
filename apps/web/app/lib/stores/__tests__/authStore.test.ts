@@ -38,13 +38,11 @@ describe('useAuthStore', () => {
     fullName: 'Test User',
     email: 'test@example.com',
     department: 'Engineering',
-    position: 'Software Engineer',
     region: 'North',
     employmentStatus: 'ACTIVE',
     canLogin: true,
-    referencePhotoUrl: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    profilePhotoUrl: undefined,
+    startDate: new Date().toISOString()
   };
 
   const mockAdminUser: AuthenticatedUser = {

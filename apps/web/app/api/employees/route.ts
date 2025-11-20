@@ -89,9 +89,7 @@ export async function POST(request: NextRequest) {
       phone: body.phone?.trim(),
       employment_status: body.employment_status || 'ACTIVE',
       can_login: body.can_login ?? true,
-      primary_region: body.primary_region?.trim(),
-      region_code: body.region_code?.trim(),
-      assigned_regions: body.assigned_regions || [],
+      assigned_cities: body.assigned_cities || [],
       password: body.password // Will be handled by auth system
     };
 

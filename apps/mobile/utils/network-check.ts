@@ -62,7 +62,7 @@ export class NetworkMonitor {
     this.updateNetworkStatus(state);
   };
 
-  private async updateNetworkStatus(netInfoState?: NetInfoState): Promise<void> {
+  protected async updateNetworkStatus(netInfoState?: NetInfoState): Promise<void> {
     try {
       const state = netInfoState || (await NetInfo.fetch());
 

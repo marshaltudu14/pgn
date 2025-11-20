@@ -106,18 +106,17 @@ export async function updateUserEmail(userId: string, newEmail: string) {
 export async function getUserByEmail(email: string) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
-      filters: {
-        email: email.toLowerCase().trim()
-      }
-    });
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
 
     if (error) {
       throw error;
     }
 
-    // Return the first user if found, otherwise return null
-    return { success: true, data: data.users.length > 0 ? data.users[0] : null };
+    // Find user by email
+    const user = data.users.find(u => u.email === email.toLowerCase().trim());
+
+    // Return the user if found, otherwise return null
+    return { success: true, data: user || null };
   } catch (error) {
     console.error('Error getting user by email:', error);
     return { success: false, error };

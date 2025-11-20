@@ -7,11 +7,11 @@ import {
   CreateEmployeeRequest,
   UpdateEmployeeRequest,
   ChangeEmploymentStatusRequest,
-  RegionalAssignmentRequest,
   EmployeeListParams,
-  EmployeeListResponse
+  EmployeeListResponse,
+  CityAssignment
 } from '@pgn/shared';
-import { Database, TablesInsert, TablesUpdate } from '@pgn/shared/src/types/supabase';
+import { Database, TablesInsert, TablesUpdate, Json } from '@pgn/shared/src/types/supabase';
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
@@ -124,7 +124,7 @@ export async function createEmployee(
     const humanReadableUserId = await generateHumanReadableUserId();
 
     // Step 2: Create employee record with auth user ID as the primary key
-    const employeeData: any = {
+    const employeeData: EmployeeInsert = {
       id: authUserId, // Use auth user ID directly as employee ID
       human_readable_user_id: humanReadableUserId,
       first_name: createData.first_name,
@@ -133,7 +133,7 @@ export async function createEmployee(
       phone: createData.phone || null,
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
-      assigned_cities: createData.assigned_cities || []
+      assigned_cities: (createData.assigned_cities as unknown as Json) || []
     };
 
     const { data, error } = await supabase
@@ -330,7 +330,7 @@ export async function updateEmployee(
     const supabase = await createClient();
 
     // Prepare update data for database using proper types
-    const employeeData: any = {
+    const employeeData: EmployeeUpdate = {
       updated_at: new Date().toISOString()
     };
 
@@ -340,7 +340,7 @@ export async function updateEmployee(
     if (updateData.phone !== undefined) employeeData.phone = updateData.phone;
     if (updateData.employment_status !== undefined) employeeData.employment_status = updateData.employment_status;
     if (updateData.can_login !== undefined) employeeData.can_login = updateData.can_login;
-    if (updateData.assigned_cities !== undefined) employeeData.assigned_cities = updateData.assigned_cities;
+    if (updateData.assigned_cities !== undefined) employeeData.assigned_cities = (updateData.assigned_cities as unknown as Json);
 
     const { data, error } = await supabase
       .from('employees')
@@ -393,11 +393,11 @@ export async function changeEmploymentStatus(
  */
 export async function updateRegionalAssignments(
   id: string,
-  regionalAssignment: RegionalAssignmentRequest
+  regionalAssignment: { assigned_cities?: CityAssignment[] }
 ): Promise<Employee> {
   try {
     const updateData: UpdateEmployeeRequest = {
-      assigned_regions: regionalAssignment.assigned_regions
+      assigned_cities: regionalAssignment.assigned_cities
     };
 
     return await updateEmployee(id, updateData);

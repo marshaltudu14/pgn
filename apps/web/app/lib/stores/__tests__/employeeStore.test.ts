@@ -3,7 +3,8 @@
  */
 
 import { useEmployeeStore } from '../employeeStore';
-import { Employee, EmploymentStatus, CreateEmployeeRequest, UpdateEmployeeRequest } from '@pgn/shared';
+import { CreateEmployeeRequest, UpdateEmployeeRequest } from '@pgn/shared';
+import { Database } from '@pgn/shared';
 
 // Mock the UI store
 const mockShowNotification = jest.fn();
@@ -19,48 +20,56 @@ jest.mock('../uiStore', () => ({
 global.fetch = jest.fn();
 
 describe('useEmployeeStore', () => {
-  const mockEmployee1: Employee = {
+  const mockEmployee1: Database['public']['Tables']['employees']['Row'] = {
     id: 'emp-1',
-    humanReadableId: 'PGN-2024-0001',
-    fullName: 'John Doe',
+    human_readable_user_id: 'PGN-2024-0001',
+    first_name: 'John',
+    last_name: 'Doe',
     email: 'john@example.com',
-    department: 'Engineering',
-    position: 'Software Engineer',
-    region: 'North',
-    employmentStatus: 'ACTIVE',
-    canLogin: true,
-    referencePhotoUrl: null,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z'
+    phone: null,
+    employment_status: 'ACTIVE',
+    can_login: true,
+    assigned_cities: null,
+    device_info: null,
+    face_embedding: '',
+    reference_photo_url: '',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    employment_status_changed_at: null,
+    employment_status_changed_by: null
   };
 
-  const mockEmployee2: Employee = {
+  const mockEmployee2: Database['public']['Tables']['employees']['Row'] = {
     id: 'emp-2',
-    humanReadableId: 'PGN-2024-0002',
-    fullName: 'Jane Smith',
+    human_readable_user_id: 'PGN-2024-0002',
+    first_name: 'Jane',
+    last_name: 'Smith',
     email: 'jane@example.com',
-    department: 'Sales',
-    position: 'Sales Manager',
-    region: 'South',
-    employmentStatus: 'ACTIVE',
-    canLogin: true,
-    referencePhotoUrl: null,
-    createdAt: '2024-01-02T00:00:00Z',
-    updatedAt: '2024-01-02T00:00:00Z'
+    phone: null,
+    employment_status: 'ACTIVE',
+    can_login: true,
+    assigned_cities: null,
+    device_info: null,
+    face_embedding: '',
+    reference_photo_url: '',
+    created_at: '2024-01-02T00:00:00Z',
+    updated_at: '2024-01-02T00:00:00Z',
+    employment_status_changed_at: null,
+    employment_status_changed_by: null
   };
 
   const mockCreateEmployeeData: CreateEmployeeRequest = {
-    fullName: 'New Employee',
+    first_name: 'New',
+    last_name: 'Employee',
     email: 'new@example.com',
-    department: 'HR',
-    position: 'HR Manager',
-    region: 'East',
+    employment_status: 'ACTIVE',
+    can_login: true,
     password: 'password123'
   };
 
   const mockUpdateEmployeeData: UpdateEmployeeRequest = {
-    fullName: 'Updated Employee',
-    position: 'Senior Developer'
+    first_name: 'Updated',
+    last_name: 'Employee'
   };
 
   beforeEach(() => {
@@ -212,12 +221,12 @@ describe('useEmployeeStore', () => {
 
       await store.fetchEmployees({
         primary_region: 'North',
-        sort_by: 'fullName',
+        sort_by: 'first_name',
         sort_order: 'asc'
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/employees?page=2&limit=10&search=John&employment_status=ACTIVE&primary_region=North&sort_by=fullName&sort_order=asc'
+        '/api/employees?page=2&limit=10&search=John&employment_status=ACTIVE&primary_region=North&sort_by=first_name&sort_order=asc'
       );
     });
 
@@ -336,7 +345,7 @@ describe('useEmployeeStore', () => {
 
   describe('updateEmployee', () => {
     it('should successfully update employee', async () => {
-      const updatedEmployee = { ...mockEmployee1, fullName: 'Updated Name' };
+      const updatedEmployee = { ...mockEmployee1, first_name: 'Updated', last_name: 'Name' };
 
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -349,15 +358,15 @@ describe('useEmployeeStore', () => {
       const store = useEmployeeStore.getState();
 
       // Set initial state with employees
-      store.setEmployees([mockEmployee1, mockEmployee2]);
+      useEmployeeStore.setState({ employees: [mockEmployee1, mockEmployee2] });
       store.setSelectedEmployee(mockEmployee1);
 
       const result = await store.updateEmployee(mockEmployee1.id, mockUpdateEmployeeData);
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual(updatedEmployee);
-      expect(useEmployeeStore.getState().employees[0].fullName).toBe('Updated Name');
-      expect(useEmployeeStore.getState().selectedEmployee?.fullName).toBe('Updated Name');
+      expect(useEmployeeStore.getState().employees[0].first_name).toBe('Updated');
+      expect(useEmployeeStore.getState().selectedEmployee?.first_name).toBe('Updated');
       expect(mockShowNotification).toHaveBeenCalledWith('Employee updated successfully', 'success');
     });
 
@@ -381,7 +390,7 @@ describe('useEmployeeStore', () => {
 
   describe('updateEmploymentStatus', () => {
     it('should successfully update employment status', async () => {
-      const updatedEmployee = { ...mockEmployee1, employmentStatus: 'INACTIVE' as EmploymentStatus };
+      const updatedEmployee = { ...mockEmployee1, employment_status: 'SUSPENDED' };
 
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -394,17 +403,18 @@ describe('useEmployeeStore', () => {
       const store = useEmployeeStore.getState();
 
       // Set initial state with employees
-      store.setEmployees([mockEmployee1, mockEmployee2]);
+      useEmployeeStore.setState({ employees: [mockEmployee1, mockEmployee2] });
       store.setSelectedEmployee(mockEmployee1);
 
       const result = await store.updateEmploymentStatus(mockEmployee1.id, {
-        employmentStatus: 'INACTIVE',
-        reason: 'Resigned'
+        employment_status: 'SUSPENDED',
+        reason: 'Resigned',
+        changed_by: 'admin'
       });
 
       expect(result.success).toBe(true);
-      expect(useEmployeeStore.getState().employees[0].employmentStatus).toBe('INACTIVE');
-      expect(useEmployeeStore.getState().selectedEmployee?.employmentStatus).toBe('INACTIVE');
+      expect(useEmployeeStore.getState().employees[0].employment_status).toBe('SUSPENDED');
+      expect(useEmployeeStore.getState().selectedEmployee?.employment_status).toBe('SUSPENDED');
       expect(mockShowNotification).toHaveBeenCalledWith('Employment status updated successfully', 'success');
     });
 
@@ -419,8 +429,9 @@ describe('useEmployeeStore', () => {
 
       const store = useEmployeeStore.getState();
       const result = await store.updateEmploymentStatus(mockEmployee1.id, {
-        employmentStatus: 'INACTIVE',
-        reason: 'Resigned'
+        employment_status: 'SUSPENDED',
+        reason: 'Resigned',
+        changed_by: 'admin'
       });
 
       expect(result.success).toBe(false);
@@ -502,13 +513,13 @@ describe('useEmployeeStore', () => {
       store.setFilters({
         search: 'test search',
         status: 'ACTIVE',
-        sortBy: 'fullName'
+        sortBy: 'first_name'
       });
 
       const filters = useEmployeeStore.getState().filters;
       expect(filters.search).toBe('test search');
       expect(filters.status).toBe('ACTIVE');
-      expect(filters.sortBy).toBe('fullName');
+      expect(filters.sortBy).toBe('first_name');
       // Should preserve other filters
       expect(filters.sortOrder).toBe('desc');
     });
@@ -548,7 +559,7 @@ describe('useEmployeeStore', () => {
         search: 'test',
         status: 'ACTIVE',
         primaryRegion: 'North',
-        sortBy: 'fullName',
+        sortBy: 'first_name',
         sortOrder: 'asc'
       });
 
@@ -642,7 +653,7 @@ describe('useEmployeeStore', () => {
 
   describe('optimistic updates', () => {
     it('should optimistically add new employee to list', async () => {
-      const newEmployee = { ...mockEmployee1, id: 'new-emp', fullName: 'New Employee Name' };
+      const newEmployee = { ...mockEmployee1, id: 'new-emp', first_name: 'New', last_name: 'Employee' };
 
       (fetch as jest.Mock)
         .mockResolvedValueOnce({
@@ -667,7 +678,7 @@ describe('useEmployeeStore', () => {
         });
 
       const store = useEmployeeStore.getState();
-      store.setEmployees([mockEmployee1]);
+      useEmployeeStore.setState({ employees: [mockEmployee1] });
 
       // Start the creation process
       const createPromise = store.createEmployee(mockCreateEmployeeData);
@@ -682,7 +693,7 @@ describe('useEmployeeStore', () => {
     });
 
     it('should optimistically update employee in list', async () => {
-      const updatedEmployee = { ...mockEmployee1, fullName: 'Updated Name' };
+      const updatedEmployee = { ...mockEmployee1, first_name: 'Updated', last_name: 'Name' };
 
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -693,20 +704,20 @@ describe('useEmployeeStore', () => {
       });
 
       const store = useEmployeeStore.getState();
-      store.setEmployees([mockEmployee1, mockEmployee2]);
+      useEmployeeStore.setState({ employees: [mockEmployee1, mockEmployee2] });
       store.setSelectedEmployee(mockEmployee1);
 
-      await store.updateEmployee(mockEmployee1.id, { fullName: 'Updated Name' });
+      await store.updateEmployee(mockEmployee1.id, { first_name: 'Updated' });
 
       // Should immediately update in list (optimistic)
-      expect(useEmployeeStore.getState().employees[0].fullName).toBe('Updated Name');
-      expect(useEmployeeStore.getState().selectedEmployee?.fullName).toBe('Updated Name');
+      expect(useEmployeeStore.getState().employees[0].first_name).toBe('Updated');
+      expect(useEmployeeStore.getState().selectedEmployee?.first_name).toBe('Updated');
     });
   });
 
   describe('loading states', () => {
     it('should set loading state during fetchEmployees', async () => {
-      let resolveFetch: (value: any) => void;
+      let resolveFetch: (value: { ok: boolean; json: () => Promise<unknown> }) => void = () => {};
       (fetch as jest.Mock).mockReturnValueOnce(new Promise(resolve => {
         resolveFetch = resolve;
       }));
@@ -740,13 +751,4 @@ describe('useEmployeeStore', () => {
   });
 });
 
-// Add helper methods to store for testing
-beforeAll(() => {
-  const store = useEmployeeStore.getState();
-  (store as any).setEmployees = (employees: Employee[]) => {
-    useEmployeeStore.setState({ employees });
-  };
-  (store as any).setError = (error: string) => {
-    useEmployeeStore.setState({ error });
-  };
-});
+// Set error method is now part of the store interface

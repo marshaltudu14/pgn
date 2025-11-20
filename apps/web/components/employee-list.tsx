@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Employee, EmploymentStatus } from '@pgn/shared';
+import { Employee, EmploymentStatus, CityAssignment } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import { Search, Filter, Plus, Edit, Eye } from 'lucide-react';
 
@@ -231,7 +231,9 @@ export function EmployeeList({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{employee.assigned_regions?.join(', ') || '-'}</div>
+                      <div className="text-sm">
+                        {(employee.assigned_cities as unknown as CityAssignment[])?.map((city: CityAssignment) => city.city).join(', ') || '-'}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -313,9 +315,9 @@ export function EmployeeList({
                   </div>
                 )}
 
-                {employee.assigned_regions && employee.assigned_regions.length > 0 && (
+                {employee.assigned_cities && (employee.assigned_cities as unknown as CityAssignment[]).length > 0 && (
                   <div className="text-sm">
-                    <span className="font-medium">Regions:</span> {employee.assigned_regions.join(', ')}
+                    <span className="font-medium">Cities:</span> {(employee.assigned_cities as unknown as CityAssignment[]).map((city: CityAssignment) => `${city.city}, ${city.district}, ${city.state}`).join('; ')}
                   </div>
                 )}
               </div>

@@ -117,6 +117,7 @@ interface EmployeeState {
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearFilters: () => void;
   clearError: () => void;
+  setError: (error: string | null) => void;
   refetch: () => Promise<void>;
 }
 
@@ -417,6 +418,10 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  setError: (error: string | null) => {
+    set({ error });
   },
 
   refetch: async () => {

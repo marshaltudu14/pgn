@@ -135,7 +135,6 @@ export function RegionsTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>State</TableHead>
-                  <TableHead>District</TableHead>
                   <TableHead>City</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>

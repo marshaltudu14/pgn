@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  Dimensions,
+  Animated,
 } from 'react-native';
 import { CameraView, CameraType } from 'expo-camera';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ChevronLeft, Camera } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   useAttendance,
@@ -25,7 +27,6 @@ interface CheckInOutModalProps {
   mode: 'checkin' | 'checkout';
 }
 
-const { width: screenWidth } = Dimensions.get('window');
 
 export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutModalProps) {
   const colorScheme = useColorScheme();
@@ -35,6 +36,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const [isCapturing, setIsCapturing] = useState(false);
   const [locationData, setLocationData] = useState<any>(null);
   const [step, setStep] = useState<'location' | 'camera' | 'processing'>('location');
+  const [pulseAnim] = useState(new Animated.Value(1));
 
   const cameraRef = useRef<CameraView>(null);
   const [cameraType, setCameraType] = useState<CameraType>('front');
@@ -48,6 +50,26 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const capturePhoto = useAttendance((state) => state.capturePhoto);
   const validateCapturedPhoto = useAttendance((state) => state.validateCapturedPhoto);
 
+  // Pulse animation for loading states
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [pulseAnim]);
+
   const fetchLocation = useCallback(async () => {
     try {
       setStep('location');
@@ -57,8 +79,8 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
     } catch (error) {
       console.error('Failed to get location:', error);
       Alert.alert(
-        'Location Error',
-        'Unable to get your current location. Please ensure GPS is enabled.',
+        'Location Required',
+        'Unable to get your current location. Please ensure GPS is enabled and try again.',
         [{ text: 'OK', onPress: onClose }]
       );
     }
@@ -106,8 +128,8 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
       // Capture photo with compression
       const photo = await capturePhoto({
-        quality: 0.7,
-        aspectRatio: 1, // Square aspect ratio for consistency
+        quality: 0.8,
+        aspectRatio: 1,
       });
 
       // Validate photo
@@ -178,7 +200,6 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
     }
   };
 
-  
   const closeModal = () => {
     if (!isLoading && !isCapturing) {
       onClose();
@@ -187,57 +208,85 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const renderLocationStep = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
-        Getting Your Location
-      </Text>
-      <ActivityIndicator size="large" color="#FF9933" />
-      <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9ca3af' : '#64748b' }]}>
-        Please wait while we get your current location...
-      </Text>
+      <View style={styles.iconContainer}>
+        <Animated.View style={[styles.locationIcon, { transform: [{ scale: pulseAnim }] }]}>
+          <View style={styles.locationDot} />
+          <View style={[styles.locationRing, { borderColor: colorScheme === 'dark' ? '#FF9933' : '#FF9933' }]} />
+        </Animated.View>
+      </View>
+
+      <View style={styles.textContainer}>
+        <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+          Getting Your Location
+        </Text>
+        <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+          Please wait while we accurately determine your current location...
+        </Text>
+      </View>
+
+      <ActivityIndicator size="large" color="#FF9933" style={styles.loader} />
     </View>
   );
 
   const renderCameraStep = () => (
-    <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
-        Take Your Selfie
-      </Text>
-      <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9ca3af' : '#64748b' }]}>
-        Position your face in the frame and tap capture
-      </Text>
-
+    <View style={styles.cameraStepContainer}>
       <View style={styles.cameraContainer}>
         <CameraView
           ref={cameraRef}
-          style={styles.camera}
+          style={styles.fullCamera}
           facing={cameraType}
           flash="off"
         />
 
-        {/* Face overlay guide */}
-        <View style={styles.faceGuide} />
+        {/* Camera overlay with instructions */}
+        <View style={styles.cameraOverlay}>
+          {/* Top section with instructions and flip button */}
+          <View style={styles.cameraTopSection}>
+            <View style={styles.cameraInstructionsTop}>
+              <Text style={[styles.cameraTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+                Take Your Selfie
+              </Text>
+              <Text style={[styles.cameraDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+                Position your face within the face frame
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.flipButtonTop, { backgroundColor: colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)' }]}
+              onPress={() => setCameraType(cameraType === 'front' ? 'back' : 'front')}
+            >
+              <Camera
+                size={24}
+                color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'}
+              />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.cameraControls}>
-          <TouchableOpacity
-            style={[styles.captureButton, { backgroundColor: '#10b981' }]}
-            onPress={captureSelfie}
-            disabled={isCapturing}
-          >
-            {isCapturing ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.captureButtonText}>CAPTURE</Text>
-            )}
-          </TouchableOpacity>
+          {/* Center face guide */}
+          <View style={styles.faceGuideCenter}>
+            <View style={[
+              styles.faceOvalGuide,
+              { borderColor: colorScheme === 'dark' ? 'rgba(255, 153, 51, 0.8)' : 'rgba(255, 153, 51, 1)' }
+            ]} />
+          </View>
 
-          <TouchableOpacity
-            style={[styles.toggleCameraButton]}
-            onPress={() => setCameraType(
-              cameraType === 'front' ? 'back' : 'front'
-            )}
-          >
-            <Text style={styles.toggleCameraText}>Flip</Text>
-          </TouchableOpacity>
+          {/* Bottom section with capture button */}
+          <View style={styles.cameraBottomSection}>
+            <View style={styles.cameraControls}>
+              <TouchableOpacity
+                style={[styles.captureButton, { backgroundColor: '#FF9933' }]}
+                onPress={captureSelfie}
+                disabled={isCapturing}
+              >
+                {isCapturing ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <View style={styles.captureIcon}>
+                    <View style={styles.captureInner} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
     </View>
@@ -245,13 +294,20 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const renderProcessingStep = () => (
     <View style={styles.stepContainer}>
-      <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
-        Processing Attendance
-      </Text>
-      <ActivityIndicator size="large" color="#FF9933" />
-      <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9ca3af' : '#64748b' }]}>
-        {mode === 'checkin' ? 'Checking you in...' : 'Checking you out...'}
-      </Text>
+      <View style={styles.iconContainer}>
+        <Animated.View style={[styles.processingIcon, { transform: [{ scale: pulseAnim }] }]}>
+          <ActivityIndicator size="large" color="#FF9933" />
+        </Animated.View>
+      </View>
+
+      <View style={styles.textContainer}>
+        <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+          Processing Attendance
+        </Text>
+        <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+          {mode === 'checkin' ? 'Checking you in and verifying your location...' : 'Checking you out and finalizing your attendance...'}
+        </Text>
+      </View>
     </View>
   );
 
@@ -262,21 +318,26 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       presentationStyle="fullScreen"
       onRequestClose={closeModal}
     >
-      <View style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' }]}>
-        {/* Header */}
-        <View style={[styles.header, { borderBottomColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb' }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }]}>
+        {/* Modern Header */}
+        <View style={[styles.header, { borderBottomColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
           <TouchableOpacity
-            style={styles.closeButton}
+            style={styles.backButton}
             onPress={closeModal}
             disabled={isLoading || isCapturing}
           >
-            <Text style={[styles.closeButtonText, { color: colorScheme === 'dark' ? '#9ca3af' : '#64748b' }]}>
-              Cancel
-            </Text>
+            <ChevronLeft
+              size={24}
+              color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'}
+            />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colorScheme === 'dark' ? '#ffffff' : '#000000' }]}>
-            {mode === 'checkin' ? 'Check In' : 'Check Out'}
-          </Text>
+
+          <View style={styles.titleContainer}>
+            <Text style={[styles.headerTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+              {mode === 'checkin' ? 'Check In' : 'Check Out'}
+            </Text>
+          </View>
+
           <View style={styles.placeholder} />
         </View>
 
@@ -286,7 +347,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           {step === 'camera' && renderCameraStep()}
           {step === 'processing' && renderProcessingStep()}
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -299,100 +360,203 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
   },
-  closeButton: {
+  backButton: {
     padding: 8,
   },
-  closeButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
+  titleContainer: {
+    alignItems: 'center',
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   placeholder: {
-    width: 50,
+    width: 40,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
   stepContainer: {
     alignItems: 'center',
     width: '100%',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  iconContainer: {
+    marginBottom: 32,
+  },
+  locationIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 153, 51, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  locationDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FF9933',
+    position: 'absolute',
+  },
+  locationRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    backgroundColor: 'transparent',
+  },
+  processingIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 153, 51, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: 40,
   },
   stepTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 12,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   stepDescription: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 32,
     lineHeight: 24,
+    maxWidth: 300,
+  },
+  loader: {
+    marginTop: 24,
+  },
+  cameraStepContainer: {
+    flex: 1,
+    width: '100%',
+    padding: 16,
   },
   cameraContainer: {
-    width: screenWidth * 0.8,
-    height: screenWidth * 0.8,
-    maxWidth: 320,
-    maxHeight: 320,
-    borderRadius: 16,
+    flex: 1,
+    borderRadius: 24,
     overflow: 'hidden',
-    marginBottom: 24,
+    position: 'relative',
   },
-  camera: {
+  fullCamera: {
     flex: 1,
   },
-  faceGuide: {
+  cameraOverlay: {
     position: 'absolute',
-    top: '25%',
-    left: '25%',
-    width: '50%',
-    height: '50%',
-    borderRadius: 100,
-    borderWidth: 2,
-    borderColor: '#10b981',
-    backgroundColor: 'transparent',
-  },
-  cameraControls: {
-    position: 'absolute',
-    bottom: 20,
+    top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
+    flex: 1,
+  },
+  cameraTopSection: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    right: 20,
+    zIndex: 20,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  cameraInstructionsTop: {
+    flex: 1,
+    marginRight: 20,
+  },
+  flipButtonTop: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
-    paddingHorizontal: 40,
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  cameraTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'left',
+  },
+  cameraDescription: {
+    fontSize: 16,
+    textAlign: 'left',
+    lineHeight: 24,
+  },
+  faceGuideCenter: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -140 }, { translateY: -180 }],
+    width: 280,
+    height: 360,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  faceOvalGuide: {
+    width: 280,
+    height: 360,
+    borderRadius: 140,
+    borderWidth: 3,
+    backgroundColor: 'transparent',
+  },
+  cameraBottomSection: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  cameraControls: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   captureButton: {
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-    minWidth: 120,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF9933',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  captureButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+  captureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 3,
+    borderColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  toggleCameraButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 16,
-  },
-  toggleCameraText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+  captureInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'white',
   },
 });

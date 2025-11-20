@@ -160,7 +160,7 @@ export function RegionsTable({
     );
   }
 
-  if (!isLoading && regions.data.length === 0) {
+  if (!isLoading && regions.data.length === 0 && regions.total === 0) {
     return (
       <div className="bg-white dark:bg-black">
         <div className="p-6">

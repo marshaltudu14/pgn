@@ -6,7 +6,6 @@ import { CreateRegionRequest, UpdateRegionRequest, Region } from '@pgn/shared';
 import { RegionsTable, RegionFormModal } from '@/components/regions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -159,7 +158,7 @@ export default function RegionsManagementClient() {
           <div>
             <h1 className="text-3xl font-bold">Regions Management</h1>
             <p className="text-muted-foreground">
-              Manage states, districts, and cities across India
+              {regions.total} region{regions.total !== 1 ? 's' : ''} found
             </p>
           </div>
           <Button
@@ -173,32 +172,26 @@ export default function RegionsManagementClient() {
 
       {/* Error Display */}
       {error && (
-        <Card className="border-destructive">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <p className="text-destructive">{error}</p>
-              <Button variant="outline" size="sm" onClick={clearError}>
-                Clear Error
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-4 flex justify-between items-center">
+          <p className="text-red-800 dark:text-red-200">{error}</p>
+          <Button variant="outline" size="sm" onClick={clearError}>
+            Dismiss
+          </Button>
+        </div>
       )}
 
       {/* Search */}
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search regions by state, district, or city..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 cursor-pointer"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search regions by state, district, or city..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
 
       {/* Regions Table */}
       <RegionsTable

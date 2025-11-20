@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Edit, Trash2, MapPin } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -128,47 +127,46 @@ export function RegionsTable({
     return items;
   };
 
-  if (isLoading && regions.data.length === 0) {
+  if (isLoading) {
     return (
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
-        <CardHeader>
-          <CardTitle>Regions</CardTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-16" />
+      <div className="hidden lg:block bg-white dark:bg-black">
+        <div className="p-6">
+          <div className="w-full overflow-x-auto border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>State</TableHead>
+                  <TableHead>District</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-28" /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Skeleton className="h-8 w-8 rounded" />
+                        <Skeleton className="h-8 w-8 rounded" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {/* Table header skeleton */}
-            <div className="grid grid-cols-4 gap-4">
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
-              <Skeleton className="h-8" />
-            </div>
-            {/* Table rows skeleton */}
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className="grid grid-cols-4 gap-4">
-                <Skeleton className="h-12" />
-                <Skeleton className="h-12" />
-                <Skeleton className="h-12" />
-                <div className="flex items-center justify-end gap-2">
-                  <Skeleton className="h-8 w-8 rounded" />
-                  <Skeleton className="h-8 w-8 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
-  if (regions.data.length === 0) {
+  if (!isLoading && regions.data.length === 0) {
     return (
-      <Card className="dark:bg-gray-900 dark:border-gray-800">
-        <CardContent className="pt-6">
+      <div className="bg-white dark:bg-black">
+        <div className="p-6">
           <div className="flex flex-col items-center justify-center py-8">
             <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No regions found</h3>
@@ -176,28 +174,15 @@ export function RegionsTable({
               Start by adding your first region, or adjust your search to see more results.
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="dark:bg-gray-900 dark:border-gray-800">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Regions</CardTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
-              Showing {regions.data.length} of {regions.total} regions
-            </span>
-            <Badge variant="secondary">
-              Page {regions.page} of {Math.ceil(regions.total / regions.limit)}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border">
+    <div className="hidden lg:block bg-white dark:bg-black">
+      <div className="p-6">
+        <div className="w-full overflow-x-auto border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
@@ -209,7 +194,7 @@ export function RegionsTable({
             </TableHeader>
             <TableBody>
               {regions.data.map((region) => (
-                <TableRow key={region.id}>
+                <TableRow key={region.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
@@ -286,7 +271,7 @@ export function RegionsTable({
             </Pagination>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

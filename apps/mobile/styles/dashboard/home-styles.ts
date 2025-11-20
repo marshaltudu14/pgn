@@ -3,7 +3,6 @@ import { StyleSheet } from 'react-native';
 export const createHomeScreenStyles = (colorScheme: 'light' | 'dark' | null | undefined, topInset: number = 0) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colorScheme === 'dark' ? '#000000' : '#f9fafb',
   },
   header: {
     paddingTop: topInset + 48, // Safe area top + pt-12 (12 * 4)

@@ -3,7 +3,6 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   configureReanimatedLogger,
@@ -13,6 +12,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/Toast';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect, useState } from 'react';
+import { Platform, View } from 'react-native';
 
 // Configure Reanimated logger to reduce warnings
 configureReanimatedLogger({
@@ -70,11 +70,13 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <RootLayoutContent />
-          <StatusBar
-            style={colorScheme === 'dark' ? 'light' : 'dark'}
-            translucent={true}
-          />
+          <View style={{ flex: 1, backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff' }}>
+            <RootLayoutContent />
+            <StatusBar
+              style={colorScheme === 'dark' ? 'light' : 'dark'}
+              translucent={true}
+            />
+          </View>
         </GestureHandlerRootView>
       </ThemeProvider>
     </SafeAreaProvider>

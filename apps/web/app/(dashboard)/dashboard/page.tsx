@@ -4,6 +4,14 @@ import React, { useEffect } from 'react';
 import { useAuthStore } from '../../lib/stores/authStore';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Dashboard',
+  description: 'PGN admin dashboard for managing employees, tracking attendance, and monitoring system status.',
+  keywords: ['dashboard', 'PGN', 'admin', 'overview', 'system status', 'employee management', 'internal system'],
+  robots: 'noindex, nofollow',
+};
 
 export default function DashboardPage() {
   const { user, isAdmin, initialize } = useAuthStore();

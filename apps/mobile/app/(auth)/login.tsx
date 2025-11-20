@@ -1,18 +1,19 @@
+import LoginForm from '@/components/LoginForm';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuth } from '@/store/auth-store';
+import { LoginRequest } from '@pgn/shared';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import {
-  View,
-  Text,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Image,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/store/auth-store';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { LoginRequest } from '@pgn/shared';
-import LoginForm from '@/components/LoginForm';
-import { createLoginScreenStyles } from './_login-styles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { createLoginScreenStyles } from '@/styles/auth/login-styles';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -45,46 +46,50 @@ export default function LoginScreen() {
   const styles = createLoginScreenStyles(colorScheme);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.mainContainer}>
-          {/* Header Section - Top row with image and text */}
-          <View style={styles.headerSection}>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('@/images/pgn-logo-transparent.png')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-              <Text style={styles.title}>
-                PGN
-              </Text>
-              <Text style={styles.subtitle}>
-                Employee Portal
-              </Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.mainContainer}>
+            {/* Header Section - Top row with image and text */}
+            <View style={styles.headerSection}>
+              <View style={styles.logoContainer}>
+                <Image
+                  source={require('@/images/pgn-logo-transparent.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.title}>
+                  PGN
+                </Text>
+                <Text style={styles.subtitle}>
+                  Employee Portal
+                </Text>
+              </View>
             </View>
-          </View>
 
-          {/* Login Form Section - Bottom 20-30% of screen */}
-          <View style={styles.formSection}>
-            <View style={styles.formContainer}>
-              <LoginForm
-                onSubmit={handleLogin}
-                isLoggingIn={isLoggingIn}
-                error={error}
-              />
+            {/* Login Form Section */}
+            <View style={styles.formSection}>
+              <View style={styles.formContainer}>
+                <LoginForm
+                  onSubmit={handleLogin}
+                  isLoggingIn={isLoggingIn}
+                  error={error}
+                />
+              </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

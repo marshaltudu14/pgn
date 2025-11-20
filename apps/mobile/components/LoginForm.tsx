@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-} from 'react-native';
-import { LoginRequest } from '@pgn/shared';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { createLoginFormStyles } from '@/styles/auth/login-styles';
 import Spinner from '@/components/Spinner';
-import { createLoginFormStyles } from '@/app/(auth)/_login-styles';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { LoginRequest } from '@pgn/shared';
+import { AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { useState } from 'react';
+import {
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginRequest) => Promise<void>;
@@ -25,6 +25,9 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  
+  // Focus states
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -68,6 +71,9 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
     }
   };
 
+  const iconColor = colorScheme === 'dark' ? '#9CA3AF' : '#6B7280';
+  const activeIconColor = '#FF9933'; // Saffron
+
   return (
     <View style={styles.container}>
       {/* Email Input Section */}
@@ -77,20 +83,26 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
         </Text>
         <View style={styles.inputContainer}>
           <View style={styles.iconContainer}>
-            <Mail size={18} color="#9CA3AF" />
+            <Mail 
+              size={18} 
+              color={focusedField === 'email' ? activeIconColor : iconColor} 
+            />
           </View>
           <TextInput
             style={[
               styles.input,
-              emailError ? styles.inputWithError : styles.inputNormal
+              focusedField === 'email' && styles.inputFocused,
+              emailError ? styles.inputWithError : null
             ]}
             placeholder="Enter your email address"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colorScheme === 'dark' ? '#52525B' : '#A1A1AA'}
             value={email}
             onChangeText={(text) => {
               setEmail(text);
               if (emailError) setEmailError('');
             }}
+            onFocus={() => setFocusedField('email')}
+            onBlur={() => setFocusedField(null)}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -101,6 +113,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
         </View>
         {emailError ? (
           <View style={styles.errorContainer}>
+            <AlertCircle size={12} color="#EF4444" />
             <Text style={styles.errorText}>{emailError}</Text>
           </View>
         ) : null}
@@ -113,20 +126,26 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
         </Text>
         <View style={styles.inputContainer}>
           <View style={styles.iconContainer}>
-            <Lock size={18} color="#9CA3AF" />
+            <Lock 
+              size={18} 
+              color={focusedField === 'password' ? activeIconColor : iconColor} 
+            />
           </View>
           <TextInput
             style={[
               styles.input,
-              passwordError ? styles.inputWithError : styles.inputNormal
+              focusedField === 'password' && styles.inputFocused,
+              passwordError ? styles.inputWithError : null
             ]}
             placeholder="Enter your password"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colorScheme === 'dark' ? '#52525B' : '#A1A1AA'}
             value={password}
             onChangeText={(text) => {
               setPassword(text);
               if (passwordError) setPasswordError('');
             }}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
             secureTextEntry={!showPassword}
             autoCapitalize="none"
             autoCorrect={false}
@@ -141,14 +160,15 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
-              <EyeOff size={18} color="#9CA3AF" />
+              <EyeOff size={18} color={iconColor} />
             ) : (
-              <Eye size={18} color="#9CA3AF" />
+              <Eye size={18} color={iconColor} />
             )}
           </TouchableOpacity>
         </View>
         {passwordError ? (
           <View style={styles.errorContainer}>
+            <AlertCircle size={12} color="#EF4444" />
             <Text style={styles.errorText}>{passwordError}</Text>
           </View>
         ) : null}
@@ -160,6 +180,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
           styles.errorMessageContainer,
           colorScheme === 'dark' ? styles.errorMessageContainerDark : styles.errorMessageContainerLight
         ]}>
+          <AlertCircle size={18} color={colorScheme === 'dark' ? '#F87171' : '#B91C1C'} style={{ marginRight: 8 }} />
           <Text style={[
             styles.errorMessageText,
             colorScheme === 'dark' ? styles.errorMessageTextDark : styles.errorMessageTextLight
@@ -178,10 +199,11 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
           disabled={isLoggingIn || !email.trim() || !password.trim()}
           accessibilityLabel="Sign in"
           accessibilityRole="button"
+          activeOpacity={0.8}
         >
           {isLoggingIn ? (
             <View style={styles.loadingContainer}>
-              <Spinner size={16} color="#000000" />
+              <Spinner size={18} color="#FFFFFF" />
               <Text style={styles.loadingText}>Signing in...</Text>
             </View>
           ) : (

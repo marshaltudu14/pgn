@@ -6,7 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { createHomeScreenStyles } from './_styles';
+import { createHomeScreenStyles } from '@/styles/dashboard/home-styles';
 
 export default function HomeScreen() {
   const { user } = useAuth();

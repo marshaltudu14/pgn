@@ -1,6 +1,14 @@
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Metadata } from 'next';
 import EmployeeFormClient from './employee-form-client';
+
+export const metadata: Metadata = {
+  title: 'Employee Form',
+  description: 'Create and edit employee profiles with photo upload and regional assignments.',
+  keywords: ['employee form', 'HR', 'employee creation', 'profile management', 'PGN', 'internal system'],
+  robots: 'noindex, nofollow',
+};
 
 export default function EmployeeFormPage() {
   return (

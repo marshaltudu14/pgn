@@ -1,4 +1,3 @@
-import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as FileSystem from 'expo-file-system';
@@ -9,6 +8,11 @@ export interface CameraOptions {
   aspectRatio?: number;
   flash?: 'auto' | 'on' | 'off';
   type?: 'front' | 'back';
+  // Additional options for compression
+  maxWidth?: number;
+  maxHeight?: number;
+  format?: any; // ImageManipulator.SaveFormat
+  targetSizeKB?: number;
 }
 
 export interface PhotoCaptureResult {
@@ -70,46 +74,50 @@ export function toggleCameraType(currentType: 'front' | 'back'): 'front' | 'back
   return currentType === 'front' ? 'back' : 'front';
 }
 
-// Take photo from camera
+// Take photo from camera using expo-image-picker (like dukancard)
 export async function takePhoto(
-  cameraRef: CameraView | null,
   options: CameraOptions = {}
 ): Promise<PhotoCaptureResult> {
   try {
-    console.log('📸 takePhoto: Starting photo capture');
-    console.log('📸 takePhoto: Camera ref exists:', !!cameraRef);
 
-    if (!cameraRef) {
-      console.log('📸 takePhoto: ERROR - Camera ref is null or undefined');
-      throw new CameraError('CAMERA_NOT_READY', 'Camera is not ready');
+    // Request camera permissions
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      throw new CameraError('CAMERA_PERMISSION_DENIED', 'Camera permission is required');
     }
 
-    // Check if cameraRef has the takePictureAsync method
-    console.log('📸 takePhoto: Camera ref methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(cameraRef)));
-    console.log('📸 takePhoto: Has takePictureAsync:', typeof (cameraRef as any).takePictureAsync);
+    // Use expo-image-picker like dukancard
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false, // We'll handle cropping ourselves
+      quality: 1, // Maximum quality, we'll compress later
+      aspect: options.aspectRatio ? [options.aspectRatio, options.aspectRatio] : undefined,
+    });
 
-    console.log('📸 takePhoto: About to call takePictureAsync with minimal options...');
-
-    // Try the most basic call possible
-    const photo = await (cameraRef as any).takePictureAsync();
-
-    console.log('📸 takePhoto: Photo captured successfully:', photo);
-
-    if (!photo) {
-      console.log('📸 takePhoto: ERROR - Photo result is null or undefined');
-      throw new CameraError('PHOTO_CAPTURE_FAILED', 'Failed to capture photo - result was null');
+    if (result.canceled) {
+      throw new CameraError('PHOTO_CAPTURE_CANCELED', 'User canceled photo capture');
     }
 
-    console.log('📸 takePhoto: Processing captured photo...');
-    // Process the captured photo and convert to base64 for API
-    const processedPhoto = await processCapturedPhoto(photo, options);
-    console.log('📸 takePhoto: Photo processed successfully');
+    if (!result.assets || result.assets.length === 0) {
+      throw new CameraError('PHOTO_CAPTURE_FAILED', 'No photo captured');
+    }
 
+    const asset = result.assets[0];
+    if (!asset) {
+      throw new CameraError('PHOTO_CAPTURE_FAILED', 'Invalid photo asset');
+    }
+
+    // Process the captured photo and aggressively compress it
+    const processedPhoto = await processCapturedPhoto({
+      uri: asset.uri,
+      width: asset.width,
+      height: asset.height,
+    }, options);
+
+    
     return processedPhoto;
 
   } catch (error) {
-    console.log('📸 takePhoto: ERROR - Exception occurred');
-    console.log('📸 takePhoto: Error:', error);
     throw new CameraError('PHOTO_CAPTURE_ERROR', 'Failed to capture photo', error);
   }
 }
@@ -159,7 +167,225 @@ export async function pickPhotoFromLibrary(options: {
   }
 }
 
-// Process captured photo (compress, resize, convert to base64)
+// Ultra aggressive image compression based on dukancard implementation
+// Modified for selfies (1:1 aspect ratio instead of 4:5)
+async function compressImageUltraAggressive(
+  imageUri: string,
+  options: CameraOptions = {}
+): Promise<PhotoCaptureResult> {
+  const {
+    maxWidth = 600,  // Smaller for selfies
+    maxHeight = 600,  // Square for selfies
+    quality = 0.8,
+    format = ImageManipulator.SaveFormat.JPEG,
+    targetSizeKB = 80, // Target less than 100KB for attendance
+  } = options;
+
+  try {
+
+    // First get original dimensions to calculate proper 1:1 crop for selfies
+    const originalResult = await ImageManipulator.manipulateAsync(imageUri, [], {
+      compress: 1,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+
+    const originalWidth = originalResult.width;
+    const originalHeight = originalResult.height;
+    const targetAspect = 1; // 1:1 aspect ratio for selfies
+
+    // Calculate crop dimensions for 1:1 aspect ratio (square for selfies)
+    let cropWidth, cropHeight;
+    if (originalWidth / originalHeight > targetAspect) {
+      // Image is wider than square - crop the width
+      cropHeight = originalHeight;
+      cropWidth = originalHeight * targetAspect;
+    } else {
+      // Image is taller than square - crop the height
+      cropWidth = originalWidth;
+      cropHeight = originalWidth / targetAspect;
+    }
+
+    // Calculate crop position (center the crop)
+    const cropX = (originalWidth - cropWidth) / 2;
+    const cropY = (originalHeight - cropHeight) / 2;
+
+    // First pass: Crop to 1:1, then resize to max dimensions
+    let resultWidth = Math.min(maxWidth, cropWidth);
+    let resultHeight = Math.min(maxHeight, cropHeight);
+
+    // Ensure minimum 400px resolution for face recognition
+    if (resultWidth < 400) {
+      resultWidth = 400;
+      resultHeight = 400; // Maintain 1:1 aspect ratio
+    }
+    if (resultHeight < 400) {
+      resultHeight = 400;
+      resultWidth = 400; // Maintain 1:1 aspect ratio
+    }
+
+    let result = await ImageManipulator.manipulateAsync(
+      imageUri,
+      [
+        {
+          crop: {
+            originX: cropX,
+            originY: cropY,
+            width: cropWidth,
+            height: cropHeight,
+          },
+        },
+        {
+          resize: {
+            width: resultWidth,
+            height: resultHeight,
+          },
+        },
+      ],
+      {
+        compress: quality,
+        format,
+        base64: true,
+      }
+    );
+
+    // Calculate current size using base64 length (more accurate than file size)
+    let currentSizeKB = result.base64
+      ? (result.base64.length * 0.75) / 1024
+      : 0;
+
+    
+    // Keep compressing until target size is achieved with proper limits
+    // Strategy: Reduce resolution first (maintain 400px minimum), then reduce quality (not below 65%)
+    let currentQuality = quality;
+    let resolutionRound = 0;
+    const maxResolutionRounds = 3; // Fewer rounds for smaller selfie target
+    const maxTotalRounds = 15; // Prevent infinite loops
+    let totalRounds = 0;
+
+    while (currentSizeKB > targetSizeKB && totalRounds < maxTotalRounds) {
+      totalRounds++;
+
+      // First try resolution reduction (maintain 400px minimum for selfies)
+      if (resolutionRound < maxResolutionRounds) {
+        resolutionRound++;
+        const scaleFactor = Math.sqrt(targetSizeKB / currentSizeKB) * 0.9; // 10% extra reduction for safety
+        let newWidth = Math.floor(result.width * scaleFactor);
+        let newHeight = Math.floor(result.height * scaleFactor);
+
+        // Only enforce minimum 400px if we're not already below it and the scale factor makes sense
+        if (newWidth < 400 && scaleFactor > 0.8) {
+          // Skip to quality reduction if we can't reduce resolution further
+          resolutionRound = maxResolutionRounds;
+          continue;
+        }
+
+        // Apply minimum constraints only if they're larger than calculated values
+        newWidth = Math.max(newWidth, 400);
+        newHeight = Math.max(newHeight, 400);
+
+        result = await ImageManipulator.manipulateAsync(
+          result.uri,
+          [
+            {
+              resize: {
+                width: newWidth,
+                height: newHeight,
+              },
+            },
+          ],
+          {
+            compress: currentQuality, // Keep original quality during resolution reduction
+            format,
+            base64: true,
+          }
+        );
+
+        currentSizeKB = result.base64 ? (result.base64.length * 0.75) / 1024 : 0;
+        
+        // If still too large after max resolution rounds, continue to quality reduction
+        if (currentSizeKB <= targetSizeKB || resolutionRound >= maxResolutionRounds) {
+          continue;
+        }
+      }
+
+      // Quality reduction phase - don't go below 65% quality for face recognition
+      if (currentQuality > 0.65) {
+        currentQuality = Math.max(0.65, currentQuality - 0.05); // Gentle quality reduction, minimum 65%
+
+        result = await ImageManipulator.manipulateAsync(result.uri, [], {
+          compress: currentQuality,
+          format,
+          base64: true,
+        });
+
+        currentSizeKB = result.base64 ? (result.base64.length * 0.75) / 1024 : 0;
+                continue;
+      }
+
+      // If we've hit 65% quality minimum and still too large, make final quality adjustment
+      if (currentQuality <= 0.65 && currentQuality > 0.6) {
+        currentQuality = 0.6; // Final minimum quality for selfies
+
+        result = await ImageManipulator.manipulateAsync(result.uri, [], {
+          compress: currentQuality,
+          format,
+          base64: true,
+        });
+
+        currentSizeKB = result.base64 ? (result.base64.length * 0.75) / 1024 : 0;
+                continue;
+      }
+
+      // If still too large after hitting quality minimum, do one final resolution reduction
+      const scaleFactor = Math.sqrt(targetSizeKB / currentSizeKB) * 0.95;
+      let finalWidth = Math.floor(result.width * scaleFactor);
+      let finalHeight = Math.floor(result.height * scaleFactor);
+
+      // For final attempt, allow going below 400px if necessary
+      result = await ImageManipulator.manipulateAsync(
+        result.uri,
+        [
+          {
+            resize: {
+              width: finalWidth,
+              height: finalHeight,
+            },
+          },
+        ],
+        {
+          compress: 0.6, // Reset to 60% quality for final attempt
+          format,
+          base64: true,
+        }
+      );
+
+      currentSizeKB = result.base64 ? (result.base64.length * 0.75) / 1024 : 0;
+      currentQuality = 0.6;
+          }
+
+    // Final validation
+    if (!result.base64 || result.base64.length === 0) {
+      throw new Error("Compression failed: no base64 data produced");
+    }
+
+    
+    return {
+      uri: result.uri,
+      base64: result.base64,
+      width: result.width,
+      height: result.height,
+      fileSize: result.base64.length * 0.75, // Convert base64 length to approximate bytes
+      type: 'image/jpeg',
+      name: `selfie_${Date.now()}.jpg`
+    };
+
+  } catch (error) {
+    console.error('🗜️ compressImageUltraAggressive: Failed to compress image:', error);
+    throw new CameraError('PHOTO_COMPRESSION_ERROR', 'Failed to compress image', error);
+  }
+}
+
+// Process captured photo using ultra aggressive compression (dukancard style)
 async function processCapturedPhoto(
   photo: {
     uri: string;
@@ -169,101 +395,9 @@ async function processCapturedPhoto(
   options: CameraOptions
 ): Promise<PhotoCaptureResult> {
   try {
-    console.log('🖼️ processCapturedPhoto: Starting image processing');
 
-    // Get image info first
-    const imageInfo = await ImageManipulator.manipulateAsync(
-      photo.uri,
-      [],
-      { format: ImageManipulator.SaveFormat.JPEG }
-    );
-
-    console.log('🖼️ processCapturedPhoto: Original image info:', {
-      width: imageInfo.width,
-      height: imageInfo.height,
-      uri: imageInfo.uri
-    });
-
-    // Apply aspect ratio if specified
-    const manipulations = [];
-    if (options.aspectRatio) {
-      const currentRatio = (imageInfo.width || 1) / (imageInfo.height || 1);
-      const targetRatio = options.aspectRatio;
-
-      if (Math.abs(currentRatio - targetRatio) > 0.1) {
-        // Crop to target aspect ratio
-        if (currentRatio > targetRatio) {
-          // Image is wider - crop width
-          const newWidth = Math.round((imageInfo.height || 1) * targetRatio);
-          const cropX = Math.round(((imageInfo.width || 1) - newWidth) / 2);
-          manipulations.push({
-            crop: {
-              originX: cropX,
-              originY: 0,
-              width: newWidth,
-              height: imageInfo.height || 1,
-            },
-          });
-        } else {
-          // Image is taller - crop height
-          const newHeight = Math.round((imageInfo.width || 1) / targetRatio);
-          const cropY = Math.round(((imageInfo.height || 1) - newHeight) / 2);
-          manipulations.push({
-            crop: {
-              originX: 0,
-              originY: cropY,
-              width: imageInfo.width || 1,
-              height: newHeight,
-            },
-          });
-        }
-      }
-    }
-
-    // Resize to reasonable dimensions if needed
-    const maxDimension = 1080; // Limit to 1080px for performance
-    if ((imageInfo.width || 0) > maxDimension || (imageInfo.height || 0) > maxDimension) {
-      const scale = Math.min(maxDimension / (imageInfo.width || 1), maxDimension / (imageInfo.height || 1));
-      manipulations.push({
-        resize: {
-          width: Math.round((imageInfo.width || 1) * scale),
-          height: Math.round((imageInfo.height || 1) * scale),
-        },
-      });
-    }
-
-    console.log('🖼️ processCapturedPhoto: Applying manipulations:', manipulations.length);
-
-    // Apply manipulations and convert to base64
-    const processedImage = await ImageManipulator.manipulateAsync(
-      photo.uri,
-      manipulations,
-      {
-        compress: options.quality || 0.8,
-        format: ImageManipulator.SaveFormat.JPEG,
-        base64: true, // Convert to base64 for API
-      }
-    );
-
-    console.log('🖼️ processCapturedPhoto: Image processed successfully:', {
-      uri: processedImage.uri,
-      width: processedImage.width,
-      height: processedImage.height,
-      hasBase64: !!processedImage.base64
-    });
-
-    // Get file size
-    const fileInfo = await FileSystem.getInfoAsync(processedImage.uri);
-
-    return {
-      uri: processedImage.uri,
-      base64: processedImage.base64 || '',
-      width: processedImage.width || 0,
-      height: processedImage.height || 0,
-      fileSize: (fileInfo as any).size || 0,
-      type: 'image/jpeg',
-      name: `selfie_${Date.now()}.jpg`
-    };
+    // Use dukancard's ultra aggressive compression adapted for selfies
+    return await compressImageUltraAggressive(photo.uri, options);
 
   } catch (error) {
     console.error('🖼️ processCapturedPhoto: Failed to process captured photo:', error);

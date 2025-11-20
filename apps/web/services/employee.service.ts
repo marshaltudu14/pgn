@@ -9,14 +9,24 @@ import {
   ChangeEmploymentStatusRequest,
   EmployeeListParams,
   EmployeeListResponse,
-  CityAssignment
+  CityAssignment,
 } from '@pgn/shared';
-import { Database, TablesInsert, TablesUpdate, Json } from '@pgn/shared/src/types/supabase';
+import {
+  Database,
+  TablesInsert,
+  TablesUpdate,
+  Json,
+} from '@pgn/shared/src/types/supabase';
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
 import { createClient } from '../utils/supabase/server';
-import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
+import {
+  createAuthUser,
+  resetUserPassword,
+  getUserByEmail,
+  updateUserPasswordByEmail,
+} from '../utils/supabase/admin';
 
 /**
  * Get the next user ID sequence for the current year
@@ -90,10 +100,14 @@ export async function createEmployee(
       );
 
       if (!updateResult.success) {
-        throw new Error(`Failed to update existing auth user password: ${updateResult.error || 'Unknown error'}`);
+        throw new Error(
+          `Failed to update existing auth user password: ${updateResult.error || 'Unknown error'}`
+        );
       }
 
-      console.log(`Updated password for existing auth user: ${createData.email}`);
+      console.log(
+        `Updated password for existing auth user: ${createData.email}`
+      );
     } else {
       // Create new auth user
       const authResult = await createAuthUser(
@@ -102,7 +116,9 @@ export async function createEmployee(
       );
 
       if (!authResult.success) {
-        throw new Error(`Failed to create auth user: ${authResult.error || 'Unknown error'}`);
+        throw new Error(
+          `Failed to create auth user: ${authResult.error || 'Unknown error'}`
+        );
       }
 
       authUserId = authResult.data?.user?.id || null;
@@ -111,7 +127,6 @@ export async function createEmployee(
         throw new Error('Failed to get auth user ID');
       }
     }
-
   } catch (error) {
     console.error('Error creating/updating auth user:', error);
     throw error; // Re-throw to let caller handle
@@ -133,7 +148,9 @@ export async function createEmployee(
       phone: createData.phone || null,
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
-      assigned_cities: (createData.assigned_cities as unknown as Json) || []
+      assigned_cities: (createData.assigned_cities as unknown as Json) || [],
+      face_embedding: '', // Will be updated when reference photo is processed
+      reference_photo_url: '', // Will be updated when reference photo is uploaded
     };
 
     const { data, error } = await supabase
@@ -147,7 +164,9 @@ export async function createEmployee(
       // as per policy: once a user is created, they are never deleted
       console.error('Error creating employee:', error);
       if (authUserId) {
-        console.error(`Employee creation failed for auth user ID ${authUserId}. Auth user remains in system.`);
+        console.error(
+          `Employee creation failed for auth user ID ${authUserId}. Auth user remains in system.`
+        );
       }
       throw new Error(`Failed to create employee: ${error.message}`);
     }
@@ -190,7 +209,9 @@ export async function getEmployeeById(id: string): Promise<Employee | null> {
 /**
  * Get employee by human readable ID
  */
-export async function getEmployeeByHumanReadableId(humanReadableId: string): Promise<Employee | null> {
+export async function getEmployeeByHumanReadableId(
+  humanReadableId: string
+): Promise<Employee | null> {
   try {
     const supabase = await createClient();
 
@@ -218,7 +239,9 @@ export async function getEmployeeByHumanReadableId(humanReadableId: string): Pro
 /**
  * Get employee by email
  */
-export async function getEmployeeByEmail(email: string): Promise<Employee | null> {
+export async function getEmployeeByEmail(
+  email: string
+): Promise<Employee | null> {
   try {
     const supabase = await createClient();
 
@@ -246,7 +269,9 @@ export async function getEmployeeByEmail(email: string): Promise<Employee | null
 /**
  * List employees with filtering and pagination
  */
-export async function listEmployees(params: EmployeeListParams): Promise<EmployeeListResponse> {
+export async function listEmployees(
+  params: EmployeeListParams
+): Promise<EmployeeListResponse> {
   try {
     const supabase = await createClient();
 
@@ -258,12 +283,10 @@ export async function listEmployees(params: EmployeeListParams): Promise<Employe
       primary_region,
       assigned_regions,
       sort_by = 'created_at',
-      sort_order = 'desc'
+      sort_order = 'desc',
     } = params;
 
-    let query = supabase
-      .from('employees')
-      .select('*', { count: 'exact' });
+    let query = supabase.from('employees').select('*', { count: 'exact' });
 
     // Apply search filter
     if (search) {
@@ -311,7 +334,7 @@ export async function listEmployees(params: EmployeeListParams): Promise<Employe
       total,
       page,
       limit,
-      hasMore
+      hasMore,
     };
   } catch (error) {
     console.error('Error in listEmployees:', error);
@@ -331,16 +354,22 @@ export async function updateEmployee(
 
     // Prepare update data for database using proper types
     const employeeData: EmployeeUpdate = {
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
-    if (updateData.first_name !== undefined) employeeData.first_name = updateData.first_name;
-    if (updateData.last_name !== undefined) employeeData.last_name = updateData.last_name;
+    if (updateData.first_name !== undefined)
+      employeeData.first_name = updateData.first_name;
+    if (updateData.last_name !== undefined)
+      employeeData.last_name = updateData.last_name;
     if (updateData.email !== undefined) employeeData.email = updateData.email;
     if (updateData.phone !== undefined) employeeData.phone = updateData.phone;
-    if (updateData.employment_status !== undefined) employeeData.employment_status = updateData.employment_status;
-    if (updateData.can_login !== undefined) employeeData.can_login = updateData.can_login;
-    if (updateData.assigned_cities !== undefined) employeeData.assigned_cities = (updateData.assigned_cities as unknown as Json);
+    if (updateData.employment_status !== undefined)
+      employeeData.employment_status = updateData.employment_status;
+    if (updateData.can_login !== undefined)
+      employeeData.can_login = updateData.can_login;
+    if (updateData.assigned_cities !== undefined)
+      employeeData.assigned_cities =
+        updateData.assigned_cities as unknown as Json;
 
     const { data, error } = await supabase
       .from('employees')
@@ -361,7 +390,6 @@ export async function updateEmployee(
   }
 }
 
-
 /**
  * Change employment status
  */
@@ -373,14 +401,15 @@ export async function changeEmploymentStatus(
     const updateData: UpdateEmployeeRequest = {
       employment_status: statusChange.employment_status,
       // Automatically set can_login based on status
-      can_login: statusChange.employment_status === 'ACTIVE' ||
-                 statusChange.employment_status === 'ON_LEAVE'
+      can_login:
+        statusChange.employment_status === 'ACTIVE' ||
+        statusChange.employment_status === 'ON_LEAVE',
     };
 
     const employee = await updateEmployee(id, updateData);
 
     // Log the status change
-    
+
     return employee;
   } catch (error) {
     console.error('Error in changeEmploymentStatus:', error);
@@ -397,7 +426,7 @@ export async function updateRegionalAssignments(
 ): Promise<Employee> {
   try {
     const updateData: UpdateEmployeeRequest = {
-      assigned_cities: regionalAssignment.assigned_cities
+      assigned_cities: regionalAssignment.assigned_cities,
     };
 
     return await updateEmployee(id, updateData);
@@ -410,9 +439,16 @@ export async function updateRegionalAssignments(
 /**
  * Check if email is already taken by another employee
  */
-export async function isEmailTaken(email: string, excludeId?: string): Promise<boolean> {
+export async function isEmailTaken(
+  email: string,
+  excludeId?: string
+): Promise<boolean> {
   try {
     const supabase = await createClient();
+
+    if (!email || typeof email !== 'string') {
+      return false;
+    }
 
     let query = supabase
       .from('employees')
@@ -440,7 +476,10 @@ export async function isEmailTaken(email: string, excludeId?: string): Promise<b
 /**
  * Check if human readable user ID is already taken
  */
-export async function isHumanReadableIdTaken(humanReadableId: string, excludeId?: string): Promise<boolean> {
+export async function isHumanReadableIdTaken(
+  humanReadableId: string,
+  excludeId?: string
+): Promise<boolean> {
   try {
     const supabase = await createClient();
 
@@ -470,7 +509,10 @@ export async function isHumanReadableIdTaken(humanReadableId: string, excludeId?
 /**
  * Reset employee password
  */
-export async function resetEmployeePassword(employeeId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+export async function resetEmployeePassword(
+  employeeId: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Step 1: Get employee by ID to get their email
     const employee = await getEmployeeById(employeeId);
@@ -483,13 +525,15 @@ export async function resetEmployeePassword(employeeId: string, newPassword: str
     const authResult = await resetUserPassword(employee.email, newPassword);
 
     if (!authResult.success) {
-      return { success: false, error: authResult.error as string || 'Failed to reset password' };
+      return {
+        success: false,
+        error: (authResult.error as string) || 'Failed to reset password',
+      };
     }
 
-        return { success: true };
+    return { success: true };
   } catch (error) {
     console.error('Error in resetEmployeePassword:', error);
     return { success: false, error: 'An unexpected error occurred' };
   }
 }
-

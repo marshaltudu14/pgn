@@ -19,6 +19,7 @@ interface RegionsStore {
   isUpdating: boolean;
   isDeleting: boolean;
   error: string | null;
+  createError: string | null;
   filter: RegionFilter;
   pagination: PaginationParams;
 
@@ -32,6 +33,7 @@ interface RegionsStore {
   setFilter: (filter: Partial<RegionFilter>) => void;
   setPagination: (pagination: Partial<PaginationParams>) => void;
   clearError: () => void;
+  clearCreateError: () => void;
   reset: () => void;
 }
 
@@ -54,6 +56,7 @@ export const useRegionsStore = create<RegionsStore>()(
       isUpdating: false,
       isDeleting: false,
       error: null,
+      createError: null,
       filter: {},
       pagination: {
         page: 1,
@@ -104,7 +107,7 @@ export const useRegionsStore = create<RegionsStore>()(
       // Create a new region
       createRegion: async (data: CreateRegionRequest) => {
         try {
-          set({ isCreating: true, error: null });
+          set({ isCreating: true, error: null, createError: null });
 
           const response = await fetch('/api/regions', {
             method: 'POST',
@@ -125,11 +128,12 @@ export const useRegionsStore = create<RegionsStore>()(
           const { filter, pagination } = get();
           await get().fetchRegions(filter, pagination);
 
-          set({ isCreating: false });
+          set({ isCreating: false, createError: null });
           return newRegion;
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Failed to create region',
+            createError: error instanceof Error ? error.message : 'Failed to create region',
             isCreating: false,
           });
           throw error;
@@ -263,6 +267,11 @@ export const useRegionsStore = create<RegionsStore>()(
         set({ error: null });
       },
 
+      // Clear create error
+      clearCreateError: () => {
+        set({ createError: null });
+      },
+
       // Reset store
       reset: () => {
         set({
@@ -273,6 +282,7 @@ export const useRegionsStore = create<RegionsStore>()(
           isUpdating: false,
           isDeleting: false,
           error: null,
+          createError: null,
           filter: {},
           pagination: {
             page: 1,

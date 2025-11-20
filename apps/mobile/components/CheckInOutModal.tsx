@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal,
   View,
@@ -8,8 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   Animated,
+  Image,
 } from 'react-native';
-import { CameraView, CameraType } from 'expo-camera';
+// No longer need CameraView since we're using expo-image-picker
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Camera } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -36,13 +37,11 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const [isCapturing, setIsCapturing] = useState(false);
   const [locationData, setLocationData] = useState<any>(null);
-  const [step, setStep] = useState<'location' | 'camera' | 'processing'>('location');
-  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<any>(null);
+  const [step, setStep] = useState<'location' | 'camera' | 'preview' | 'processing'>('location');
   const [pulseAnim] = useState(new Animated.Value(1));
 
-  const cameraRef = useRef<CameraView>(null);
-  const [cameraType, setCameraType] = useState<CameraType>('front');
-
+  
   const checkIn = useAttendance((state) => state.checkIn);
   const checkOut = useAttendance((state) => state.checkOut);
   const clearError = useAttendance((state) => state.clearError);
@@ -77,29 +76,53 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       setStep('location');
       const location = await getCurrentLocation();
       setLocationData(location);
-      setStep('camera');
-    } catch (error) {
-      console.error('Failed to get location:', error);
+      // Automatically trigger camera capture after getting location
+      setTimeout(() => {
+        // Open camera directly without storing the function
+        setStep('camera');
+        setIsCapturing(true);
+
+        // Then call capturePhoto from store
+        capturePhoto({
+          quality: 0.8,
+          aspectRatio: 1,
+        }).then((photo) => {
+          const validation = validateCapturedPhoto(photo);
+          if (!validation.isValid) {
+            throw new Error(validation.errors.join(', '));
+          }
+          setCapturedPhoto(photo);
+          setStep('preview');
+        }).catch((error) => {
+          Alert.alert(
+            'Camera Error',
+            error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
+            [{ text: 'OK', onPress: () => setStep('camera') }]
+          );
+        }).finally(() => {
+          setIsCapturing(false);
+        });
+      }, 500);
+    } catch {
       Alert.alert(
         'Location Required',
         'Unable to get your current location. Please ensure GPS is enabled and try again.',
         [{ text: 'OK', onPress: onClose }]
       );
     }
-  }, [onClose]);
+  }, [onClose, capturePhoto, validateCapturedPhoto]);
 
   const initializeModal = useCallback(async () => {
     try {
       // Reset state
       setStep('location');
       setLocationData(null);
+      setCapturedPhoto(null);
       setIsCapturing(false);
-      setIsCameraReady(false);
 
       // Get current location (permissions already handled by permissions screen)
       await fetchLocation();
-    } catch (error) {
-      console.error('Failed to initialize modal:', error);
+    } catch {
       Alert.alert('Error', 'Failed to initialize attendance. Please try again.');
       onClose();
     }
@@ -121,55 +144,26 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const captureSelfie = async () => {
     try {
-      console.log('🎯 CheckInOutModal.captureSelfie: Starting selfie capture');
-      console.log('🎯 CheckInOutModal.captureSelfie: Camera ready state:', isCameraReady);
-
-      // Validate camera is ready
-      if (!isCameraReady) {
-        console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Camera is not ready yet');
-        throw new Error('Camera is still initializing. Please wait a moment and try again.');
-      }
-
       setIsCapturing(true);
-      setStep('processing');
+      setStep('camera');
 
-      console.log('🎯 CheckInOutModal.captureSelfie: Checking camera ref...');
-      console.log('🎯 CheckInOutModal.captureSelfie: cameraRef.current exists:', !!cameraRef.current);
-      console.log('🎯 CheckInOutModal.captureSelfie: cameraRef.current type:', typeof cameraRef.current);
-
-      // Validate camera is available
-      if (!cameraRef.current) {
-        console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Camera ref is null');
-        throw new Error('Camera is not ready');
-      }
-
-      console.log('🎯 CheckInOutModal.captureSelfie: Calling store capturePhoto...');
-      // Capture photo directly with camera ref - no need to set it in store first
-      const photo = await capturePhoto(cameraRef.current, {
+      // Capture photo using expo-image-picker
+      const photo = await capturePhoto({
         quality: 0.8,
         aspectRatio: 1,
       });
-      console.log('🎯 CheckInOutModal.captureSelfie: Store capturePhoto completed');
 
-      console.log('🎯 CheckInOutModal.captureSelfie: Validating photo...');
       // Validate photo
       const validation = validateCapturedPhoto(photo);
-      console.log('🎯 CheckInOutModal.captureSelfie: Photo validation result:', validation);
 
       if (!validation.isValid) {
-        console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Photo validation failed:', validation.errors);
         throw new Error(validation.errors.join(', '));
       }
 
-      console.log('🎯 CheckInOutModal.captureSelfie: Processing attendance...');
-      // Process attendance
-      await processAttendance(photo);
-      console.log('🎯 CheckInOutModal.captureSelfie: Attendance processing completed');
+      // Show preview instead of processing immediately
+      setCapturedPhoto(photo);
+      setStep('preview');
     } catch (error) {
-      console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Exception occurred');
-      console.log('🎯 CheckInOutModal.captureSelfie: Error type:', typeof error);
-      console.log('🎯 CheckInOutModal.captureSelfie: Error:', error);
-      console.error('Failed to capture selfie:', error);
       Alert.alert(
         'Camera Error',
         error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
@@ -177,8 +171,21 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       );
     } finally {
       setIsCapturing(false);
-      console.log('🎯 CheckInOutModal.captureSelfie: Finally block - isCapturing set to false');
     }
+  };
+
+  const confirmPhoto = async () => {
+    if (!capturedPhoto) {
+      Alert.alert('Error', 'No photo captured. Please try again.');
+      return;
+    }
+
+    await processAttendance(capturedPhoto);
+  };
+
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+    captureSelfie();
   };
 
   const processAttendance = async (photo: any) => {
@@ -186,6 +193,8 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       if (!locationData || !photo.base64) {
         throw new Error('Missing location or photo data');
       }
+
+      setStep('processing');
 
       const attendanceData = {
         location: {
@@ -220,7 +229,6 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
         throw new Error(result.message || 'Attendance failed');
       }
     } catch (error) {
-      console.error('Attendance processing failed:', error);
       Alert.alert(
         'Attendance Error',
         error instanceof Error ? error.message : 'Failed to process attendance. Please try again.',
@@ -258,69 +266,71 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   );
 
   const renderCameraStep = () => (
-    <View style={styles.cameraStepContainer}>
-      <View style={styles.cameraContainer}>
-        <CameraView
-          ref={cameraRef}
-          style={styles.fullCamera}
-          facing={cameraType}
-          flash="off"
-          onCameraReady={() => {
-            console.log('📷 CheckInOutModal: Camera ready callback triggered');
-            setIsCameraReady(true);
-          }}
-        />
-
-        {/* Camera overlay with instructions */}
-        <View style={styles.cameraOverlay}>
-          {/* Top section with instructions and flip button */}
-          <View style={styles.cameraTopSection}>
-            <View style={styles.cameraInstructionsTop}>
-              <Text style={[styles.cameraTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
-                Take Your Selfie
-              </Text>
-              <Text style={[styles.cameraDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
-                Position your face within the face frame
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.flipButtonTop, { backgroundColor: colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.5)' }]}
-              onPress={() => setCameraType(cameraType === 'front' ? 'back' : 'front')}
-            >
-              <Camera
-                size={24}
-                color={colorScheme === 'dark' ? '#FFFFFF' : '#000000'}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Center face guide */}
-          <View style={styles.faceGuideCenter}>
-            <View style={[
-              styles.faceOvalGuide,
-              { borderColor: colorScheme === 'dark' ? 'rgba(255, 153, 51, 0.8)' : 'rgba(255, 153, 51, 1)' }
-            ]} />
-          </View>
-
-          {/* Bottom section with capture button */}
-          <View style={styles.cameraBottomSection}>
-            <View style={styles.cameraControls}>
-              <TouchableOpacity
-                style={[styles.captureButton, { backgroundColor: COLORS.SAFFRON }]}
-                onPress={captureSelfie}
-                disabled={isCapturing}
-              >
-                {isCapturing ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <View style={styles.captureIcon}>
-                    <View style={styles.captureInner} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
+    <View style={styles.stepContainer}>
+      <View style={styles.iconContainer}>
+        <View style={[styles.cameraIcon, { backgroundColor: 'rgba(255, 153, 51, 0.1)' }]}>
+          <Camera size={40} color={COLORS.SAFFRON} />
         </View>
+      </View>
+
+      <View style={styles.textContainer}>
+        <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+          Opening Camera...
+        </Text>
+        <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+          Please wait while we open the camera for your selfie
+        </Text>
+      </View>
+
+      <ActivityIndicator size="large" color={COLORS.SAFFRON} style={styles.loader} />
+    </View>
+  );
+
+  const renderPreviewStep = () => (
+    <View style={styles.previewContainer}>
+      <View style={styles.previewHeader}>
+        <Text style={[styles.previewTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+          Review Your Selfie
+        </Text>
+        <Text style={[styles.previewDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+          Please confirm your photo is clear and your face is visible
+        </Text>
+      </View>
+
+      {capturedPhoto && (
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${capturedPhoto.base64}` }}
+            style={styles.previewImage}
+            resizeMode="cover"
+          />
+        </View>
+      )}
+
+      <View style={styles.previewButtons}>
+        <TouchableOpacity
+          style={[styles.previewButton, styles.retakeButton, { borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)' }]}
+          onPress={retakePhoto}
+          disabled={isLoading}
+        >
+          <Text style={[styles.retakeButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+            Retake
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.previewButton, styles.confirmButton, { backgroundColor: COLORS.SAFFRON }]}
+          onPress={confirmPhoto}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.confirmButtonText}>
+              Confirm & {mode === 'checkin' ? 'Check In' : 'Check Out'}
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -378,6 +388,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
         <View style={styles.content}>
           {step === 'location' && renderLocationStep()}
           {step === 'camera' && renderCameraStep()}
+          {step === 'preview' && renderPreviewStep()}
           {step === 'processing' && renderProcessingStep()}
         </View>
       </SafeAreaView>
@@ -477,119 +488,107 @@ const styles = StyleSheet.create({
   loader: {
     marginTop: 24,
   },
-  cameraStepContainer: {
-    flex: 1,
-    width: '100%',
-    padding: 16,
+  cameraIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cameraContainer: {
-    flex: 1,
-    borderRadius: 24,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  fullCamera: {
-    flex: 1,
-  },
-  cameraOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flex: 1,
-  },
-  cameraTopSection: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-    zIndex: 20,
+  captureButtonLarge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  cameraInstructionsTop: {
-    flex: 1,
-    marginRight: 20,
-  },
-  flipButtonTop: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  cameraTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
-    textAlign: 'left',
-  },
-  cameraDescription: {
-    fontSize: 16,
-    textAlign: 'left',
-    lineHeight: 24,
-  },
-  faceGuideCenter: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -140 }, { translateY: -180 }],
-    width: 280,
-    height: 360,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  faceOvalGuide: {
-    width: 280,
-    height: 360,
-    borderRadius: 140,
-    borderWidth: 3,
-    backgroundColor: 'transparent',
-  },
-  cameraBottomSection: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  cameraControls: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  captureButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    minWidth: 200,
     shadowColor: COLORS.SAFFRON,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
-  captureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 3,
-    borderColor: 'white',
+  buttonIcon: {
+    marginRight: 12,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  previewContainer: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 32,
+  },
+  previewHeader: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  previewTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  previewDescription: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  imageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    maxWidth: 300,
+    marginVertical: 32,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 20,
+    width: '100%',
+  },
+  previewButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    minHeight: 52,
   },
-  captureInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'white',
+  retakeButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+  },
+  retakeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmButton: {
+    shadowColor: COLORS.SAFFRON,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  confirmButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

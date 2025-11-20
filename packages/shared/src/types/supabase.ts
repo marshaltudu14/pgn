@@ -44,19 +44,15 @@ export type Database = {
           attendance_date: string
           battery_level_at_check_in: number | null
           battery_level_at_check_out: number | null
-          check_in_face_confidence: number | null
           check_in_latitude: number | null
-          check_in_location_name: string | null
           check_in_longitude: number | null
-          check_in_selfie_data: string | null
+          check_in_selfie_url: string | null
           check_in_timestamp: string | null
-          check_out_face_confidence: number | null
           check_out_latitude: number | null
-          check_out_location_name: string | null
           check_out_longitude: number | null
           check_out_method: string | null
           check_out_reason: string | null
-          check_out_selfie_data: string | null
+          check_out_selfie_url: string | null
           check_out_timestamp: string | null
           created_at: string | null
           employee_id: string
@@ -75,19 +71,15 @@ export type Database = {
           attendance_date: string
           battery_level_at_check_in?: number | null
           battery_level_at_check_out?: number | null
-          check_in_face_confidence?: number | null
           check_in_latitude?: number | null
-          check_in_location_name?: string | null
           check_in_longitude?: number | null
-          check_in_selfie_data?: string | null
+          check_in_selfie_url?: string | null
           check_in_timestamp?: string | null
-          check_out_face_confidence?: number | null
           check_out_latitude?: number | null
-          check_out_location_name?: string | null
           check_out_longitude?: number | null
           check_out_method?: string | null
           check_out_reason?: string | null
-          check_out_selfie_data?: string | null
+          check_out_selfie_url?: string | null
           check_out_timestamp?: string | null
           created_at?: string | null
           employee_id: string
@@ -106,19 +98,15 @@ export type Database = {
           attendance_date?: string
           battery_level_at_check_in?: number | null
           battery_level_at_check_out?: number | null
-          check_in_face_confidence?: number | null
           check_in_latitude?: number | null
-          check_in_location_name?: string | null
           check_in_longitude?: number | null
-          check_in_selfie_data?: string | null
+          check_in_selfie_url?: string | null
           check_in_timestamp?: string | null
-          check_out_face_confidence?: number | null
           check_out_latitude?: number | null
-          check_out_location_name?: string | null
           check_out_longitude?: number | null
           check_out_method?: string | null
           check_out_reason?: string | null
-          check_out_selfie_data?: string | null
+          check_out_selfie_url?: string | null
           check_out_timestamp?: string | null
           created_at?: string | null
           employee_id?: string
@@ -150,42 +138,6 @@ export type Database = {
           },
         ]
       }
-      regions: {
-        Row: {
-          city: string
-          city_slug: string
-          created_at: string | null
-          district: string
-          district_slug: string
-          id: string
-          state: string
-          state_slug: string
-          updated_at: string | null
-        }
-        Insert: {
-          city: string
-          city_slug: string
-          created_at?: string | null
-          district: string
-          district_slug: string
-          id?: string
-          state: string
-          state_slug: string
-          updated_at?: string | null
-        }
-        Update: {
-          city?: string
-          city_slug?: string
-          created_at?: string | null
-          district?: string
-          district_slug?: string
-          id?: string
-          state?: string
-          state_slug?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       employees: {
         Row: {
           assigned_cities: Json | null
@@ -214,13 +166,13 @@ export type Database = {
           employment_status?: string
           employment_status_changed_at?: string | null
           employment_status_changed_by?: string | null
-          face_embedding?: string
+          face_embedding: string
           first_name: string
           human_readable_user_id: string
           id: string
           last_name: string
           phone?: string | null
-          reference_photo_url?: string | null
+          reference_photo_url: string
           updated_at?: string | null
         }
         Update: {
@@ -238,7 +190,37 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
-          reference_photo_url?: string | null
+          reference_photo_url?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      regions: {
+        Row: {
+          city: string
+          city_slug: string
+          created_at: string | null
+          id: string
+          state: string
+          state_slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          city: string
+          city_slug: string
+          created_at?: string | null
+          id?: string
+          state: string
+          state_slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string
+          city_slug?: string
+          created_at?: string | null
+          id?: string
+          state?: string
+          state_slug?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -248,7 +230,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_slug: { Args: { text_param: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
@@ -375,7 +357,6 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
 
 export const Constants = {
   graphql_public: {

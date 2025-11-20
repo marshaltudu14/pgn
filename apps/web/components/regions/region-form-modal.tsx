@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { CreateRegionRequest, UpdateRegionRequest, StateOption } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ interface RegionFormModalProps {
   states: StateOption[];
   initialData?: CreateRegionRequest;
   title: string;
+  submitError?: string | null;
 }
 
 export function RegionFormModal({
@@ -40,21 +42,14 @@ export function RegionFormModal({
   states,
   initialData,
   title,
+  submitError,
 }: RegionFormModalProps) {
-  const [formData, setFormData] = useState<CreateRegionRequest>({
-    state: '',
-    city: '',
-  });
+  // Derive form data directly from props to avoid setState in effects
+  const [formData, setFormData] = useState<CreateRegionRequest>({ state: '', city: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Initialize form data when modal opens
-  useEffect(() => {
-    if (open) {
-      const newFormData = initialData ? { ...initialData } : { state: '', city: '' };
-      setFormData(newFormData);
-      setErrors({});
-    }
-  }, [open, initialData]);
+  // Use derived state instead of setState in effects
+  const derivedFormData = open && initialData ? initialData : (open ? { state: '', city: '' } : formData);
 
   // Handle state change
   const handleStateChange = useCallback((state: string) => {
@@ -72,10 +67,10 @@ export function RegionFormModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.state.trim()) {
+    if (!derivedFormData.state.trim()) {
       newErrors.state = 'State is required';
     }
-    if (!formData.city.trim()) {
+    if (!derivedFormData.city.trim()) {
       newErrors.city = 'City is required';
     }
 
@@ -91,7 +86,7 @@ export function RegionFormModal({
       return;
     }
 
-    onSubmit(formData);
+    onSubmit(derivedFormData);
   };
 
   // Handle dialog close
@@ -114,11 +109,18 @@ export function RegionFormModal({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Display submit error if any */}
+        {submitError && (
+          <Alert variant="destructive">
+            <AlertDescription>{submitError}</AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="state">State *</Label>
             <Select
-              value={formData.state}
+              value={derivedFormData.state}
               onValueChange={handleStateChange}
               disabled={isSubmitting}
             >
@@ -142,7 +144,7 @@ export function RegionFormModal({
             <Label htmlFor="city">City *</Label>
             <Input
               id="city"
-              value={formData.city}
+              value={derivedFormData.city}
               onChange={(e) => handleCityChange(e.target.value)}
               placeholder="Enter city name"
               disabled={isSubmitting}

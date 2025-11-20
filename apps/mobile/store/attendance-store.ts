@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CameraView, FlashMode } from 'expo-camera';
+import { FlashMode } from 'expo-camera';
 import {
   AttendanceResponse,
   LocationData,
@@ -88,10 +88,6 @@ interface AttendanceStoreState {
   // Camera state
   cameraPermission: boolean;
   locationPermission: boolean;
-  isCameraReady: boolean;
-  cameraRef: CameraView | null;
-  cameraType: 'front' | 'back';
-  flashMode: FlashMode;
   isTakingPhoto: boolean;
   lastPhotoCapture: PhotoCaptureResult | null;
 
@@ -122,14 +118,10 @@ interface AttendanceStoreState {
   shouldQueueForOffline: (error: any) => boolean;
 
   // Camera methods
-  setCameraRef: (cameraRef: CameraView | null) => void;
-  toggleCamera: () => void;
-  setFlashMode: (mode: FlashMode) => void;
-  capturePhoto: (cameraRef?: CameraView, options?: CameraOptions) => Promise<PhotoCaptureResult>;
+  capturePhoto: (options?: CameraOptions) => Promise<PhotoCaptureResult>;
   pickPhoto: (options?: { allowsEditing?: boolean; quality?: number; aspectRatio?: number }) => Promise<PhotoCaptureResult>;
   validateCapturedPhoto: (photo: PhotoCaptureResult) => { isValid: boolean; errors: string[]; warnings: string[] };
   compressCapturedPhoto: (uri: string, targetSize?: number) => Promise<PhotoCaptureResult>;
-  checkCameraAvailability: () => Promise<boolean>;
 
   // State management
   clearError: () => void;
@@ -165,10 +157,6 @@ export const useAttendance = create<AttendanceStoreState>()(
         isOnline: true,
         cameraPermission: false,
         locationPermission: false,
-        isCameraReady: false,
-        cameraRef: null,
-        cameraType: 'front',
-        flashMode: 'off',
         isTakingPhoto: false,
         lastPhotoCapture: null,
 
@@ -182,7 +170,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             set({
               cameraPermission: cameraAvailable,
               locationPermission: locationAvailable,
-              isCameraReady: cameraAvailable
             });
 
             // Note: We do NOT fetch attendance status here.
@@ -195,7 +182,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             set({
               cameraPermission: false,
               locationPermission: false,
-              isCameraReady: false
             });
           }
         },
@@ -209,7 +195,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             set({
               cameraPermission: cameraAvailable,
               locationPermission: locationAvailable,
-              isCameraReady: cameraAvailable
             });
           } catch (error) {
             console.error('Failed to check permissions:', error);
@@ -780,51 +765,18 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         // Camera methods
-        setCameraRef: (cameraRef: CameraView | null) => {
-          set({ cameraRef });
-        },
-
-        toggleCamera: () => {
-          const { cameraType } = get();
-          const newType = toggleCameraType(cameraType);
-          set({ cameraType: newType });
-        },
-
-        setFlashMode: (mode: FlashMode) => {
-          set({ flashMode: mode });
-        },
-
-        capturePhoto: async (cameraRef?: CameraView, options: CameraOptions = {}) => {
-          console.log('🏪 attendanceStore.capturePhoto: Starting capture');
-          console.log('🏪 attendanceStore.capturePhoto: Provided cameraRef:', !!cameraRef);
-          console.log('🏪 attendanceStore.capturePhoto: Stored cameraRef:', !!get().cameraRef);
-
+        capturePhoto: async (options: CameraOptions = {}) => {
           set({ isTakingPhoto: true, error: null });
           try {
-            // Use provided cameraRef or fall back to stored ref
-            const ref = cameraRef || get().cameraRef;
-            console.log('🏪 attendanceStore.capturePhoto: Using ref:', !!ref);
+            const photo = await takePhoto(options);
 
-            if (!ref) {
-              console.log('🏪 attendanceStore.capturePhoto: ERROR - No camera ref available');
-              throw new CameraError('CAMERA_NOT_READY', 'Camera is not ready');
-            }
-
-            console.log('🏪 attendanceStore.capturePhoto: Calling takePhoto utility...');
-            const photo = await takePhoto(ref, options);
-            console.log('🏪 attendanceStore.capturePhoto: takePhoto utility completed');
-
-            console.log('🏪 attendanceStore.capturePhoto: Updating store state...');
             set({
               lastPhotoCapture: photo,
               isTakingPhoto: false
             });
-            console.log('🏪 attendanceStore.capturePhoto: Store state updated');
 
             return photo;
           } catch (error) {
-            console.log('🏪 attendanceStore.capturePhoto: ERROR - Exception in store');
-            console.log('🏪 attendanceStore.capturePhoto: Error:', error);
             set({
               isTakingPhoto: false,
               error: error instanceof Error ? error.message : 'Failed to capture photo'
@@ -861,15 +813,7 @@ export const useAttendance = create<AttendanceStoreState>()(
           return await compressPhoto(uri, targetSize);
         },
 
-        checkCameraAvailability: async () => {
-          const available = await isCameraAvailable();
-          set({
-            cameraPermission: available,
-            isCameraReady: available
-          });
-          return available;
-        },
-
+        
         // Reset store
         reset: () => {
           set({
@@ -895,10 +839,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             isOnline: true,
             cameraPermission: false,
             locationPermission: false,
-            isCameraReady: false,
-            cameraRef: null,
-            cameraType: 'front',
-            flashMode: 'off',
             isTakingPhoto: false,
             lastPhotoCapture: null,
           });

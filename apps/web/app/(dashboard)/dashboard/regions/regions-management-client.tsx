@@ -18,6 +18,7 @@ export default function RegionsManagementClient() {
     isCreating,
     isUpdating,
     error,
+    createError,
     filter,
     pagination,
     createRegion,
@@ -25,6 +26,7 @@ export default function RegionsManagementClient() {
     deleteRegion,
     setPagination,
     clearError,
+    clearCreateError,
   } = useRegionsStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -88,8 +90,20 @@ export default function RegionsManagementClient() {
   };
 
   // Handle region creation
+  // Handle modal close with error clearing
+  const handleCreateModalClose = (open: boolean) => {
+    if (!open) {
+      clearCreateError();
+    }
+    setShowCreateModal(open);
+  };
+
+  // Handle region creation
   const handleCreateRegion = async (data: CreateRegionRequest | UpdateRegionRequest) => {
     try {
+      // Clear any existing create error when starting creation
+      clearCreateError();
+
       // Ensure we have all required fields for creation
       if ('state' in data && data.state && data.city) {
         await createRegion({
@@ -103,7 +117,8 @@ export default function RegionsManagementClient() {
       }
     } catch (error) {
       console.error('Failed to create region:', error);
-      toast.error('Failed to create region');
+      // Don't show toast error here - let the modal display the specific error
+      // The user can see the error in the modal and can correct it
     }
   };
 
@@ -204,11 +219,12 @@ export default function RegionsManagementClient() {
       {/* Create Region Modal */}
       <RegionFormModal
         open={showCreateModal}
-        onOpenChange={setShowCreateModal}
+        onOpenChange={handleCreateModalClose}
         onSubmit={handleCreateRegion}
         isSubmitting={isCreating}
         states={states}
         title="Add New Region"
+        submitError={createError}
       />
 
       {/* Edit Region Modal */}

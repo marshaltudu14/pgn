@@ -7,161 +7,266 @@ global.__DEV__ = true;
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-global.beforeEach(() => {
-  console.error = global.jest.fn();
-  console.warn = global.jest.fn();
+beforeEach(() => {
+  console.error = jest.fn();
+  console.warn = jest.fn();
 });
 
-global.afterEach(() => {
+afterEach(() => {
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;
 });
 
 // Mock react-native-reanimated to prevent native driver issues
-global.jest.mock('react-native-reanimated', () => {
+jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');
   Reanimated.default.call = () => {};
   return Reanimated;
 });
 
 // Mock react-native-screens
-global.jest.mock('react-native-screens', () => ({
-  enableScreens: global.jest.fn(),
-  screensEnabled: global.jest.fn(),
+jest.mock('react-native-screens', () => ({
+  enableScreens: jest.fn(),
+  screensEnabled: jest.fn(),
 }));
 
 // Mock @react-navigation/native
-global.jest.mock('@react-navigation/native', () => ({
+jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
-    navigate: global.jest.fn(),
-    replace: global.jest.fn(),
-    dispatch: global.jest.fn(),
-    goBack: global.jest.fn(),
-    setOptions: global.jest.fn(),
+    navigate: jest.fn(),
+    replace: jest.fn(),
+    dispatch: jest.fn(),
+    goBack: jest.fn(),
+    setOptions: jest.fn(),
   }),
   useRoute: () => ({
     params: {},
     name: 'mock-route',
     key: 'mock-key',
   }),
-  useFocusEffect: global.jest.fn(),
-  useIsFocused: global.jest.fn(() => true),
-  createNavigationContainerRef: global.jest.fn(),
+  useFocusEffect: jest.fn(),
+  useIsFocused: jest.fn(() => true),
+  createNavigationContainerRef: jest.fn(),
   NavigationContainer: ({ children }) => children,
 }));
 
 // Mock expo-router
-global.jest.mock('expo-router', () => ({
+jest.mock('expo-router', () => ({
   router: {
-    push: global.jest.fn(),
-    replace: global.jest.fn(),
-    back: global.jest.fn(),
-    navigate: global.jest.fn(),
-    canGoBack: global.jest.fn(() => true),
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    navigate: jest.fn(),
+    canGoBack: jest.fn(() => true),
   },
-  useLocalSearchParams: global.jest.fn(() => ({})),
-  useSegments: global.jest.fn(() => []),
-  useFocusEffect: global.jest.fn(),
-  usePathname: global.jest.fn(() => '/test'),
+  useLocalSearchParams: jest.fn(() => ({})),
+  useSegments: jest.fn(() => []),
+  useFocusEffect: jest.fn(),
+  usePathname: jest.fn(() => '/test'),
 }));
 
-// Mock React Native Alert and other native modules
-global.jest.mock('react-native', () => ({
+// Mock react-native
+jest.mock('react-native', () => ({
   Platform: {
     OS: 'ios',
-    select: global.jest.fn((obj) => obj.ios),
+    Version: '14.0',
+    select: jest.fn((obj) => obj.ios),
   },
-  useColorScheme: global.jest.fn(),
   Dimensions: {
-    get: global.jest.fn(() => ({ width: 375, height: 667, scale: 2, fontScale: 1 })),
+    get: jest.fn(() => ({ width: 375, height: 667, scale: 2, fontScale: 1 })),
   },
   PixelRatio: {
-    get: global.jest.fn(() => 2),
-    getFontScale: global.jest.fn(() => 1),
-    getPixelSizeForLayoutSize: global.jest.fn((layoutSize) => layoutSize * 2),
-    roundToNearestPixel: global.jest.fn((layoutSize) => layoutSize),
+    get: jest.fn(() => 2),
+    getFontScale: jest.fn(() => 1),
+    getPixelSizeForLayoutSize: jest.fn((layoutSize) => layoutSize * 2),
+    roundToNearestPixel: jest.fn((layoutSize) => layoutSize),
   },
   Alert: {
-    alert: global.jest.fn(),
+    alert: jest.fn(),
   },
   StyleSheet: {
-    create: global.jest.fn((styles) => styles),
-    flatten: global.jest.fn((style) => style),
-    compose: global.jest.fn((style1, style2) => ({ ...style1, ...style2 })),
+    create: jest.fn((styles) => styles),
+    flatten: jest.fn((style) => style),
+    compose: jest.fn((style1, style2) => ({ ...style1, ...style2 })),
   },
-  View: 'View',
-  Text: 'Text',
-  TextInput: 'TextInput',
-  ScrollView: 'ScrollView',
-  Pressable: 'Pressable',
-  TouchableOpacity: 'TouchableOpacity',
-  Image: 'Image',
-  ActivityIndicator: 'ActivityIndicator',
   Animated: {
-    View: 'Animated.View',
-    Text: 'Animated.Text',
-    Image: 'Animated.Image',
-    ScrollView: 'Animated.ScrollView',
-    Value: global.jest.fn(),
-    event: global.jest.fn(),
-    timing: global.jest.fn(() => ({ start: global.jest.fn() })),
-    spring: global.jest.fn(() => ({ start: global.jest.fn() })),
-    decay: global.jest.fn(() => ({ start: global.jest.fn() })),
-    seq: global.jest.fn(),
-    parallel: global.jest.fn(),
-    stagger: global.jest.fn(),
-    delay: global.jest.fn(),
+    Value: jest.fn(),
+    event: jest.fn(),
+    timing: jest.fn(() => ({ start: jest.fn() })),
+    spring: jest.fn(() => ({ start: jest.fn() })),
+    decay: jest.fn(() => ({ start: jest.fn() })),
+    seq: jest.fn(),
+    parallel: jest.fn(),
+    stagger: jest.fn(),
+    delay: jest.fn(),
   },
 }));
 
-// Mock TurboModuleRegistry to handle missing native modules
-global.jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
-  get: global.jest.fn(() => ({})),
-  getEnforcing: global.jest.fn(() => ({})),
+// Mock react-native/Libraries/TurboModule/TurboModuleRegistry
+jest.mock('react-native/Libraries/TurboModule/TurboModuleRegistry', () => ({
+  get: jest.fn(() => ({})),
+  getEnforcing: jest.fn(() => ({})),
 }));
 
-// Mock react-native-svg for lucide icons
-global.jest.mock('react-native-svg', () => ({
-  Svg: 'Svg',
-  Circle: 'Circle',
-  Ellipse: 'Ellipse',
-  G: 'G',
-  Text: 'Text',
-  TSpan: 'TSpan',
-  TextPath: 'TextPath',
-  Path: 'Path',
-  Polygon: 'Polygon',
-  Polyline: 'Polyline',
-  Line: 'Line',
-  Rect: 'Rect',
-  Use: 'Use',
-  Image: 'Image',
-  Symbol: 'Symbol',
-  Defs: 'Defs',
-  LinearGradient: 'LinearGradient',
-  RadialGradient: 'RadialGradient',
-  Stop: 'Stop',
-  ClipPath: 'ClipPath',
-  Pattern: 'Pattern',
-  Mask: 'Mask',
+// Mock react-native-svg
+jest.mock('react-native-svg', () => ({
+  Svg: {
+    Circle: 'Circle',
+    Ellipse: 'Ellipse',
+    G: 'G',
+    Text: 'Text',
+    TSpan: 'TSpan',
+    TextPath: 'TextPath',
+    Path: 'Path',
+    Polygon: 'Polygon',
+    Polyline: 'Polyline',
+    Line: 'Line',
+    Rect: 'Rect',
+    Use: 'Use',
+    Image: 'Image',
+    Symbol: 'Symbol',
+    Defs: 'Defs',
+    LinearGradient: 'LinearGradient',
+    RadialGradient: 'RadialGradient',
+    Stop: 'Stop',
+    ClipPath: 'ClipPath',
+    Pattern: 'Pattern',
+    Mask: 'Mask',
+  },
 }));
 
-// Mock lucide-react-native icons
-global.jest.mock('lucide-react-native', () => ({
-  Mail: 'Mail',
-  X: 'X',
-  ChevronRight: 'ChevronRight',
+// Mock lucide-react-native
+jest.mock('lucide-react-native', () => ({
   ChevronLeft: 'ChevronLeft',
+  ChevronRight: 'ChevronRight',
+  ChevronDown: 'ChevronDown',
+  ChevronUp: 'ChevronUp',
+  Menu: 'Menu',
+  X: 'X',
+  Plus: 'Plus',
+  Minus: 'Minus',
+  Search: 'Search',
+  Filter: 'Filter',
+  Home: 'Home',
+  Settings: 'Settings',
+  User: 'User',
+  LogOut: 'LogOut',
+  Camera: 'Camera',
+  MapPin: 'MapPin',
+  Clock: 'Clock',
+  Check: 'Check',
+  Alert: 'Alert',
+  Calendar: 'Calendar',
+  Phone: 'Phone',
+  Mail: 'Mail',
   Eye: 'Eye',
   EyeOff: 'EyeOff',
-  User: 'User',
-  MapPin: 'MapPin',
-  Phone: 'Phone',
-  Lock: 'Lock',
-  Check: 'Check',
-  AlertCircle: 'AlertCircle',
-  Info: 'Info',
+  Edit: 'Edit',
+  Trash: 'Trash',
+  Save: 'Save',
+  Download: 'Download',
+  Upload: 'Upload',
+  Refresh: 'Refresh',
+  ArrowLeft: 'ArrowLeft',
+  ArrowRight: 'ArrowRight',
+  ArrowUp: 'ArrowUp',
+  ArrowDown: 'ArrowDown',
 }));
 
-// Import React Native Testing Library matchers
-require('@testing-library/jest-native/extend-expect');
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaProvider: ({ children }) => children,
+  SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 44, bottom: 34, left: 0, right: 0 }),
+  useSafeAreaFrame: () => ({ x: 0, y: 0, width: 375, height: 667 }),
+}));
+
+// Mock expo-status-bar
+jest.mock('expo-status-bar', () => ({
+  StatusBar: ({ children }) => children,
+}));
+
+// Mock expo-constants
+jest.mock('expo-constants', () => ({
+  default: {
+    expoConfig: {
+      extra: {
+        eas: {},
+      },
+    },
+    manifest: {},
+  },
+}));
+
+// Mock expo-secure-store
+jest.mock('expo-secure-store', () => ({
+  setItemAsync: jest.fn(),
+  getItemAsync: jest.fn(),
+  deleteItemAsync: jest.fn(),
+}));
+
+// Mock expo-location
+jest.mock('expo-location', () => ({
+  requestForegroundPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  requestBackgroundPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  getForegroundPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  getBackgroundPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  getCurrentPositionAsync: jest.fn(() => ({
+    coords: {
+      latitude: 37.7749,
+      longitude: -122.4194,
+      altitude: 0,
+      accuracy: 5,
+      altitudeAccuracy: 5,
+      heading: 0,
+      speed: 0,
+    },
+    timestamp: Date.now(),
+  })),
+  watchPositionAsync: jest.fn(() => ({ remove: jest.fn() })),
+}));
+
+// Mock expo-image-picker
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  requestCameraPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  launchImageLibraryAsync: jest.fn(() => ({
+    canceled: false,
+    assets: [{
+      uri: 'mock-image-uri',
+      fileName: 'mock-image.jpg',
+      mimeType: 'image/jpeg',
+      width: 100,
+      height: 100,
+    }],
+  })),
+  launchCameraAsync: jest.fn(() => ({
+    canceled: false,
+    assets: [{
+      uri: 'mock-image-uri',
+      fileName: 'mock-image.jpg',
+      mimeType: 'image/jpeg',
+      width: 100,
+      height: 100,
+    }],
+  })),
+}));
+
+// Mock expo-camera
+jest.mock('expo-camera', () => ({
+  Camera: ({ children }) => children,
+  CameraView: ({ children }) => children,
+  requestCameraPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  getCameraPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
+  CameraType: {
+    front: 'front',
+    back: 'back',
+  },
+  FlashMode: {
+    on: 'on',
+    off: 'off',
+    auto: 'auto',
+  },
+}));
+
+// Ignore react-native-specific modules

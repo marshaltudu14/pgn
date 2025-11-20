@@ -196,7 +196,7 @@ export class PhotoService {
   }
 
   /**
-   * Validate photo format and size (expecting already compressed from client)
+   * Validate photo format (no strict size check - client handles compression)
    */
   private async validatePhoto(blob: Blob): Promise<{ isValid: boolean; error?: string }> {
     return new Promise((resolve) => {
@@ -215,24 +215,8 @@ export class PhotoService {
           return;
         }
 
-        // Check file size (maximum 100KB - client should compress before sending)
-        if (blob.size > 100 * 1024) {
-          resolve({
-            isValid: false,
-            error: 'Image too large. Maximum size is 100KB after compression.'
-          });
-          return;
-        }
-
-        // Check aspect ratio (should be roughly portrait or square)
-        const aspectRatio = img.width / img.height;
-        if (aspectRatio > 1.5) {
-          resolve({
-            isValid: false,
-            error: 'Invalid aspect ratio. Please use a portrait or square photo.'
-          });
-          return;
-        }
+        // No strict file size check - client handles aggressive compression
+        // Only basic validation that it's a valid image
 
         resolve({ isValid: true });
       };

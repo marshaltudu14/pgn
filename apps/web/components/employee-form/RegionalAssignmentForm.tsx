@@ -1,6 +1,6 @@
 /**
  * Regional Assignment Form Component
- * Handles regional assignments for employees with state, district, and city selection
+ * Handles regional assignments for employees with state and city selection
  */
 
 'use client';
@@ -42,21 +42,48 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   const { regions, isLoading: loading } = useRegionsStore();
   const [openCity, setOpenCity] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(100);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isSearching, setIsSearching] = useState(false);
+  const pageSize = 50; // Load 50 cities per page
 
-  // Load regions data using the store
+  // Load regions data using the store with pagination
   useEffect(() => {
     const store = useRegionsStore.getState();
-    // Fetch all regions with a high limit
-    store.fetchRegions({}, { limit: 1000 });
     store.fetchStates();
+
+    // Initial load of regions with pagination
+    loadRegions(1, '');
   }, []);
 
-  // Get form values
-  const selectedCities = form.watch('assigned_cities') || [];
+  // Load regions with pagination and search
+  const loadRegions = async (page: number, query: string) => {
+    setIsSearching(true);
+    try {
+      const store = useRegionsStore.getState();
+      const filters = query ? { city: query } : {};
+      await store.fetchRegions(filters, { page, limit: pageSize });
+    } catch (error) {
+      console.error('Error loading regions:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
-  // Create flat list of all city-district pairs for combobox
-  const allCityDistrictPairs = useMemo(() => {
+  // Debounced search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1);
+      loadRegions(1, searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // Get form values and memoize to prevent dependency changes
+  const selectedCities = useMemo(() => form.watch('assigned_cities') || [], [form]);
+
+  // Create flat list of city pairs for combobox
+  const allCityPairs = useMemo(() => {
     if (!regions.data || !regions.data.length) return [];
 
     const pairs: Array<{id: string, city: string, state: string, display: string}> = [];
@@ -70,29 +97,24 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       });
     });
 
-    return pairs.sort((a, b) => a.display.localeCompare(b.display));
+    return pairs;
   }, [regions.data]);
 
-  // Filter cities based on search query and display limit
-  const filteredCities = useMemo(() => {
-    if (!regions.data || !regions.data.length) return [];
+  // Filter out already selected cities from the dropdown
+  const availableCities = useMemo(() => {
+    return allCityPairs.filter(pair => {
+      return !selectedCities.some(selected =>
+        selected.city === pair.city && selected.state === pair.state
+      );
+    });
+  }, [allCityPairs, selectedCities]);
 
-    let filtered = allCityDistrictPairs;
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase().trim();
-      const searchTerms = query.split(/\s+/).filter(term => term.length > 0);
-
-      filtered = allCityDistrictPairs.filter(pair => {
-        const fullText = `${pair.city} ${pair.state}`.toLowerCase();
-
-        // Check if all search terms appear in the full text (city, state)
-        return searchTerms.every(term => fullText.includes(term));
-      });
-    }
-
-    return filtered.slice(0, displayLimit);
-  }, [regions.data, allCityDistrictPairs, searchQuery, displayLimit]);
+  // Load more cities for pagination
+  const loadMoreCities = () => {
+    const nextPage = currentPage + 1;
+    setCurrentPage(nextPage);
+    loadRegions(nextPage, searchQuery);
+  };
 
   // Handle city selection
   const handleCitySelect = (city: string, state: string) => {
@@ -118,9 +140,9 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
     const scrollPosition = element.scrollTop + element.clientHeight;
     const scrollHeight = element.scrollHeight;
 
-    // When user reaches bottom, load more cities
-    if (scrollPosition >= scrollHeight - 100 && filteredCities.length >= displayLimit) {
-      setDisplayLimit(prev => Math.min(prev + 100, allCityDistrictPairs.length));
+    // When user reaches bottom and has more data, load more cities
+    if (scrollPosition >= scrollHeight - 100 && regions.hasMore && !isSearching) {
+      loadMoreCities();
     }
   };
 
@@ -183,7 +205,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                   <PopoverContent className="w-full p-0 max-h-[400px]" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                     <Command>
                       <CommandInput
-                        placeholder="Search cities, districts, or states..."
+                        placeholder="Search cities or states..."
                         value={searchQuery}
                         onValueChange={setSearchQuery}
                       />
@@ -192,9 +214,9 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                           {searchQuery ? 'No cities found matching your search.' : 'No cities available.'}
                         </CommandEmpty>
                         <CommandGroup>
-                          {filteredCities.map((pair) => {
+                          {availableCities.map((pair) => {
                             const isSelected = selectedCities.some(
-                              c => c.city === pair.city
+                              c => c.city === pair.city && c.state === pair.state
                             );
 
                             return (
@@ -202,6 +224,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                                 key={pair.id}
                                 value={pair.display}
                                 onSelect={() => handleCitySelect(pair.city, pair.state)}
+                                disabled={isSelected}
                               >
                                 <div className={cn(
                                   "mr-2 h-4 w-4 rounded-sm border border-primary",
@@ -215,10 +238,10 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                               </CommandItem>
                             );
                           })}
-                          {filteredCities.length < allCityDistrictPairs.length && (
+                          {(regions.hasMore || isSearching) && (
                             <CommandItem disabled>
                               <div className="text-center text-muted-foreground text-sm py-2">
-                                Loading more cities... ({filteredCities.length} of {allCityDistrictPairs.length})
+                                {isSearching ? 'Searching...' : 'Loading more cities...'}
                               </div>
                             </CommandItem>
                           )}

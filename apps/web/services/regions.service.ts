@@ -29,6 +29,12 @@ export async function createRegion(data: CreateRegionRequest): Promise<Region> {
 
   if (error) {
     console.error('Error creating region:', error);
+
+    // Handle specific duplicate key error
+    if (error.code === '23505' && error.message.includes('unique_state_city')) {
+      throw new Error('A region with this state and city combination already exists');
+    }
+
     throw new Error('Failed to create region');
   }
 
@@ -50,8 +56,8 @@ export async function getRegions(
   let query = supabase
     .from('regions')
     .select('*', { count: 'exact' })
-    .order('state', { ascending: true })
-    .order('city', { ascending: true });
+    .order('city', { ascending: true })
+    .order('state', { ascending: true });
 
   // Apply filters
   if (filters.state) {
@@ -132,6 +138,12 @@ export async function updateRegion(
 
   if (error) {
     console.error('Error updating region:', error);
+
+    // Handle specific duplicate key error
+    if (error.code === '23505' && error.message.includes('unique_state_city')) {
+      throw new Error('A region with this state and city combination already exists');
+    }
+
     throw new Error('Failed to update region');
   }
 
@@ -198,8 +210,8 @@ export async function searchRegions(
     .from('regions')
     .select('*', { count: 'exact' })
     .or(`state.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
-    .order('state', { ascending: true })
     .order('city', { ascending: true })
+    .order('state', { ascending: true })
     .range(offset, offset + limit - 1);
 
   if (error) {

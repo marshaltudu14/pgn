@@ -154,11 +154,19 @@ export function withAuth<T extends unknown[]>(
     requestHeaders.set('x-middleware-context', 'withAuth');
 
     // Create a temporary request with the context header
-    const tempRequest = new Request(req.url, {
+    const requestOptions: RequestInit = {
       method: req.method,
       headers: requestHeaders,
-      body: req.body,
-    }) as NextRequest;
+    };
+
+    // Only add body if it exists
+    if (req.body) {
+      requestOptions.body = req.body;
+      // Add duplex option for Next.js 16 when body is present for streaming support
+      (requestOptions as RequestInit & { duplex: 'half' }).duplex = 'half';
+    }
+
+    const tempRequest = new Request(req.url, requestOptions) as NextRequest;
     const result = await middleware(tempRequest);
 
     // If middleware returned a response (error), return it

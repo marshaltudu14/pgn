@@ -74,24 +74,62 @@ export async function takePhoto(
   options: CameraOptions = {}
 ): Promise<PhotoCaptureResult> {
   try {
+    console.log('📸 takePhoto: Starting photo capture');
+    console.log('📸 takePhoto: Camera ref type:', typeof cameraRef);
+    console.log('📸 takePhoto: Camera ref exists:', !!cameraRef);
+    console.log('📸 takePhoto: Options:', options);
+
     if (!cameraRef) {
+      console.log('📸 takePhoto: ERROR - Camera ref is null or undefined');
       throw new CameraError('CAMERA_NOT_READY', 'Camera is not ready');
     }
 
-    const photo = await cameraRef.takePictureAsync({
+    console.log('📸 takePhoto: Camera ref details:', {
+      hasTakePicture: typeof (cameraRef as any).takePictureAsync,
+      refObject: cameraRef
+    });
+
+    console.log('📸 takePhoto: About to call takePictureAsync...');
+    const takePictureOptions = {
       quality: options.quality || 0.8,
       base64: true,
       exif: false
-    });
+    };
+    console.log('📸 takePhoto: takePictureAsync options:', takePictureOptions);
 
-    if (!photo) {
-      throw new CameraError('PHOTO_CAPTURE_FAILED', 'Failed to capture photo');
+    const photo = await cameraRef.takePictureAsync(takePictureOptions);
+
+    console.log('📸 takePhoto: takePictureAsync completed');
+    console.log('📸 takePhoto: Photo result type:', typeof photo);
+    console.log('📸 takePhoto: Photo result exists:', !!photo);
+
+    if (photo) {
+      console.log('📸 takePhoto: Photo result keys:', Object.keys(photo));
+      console.log('📸 takePhoto: Photo details:', {
+        uri: photo.uri,
+        width: photo.width,
+        height: photo.height,
+        hasBase64: !!photo.base64
+      });
     }
 
+    if (!photo) {
+      console.log('📸 takePhoto: ERROR - Photo result is null or undefined');
+      throw new CameraError('PHOTO_CAPTURE_FAILED', 'Failed to capture photo - result was null');
+    }
+
+    console.log('📸 takePhoto: Processing captured photo...');
     // Process the captured photo
-    return await processCapturedPhoto(photo, options);
+    const processedPhoto = await processCapturedPhoto(photo, options);
+    console.log('📸 takePhoto: Photo processed successfully');
+
+    return processedPhoto;
 
   } catch (error) {
+    console.log('📸 takePhoto: ERROR - Exception occurred');
+    console.log('📸 takePhoto: Error type:', typeof error);
+    console.log('📸 takePhoto: Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.log('📸 takePhoto: Error details:', error);
     console.error('Failed to take photo:', error);
     throw new CameraError('PHOTO_CAPTURE_ERROR', 'Failed to capture photo', error);
   }

@@ -8,14 +8,12 @@ import {
   PaginationParams,
   RegionsResponse,
   StateOption,
-  CityOption,
 } from '@pgn/shared';
 
 interface RegionsStore {
   // State
   regions: RegionsResponse;
   states: StateOption[];
-  cities: CityOption[];
   isLoading: boolean;
   isCreating: boolean;
   isUpdating: boolean;
@@ -30,7 +28,6 @@ interface RegionsStore {
   updateRegion: (id: string, data: UpdateRegionRequest) => Promise<Region>;
   deleteRegion: (id: string) => Promise<void>;
   fetchStates: () => Promise<void>;
-  fetchCities: (state: string) => Promise<void>;
   searchRegions: (searchTerm: string, pagination?: PaginationParams) => Promise<void>;
   setFilter: (filter: Partial<RegionFilter>) => void;
   setPagination: (pagination: Partial<PaginationParams>) => void;
@@ -52,7 +49,6 @@ export const useRegionsStore = create<RegionsStore>()(
       // Initial state
       regions: initialState,
       states: [],
-      cities: [],
       isLoading: false,
       isCreating: false,
       isUpdating: false,
@@ -217,20 +213,7 @@ export const useRegionsStore = create<RegionsStore>()(
         }
       },
 
-      // Fetch cities by state
-      fetchCities: async (state: string) => {
-        try {
-          const response = await fetch(`/api/regions/cities/${encodeURIComponent(state)}`);
-          if (!response.ok) {
-            throw new Error('Failed to fetch cities');
-          }
-          const cities = await response.json();
-          set({ cities });
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Failed to fetch cities' });
-        }
-      },
-
+  
       // Search regions
       searchRegions: async (searchTerm: string, pagination: PaginationParams = {}) => {
         try {
@@ -285,7 +268,6 @@ export const useRegionsStore = create<RegionsStore>()(
         set({
           regions: initialState,
           states: [],
-          cities: [],
           isLoading: false,
           isCreating: false,
           isUpdating: false,

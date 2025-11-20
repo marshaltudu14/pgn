@@ -46,10 +46,10 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const clearError = useAttendance((state) => state.clearError);
 
   // Camera methods from attendance store
-  const setCameraRef = useAttendance((state) => state.setCameraRef);
   const capturePhoto = useAttendance((state) => state.capturePhoto);
   const validateCapturedPhoto = useAttendance((state) => state.validateCapturedPhoto);
 
+  
   // Pulse animation for loading states
   useEffect(() => {
     const pulse = Animated.loop(
@@ -121,13 +121,13 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       setIsCapturing(true);
       setStep('processing');
 
-      // Set camera reference for attendance store
-      if (cameraRef.current) {
-        setCameraRef(cameraRef.current);
+      // Validate camera is available
+      if (!cameraRef.current) {
+        throw new Error('Camera is not ready');
       }
 
-      // Capture photo with compression
-      const photo = await capturePhoto({
+      // Capture photo directly with camera ref - no need to set it in store first
+      const photo = await capturePhoto(cameraRef.current, {
         quality: 0.8,
         aspectRatio: 1,
       });

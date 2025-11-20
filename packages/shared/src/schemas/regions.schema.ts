@@ -3,10 +3,8 @@ import { z } from 'zod';
 export interface Region {
   id: string;
   state: string;
-  district: string;
   city: string;
   state_slug: string;
-  district_slug: string;
   city_slug: string;
   created_at: string;
   updated_at: string;
@@ -14,18 +12,15 @@ export interface Region {
 
 export interface CreateRegionRequest {
   state: string;
-  district: string;
   city: string;
 }
 
 export interface UpdateRegionRequest {
-  district?: string;
   city?: string;
 }
 
 export interface RegionFilter {
   state?: string;
-  district?: string;
   city?: string;
 }
 
@@ -48,10 +43,6 @@ export interface StateOption {
   state_slug: string;
 }
 
-export interface DistrictOption {
-  district: string;
-  district_slug: string;
-}
 
 export interface CityOption {
   city: string;
@@ -61,17 +52,15 @@ export interface CityOption {
 // Zod schemas
 export const createRegionSchema = z.object({
   state: z.string().min(1, 'State is required').max(100),
-  district: z.string().min(1, 'District is required').max(100),
   city: z.string().min(1, 'City is required').max(100),
 });
 
 export const updateRegionSchema = z.object({
-  district: z.string().min(1).max(100).optional(),
   city: z.string().min(1).max(100).optional(),
 }).refine(
-  (data) => data.district !== undefined || data.city !== undefined,
+  (data) => data.city !== undefined,
   {
-    message: "At least one field (district or city) must be provided",
+    message: "City must be provided",
   }
 );
 
@@ -79,7 +68,6 @@ export const regionsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   state: z.string().optional(),
-  district: z.string().optional(),
   city: z.string().optional(),
 });
 

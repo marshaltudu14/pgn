@@ -22,7 +22,8 @@ import {
   compressPhoto,
   toggleCameraType,
   PhotoCaptureResult,
-  CameraOptions
+  CameraOptions,
+  CameraError
 } from '@/utils/camera';
 import {
   isLocationAvailable,
@@ -124,7 +125,7 @@ interface AttendanceStoreState {
   setCameraRef: (cameraRef: CameraView | null) => void;
   toggleCamera: () => void;
   setFlashMode: (mode: FlashMode) => void;
-  capturePhoto: (options?: CameraOptions) => Promise<PhotoCaptureResult>;
+  capturePhoto: (cameraRef?: CameraView, options?: CameraOptions) => Promise<PhotoCaptureResult>;
   pickPhoto: (options?: { allowsEditing?: boolean; quality?: number; aspectRatio?: number }) => Promise<PhotoCaptureResult>;
   validateCapturedPhoto: (photo: PhotoCaptureResult) => { isValid: boolean; errors: string[]; warnings: string[] };
   compressCapturedPhoto: (uri: string, targetSize?: number) => Promise<PhotoCaptureResult>;
@@ -793,11 +794,16 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ flashMode: mode });
         },
 
-        capturePhoto: async (options: CameraOptions = {}) => {
+        capturePhoto: async (cameraRef?: CameraView, options: CameraOptions = {}) => {
           set({ isTakingPhoto: true, error: null });
           try {
-            const { cameraRef } = get();
-            const photo = await takePhoto(cameraRef, options);
+            // Use provided cameraRef or fall back to stored ref
+            const ref = cameraRef || get().cameraRef;
+            if (!ref) {
+              throw new CameraError('CAMERA_NOT_READY', 'Camera is not ready');
+            }
+
+            const photo = await takePhoto(ref, options);
 
             set({
               lastPhotoCapture: photo,

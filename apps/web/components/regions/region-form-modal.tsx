@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { CreateRegionRequest, UpdateRegionRequest, StateOption } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { Loader2 } from 'lucide-react';
 
 interface RegionFormModalProps {
@@ -42,57 +41,35 @@ export function RegionFormModal({
   initialData,
   title,
 }: RegionFormModalProps) {
-  const { cities } = useRegionsStore();
   const [formData, setFormData] = useState<CreateRegionRequest>({
     state: '',
     city: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Use refs to track previous values and prevent infinite loops
-  const prevOpenRef = useRef(open);
-  const prevInitialDataRef = useRef(initialData);
+  // Initialize form data when modal opens
+  const resetForm = useCallback(() => {
+    const newFormData = initialData ? { ...initialData } : { state: '', city: '' };
+    setFormData(newFormData);
+    setErrors({});
+  }, [initialData]);
 
-  // Initialize form data when modal opens or initialData changes
-  useEffect(() => {
-    // Only fetch data if there are actual changes
-    if (open !== prevOpenRef.current || JSON.stringify(initialData) !== JSON.stringify(prevInitialDataRef.current)) {
-      if (open) {
-        const newFormData = initialData ? { ...initialData } : { state: '', city: '' };
-
-        // Use setTimeout to defer state updates and avoid cascading renders
-        setTimeout(() => {
-          setFormData(newFormData);
-          setErrors({});
-        }, 0);
-
-        // Load cities for initial data using direct store access
-        const store = useRegionsStore.getState();
-        if (newFormData.state) {
-          store.fetchCities(newFormData.state);
-        }
-      }
-
-      prevOpenRef.current = open;
-      prevInitialDataRef.current = initialData ? { ...initialData } : undefined;
-    }
-  }, [open, initialData]); // Only depend on actual values
+  // Reset form when open changes
+  if (open && (formData.state !== (initialData?.state || '') || formData.city !== (initialData?.city || ''))) {
+    resetForm();
+  }
 
   // Handle state change
-  const handleStateChange = (state: string) => {
-    setFormData({ ...formData, state, city: '' });
-    if (state) {
-      const store = useRegionsStore.getState();
-      store.fetchCities(state);
-    }
+  const handleStateChange = useCallback((state: string) => {
+    setFormData(prev => ({ ...prev, state, city: '' }));
     setErrors({});
-  };
+  }, []);
 
   // Handle city change
-  const handleCityChange = (city: string) => {
-    setFormData({ ...formData, city });
+  const handleCityChange = useCallback((city: string) => {
+    setFormData(prev => ({ ...prev, city }));
     setErrors({});
-  };
+  }, []);
 
   // Validate form
   const validateForm = (): boolean => {
@@ -166,29 +143,14 @@ export function RegionFormModal({
 
           <div className="space-y-2">
             <Label htmlFor="city">City *</Label>
-            {formData.state ? (
-              <div className="space-y-2">
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleCityChange(e.target.value)}
-                  placeholder="Enter city name"
-                  disabled={isSubmitting}
-                  className={errors.city ? 'border-destructive' : ''}
-                />
-                {cities.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    Existing cities in {formData.state}: {cities.map(c => c.city).join(', ')}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Input
-                placeholder="Select a state first"
-                disabled
-                className={errors.city ? 'border-destructive' : ''}
-              />
-            )}
+            <Input
+              id="city"
+              value={formData.city}
+              onChange={(e) => handleCityChange(e.target.value)}
+              placeholder="Enter city name"
+              disabled={isSubmitting}
+              className={errors.city ? 'border-destructive' : ''}
+            />
             {errors.city && (
               <p className="text-sm text-destructive">{errors.city}</p>
             )}

@@ -7,7 +7,6 @@ import {
   type PaginationParams,
   type RegionsResponse,
   type StateOption,
-  type CityOption,
 } from '@pgn/shared';
 
 
@@ -17,19 +16,8 @@ import {
 export async function createRegion(data: CreateRegionRequest): Promise<Region> {
   const supabase = await createClient();
 
-  // Check for exact duplicates (same state and city)
-  const { data: existingRegion } = await supabase
-    .from('regions')
-    .select('id')
-    .eq('state', data.state)
-    .eq('city', data.city)
-    .single();
-
-  if (existingRegion) {
-    throw new Error('Region with this state and city already exists');
-  }
-
   // Create region - Supabase trigger will generate slugs automatically
+  // Database unique constraint on (state, city) will handle duplicates
   const { data: region, error } = await supabase
     .from('regions')
     .insert({
@@ -128,26 +116,13 @@ export async function updateRegion(
   }
 
   // Prepare update data - Supabase trigger will update slugs automatically
-  const updateData: Partial<UpdateRegionRequest> = {};
+  const updateData: Partial<Region> = {};
 
   if (data.city) {
     updateData.city = data.city;
   }
 
-  // Check for duplicates (excluding current record)
-  const { data: duplicateCheck } = await supabase
-    .from('regions')
-    .select('id')
-    .eq('state', existingRegion.state)
-    .eq('city', data.city || existingRegion.city)
-    .neq('id', id)
-    .single();
-
-  if (duplicateCheck) {
-    throw new Error('Region with this state and city already exists');
-  }
-
-  // Update region
+  // Update region - Database unique constraint will handle duplicates
   const { data: updatedRegion, error } = await supabase
     .from('regions')
     .update(updateData)
@@ -206,32 +181,6 @@ export async function getStates(): Promise<StateOption[]> {
   }
 }
 
-/**
- * Get cities by state
- */
-export async function getCitiesByState(
-  state: string
-): Promise<CityOption[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from('regions')
-    .select('city, city_slug')
-    .eq('state', state)
-    .not('city', 'is', null);
-
-  if (error) {
-    console.error('Error fetching cities:', error);
-    throw new Error('Failed to fetch cities');
-  }
-
-  // Remove duplicates
-  const uniqueCities = Array.from(
-    new Map((data || []).map(item => [item.city, item])).values()
-  );
-
-  return uniqueCities;
-}
 
 /**
  * Search regions by text (searches across state and city)

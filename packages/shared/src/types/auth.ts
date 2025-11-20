@@ -76,10 +76,9 @@ export interface AuthenticationResult {
   error?: string;
 }
 
-// City-District-State assignment for regional assignments
+// City-State assignment for regional assignments
 export interface CityAssignment {
   city: string;
-  district: string;
   state: string;
 }
 

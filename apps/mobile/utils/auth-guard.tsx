@@ -64,7 +64,11 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
   // Initialize attendance after permissions are granted
   useEffect(() => {
     if (isAuthenticated && !showPermissionsScreen && permissionsChecked && shouldCheckPermissions) {
-      initializePermissions();
+      // Delay slightly to ensure auth state is stable
+      const timer = setTimeout(() => {
+        initializePermissions();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, showPermissionsScreen, permissionsChecked, shouldCheckPermissions, initializePermissions]);
 

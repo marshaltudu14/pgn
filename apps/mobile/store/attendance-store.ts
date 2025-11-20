@@ -117,7 +117,6 @@ interface AttendanceStoreState {
   clearOfflineQueue: () => Promise<void>;
 
   // Utility methods
-  getAuthToken: () => Promise<string>;
   getDeviceInfo: () => DeviceInfo;
   shouldQueueForOffline: (error: any) => boolean;
 
@@ -172,7 +171,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         isTakingPhoto: false,
         lastPhotoCapture: null,
 
-        // Initialize permissions and check current status
+        // Initialize permissions only (no API calls - AuthGuard handles authentication)
         initializePermissions: async () => {
           try {
             // Check permissions
@@ -185,13 +184,14 @@ export const useAttendance = create<AttendanceStoreState>()(
               isCameraReady: cameraAvailable
             });
 
-            // Fetch current attendance status
-            await get().fetchAttendanceStatus();
+            // Note: We do NOT fetch attendance status here.
+            // The attendance status should only be fetched when explicitly needed
+            // (e.g., when user clicks attendance button or opens attendance screen)
+            // AuthGuard ensures user is authenticated, so no auth checks needed here.
 
           } catch (error) {
             console.error('Failed to initialize permissions:', error);
             set({
-              error: 'Failed to initialize permissions',
               cameraPermission: false,
               locationPermission: false,
               isCameraReady: false
@@ -215,12 +215,20 @@ export const useAttendance = create<AttendanceStoreState>()(
           }
         },
 
-        // Fetch current attendance status
+        // Fetch current attendance status - only call when explicitly needed
         fetchAttendanceStatus: async () => {
           set({ isLoading: true, error: null });
 
           try {
-            const token = await get().getAuthToken();
+            // Get token from auth store since AuthGuard ensures user is authenticated
+            const { useAuth } = await import('@/store/auth-store');
+            const authStore = useAuth.getState();
+            const token = await authStore.getValidToken();
+
+            if (!token) {
+              throw new Error('No authentication token available');
+            }
+
             const status = await apiClient.request<{ success: boolean; data: AttendanceStatusResponse }>(
               API_ENDPOINTS.ATTENDANCE_STATUS,
               {
@@ -287,8 +295,15 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-            // Make direct API call instead of using service
-            const token = await get().getAuthToken();
+            // Get token from auth store since AuthGuard ensures user is authenticated
+            const { useAuth } = await import('@/store/auth-store');
+            const authStore = useAuth.getState();
+            const token = await authStore.getValidToken();
+
+            if (!token) {
+              throw new Error('No authentication token available');
+            }
+
             const deviceInfo = request.deviceInfo || get().getDeviceInfo();
 
             // Build API request
@@ -385,8 +400,15 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-            // Make direct API call instead of using service
-            const token = await get().getAuthToken();
+            // Get token from auth store since AuthGuard ensures user is authenticated
+            const { useAuth } = await import('@/store/auth-store');
+            const authStore = useAuth.getState();
+            const token = await authStore.getValidToken();
+
+            if (!token) {
+              throw new Error('No authentication token available');
+            }
+
             const deviceInfo = request.deviceInfo || get().getDeviceInfo();
 
             // Build API request
@@ -473,8 +495,15 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingOut: true, error: null });
 
           try {
-            // Get auth token first
-            const token = await get().getAuthToken();
+            // Get token from auth store since AuthGuard ensures user is authenticated
+            const { useAuth } = await import('@/store/auth-store');
+            const authStore = useAuth.getState();
+            const token = await authStore.getValidToken();
+
+            if (!token) {
+              throw new Error('No authentication token available');
+            }
+
             const deviceInfo = request.deviceInfo || get().getDeviceInfo();
 
             // Build checkout request with emergency method
@@ -683,15 +712,6 @@ export const useAttendance = create<AttendanceStoreState>()(
               get().processOfflineQueue();
             }, 1000);
           }
-        },
-
-        // Get auth token from AsyncStorage
-        getAuthToken: async (): Promise<string> => {
-          const token = await AsyncStorage.getItem('pgn_auth_token');
-          if (!token) {
-            throw new Error('No authentication token found');
-          }
-          return token;
         },
 
         // Get current device information

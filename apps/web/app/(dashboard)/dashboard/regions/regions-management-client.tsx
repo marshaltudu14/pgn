@@ -1,0 +1,242 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { useRegionsStore } from '@/app/lib/stores/regionsStore';
+import { CreateRegionRequest, UpdateRegionRequest, Region } from '@pgn/shared';
+import { RegionsTable, RegionFormModal } from '@/components/regions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Search, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+
+export default function RegionsManagementClient() {
+  const {
+    regions,
+    states,
+    isLoading,
+    isCreating,
+    isUpdating,
+    error,
+    filter,
+    pagination,
+    createRegion,
+    updateRegion,
+    deleteRegion,
+    setPagination,
+    clearError,
+  } = useRegionsStore();
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingRegion, setEditingRegion] = useState<Region | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Use refs to track current values to prevent infinite loops
+  const searchTermRef = useRef(searchTerm);
+  const prevFilterRef = useRef(filter);
+  const prevPaginationRef = useRef(pagination);
+
+  // Load initial data only once
+  useEffect(() => {
+    const store = useRegionsStore.getState();
+    store.fetchRegions();
+    store.fetchStates();
+  }, []); // Empty dependency array to run only once
+
+  // Update ref when searchTerm changes
+  useEffect(() => {
+    searchTermRef.current = searchTerm;
+  }, [searchTerm]);
+
+  // Handle search with debounce - only depends on searchTerm
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const store = useRegionsStore.getState();
+
+      if (searchTermRef.current.trim()) {
+        store.searchRegions(searchTermRef.current);
+      } else {
+        store.fetchRegions(store.filter, store.pagination);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]); // Only depend on searchTerm
+
+  // Handle filter and pagination changes
+  useEffect(() => {
+    const store = useRegionsStore.getState();
+    const currentFilter = store.filter;
+    const currentPagination = store.pagination;
+
+    // Only fetch if filter or pagination actually changed
+    if (
+      JSON.stringify(currentFilter) !== JSON.stringify(prevFilterRef.current) ||
+      JSON.stringify(currentPagination) !== JSON.stringify(prevPaginationRef.current)
+    ) {
+      if (!searchTermRef.current.trim()) {
+        store.fetchRegions(currentFilter, currentPagination);
+      }
+      prevFilterRef.current = { ...currentFilter };
+      prevPaginationRef.current = { ...currentPagination };
+    }
+  }, [filter, pagination]); // Monitor changes but prevent infinite loops
+
+  // Handle pagination
+  const handlePageChange = (page: number) => {
+    setPagination({ page });
+  };
+
+  // Handle region creation
+  const handleCreateRegion = async (data: CreateRegionRequest | UpdateRegionRequest) => {
+    try {
+      // Ensure we have all required fields for creation
+      if ('state' in data && data.state && data.district && data.city) {
+        await createRegion({
+          state: data.state,
+          district: data.district,
+          city: data.city
+        });
+        setShowCreateModal(false);
+        toast.success('Region created successfully');
+      } else {
+        toast.error('State, district, and city are required');
+      }
+    } catch (error) {
+      console.error('Failed to create region:', error);
+      toast.error('Failed to create region');
+    }
+  };
+
+  // Handle region update
+  const handleUpdateRegion = async (id: string, data: UpdateRegionRequest) => {
+    try {
+      await updateRegion(id, data);
+      setEditingRegion(null);
+      toast.success('Region updated successfully');
+    } catch (error) {
+      console.error('Failed to update region:', error);
+      toast.error('Failed to update region');
+    }
+  };
+
+  // Handle region deletion
+  const handleDeleteRegion = async (id: string) => {
+    try {
+      await deleteRegion(id);
+      toast.success('Region deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete region:', error);
+      toast.error('Failed to delete region');
+    }
+  };
+
+  // Handle edit
+  const handleEdit = (region: Region) => {
+    setEditingRegion(region);
+  };
+
+  
+  return (
+    <div className="min-h-screen bg-background dark:bg-black text-foreground">
+      <div className="space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard" className="hover:text-primary transition-colors">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Regions</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Regions Management</h1>
+            <p className="text-muted-foreground">
+              Manage states, districts, and cities across India
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowCreateModal(true)}
+            className="cursor-pointer hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Region
+          </Button>
+        </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <p className="text-destructive">{error}</p>
+              <Button variant="outline" size="sm" onClick={clearError}>
+                Clear Error
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Search */}
+      <Card className="dark:bg-gray-900 dark:border-gray-800">
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search regions by state, district, or city..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 cursor-pointer"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Regions Table */}
+      <RegionsTable
+        regions={regions}
+        isLoading={isLoading}
+        onEdit={handleEdit}
+        onDelete={handleDeleteRegion}
+        onPageChange={handlePageChange}
+      />
+
+      {/* Create Region Modal */}
+      <RegionFormModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onSubmit={handleCreateRegion}
+        isSubmitting={isCreating}
+        states={states}
+        title="Add New Region"
+      />
+
+      {/* Edit Region Modal */}
+      <RegionFormModal
+        open={!!editingRegion}
+        onOpenChange={(open) => !open && setEditingRegion(null)}
+        onSubmit={(data) => editingRegion && handleUpdateRegion(editingRegion.id, {
+          district: data.district,
+          city: data.city
+        })}
+        isSubmitting={isUpdating}
+        states={states}
+        initialData={editingRegion ? {
+          state: editingRegion.state,
+          district: editingRegion.district,
+          city: editingRegion.city,
+        } : undefined}
+        title="Edit Region"
+      />
+      </div>
+    </div>
+  );
+}

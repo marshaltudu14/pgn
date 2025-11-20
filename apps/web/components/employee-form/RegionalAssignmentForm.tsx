@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, X, ChevronDown, Check } from 'lucide-react';
 import { EmployeeFormData } from './types';
-import { RegionsData } from '@pgn/shared';
+import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { cn } from '@/lib/utils';
 
 interface RegionalAssignmentFormProps {
@@ -39,27 +39,17 @@ interface RegionalAssignmentFormProps {
 }
 
 export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
-  const [regionsData, setRegionsData] = useState<RegionsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { regions, isLoading: loading } = useRegionsStore();
   const [openCity, setOpenCity] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [displayLimit, setDisplayLimit] = useState(100);
 
-  // Load regions data
+  // Load regions data using the store
   useEffect(() => {
-    const loadRegionsData = async () => {
-      try {
-        const response = await fetch('/regions_data.json');
-        const data = await response.json();
-        setRegionsData(data);
-      } catch (error) {
-        console.error('Failed to load regions data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadRegionsData();
+    const store = useRegionsStore.getState();
+    // Fetch all regions with a high limit
+    store.fetchRegions({}, { limit: 1000 });
+    store.fetchStates();
   }, []);
 
   // Get form values
@@ -67,31 +57,26 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
 
   // Create flat list of all city-district pairs for combobox
   const allCityDistrictPairs = useMemo(() => {
-    if (!regionsData) return [];
+    if (!regions.data || !regions.data.length) return [];
 
     const pairs: Array<{id: string, city: string, district: string, state: string, display: string}> = [];
 
-    let idCounter = 0;
-    regionsData.regions.forEach(state => {
-      state.districts.forEach(district => {
-        district.cities.forEach(cityObj => {
-          pairs.push({
-            id: `city-${++idCounter}`,
-            city: cityObj.name,
-            district: district.name,
-            state: state.name,
-            display: `${cityObj.name}, ${district.name}, ${state.name}`
-          });
-        });
+    regions.data.forEach((region, index) => {
+      pairs.push({
+        id: `city-${index}`,
+        city: region.city,
+        district: region.district,
+        state: region.state,
+        display: `${region.city}, ${region.district}, ${region.state}`
       });
     });
 
     return pairs.sort((a, b) => a.display.localeCompare(b.display));
-  }, [regionsData]);
+  }, [regions.data]);
 
   // Filter cities based on search query and display limit
   const filteredCities = useMemo(() => {
-    if (!regionsData) return [];
+    if (!regions.data || !regions.data.length) return [];
 
     let filtered = allCityDistrictPairs;
 
@@ -108,7 +93,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
     }
 
     return filtered.slice(0, displayLimit);
-  }, [regionsData, allCityDistrictPairs, searchQuery, displayLimit]);
+  }, [regions.data, allCityDistrictPairs, searchQuery, displayLimit]);
 
   // Handle city selection
   const handleCitySelect = (city: string, district: string, state: string) => {

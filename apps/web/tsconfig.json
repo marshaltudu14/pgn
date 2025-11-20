@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@pgn/shared": ["../../packages/shared/src"]
     }
   },
   "include": [

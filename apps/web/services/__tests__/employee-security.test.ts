@@ -28,10 +28,10 @@ jest.mock('../../utils/supabase/admin', () => ({
 }));
 
 import { createClient } from '../../utils/supabase/server';
-import { createAuthUser, getUserByEmail, updateUserPasswordByEmail } from '../../utils/supabase/admin';
+import { createAuthUser, getUserByEmail } from '../../utils/supabase/admin';
 
 describe('Employee Service Security Tests', () => {
-  let mockSupabaseClient: any;
+  let mockSupabaseClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -187,13 +187,13 @@ describe('Employee Service Security Tests', () => {
       (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
         success: true,
         data: null
-      } as any);
+      } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
         data: { user: { id: 'auth-user-id' } },
         error: undefined
-      } as any);
+      } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
@@ -245,7 +245,7 @@ describe('Employee Service Security Tests', () => {
       (getUserByEmail as jest.MockedFunction<typeof getUserByEmail>).mockResolvedValue({
         success: true,
         data: null
-      } as any);
+      } as any); // eslint-disable-line @typescript-eslint/no-explicit-any
 
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: false,
@@ -312,10 +312,11 @@ describe('Employee Service Security Tests', () => {
       // The service should sanitize this error
       try {
         await listEmployees({ search: 'test' });
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Error should not contain the sensitive database credentials
-        expect(error.message).not.toContain('password');
-        expect(error.message).not.toContain('secret123');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        expect(errorMessage).not.toContain('password');
+        expect(errorMessage).not.toContain('secret123');
       }
     });
 

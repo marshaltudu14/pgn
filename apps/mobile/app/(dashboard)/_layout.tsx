@@ -75,7 +75,7 @@ function DashboardLayoutContent() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+    <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
       <DashboardScreenWrapper>
         <Slot />
       </DashboardScreenWrapper>

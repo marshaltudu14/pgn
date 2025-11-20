@@ -20,6 +20,7 @@ import {
 } from '@/store/attendance-store';
 import { getCurrentLocation } from '@/utils/location';
 import { CheckInMobileRequest, CheckOutMobileRequest } from '@pgn/shared';
+import { COLORS } from '@/constants';
 
 interface CheckInOutModalProps {
   visible: boolean;
@@ -36,6 +37,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const [isCapturing, setIsCapturing] = useState(false);
   const [locationData, setLocationData] = useState<any>(null);
   const [step, setStep] = useState<'location' | 'camera' | 'processing'>('location');
+  const [isCameraReady, setIsCameraReady] = useState(false);
   const [pulseAnim] = useState(new Animated.Value(1));
 
   const cameraRef = useRef<CameraView>(null);
@@ -92,6 +94,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       setStep('location');
       setLocationData(null);
       setIsCapturing(false);
+      setIsCameraReady(false);
 
       // Get current location (permissions already handled by permissions screen)
       await fetchLocation();
@@ -118,29 +121,54 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const captureSelfie = async () => {
     try {
+      console.log('🎯 CheckInOutModal.captureSelfie: Starting selfie capture');
+      console.log('🎯 CheckInOutModal.captureSelfie: Camera ready state:', isCameraReady);
+
+      // Validate camera is ready
+      if (!isCameraReady) {
+        console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Camera is not ready yet');
+        throw new Error('Camera is still initializing. Please wait a moment and try again.');
+      }
+
       setIsCapturing(true);
       setStep('processing');
 
+      console.log('🎯 CheckInOutModal.captureSelfie: Checking camera ref...');
+      console.log('🎯 CheckInOutModal.captureSelfie: cameraRef.current exists:', !!cameraRef.current);
+      console.log('🎯 CheckInOutModal.captureSelfie: cameraRef.current type:', typeof cameraRef.current);
+
       // Validate camera is available
       if (!cameraRef.current) {
+        console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Camera ref is null');
         throw new Error('Camera is not ready');
       }
 
+      console.log('🎯 CheckInOutModal.captureSelfie: Calling store capturePhoto...');
       // Capture photo directly with camera ref - no need to set it in store first
       const photo = await capturePhoto(cameraRef.current, {
         quality: 0.8,
         aspectRatio: 1,
       });
+      console.log('🎯 CheckInOutModal.captureSelfie: Store capturePhoto completed');
 
+      console.log('🎯 CheckInOutModal.captureSelfie: Validating photo...');
       // Validate photo
       const validation = validateCapturedPhoto(photo);
+      console.log('🎯 CheckInOutModal.captureSelfie: Photo validation result:', validation);
+
       if (!validation.isValid) {
+        console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Photo validation failed:', validation.errors);
         throw new Error(validation.errors.join(', '));
       }
 
+      console.log('🎯 CheckInOutModal.captureSelfie: Processing attendance...');
       // Process attendance
       await processAttendance(photo);
+      console.log('🎯 CheckInOutModal.captureSelfie: Attendance processing completed');
     } catch (error) {
+      console.log('🎯 CheckInOutModal.captureSelfie: ERROR - Exception occurred');
+      console.log('🎯 CheckInOutModal.captureSelfie: Error type:', typeof error);
+      console.log('🎯 CheckInOutModal.captureSelfie: Error:', error);
       console.error('Failed to capture selfie:', error);
       Alert.alert(
         'Camera Error',
@@ -149,6 +177,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       );
     } finally {
       setIsCapturing(false);
+      console.log('🎯 CheckInOutModal.captureSelfie: Finally block - isCapturing set to false');
     }
   };
 
@@ -211,7 +240,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       <View style={styles.iconContainer}>
         <Animated.View style={[styles.locationIcon, { transform: [{ scale: pulseAnim }] }]}>
           <View style={styles.locationDot} />
-          <View style={[styles.locationRing, { borderColor: colorScheme === 'dark' ? '#FF9933' : '#FF9933' }]} />
+          <View style={[styles.locationRing, { borderColor: COLORS.SAFFRON }]} />
         </Animated.View>
       </View>
 
@@ -224,7 +253,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
         </Text>
       </View>
 
-      <ActivityIndicator size="large" color="#FF9933" style={styles.loader} />
+      <ActivityIndicator size="large" color={COLORS.SAFFRON} style={styles.loader} />
     </View>
   );
 
@@ -236,6 +265,10 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           style={styles.fullCamera}
           facing={cameraType}
           flash="off"
+          onCameraReady={() => {
+            console.log('📷 CheckInOutModal: Camera ready callback triggered');
+            setIsCameraReady(true);
+          }}
         />
 
         {/* Camera overlay with instructions */}
@@ -273,7 +306,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           <View style={styles.cameraBottomSection}>
             <View style={styles.cameraControls}>
               <TouchableOpacity
-                style={[styles.captureButton, { backgroundColor: '#FF9933' }]}
+                style={[styles.captureButton, { backgroundColor: COLORS.SAFFRON }]}
                 onPress={captureSelfie}
                 disabled={isCapturing}
               >
@@ -296,7 +329,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
     <View style={styles.stepContainer}>
       <View style={styles.iconContainer}>
         <Animated.View style={[styles.processingIcon, { transform: [{ scale: pulseAnim }] }]}>
-          <ActivityIndicator size="large" color="#FF9933" />
+          <ActivityIndicator size="large" color={COLORS.SAFFRON} />
         </Animated.View>
       </View>
 
@@ -406,7 +439,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#FF9933',
+    backgroundColor: COLORS.SAFFRON,
     position: 'absolute',
   },
   locationRing: {
@@ -537,7 +570,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF9933',
+    shadowColor: COLORS.SAFFRON,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -49,7 +49,7 @@ export const useRegionsStore = create<RegionsStore>()(
       // Initial state
       regions: initialState,
       states: [],
-      isLoading: false,
+      isLoading: true, // Start with loading true since we fetch data immediately
       isCreating: false,
       isUpdating: false,
       isDeleting: false,
@@ -268,7 +268,7 @@ export const useRegionsStore = create<RegionsStore>()(
         set({
           regions: initialState,
           states: [],
-          isLoading: false,
+          isLoading: true, // Start with loading true since we fetch data immediately
           isCreating: false,
           isUpdating: false,
           isDeleting: false,

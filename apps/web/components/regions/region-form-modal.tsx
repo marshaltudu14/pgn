@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { CreateRegionRequest, UpdateRegionRequest, StateOption } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,16 +48,13 @@ export function RegionFormModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Initialize form data when modal opens
-  const resetForm = useCallback(() => {
-    const newFormData = initialData ? { ...initialData } : { state: '', city: '' };
-    setFormData(newFormData);
-    setErrors({});
-  }, [initialData]);
-
-  // Reset form when open changes
-  if (open && (formData.state !== (initialData?.state || '') || formData.city !== (initialData?.city || ''))) {
-    resetForm();
-  }
+  useEffect(() => {
+    if (open) {
+      const newFormData = initialData ? { ...initialData } : { state: '', city: '' };
+      setFormData(newFormData);
+      setErrors({});
+    }
+  }, [open, initialData]);
 
   // Handle state change
   const handleStateChange = useCallback((state: string) => {

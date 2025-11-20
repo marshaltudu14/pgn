@@ -1,5 +1,7 @@
 import { CameraView } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
 import { permissionService } from '@/services/permissions';
 
 export interface CameraOptions {
@@ -75,43 +77,23 @@ export async function takePhoto(
 ): Promise<PhotoCaptureResult> {
   try {
     console.log('📸 takePhoto: Starting photo capture');
-    console.log('📸 takePhoto: Camera ref type:', typeof cameraRef);
     console.log('📸 takePhoto: Camera ref exists:', !!cameraRef);
-    console.log('📸 takePhoto: Options:', options);
 
     if (!cameraRef) {
       console.log('📸 takePhoto: ERROR - Camera ref is null or undefined');
       throw new CameraError('CAMERA_NOT_READY', 'Camera is not ready');
     }
 
-    console.log('📸 takePhoto: Camera ref details:', {
-      hasTakePicture: typeof (cameraRef as any).takePictureAsync,
-      refObject: cameraRef
-    });
+    // Check if cameraRef has the takePictureAsync method
+    console.log('📸 takePhoto: Camera ref methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(cameraRef)));
+    console.log('📸 takePhoto: Has takePictureAsync:', typeof (cameraRef as any).takePictureAsync);
 
-    console.log('📸 takePhoto: About to call takePictureAsync...');
-    const takePictureOptions = {
-      quality: options.quality || 0.8,
-      base64: true,
-      exif: false
-    };
-    console.log('📸 takePhoto: takePictureAsync options:', takePictureOptions);
+    console.log('📸 takePhoto: About to call takePictureAsync with minimal options...');
 
-    const photo = await cameraRef.takePictureAsync(takePictureOptions);
+    // Try the most basic call possible
+    const photo = await (cameraRef as any).takePictureAsync();
 
-    console.log('📸 takePhoto: takePictureAsync completed');
-    console.log('📸 takePhoto: Photo result type:', typeof photo);
-    console.log('📸 takePhoto: Photo result exists:', !!photo);
-
-    if (photo) {
-      console.log('📸 takePhoto: Photo result keys:', Object.keys(photo));
-      console.log('📸 takePhoto: Photo details:', {
-        uri: photo.uri,
-        width: photo.width,
-        height: photo.height,
-        hasBase64: !!photo.base64
-      });
-    }
+    console.log('📸 takePhoto: Photo captured successfully:', photo);
 
     if (!photo) {
       console.log('📸 takePhoto: ERROR - Photo result is null or undefined');
@@ -119,7 +101,7 @@ export async function takePhoto(
     }
 
     console.log('📸 takePhoto: Processing captured photo...');
-    // Process the captured photo
+    // Process the captured photo and convert to base64 for API
     const processedPhoto = await processCapturedPhoto(photo, options);
     console.log('📸 takePhoto: Photo processed successfully');
 
@@ -127,10 +109,7 @@ export async function takePhoto(
 
   } catch (error) {
     console.log('📸 takePhoto: ERROR - Exception occurred');
-    console.log('📸 takePhoto: Error type:', typeof error);
-    console.log('📸 takePhoto: Error message:', error instanceof Error ? error.message : 'Unknown error');
-    console.log('📸 takePhoto: Error details:', error);
-    console.error('Failed to take photo:', error);
+    console.log('📸 takePhoto: Error:', error);
     throw new CameraError('PHOTO_CAPTURE_ERROR', 'Failed to capture photo', error);
   }
 }
@@ -180,71 +159,118 @@ export async function pickPhotoFromLibrary(options: {
   }
 }
 
-// Process captured photo (compress, resize, etc.)
+// Process captured photo (compress, resize, convert to base64)
 async function processCapturedPhoto(
   photo: {
     uri: string;
-    base64?: string;
     width?: number;
     height?: number;
   },
   options: CameraOptions
 ): Promise<PhotoCaptureResult> {
   try {
-    // For now, use the photo as-is without manipulation
-    // In a real app, you might want to add basic compression here
+    console.log('🖼️ processCapturedPhoto: Starting image processing');
+
+    // Get image info first
+    const imageInfo = await ImageManipulator.manipulateAsync(
+      photo.uri,
+      [],
+      { format: ImageManipulator.SaveFormat.JPEG }
+    );
+
+    console.log('🖼️ processCapturedPhoto: Original image info:', {
+      width: imageInfo.width,
+      height: imageInfo.height,
+      uri: imageInfo.uri
+    });
+
+    // Apply aspect ratio if specified
+    const manipulations = [];
+    if (options.aspectRatio) {
+      const currentRatio = (imageInfo.width || 1) / (imageInfo.height || 1);
+      const targetRatio = options.aspectRatio;
+
+      if (Math.abs(currentRatio - targetRatio) > 0.1) {
+        // Crop to target aspect ratio
+        if (currentRatio > targetRatio) {
+          // Image is wider - crop width
+          const newWidth = Math.round((imageInfo.height || 1) * targetRatio);
+          const cropX = Math.round(((imageInfo.width || 1) - newWidth) / 2);
+          manipulations.push({
+            crop: {
+              originX: cropX,
+              originY: 0,
+              width: newWidth,
+              height: imageInfo.height || 1,
+            },
+          });
+        } else {
+          // Image is taller - crop height
+          const newHeight = Math.round((imageInfo.width || 1) / targetRatio);
+          const cropY = Math.round(((imageInfo.height || 1) - newHeight) / 2);
+          manipulations.push({
+            crop: {
+              originX: 0,
+              originY: cropY,
+              width: imageInfo.width || 1,
+              height: newHeight,
+            },
+          });
+        }
+      }
+    }
+
+    // Resize to reasonable dimensions if needed
+    const maxDimension = 1080; // Limit to 1080px for performance
+    if ((imageInfo.width || 0) > maxDimension || (imageInfo.height || 0) > maxDimension) {
+      const scale = Math.min(maxDimension / (imageInfo.width || 1), maxDimension / (imageInfo.height || 1));
+      manipulations.push({
+        resize: {
+          width: Math.round((imageInfo.width || 1) * scale),
+          height: Math.round((imageInfo.height || 1) * scale),
+        },
+      });
+    }
+
+    console.log('🖼️ processCapturedPhoto: Applying manipulations:', manipulations.length);
+
+    // Apply manipulations and convert to base64
+    const processedImage = await ImageManipulator.manipulateAsync(
+      photo.uri,
+      manipulations,
+      {
+        compress: options.quality || 0.8,
+        format: ImageManipulator.SaveFormat.JPEG,
+        base64: true, // Convert to base64 for API
+      }
+    );
+
+    console.log('🖼️ processCapturedPhoto: Image processed successfully:', {
+      uri: processedImage.uri,
+      width: processedImage.width,
+      height: processedImage.height,
+      hasBase64: !!processedImage.base64
+    });
 
     // Get file size
-    const fileInfo = await getImageSize(photo.uri);
+    const fileInfo = await FileSystem.getInfoAsync(processedImage.uri);
 
     return {
-      uri: photo.uri,
-      base64: photo.base64 || '',
-      width: photo.width || 0,
-      height: photo.height || 0,
-      fileSize: fileInfo.size,
+      uri: processedImage.uri,
+      base64: processedImage.base64 || '',
+      width: processedImage.width || 0,
+      height: processedImage.height || 0,
+      fileSize: (fileInfo as any).size || 0,
       type: 'image/jpeg',
       name: `selfie_${Date.now()}.jpg`
     };
 
   } catch (error) {
-    console.error('Failed to process captured photo:', error);
+    console.error('🖼️ processCapturedPhoto: Failed to process captured photo:', error);
     throw new CameraError('PHOTO_PROCESSING_ERROR', 'Failed to process photo', error);
   }
 }
 
-// Get image file size (simplified version)
-async function getImageSize(uri: string): Promise<{ size: number; width: number; height: number }> {
-  try {
-    // Try to get file size from filesystem
-    try {
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      return {
-        size: blob.size,
-        width: 0, // Would need ImageManipulator or another library to get dimensions
-        height: 0
-      };
-    } catch {
-      // If we can't get file size, return estimated size
-      return {
-        size: estimateImageSize(300, 400), // Assume typical selfie dimensions
-        width: 300,
-        height: 400
-      };
-    }
-  } catch (error) {
-    console.error('Failed to get image size:', error);
-    return { size: 0, width: 300, height: 400 };
-  }
-}
-
-// Estimate image file size based on dimensions
-function estimateImageSize(width: number, height: number): number {
-  // Rough estimation: width * height * 0.3 (bytes per pixel for JPEG)
-  return Math.round(width * height * 0.3);
-}
 
 // Validate photo quality
 export function validatePhoto(photo: PhotoCaptureResult): {
@@ -287,16 +313,15 @@ export async function compressPhoto(
   maxAttempts: number = 3
 ): Promise<PhotoCaptureResult> {
   try {
-    // For now, just return the original photo
-    // In a real implementation, you might use a different compression library
-    const fileInfo = await getImageSize(uri);
+    // Get file info using FileSystem
+    const fileInfo = await FileSystem.getInfoAsync(uri);
 
     return {
       uri: uri,
       base64: '', // Would need to convert to base64 if needed
       width: 0,
       height: 0,
-      fileSize: fileInfo.size,
+      fileSize: (fileInfo as any).size || 0,
       type: 'image/jpeg',
       name: `selfie_${Date.now()}.jpg`
     };

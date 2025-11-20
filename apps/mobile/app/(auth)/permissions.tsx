@@ -4,8 +4,8 @@ import {
   Text,
   TouchableOpacity,
   AppState,
+  StyleSheet,
 } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   Camera,
   MapPin,
@@ -13,7 +13,9 @@ import {
   Settings,
   CheckCircle,
 } from 'lucide-react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { permissionService, AppPermissions } from '@/services/permissions';
+import { COLORS, THEME } from '@/constants/theme';
 
 interface PermissionsScreenProps {
   permissions?: AppPermissions;
@@ -29,6 +31,178 @@ export default function PermissionsScreen({
     initialPermissions || { camera: 'denied', location: 'denied' }
   );
   const [isChecking, setIsChecking] = useState(false);
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colorScheme === 'dark' ? COLORS.BACKGROUND_DARK : COLORS.BACKGROUND_LIGHT,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: THEME.SPACING.XL,
+      paddingTop: THEME.SPACING.XXL + THEME.SPACING.XL, // Extra top padding for notch area
+      justifyContent: 'center',
+    },
+    headerContainer: {
+      alignItems: 'center',
+      marginBottom: THEME.SPACING.XXL + THEME.SPACING.SM,
+    },
+    iconContainer: {
+      width: THEME.SPACING.XXL,
+      height: THEME.SPACING.XXL,
+      borderRadius: THEME.BORDER_RADIUS.ROUND,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: THEME.SPACING.LG,
+    },
+    iconContainerGranted: {
+      backgroundColor: COLORS.SUCCESS_LIGHT,
+    },
+    iconContainerDefault: {
+      backgroundColor: colorScheme === 'dark' ? COLORS.SAFFRON_ALPHA_DARK : COLORS.WARNING_LIGHT,
+    },
+    title: {
+      fontSize: THEME.FONT_SIZES.DISPLAY,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginBottom: THEME.SPACING.SM,
+    },
+    titleDark: {
+      color: COLORS.TEXT_PRIMARY_DARK,
+    },
+    titleLight: {
+      color: COLORS.TEXT_PRIMARY_LIGHT,
+    },
+    subtitle: {
+      fontSize: THEME.FONT_SIZES.BASE,
+      textAlign: 'center',
+      paddingHorizontal: THEME.SPACING.SM,
+    },
+    subtitleDark: {
+      color: COLORS.TEXT_TERTIARY_DARK,
+    },
+    subtitleLight: {
+      color: COLORS.TEXT_TERTIARY_LIGHT,
+    },
+    permissionsList: {
+      marginTop: THEME.SPACING.XL,
+    },
+    permissionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: THEME.SPACING.LG,
+    },
+    permissionIconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: THEME.BORDER_RADIUS.ROUND,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: THEME.SPACING.SM,
+    },
+    permissionIconContainerGranted: {
+      backgroundColor: COLORS.SUCCESS_LIGHT,
+    },
+    permissionIconContainerDefault: {
+      backgroundColor: colorScheme === 'dark' ? COLORS.SAFFRON_ALPHA_DARK : COLORS.WARNING_LIGHT,
+    },
+    permissionTextContainer: {
+      flex: 1,
+    },
+    permissionTitle: {
+      fontSize: THEME.FONT_SIZES.BASE,
+      fontWeight: '600',
+      marginBottom: THEME.SPACING.XS,
+    },
+    permissionTitleDark: {
+      color: COLORS.TEXT_PRIMARY_DARK,
+    },
+    permissionTitleLight: {
+      color: COLORS.TEXT_PRIMARY_LIGHT,
+    },
+    permissionDescription: {
+      fontSize: THEME.FONT_SIZES.SM,
+    },
+    permissionDescriptionDark: {
+      color: COLORS.TEXT_TERTIARY_DARK,
+    },
+    permissionDescriptionLight: {
+      color: COLORS.TEXT_TERTIARY_LIGHT,
+    },
+    checkIconContainer: {
+      backgroundColor: COLORS.SUCCESS_LIGHT,
+      borderRadius: THEME.BORDER_RADIUS.SMALL,
+      padding: THEME.SPACING.XS,
+    },
+    actionButton: {
+      paddingVertical: THEME.SPACING.MD,
+      borderRadius: THEME.BORDER_RADIUS.LARGE,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: THEME.SPACING.SM,
+    },
+    actionButtonBlocked: {
+      backgroundColor: COLORS.ERROR,
+    },
+    actionButtonDefault: {
+      backgroundColor: COLORS.SAFFRON,
+    },
+    refreshButton: {
+      paddingVertical: THEME.SPACING.MD,
+      borderRadius: THEME.BORDER_RADIUS.LARGE,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+    },
+    refreshButtonDark: {
+      borderColor: COLORS.BORDER_DARK,
+    },
+    refreshButtonLight: {
+      borderColor: COLORS.BORDER_LIGHT,
+    },
+    refreshTextDisabled: {
+      fontSize: THEME.FONT_SIZES.BASE,
+      fontWeight: '500',
+    },
+    refreshTextDisabledDark: {
+      color: COLORS.TEXT_DISABLED_DARK,
+    },
+    refreshTextDisabledLight: {
+      color: COLORS.TEXT_DISABLED_LIGHT,
+    },
+    refreshTextEnabled: {
+      fontSize: THEME.FONT_SIZES.BASE,
+      fontWeight: '500',
+    },
+    refreshTextEnabledDark: {
+      color: COLORS.TEXT_SECONDARY_DARK,
+    },
+    refreshTextEnabledLight: {
+      color: COLORS.TEXT_SECONDARY_LIGHT,
+    },
+    privacyContainer: {
+      position: 'absolute',
+      bottom: THEME.SPACING.XL,
+      left: THEME.SPACING.XL,
+      right: THEME.SPACING.XL,
+    },
+    privacyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    privacyText: {
+      fontSize: THEME.FONT_SIZES.XS,
+      marginLeft: THEME.SPACING.XS,
+    },
+    privacyTextDark: {
+      color: COLORS.TEXT_DISABLED_DARK,
+    },
+    privacyTextLight: {
+      color: COLORS.TEXT_DISABLED_LIGHT,
+    },
+  });
 
   const checkPermissions = useCallback(async () => {
     setIsChecking(true);
@@ -86,30 +260,31 @@ export default function PermissionsScreen({
   const hasAnyBlocked = Object.values(permissions).some(status => status === 'blocked');
 
   return (
-    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}>
+    <View style={styles.container}>
       {/* Header with icon and title */}
-      <View className="flex-1 px-8 pt-20 justify-center">
-        <View className="items-center mb-12">
-          <View className={`w-20 h-20 rounded-full items-center justify-center mb-6 ${
-            allGranted
-              ? 'bg-green-100'
-              : colorScheme === 'dark' ? 'bg-primary-900/20' : 'bg-primary-100'
-          }`}>
+      <View style={styles.content}>
+        <View style={styles.headerContainer}>
+          <View style={[
+            styles.iconContainer,
+            allGranted ? styles.iconContainerGranted : styles.iconContainerDefault
+          ]}>
             <Shield
               size={40}
               color={allGranted ? '#10B981' : '#FFB74D'}
             />
           </View>
 
-          <Text className={`text-3xl font-bold text-center mb-2 ${
-            colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <Text style={[
+            styles.title,
+            colorScheme === 'dark' ? styles.titleDark : styles.titleLight
+          ]}>
             {allGranted ? 'Permissions Granted' : 'Enable Permissions'}
           </Text>
 
-          <Text className={`text-base text-center px-4 ${
-            colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-          }`}>
+          <Text style={[
+            styles.subtitle,
+            colorScheme === 'dark' ? styles.subtitleDark : styles.subtitleLight
+          ]}>
             {allGranted
               ? 'All required permissions are enabled. You can now use the app.'
               : 'PGN needs camera and location access for attendance tracking'
@@ -120,64 +295,70 @@ export default function PermissionsScreen({
         {!allGranted && (
           <>
             {/* Permission Items */}
-            <View className="space-y-6 mb-10">
-              <View className="flex-row items-center">
-                <View className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${
+            <View style={styles.permissionsList}>
+              <View style={styles.permissionItem}>
+                <View style={[
+                  styles.permissionIconContainer,
                   permissions.camera === 'granted'
-                    ? 'bg-green-100'
-                    : colorScheme === 'dark' ? 'bg-primary-900/20' : 'bg-primary-100'
-                }`}>
+                    ? styles.permissionIconContainerGranted
+                    : styles.permissionIconContainerDefault
+                ]}>
                   {permissions.camera === 'granted' ? (
                     <CheckCircle size={24} color="#10B981" />
                   ) : (
                     <Camera size={24} color="#FFB74D" />
                   )}
                 </View>
-                <View className="flex-1">
-                  <Text className={`font-semibold text-base mb-1 ${
-                    colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                <View style={styles.permissionTextContainer}>
+                  <Text style={[
+                    styles.permissionTitle,
+                    colorScheme === 'dark' ? styles.permissionTitleDark : styles.permissionTitleLight
+                  ]}>
                     Camera Access
                   </Text>
-                  <Text className={`text-sm ${
-                    colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
+                  <Text style={[
+                    styles.permissionDescription,
+                    colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
+                  ]}>
                     Required for selfie check-in/out and face recognition
                   </Text>
                 </View>
                 {permissions.camera === 'granted' && (
-                  <View className="bg-green-100 rounded-full p-1">
+                  <View style={styles.checkIconContainer}>
                     <CheckCircle size={16} color="#10B981" />
                   </View>
                 )}
               </View>
 
-              <View className="flex-row items-center">
-                <View className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${
+              <View style={styles.permissionItem}>
+                <View style={[
+                  styles.permissionIconContainer,
                   permissions.location === 'granted'
-                    ? 'bg-green-100'
-                    : colorScheme === 'dark' ? 'bg-primary-900/20' : 'bg-primary-100'
-                }`}>
+                    ? styles.permissionIconContainerGranted
+                    : styles.permissionIconContainerDefault
+                ]}>
                   {permissions.location === 'granted' ? (
                     <CheckCircle size={24} color="#10B981" />
                   ) : (
                     <MapPin size={24} color="#FFB74D" />
                   )}
                 </View>
-                <View className="flex-1">
-                  <Text className={`font-semibold text-base mb-1 ${
-                    colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-                  }`}>
+                <View style={styles.permissionTextContainer}>
+                  <Text style={[
+                    styles.permissionTitle,
+                    colorScheme === 'dark' ? styles.permissionTitleDark : styles.permissionTitleLight
+                  ]}>
                     Location Access
                   </Text>
-                  <Text className={`text-sm ${
-                    colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                  }`}>
+                  <Text style={[
+                    styles.permissionDescription,
+                    colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
+                  ]}>
                     Required for attendance tracking and verification
                   </Text>
                 </View>
                 {permissions.location === 'granted' && (
-                  <View className="bg-green-100 rounded-full p-1">
+                  <View style={styles.checkIconContainer}>
                     <CheckCircle size={16} color="#10B981" />
                   </View>
                 )}
@@ -186,22 +367,20 @@ export default function PermissionsScreen({
 
             {/* Action Button */}
             <TouchableOpacity
-              className={`py-4 rounded-2xl flex-row items-center justify-center active:scale-[0.98] transition-all duration-200 mb-4 ${
-                hasAnyBlocked
-                  ? colorScheme === 'dark' ? 'bg-red-600' : 'bg-red-500'
-                  : colorScheme === 'dark' ? 'bg-primary' : 'bg-primary'
-              }`}
+              style={[
+                styles.actionButton,
+                hasAnyBlocked ? styles.actionButtonBlocked : styles.actionButtonDefault
+              ]}
               onPress={openSettings}
-              style={{
-                shadowColor: '#FFB74D',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8,
-              }}
+              activeOpacity={0.9}
             >
               <Settings size={20} color="#FFFFFF" />
-              <Text className="text-white font-semibold text-base ml-3">
+              <Text style={{
+                color: '#FFFFFF',
+                fontWeight: '600',
+                fontSize: 16,
+                marginLeft: 12,
+              }}>
                 {hasAnyBlocked ? 'Open Settings' : 'Enable Permissions'}
               </Text>
             </TouchableOpacity>
@@ -209,22 +388,26 @@ export default function PermissionsScreen({
             {/* Refresh Button */}
             {!hasAnyBlocked && (
               <TouchableOpacity
-                className={`py-4 rounded-2xl items-center justify-center active:scale-[0.98] transition-all duration-200 ${
-                  colorScheme === 'dark' ? 'border border-gray-700' : 'border border-gray-300'
-                }`}
+                style={[
+                  styles.refreshButton,
+                  colorScheme === 'dark' ? styles.refreshButtonDark : styles.refreshButtonLight
+                ]}
                 onPress={checkPermissions}
                 disabled={isChecking}
+                activeOpacity={0.9}
               >
                 {isChecking ? (
-                  <Text className={`text-base font-medium ${
-                    colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
+                  <Text style={[
+                    styles.refreshTextDisabled,
+                    colorScheme === 'dark' ? styles.refreshTextDisabledDark : styles.refreshTextDisabledLight
+                  ]}>
                     Checking...
                   </Text>
                 ) : (
-                  <Text className={`text-base font-medium ${
-                    colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                  }`}>
+                  <Text style={[
+                    styles.refreshTextEnabled,
+                    colorScheme === 'dark' ? styles.refreshTextEnabledDark : styles.refreshTextEnabledLight
+                  ]}>
                     Check Again
                   </Text>
                 )}
@@ -234,12 +417,13 @@ export default function PermissionsScreen({
         )}
 
         {/* Privacy Note */}
-        <View className="absolute bottom-8 left-8 right-8">
-          <View className="flex-row items-center justify-center">
+        <View style={styles.privacyContainer}>
+          <View style={styles.privacyRow}>
             <Shield size={12} color={colorScheme === 'dark' ? '#6B7280' : '#9CA3AF'} />
-            <Text className={`text-xs ml-2 ${
-              colorScheme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-            }`}>
+            <Text style={[
+              styles.privacyText,
+              colorScheme === 'dark' ? styles.privacyTextDark : styles.privacyTextLight
+            ]}>
               Your privacy is respected. Permissions used only for work purposes.
             </Text>
           </View>

@@ -3,6 +3,7 @@ import Spinner from '@/components/Spinner';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LoginRequest } from '@pgn/shared';
 import { AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
+import { COLORS } from '@/constants';
 import { useState } from 'react';
 import {
     Text,
@@ -72,7 +73,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
   };
 
   const iconColor = colorScheme === 'dark' ? '#9CA3AF' : '#6B7280';
-  const activeIconColor = '#FF9933'; // Saffron
+  const activeIconColor = COLORS.SAFFRON;
 
   return (
     <View style={styles.container}>

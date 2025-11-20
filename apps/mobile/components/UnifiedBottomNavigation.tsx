@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown } from 'lucide-react-native';
+import { COLORS } from '@/constants';
 
 interface TabItem {
   key: string;
@@ -27,14 +28,14 @@ const TabButton: React.FC<{
   const getIconColor = () => {
     if (item.disabled) return '#9ca3af';
     return item.isActive
-      ? '#FF9933' // Saffron color for active state
+      ? COLORS.SAFFRON // Active state
       : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
   };
 
   const getTextColor = () => {
     if (item.disabled) return '#9ca3af';
     return item.isActive
-      ? '#FF9933' // Saffron color for active state
+      ? COLORS.SAFFRON // Active state
       : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
   };
 

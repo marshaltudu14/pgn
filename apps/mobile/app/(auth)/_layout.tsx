@@ -27,7 +27,7 @@ export default function AuthLayout() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView style={{ flex: 1 }} edges={['left', 'right', 'bottom']}>
       <Slot />
     </SafeAreaView>
   );

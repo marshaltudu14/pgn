@@ -1,4 +1,5 @@
 import { Platform, StyleSheet } from 'react-native';
+import { COLORS } from '@/constants';
 
 export const createLoginScreenStyles = (colorScheme: 'light' | 'dark' | null | undefined) => StyleSheet.create({
   container: {
@@ -104,7 +105,7 @@ export const createLoginFormStyles = (colorScheme: 'light' | 'dark' | null | und
     color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
   },
   inputFocused: {
-    borderColor: '#FF9933', // Saffron
+    borderColor: COLORS.SAFFRON,
     backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
   },
   inputWithError: {
@@ -161,7 +162,7 @@ export const createLoginFormStyles = (colorScheme: 'light' | 'dark' | null | und
   button: {
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#FF9933', // Saffron
+    backgroundColor: COLORS.SAFFRON,
     alignItems: 'center',
     justifyContent: 'center',
   },

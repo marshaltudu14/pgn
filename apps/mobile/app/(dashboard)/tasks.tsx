@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ClipboardList, Clock, MapPin, CheckCircle, AlertCircle } from 'lucide-react-native';
+import { COLORS } from '@/constants';
 
 interface TaskItem {
   id: string;
@@ -215,7 +216,7 @@ export default function TasksScreen() {
           colorScheme === 'dark' ? 'bg-yellow-900/20 border-yellow-800' : 'bg-yellow-50 border-yellow-200'
         }`}>
           <View className="flex-row items-start">
-            <AlertCircle size={20} color="#F59E0B" className="mr-3 mt-0.5" />
+            <AlertCircle size={20} color={COLORS.WARNING} className="mr-3 mt-0.5" />
             <View className="flex-1">
               <Text className={`font-medium text-sm mb-1 ${
                 colorScheme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'

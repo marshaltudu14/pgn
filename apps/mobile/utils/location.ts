@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import { Alert } from 'react-native';
 import { permissionService } from '@/services/permissions';
+import { COLORS } from '@/constants';
 
 export interface LocationData {
   latitude: number;
@@ -200,7 +201,7 @@ export function getAccuracyLevel(accuracy: number): LocationAccuracyLevel {
   } else if (accuracy <= 20) {
     return {
       level: 'FAIR',
-      color: '#F59E0B', // amber
+      color: COLORS.WARNING,
       description: 'Fair location accuracy (±20m)'
     };
   } else if (accuracy <= 50) {

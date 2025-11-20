@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react-native';
 import { setGlobalToastInstance } from '@/utils/toast';
+import { COLORS } from '@/constants';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -129,14 +130,14 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   const getIconColor = () => {
     switch (toast.type) {
       case 'success':
-        return '#10B981'; // green-500
+        return COLORS.SUCCESS; // green-500
       case 'error':
-        return '#EF4444'; // red-500
+        return COLORS.ERROR; // red-500
       case 'warning':
-        return '#F59E0B'; // amber-500
+        return COLORS.WARNING;
       case 'info':
       default:
-        return '#3B82F6'; // blue-500
+        return COLORS.INFO; // blue-500
     }
   };
 
@@ -147,14 +148,14 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   const getBorderColor = () => {
     switch (toast.type) {
       case 'success':
-        return '#10B981';
+        return COLORS.SUCCESS;
       case 'error':
-        return '#EF4444';
+        return COLORS.ERROR;
       case 'warning':
-        return '#F59E0B';
+        return COLORS.WARNING;
       case 'info':
       default:
-        return '#3B82F6';
+        return COLORS.INFO;
     }
   };
 

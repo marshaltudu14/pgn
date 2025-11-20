@@ -795,23 +795,36 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         capturePhoto: async (cameraRef?: CameraView, options: CameraOptions = {}) => {
+          console.log('🏪 attendanceStore.capturePhoto: Starting capture');
+          console.log('🏪 attendanceStore.capturePhoto: Provided cameraRef:', !!cameraRef);
+          console.log('🏪 attendanceStore.capturePhoto: Stored cameraRef:', !!get().cameraRef);
+
           set({ isTakingPhoto: true, error: null });
           try {
             // Use provided cameraRef or fall back to stored ref
             const ref = cameraRef || get().cameraRef;
+            console.log('🏪 attendanceStore.capturePhoto: Using ref:', !!ref);
+
             if (!ref) {
+              console.log('🏪 attendanceStore.capturePhoto: ERROR - No camera ref available');
               throw new CameraError('CAMERA_NOT_READY', 'Camera is not ready');
             }
 
+            console.log('🏪 attendanceStore.capturePhoto: Calling takePhoto utility...');
             const photo = await takePhoto(ref, options);
+            console.log('🏪 attendanceStore.capturePhoto: takePhoto utility completed');
 
+            console.log('🏪 attendanceStore.capturePhoto: Updating store state...');
             set({
               lastPhotoCapture: photo,
               isTakingPhoto: false
             });
+            console.log('🏪 attendanceStore.capturePhoto: Store state updated');
 
             return photo;
           } catch (error) {
+            console.log('🏪 attendanceStore.capturePhoto: ERROR - Exception in store');
+            console.log('🏪 attendanceStore.capturePhoto: Error:', error);
             set({
               isTakingPhoto: false,
               error: error instanceof Error ? error.message : 'Failed to capture photo'

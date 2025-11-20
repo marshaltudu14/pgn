@@ -7,7 +7,6 @@ import {
   LogoutResponse,
   AuthenticatedUser
 } from '@pgn/shared';
-import { Platform } from 'react-native';
 import {
   API_BASE_URL,
   API_ENDPOINTS,
@@ -108,7 +107,7 @@ class ApiClient {
     return data;
   }
 
-  private async request<T>(
+  public async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -174,7 +173,7 @@ class ApiClient {
       );
 
       return response.status === 405; // 405 means server is reachable
-    } catch (error) {
+    } catch {
       return false;
     }
   }

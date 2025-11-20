@@ -222,7 +222,6 @@ export class NetworkMonitor {
 
   async waitForConnection(): Promise<NetworkStatus> {
     return new Promise(async (resolve, reject) => {
-      const startTime = Date.now();
 
       // Check immediately
       if (this.currentStatus?.isConnected && this.currentStatus?.isInternetReachable) {
@@ -245,7 +244,7 @@ export class NetworkMonitor {
           unsubscribe();
           resolve(this.currentStatus);
         }
-      } catch (error) {
+      } catch {
         unsubscribe();
         reject(new Error('Connection failed'));
       }

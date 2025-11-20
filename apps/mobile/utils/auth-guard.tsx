@@ -61,7 +61,6 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
 // Hook for easier usage in components
 export function useAuthGuard(requireAuth = true) {
-  const router = useRouter();
   const { isAuthenticated, isLoading, initializeAuth } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
 

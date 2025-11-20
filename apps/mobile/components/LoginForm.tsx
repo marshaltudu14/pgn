@@ -9,6 +9,7 @@ import { LoginRequest } from '@pgn/shared';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import Spinner from '@/components/Spinner';
+import { createLoginFormStyles } from '@/app/(auth)/_login-styles';
 
 interface LoginFormProps {
   onSubmit: (credentials: LoginRequest) => Promise<void>;
@@ -18,6 +19,7 @@ interface LoginFormProps {
 
 export default function LoginForm({ onSubmit, isLoggingIn = false, error }: LoginFormProps) {
   const colorScheme = useColorScheme();
+  const styles = createLoginFormStyles(colorScheme);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -67,24 +69,21 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
   };
 
   return (
-    <View className="w-full px-2">
+    <View style={styles.container}>
       {/* Email Input Section */}
-      <View className="mb-8">
-        <Text className={`font-medium text-xs ml-1 mb-3 ${
-          colorScheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-        }`}>
+      <View style={styles.inputSection}>
+        <Text style={styles.label}>
           Email Address
         </Text>
-        <View className="relative">
-          <View className="absolute left-3 top-3 z-10">
+        <View style={styles.inputContainer}>
+          <View style={styles.iconContainer}>
             <Mail size={18} color="#9CA3AF" />
           </View>
           <TextInput
-            className={`input-field pl-10 pr-3 text-sm ${
-              emailError
-                ? 'border-red-500'
-                : 'border-gray-300 dark:border-gray-600'
-            }`}
+            style={[
+              styles.input,
+              emailError ? styles.inputWithError : styles.inputNormal
+            ]}
             placeholder="Enter your email address"
             placeholderTextColor="#9CA3AF"
             value={email}
@@ -101,29 +100,26 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
           />
         </View>
         {emailError ? (
-          <View className="flex-row items-center mt-2 ml-1">
-            <Text className="text-red-500 text-xs font-medium">{emailError}</Text>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{emailError}</Text>
           </View>
         ) : null}
       </View>
 
       {/* Password Input Section */}
-      <View className="mb-8">
-        <Text className={`font-medium text-xs ml-1 mb-3 ${
-          colorScheme === 'dark' ? 'text-gray-200' : 'text-gray-700'
-        }`}>
+      <View style={styles.inputSection}>
+        <Text style={styles.label}>
           Password
         </Text>
-        <View className="relative">
-          <View className="absolute left-3 top-3 z-10">
+        <View style={styles.inputContainer}>
+          <View style={styles.iconContainer}>
             <Lock size={18} color="#9CA3AF" />
           </View>
           <TextInput
-            className={`input-field pl-10 pr-10 text-sm ${
-              passwordError
-                ? 'border-red-500'
-                : 'border-gray-300 dark:border-gray-600'
-            }`}
+            style={[
+              styles.input,
+              passwordError ? styles.inputWithError : styles.inputNormal
+            ]}
             placeholder="Enter your password"
             placeholderTextColor="#9CA3AF"
             value={password}
@@ -139,7 +135,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
             accessibilityHint="Enter your password"
           />
           <TouchableOpacity
-            className="absolute right-3 top-3 p-1"
+            style={styles.passwordToggle}
             onPress={() => setShowPassword(!showPassword)}
             disabled={isLoggingIn}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
@@ -152,45 +148,44 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
           </TouchableOpacity>
         </View>
         {passwordError ? (
-          <View className="flex-row items-center mt-2 ml-1">
-            <Text className="text-red-500 text-xs font-medium">{passwordError}</Text>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{passwordError}</Text>
           </View>
         ) : null}
       </View>
 
       {/* Error Message Section */}
       {error ? (
-        <View className={`border rounded-lg p-3 mb-8 ${
-          colorScheme === 'dark'
-            ? 'bg-red-900/20 border-red-800'
-            : 'bg-red-50 border-red-200'
-        }`}>
-          <Text className={`text-xs font-medium ${
-            colorScheme === 'dark' ? 'text-red-400' : 'text-red-700'
-          }`}>{error}</Text>
+        <View style={[
+          styles.errorMessageContainer,
+          colorScheme === 'dark' ? styles.errorMessageContainerDark : styles.errorMessageContainerLight
+        ]}>
+          <Text style={[
+            styles.errorMessageText,
+            colorScheme === 'dark' ? styles.errorMessageTextDark : styles.errorMessageTextLight
+          ]}>{error}</Text>
         </View>
       ) : null}
 
       {/* Login Button Section */}
-      <View className="mb-6">
+      <View style={styles.buttonSection}>
         <TouchableOpacity
-          className={`primary-button py-3 ${
-            isLoggingIn || !email.trim() || !password.trim()
-              ? 'opacity-50'
-              : 'opacity-100 active:scale-[0.98]'
-          } transition-all duration-200`}
+          style={[
+            styles.button,
+            (isLoggingIn || !email.trim() || !password.trim()) && styles.buttonDisabled
+          ]}
           onPress={handleSubmit}
           disabled={isLoggingIn || !email.trim() || !password.trim()}
           accessibilityLabel="Sign in"
           accessibilityRole="button"
         >
           {isLoggingIn ? (
-            <View className="flex-row items-center justify-center">
+            <View style={styles.loadingContainer}>
               <Spinner size={16} color="#000000" />
-              <Text className="text-black font-semibold text-sm ml-2">Signing in...</Text>
+              <Text style={styles.loadingText}>Signing in...</Text>
             </View>
           ) : (
-            <Text className="text-black font-semibold text-sm text-center">Sign In</Text>
+            <Text style={styles.buttonText}>Sign In</Text>
           )}
         </TouchableOpacity>
       </View>

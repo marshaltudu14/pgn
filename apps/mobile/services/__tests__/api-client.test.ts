@@ -9,11 +9,11 @@ import {
   AuthenticatedUser
 } from '@pgn/shared';
 
-// Mock fetch
-global.fetch = jest.fn();
-
 // Import the module and mock it
 import * as apiModule from '@/constants/api';
+
+// Mock fetch
+global.fetch = jest.fn();
 jest.mock('@/constants/api', () => ({
   ...apiModule,
   buildApiUrl: jest.fn((endpoint: string) => `http://localhost:3000/api${endpoint}`),

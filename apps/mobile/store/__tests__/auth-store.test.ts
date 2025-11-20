@@ -1,24 +1,18 @@
 import { renderHook, act } from '@testing-library/react-hooks';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, useUser, useIsAuthenticated, useAuthLoading, useAuthError } from '../auth-store';
-import { mobileAuthService } from '@/services/auth-service';
-import { secureStorage } from '@/services/secure-storage';
+import { apiClient } from '@/services/api-client';
 import {
   AuthenticatedUser,
   LoginRequest,
-  AuthenticationResult,
 } from '@pgn/shared';
 
 // Mock dependencies
-jest.mock('@/services/auth-service');
-jest.mock('@/services/secure-storage');
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-}));
+jest.mock('@/services/api-client');
+jest.mock('@react-native-async-storage/async-storage');
 
-const mockMobileAuthService = mobileAuthService as jest.Mocked<typeof mobileAuthService>;
-const mockSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
+const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
+const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 // Mock implementation for user data
 const createMockUser = (overrides: Partial<AuthenticatedUser> = {}): AuthenticatedUser => ({
@@ -44,29 +38,23 @@ describe('Auth Store', () => {
     jest.clearAllMocks();
     jest.useFakeTimers();
 
-    // Mock secure storage methods
-    mockSecureStorage.getAuthToken.mockResolvedValue('mock-token');
-    mockSecureStorage.getUserData.mockResolvedValue(createMockUser());
-    mockSecureStorage.getRefreshToken.mockResolvedValue('mock-refresh-token');
-    mockSecureStorage.clearAllAuthData.mockResolvedValue();
+    // Mock AsyncStorage methods
+    mockAsyncStorage.getItem.mockResolvedValue(null);
+    mockAsyncStorage.setItem.mockResolvedValue();
+    mockAsyncStorage.multiRemove.mockResolvedValue();
 
-    // Mock mobile auth service methods
-    mockMobileAuthService.getCurrentAuthState.mockResolvedValue({
-      isAuthenticated: false,
-      isLoading: false,
-      user: null,
-      error: null,
-      lastActivity: Date.now(),
+    // Mock API client methods
+    mockApiClient.login.mockResolvedValue({
+      message: 'Login successful',
+      token: 'mock-token',
+      employee: createMockUser(),
     });
-    mockMobileAuthService.login.mockResolvedValue({
-      success: true,
-      user: createMockUser(),
+    mockApiClient.logout.mockResolvedValue({
+      message: 'Logout successful',
     });
-    mockMobileAuthService.logout.mockResolvedValue();
-    mockMobileAuthService.validateToken.mockResolvedValue(true);
-    mockMobileAuthService.getUserDataFromToken.mockResolvedValue(createMockUser());
-    mockMobileAuthService.refreshToken.mockResolvedValue({
-      token: 'new-token',
+    mockApiClient.getCurrentUser.mockResolvedValue(createMockUser());
+    mockApiClient.refreshToken.mockResolvedValue({
+      token: 'new-refresh-token',
     });
   });
 
@@ -107,9 +95,10 @@ describe('Auth Store', () => {
       };
 
       const expectedUser = createMockUser();
-      mockMobileAuthService.login.mockResolvedValue({
-        success: true,
-        user: expectedUser,
+      mockApiClient.login.mockResolvedValue({
+        message: 'Login successful',
+        token: 'mock-token',
+        employee: expectedUser,
       });
 
       const { result } = renderHook(() => useAuth());
@@ -128,6 +117,10 @@ describe('Auth Store', () => {
         success: true,
         user: expectedUser,
       });
+
+      // Verify AsyncStorage was called
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith('pgn_auth_token', 'mock-token');
+      expect(mockAsyncStorage.setItem).toHaveBeenCalledWith('pgn_employee_data', JSON.stringify(expectedUser));
     });
 
     it('should handle login failure', async () => {
@@ -136,10 +129,7 @@ describe('Auth Store', () => {
         password: 'wrongpassword',
       };
 
-      mockMobileAuthService.login.mockResolvedValue({
-        success: false,
-        error: 'Invalid credentials',
-      });
+      mockApiClient.login.mockRejectedValue(new Error('Invalid credentials'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -165,7 +155,7 @@ describe('Auth Store', () => {
         password: 'password123',
       };
 
-      mockMobileAuthService.login.mockRejectedValue(new Error('Network error'));
+      mockApiClient.login.mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -215,11 +205,18 @@ describe('Auth Store', () => {
         success: true,
       });
 
-      expect(mockMobileAuthService.logout).toHaveBeenCalledWith('mock-token');
+      // Verify AsyncStorage was called to clear tokens
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
+        'pgn_auth_token',
+        'pgn_refresh_token',
+        'pgn_employee_data',
+        'pgn_user_id',
+        'pgn_last_login',
+      ]);
     });
 
     it('should handle logout when no token exists', async () => {
-      mockSecureStorage.getAuthToken.mockResolvedValue(null);
+      mockAsyncStorage.getItem.mockResolvedValue(null);
 
       const { result } = renderHook(() => useAuth());
 
@@ -239,7 +236,7 @@ describe('Auth Store', () => {
     });
 
     it('should clear state even if logout API fails', async () => {
-      mockMobileAuthService.logout.mockRejectedValue(new Error('API error'));
+      mockApiClient.logout.mockRejectedValue(new Error('API error'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -271,13 +268,9 @@ describe('Auth Store', () => {
   describe('Initialize Auth', () => {
     it('should initialize auth state successfully', async () => {
       const mockUser = createMockUser();
-      mockMobileAuthService.getCurrentAuthState.mockResolvedValue({
-        isAuthenticated: true,
-        isLoading: false,
-        user: mockUser,
-        error: null,
-        lastActivity: Date.now(),
-      });
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce('mock-token') // pgn_auth_token
+        .mockResolvedValueOnce(JSON.stringify(mockUser)); // pgn_employee_data
 
       const { result } = renderHook(() => useAuth());
 
@@ -292,7 +285,7 @@ describe('Auth Store', () => {
     });
 
     it('should handle initialization failure', async () => {
-      mockMobileAuthService.getCurrentAuthState.mockRejectedValue(new Error('Init failed'));
+      mockAsyncStorage.getItem.mockRejectedValue(new Error('Init failed'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -335,9 +328,10 @@ describe('Auth Store', () => {
       const { result } = renderHook(() => useAuth());
 
       // First, let's login to set some state
-      mockMobileAuthService.login.mockResolvedValue({
-        success: true,
-        user: createMockUser(),
+      mockApiClient.login.mockResolvedValue({
+        message: 'Login successful',
+        token: 'mock-token',
+        employee: createMockUser(),
       });
 
       await act(async () => {
@@ -365,8 +359,7 @@ describe('Auth Store', () => {
 
   describe('Token Management', () => {
     it('should get valid token', async () => {
-      mockSecureStorage.getAuthToken.mockResolvedValue('valid-token');
-      mockMobileAuthService.validateToken.mockResolvedValue(true);
+      mockAsyncStorage.getItem.mockResolvedValue('valid.token.here'); // Valid JWT format
 
       const { result } = renderHook(() => useAuth());
 
@@ -375,12 +368,11 @@ describe('Auth Store', () => {
         token = await result.current.getValidToken();
       });
 
-      expect(token).toBe('valid-token');
+      expect(token).toBe('valid.token.here');
     });
 
     it('should return null for invalid token', async () => {
-      mockSecureStorage.getAuthToken.mockResolvedValue('invalid-token');
-      mockMobileAuthService.validateToken.mockResolvedValue(false);
+      mockAsyncStorage.getItem.mockResolvedValue('invalid-token'); // Invalid JWT format
 
       const { result } = renderHook(() => useAuth());
 
@@ -393,7 +385,7 @@ describe('Auth Store', () => {
     });
 
     it('should return null when no token exists', async () => {
-      mockSecureStorage.getAuthToken.mockResolvedValue(null);
+      mockAsyncStorage.getItem.mockResolvedValue(null);
 
       const { result } = renderHook(() => useAuth());
 
@@ -407,7 +399,8 @@ describe('Auth Store', () => {
 
     it('should refresh user data successfully', async () => {
       const updatedUser = createMockUser({ fullName: 'Updated User' });
-      mockMobileAuthService.getUserDataFromToken.mockResolvedValue(updatedUser);
+      mockApiClient.getCurrentUser.mockResolvedValue(updatedUser);
+      mockAsyncStorage.getItem.mockResolvedValue('mock-token');
 
       const { result } = renderHook(() => useAuth());
 
@@ -430,7 +423,8 @@ describe('Auth Store', () => {
     });
 
     it('should handle refresh user data failure gracefully', async () => {
-      mockMobileAuthService.getUserDataFromToken.mockRejectedValue(new Error('API error'));
+      mockApiClient.getCurrentUser.mockRejectedValue(new Error('API error'));
+      mockAsyncStorage.getItem.mockResolvedValue('mock-token');
 
       const { result } = renderHook(() => useAuth());
 
@@ -451,6 +445,88 @@ describe('Auth Store', () => {
 
       // Should keep existing user data on failure
       expect(result.current.user).toEqual(originalUser);
+    });
+  });
+
+  describe('Utility Methods', () => {
+    it('should validate JWT tokens correctly', () => {
+      const { result } = renderHook(() => useAuth());
+
+      // Valid JWT format
+      expect(result.current.validateToken('header.payload.signature')).toBe(true);
+
+      // Invalid formats
+      expect(result.current.validateToken('short')).toBe(false);
+      expect(result.current.validateToken('')).toBe(false);
+      expect(result.current.validateToken('only.one.part')).toBe(false);
+      expect(result.current.validateToken('too.many.parts.here')).toBe(true); // Still validates format
+    });
+
+    it('should parse auth errors correctly', () => {
+      const { result } = renderHook(() => useAuth());
+
+      // Network errors
+      expect(result.current.parseAuthError(new Error('NETWORK_ERROR'))).toBe('Network error. Please check your internet connection.');
+      expect(result.current.parseAuthError(new Error('TIMEOUT'))).toBe('Request timed out. Please try again.');
+      expect(result.current.parseAuthError(new Error('UNAUTHORIZED'))).toBe('Invalid email or password.');
+      expect(result.current.parseAuthError(new Error('FORBIDDEN'))).toBe('Access denied. You may not have permission to login.');
+
+      // Generic errors
+      expect(result.current.parseAuthError(new Error('Random error'))).toBe('Random error');
+      expect(result.current.parseAuthError('String error')).toBe('String error');
+      expect(result.current.parseAuthError({ message: 'Object error' })).toBe('Object error');
+      expect(result.current.parseAuthError(null)).toBe('An unexpected error occurred. Please try again.');
+    });
+
+    it('should clear local tokens correctly', async () => {
+      const { result } = renderHook(() => useAuth());
+
+      await act(async () => {
+        await result.current.clearLocalTokens();
+      });
+
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
+        'pgn_auth_token',
+        'pgn_refresh_token',
+        'pgn_employee_data',
+        'pgn_user_id',
+        'pgn_last_login',
+      ]);
+    });
+
+    it('should get current auth state correctly', async () => {
+      const mockUser = createMockUser();
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce('mock-token') // pgn_auth_token
+        .mockResolvedValueOnce(JSON.stringify(mockUser)); // pgn_employee_data
+
+      const { result } = renderHook(() => useAuth());
+
+      let authState: any = null;
+      await act(async () => {
+        authState = await result.current.getCurrentAuthState();
+      });
+
+      expect(authState.isAuthenticated).toBe(true);
+      expect(authState.user).toEqual(mockUser);
+      expect(authState.error).toBe(null);
+    });
+
+    it('should handle getCurrentAuthState with invalid token', async () => {
+      mockAsyncStorage.getItem
+        .mockResolvedValueOnce('invalid-token') // Invalid JWT format
+        .mockResolvedValueOnce(JSON.stringify(createMockUser())); // pgn_employee_data
+
+      const { result } = renderHook(() => useAuth());
+
+      let authState: any = null;
+      await act(async () => {
+        authState = await result.current.getCurrentAuthState();
+      });
+
+      expect(authState.isAuthenticated).toBe(false);
+      expect(authState.user).toBe(null);
+      expect(mockAsyncStorage.multiRemove).toHaveBeenCalled(); // Should clear invalid tokens
     });
   });
 

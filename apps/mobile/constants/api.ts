@@ -35,6 +35,11 @@ export const API_ENDPOINTS = {
   EMPLOYEES: "/employees",
   EMPLOYEE_BY_ID: "/employees", // Base for /employees/[id]
 
+  // Attendance endpoints
+  ATTENDANCE_CHECKIN: "/attendance/checkin",
+  ATTENDANCE_CHECKOUT: "/attendance/checkout",
+  ATTENDANCE_STATUS: "/attendance/status",
+
   // Note: Face recognition endpoints will be added in Phase 4
   // GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding", // TODO: Add in Phase 4
 } as const;

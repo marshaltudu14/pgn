@@ -12,6 +12,7 @@ import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LoginRequest } from '@pgn/shared';
 import LoginForm from '@/components/LoginForm';
+import { createLoginScreenStyles } from './_login-styles';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -40,45 +41,41 @@ export default function LoginScreen() {
     }
   };
 
-  
   const colorScheme = useColorScheme();
+  const styles = createLoginScreenStyles(colorScheme);
 
   return (
     <KeyboardAvoidingView
-      className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-white'}`}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ flexGrow: 1 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollViewContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1">
+        <View style={styles.mainContainer}>
           {/* Header Section - Top row with image and text */}
-          <View className="flex-[3] justify-start items-center px-6 pt-16">
-            <View className="items-center mb-8">
+          <View style={styles.headerSection}>
+            <View style={styles.logoContainer}>
               <Image
                 source={require('@/images/pgn-logo-transparent.png')}
-                className="w-32 h-32 mb-2"
+                style={styles.logo}
                 resizeMode="contain"
               />
-              <Text className={`text-4xl font-bold text-center mb-2 ${
-                colorScheme === 'dark' ? 'text-white' : 'text-black'
-              }`}>
+              <Text style={styles.title}>
                 PGN
               </Text>
-              <Text className={`text-sm text-center ${
-                colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}>
+              <Text style={styles.subtitle}>
                 Employee Portal
               </Text>
             </View>
           </View>
 
           {/* Login Form Section - Bottom 20-30% of screen */}
-          <View className="flex-[1] justify-start items-center px-6 pb-8">
-            <View className="w-full max-w-sm">
+          <View style={styles.formSection}>
+            <View style={styles.formContainer}>
               <LoginForm
                 onSubmit={handleLogin}
                 isLoggingIn={isLoggingIn}

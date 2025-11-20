@@ -150,6 +150,42 @@ export type Database = {
           },
         ]
       }
+      regions: {
+        Row: {
+          city: string
+          city_slug: string
+          created_at: string | null
+          district: string
+          district_slug: string
+          id: string
+          state: string
+          state_slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          city: string
+          city_slug: string
+          created_at?: string | null
+          district: string
+          district_slug: string
+          id?: string
+          state: string
+          state_slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          city?: string
+          city_slug?: string
+          created_at?: string | null
+          district?: string
+          district_slug?: string
+          id?: string
+          state?: string
+          state_slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           assigned_cities: Json | null

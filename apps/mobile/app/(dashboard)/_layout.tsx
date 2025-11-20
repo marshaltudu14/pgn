@@ -1,4 +1,5 @@
 import UnifiedBottomNavigation from '@/components/UnifiedBottomNavigation';
+import CheckInOutModal from '@/components/CheckInOutModal';
 import { AppPermissions, permissionService } from '@/services/permissions';
 import { AuthGuard } from '@/utils/auth-guard';
 import { Slot, usePathname, useRouter } from 'expo-router';
@@ -9,6 +10,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import PermissionsScreen from '../(auth)/permissions';
+import { useAttendance, useIsCheckedIn } from '@/store/attendance-store';
 
 function ScreenContentWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -31,11 +33,19 @@ function DashboardLayoutContent() {
   const [permissionsChecked, setPermissionsChecked] = useState(false);
   const [showPermissionsScreen, setShowPermissionsScreen] = useState(false);
   const [permissions, setPermissions] = useState<AppPermissions | null>(null);
+  const [showCheckInOutModal, setShowCheckInOutModal] = useState(false);
+  const [checkInOutMode, setCheckInOutMode] = useState<'checkin' | 'checkout'>('checkin');
 
-  // Permission checking logic
+  // Attendance hooks
+  const isCheckedIn = useIsCheckedIn();
+  const initializePermissions = useAttendance((state) => state.initializePermissions);
+
+  // Initialize attendance only after permissions are granted
   useEffect(() => {
-    checkPermissions();
-  }, []);
+    if (!showPermissionsScreen && permissionsChecked) {
+      initializePermissions();
+    }
+  }, [showPermissionsScreen, permissionsChecked, initializePermissions]);
 
   const checkPermissions = async () => {
     try {
@@ -78,10 +88,23 @@ function DashboardLayoutContent() {
     return 'home'; // Default fallback
   };
 
+  
   const handlePermissionsGranted = () => {
     setShowPermissionsScreen(false);
     // Refresh permissions
     checkPermissions();
+    // Also initialize attendance after permissions are granted
+    initializePermissions();
+  };
+
+  const handleCheckInOut = () => {
+    const mode = isCheckedIn ? 'checkout' : 'checkin';
+    setCheckInOutMode(mode);
+    setShowCheckInOutModal(true);
+  };
+
+  const handleCloseCheckInOutModal = () => {
+    setShowCheckInOutModal(false);
   };
 
   const handleTabChange = (tab: string) => {
@@ -129,6 +152,14 @@ function DashboardLayoutContent() {
       <UnifiedBottomNavigation
         activeTab={getActiveTab(pathname)}
         onTabChange={handleTabChange}
+        isCheckedIn={isCheckedIn}
+        onCheckInOut={handleCheckInOut}
+      />
+
+      <CheckInOutModal
+        visible={showCheckInOutModal}
+        onClose={handleCloseCheckInOutModal}
+        mode={checkInOutMode}
       />
     </SafeAreaView>
   );

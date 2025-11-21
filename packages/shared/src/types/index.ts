@@ -7,3 +7,6 @@ export * from './ui';
 export * from './middleware';
 export * from './supabase';
 export * from './regions';
+
+// Re-export verification status utilities
+export * from './verification-status';

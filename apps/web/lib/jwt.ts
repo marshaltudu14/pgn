@@ -36,16 +36,39 @@ export class JWTService {
   }
 
   /**
+   * Generate a refresh token for React Native app (longer lived)
+   */
+  generateRefreshToken(tokenOptions: TokenGenerateOptions): string {
+    const payload: Omit<JWTPayload, 'iat' | 'exp'> = {
+      sub: tokenOptions.humanReadableId,
+      employeeId: tokenOptions.employeeId,
+      employmentStatus: tokenOptions.employmentStatus,
+      canLogin: tokenOptions.canLogin,
+    };
+
+    return jwt.sign(payload, this.secret, {
+      expiresIn: '7d', // 7 days for refresh token
+      issuer: 'pgn-auth',
+      audience: 'pgn-mobile',
+    } as SignOptions);
+  }
+
+  /**
    * Validate and decode a JWT token
    */
   validateToken(token: string): JWTPayload | null {
     try {
       const verifyOptions = {
         issuer: 'pgn-auth',
-        audience: 'pgn-web',
+        audience: 'pgn-web', // Web application audience
       };
 
-      const decoded = jwt.verify(token, this.secret, verifyOptions) as JWTPayload;
+      const decoded = jwt.verify(token, this.secret, verifyOptions) as unknown as JWTPayload;
+
+      // Validate the decoded token has required properties
+      if (!decoded || typeof decoded !== 'object' || !('sub' in decoded) || !('employeeId' in decoded)) {
+        return null;
+      }
 
       return decoded;
     } catch (error) {

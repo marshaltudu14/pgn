@@ -205,8 +205,8 @@ export class AuthService {
           canLogin: employee.can_login,
         });
 
-        // Generate refresh token for React Native app (longer lived)
-        const refreshToken = jwtService.generateToken({
+        // Generate refresh token for React Native app (longer lived - 7 days)
+        const refreshToken = jwtService.generateRefreshToken({
           employeeId: employee.id,
           humanReadableId: employee.human_readable_id,
           employmentStatus: employee.employment_status,
@@ -265,8 +265,18 @@ export class AuthService {
       canLogin: employee.can_login,
     });
 
+    // Generate new refresh token for React Native app (longer lived - 7 days)
+    const newRefreshToken = jwtService.generateRefreshToken({
+      employeeId: employee.id,
+      humanReadableId: employee.human_readable_id,
+      employmentStatus: employee.employment_status,
+      canLogin: employee.can_login,
+    });
+
     return {
       token: newToken,
+      refreshToken: newRefreshToken,
+      expiresIn: 900, // 15 minutes for access token
     };
   }
 

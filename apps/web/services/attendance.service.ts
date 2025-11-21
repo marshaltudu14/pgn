@@ -9,8 +9,54 @@ import {
   CheckOutMethod,
   VerificationStatus,
   EmergencyCheckOutRequest,
-  LocationUpdateRequest
+  LocationUpdateRequest,
+  DailyAttendanceRecord,
+  AttendanceListParams,
+  AttendanceListResponse,
+  UpdateVerificationRequest
 } from '@pgn/shared';
+
+// Interfaces for database records to avoid using any
+interface DatabaseAttendanceRecord {
+  id: string;
+  employee_id: string;
+  attendance_date: string;
+  check_in_timestamp: string | null;
+  check_out_timestamp: string | null;
+  check_in_latitude: number | null;
+  check_in_longitude: number | null;
+  check_in_selfie_url: string | null;
+  check_out_latitude: number | null;
+  check_out_longitude: number | null;
+  check_out_selfie_url: string | null;
+  check_out_method: string | null;
+  check_out_reason: string | null;
+  total_work_hours: number | null;
+  total_distance_meters: number | null;
+  path_data: PathPoint[] | null;
+  last_location_update: string | null;
+  battery_level_at_check_in: number | null;
+  battery_level_at_check_out: number | null;
+  verification_status: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  verification_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  employee?: {
+    human_readable_user_id?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
+interface PathPoint {
+  lat: number;
+  lng: number;
+  timestamp: string;
+  accuracy?: number;
+  batteryLevel?: number;
+}
 
 export class AttendanceService {
   /**
@@ -498,7 +544,250 @@ export class AttendanceService {
     const diffHours = diffMs / (1000 * 60 * 60);
     return Math.round(diffHours * 100) / 100; // Round to 2 decimal places
   }
+
+  /**
+   * List attendance records with filtering and pagination
+   */
+  async listAttendanceRecords(
+    params: AttendanceListParams
+  ): Promise<AttendanceListResponse> {
+    const supabase = await createClient();
+
+    // Start building the query
+    let query = supabase
+      .from('daily_attendance')
+      .select(`
+        *,
+        employee:employee_id (
+          id,
+          human_readable_user_id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .order(params.sortBy || 'attendance_date', { ascending: params.sortOrder === 'asc' });
+
+    // Apply filters
+    if (params.date) {
+      query = query.eq('attendance_date', params.date);
+    } else {
+      if (params.dateFrom) {
+        query = query.gte('attendance_date', params.dateFrom);
+      }
+      if (params.dateTo) {
+        query = query.lte('attendance_date', params.dateTo);
+      }
+    }
+
+    if (params.status) {
+      query = query.eq('status', params.status);
+    }
+
+    if (params.verificationStatus) {
+      query = query.eq('verification_status', params.verificationStatus);
+    }
+
+    if (params.employeeId) {
+      query = query.eq('employee_id', params.employeeId);
+    }
+
+    // Get total count for pagination
+    const { count, error: countError } = await supabase
+      .from('daily_attendance')
+      .select('*', { count: 'exact', head: true })
+      .match({
+        ...(params.date && { attendance_date: params.date }),
+        ...(params.status && { status: params.status }),
+        ...(params.verificationStatus && { verification_status: params.verificationStatus }),
+        ...(params.employeeId && { employee_id: params.employeeId }),
+      });
+
+    if (countError) {
+      console.error('Error getting attendance count:', countError);
+      throw new Error('Failed to get attendance count');
+    }
+
+    // Apply pagination
+    const page = params.page || 1;
+    const limit = params.limit || 20;
+    const offset = (page - 1) * limit;
+    query = query.range(offset, offset + limit - 1);
+
+    // Execute the query
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching attendance records:', error);
+      throw new Error('Failed to fetch attendance records');
+    }
+
+    // Transform the data to match the expected interface
+    const transformedRecords: DailyAttendanceRecord[] = (data || []).map((record: DatabaseAttendanceRecord) => ({
+      id: record.id,
+      employeeId: record.employee_id,
+      humanReadableEmployeeId: record.employee?.human_readable_user_id,
+      employeeName: record.employee?.first_name && record.employee?.last_name
+        ? `${record.employee.first_name} ${record.employee.last_name}`
+        : undefined,
+      date: record.attendance_date,
+      checkInTime: record.check_in_timestamp ? new Date(record.check_in_timestamp) : undefined,
+      checkOutTime: record.check_out_timestamp ? new Date(record.check_out_timestamp) : undefined,
+      checkInLocation: record.check_in_latitude && record.check_in_longitude
+        ? {
+            latitude: record.check_in_latitude,
+            longitude: record.check_in_longitude,
+            accuracy: 10, // Default accuracy if not stored
+            timestamp: record.check_in_timestamp ? new Date(record.check_in_timestamp) : new Date(record.attendance_date),
+            address: undefined, // Would need geocoding service for address
+          }
+        : undefined,
+      checkOutLocation: record.check_out_latitude && record.check_out_longitude
+        ? {
+            latitude: record.check_out_latitude,
+            longitude: record.check_out_longitude,
+            accuracy: 10, // Default accuracy if not stored
+            timestamp: record.check_out_timestamp ? new Date(record.check_out_timestamp) : new Date(record.attendance_date),
+            address: undefined, // Would need geocoding service for address
+          }
+        : undefined,
+      locationPath: record.path_data ? record.path_data.map((point: PathPoint) => ({
+        latitude: point.lat,
+        longitude: point.lng,
+        timestamp: new Date(point.timestamp),
+        accuracy: point.accuracy || 10,
+        batteryLevel: point.batteryLevel,
+      })) : [],
+      status: this.mapAttendanceStatus(record),
+      verificationStatus: record.verification_status as VerificationStatus,
+      workHours: record.total_work_hours ? Number(record.total_work_hours) : undefined,
+      notes: record.verification_notes || undefined,
+      createdAt: new Date(record.created_at),
+      updatedAt: new Date(record.updated_at),
+    }));
+
+    // Calculate pagination info
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
+
+    return {
+      records: transformedRecords,
+      page,
+      limit,
+      total,
+      totalPages,
+      hasMore,
+    };
+  }
+
+  /**
+   * Update attendance verification status
+   */
+  async updateAttendanceVerification(
+    recordId: string,
+    request: UpdateVerificationRequest
+  ): Promise<DailyAttendanceRecord> {
+    const supabase = await createClient();
+
+    const updateData: Record<string, unknown> = {
+      verification_status: request.verificationStatus,
+      verification_notes: request.verificationNotes,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Get the current user for verification
+    const { data } = await supabase.auth.getUser();
+    if (data.user) {
+      updateData.verified_by = data.user.id;
+      updateData.verified_at = new Date().toISOString();
+    }
+
+    const { data: recordData, error } = await supabase
+      .from('daily_attendance')
+      .update(updateData)
+      .eq('id', recordId)
+      .select(`
+        *,
+        employee:employee_id (
+          id,
+          human_readable_user_id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error updating attendance verification:', error);
+      throw new Error('Failed to update attendance verification');
+    }
+
+    // Transform the updated record
+    const transformedRecord: DailyAttendanceRecord = {
+      id: recordData.id,
+      employeeId: recordData.employee_id,
+      humanReadableEmployeeId: recordData.employee?.human_readable_user_id,
+      employeeName: recordData.employee?.first_name && recordData.employee?.last_name
+        ? `${recordData.employee.first_name} ${recordData.employee.last_name}`
+        : undefined,
+      date: recordData.attendance_date,
+      checkInTime: recordData.check_in_timestamp ? new Date(recordData.check_in_timestamp) : undefined,
+      checkOutTime: recordData.check_out_timestamp ? new Date(recordData.check_out_timestamp) : undefined,
+      checkInLocation: recordData.check_in_latitude && recordData.check_in_longitude
+        ? {
+            latitude: recordData.check_in_latitude,
+            longitude: recordData.check_in_longitude,
+            accuracy: 10,
+            timestamp: recordData.check_in_timestamp ? new Date(recordData.check_in_timestamp) : new Date(recordData.attendance_date),
+            address: undefined,
+          }
+        : undefined,
+      checkOutLocation: recordData.check_out_latitude && recordData.check_out_longitude
+        ? {
+            latitude: recordData.check_out_latitude,
+            longitude: recordData.check_out_longitude,
+            accuracy: 10,
+            timestamp: recordData.check_out_timestamp ? new Date(recordData.check_out_timestamp) : new Date(recordData.attendance_date),
+            address: undefined,
+          }
+        : undefined,
+      locationPath: recordData.path_data ? recordData.path_data.map((point: PathPoint) => ({
+        latitude: point.lat,
+        longitude: point.lng,
+        timestamp: new Date(point.timestamp),
+        accuracy: point.accuracy || 10,
+        batteryLevel: point.batteryLevel,
+      })) : [],
+      status: this.mapAttendanceStatus(recordData),
+      verificationStatus: recordData.verification_status as VerificationStatus,
+      workHours: recordData.total_work_hours ? Number(recordData.total_work_hours) : undefined,
+      notes: recordData.verification_notes || undefined,
+      createdAt: new Date(recordData.created_at),
+      updatedAt: new Date(recordData.updated_at),
+    };
+
+    return transformedRecord;
+  }
+
+  /**
+   * Helper function to map database status to application status
+   */
+  private mapAttendanceStatus(record: DatabaseAttendanceRecord): 'CHECKED_IN' | 'CHECKED_OUT' | 'ABSENT' {
+    if (record.check_in_timestamp && !record.check_out_timestamp) {
+      return 'CHECKED_IN';
+    }
+    if (record.check_in_timestamp && record.check_out_timestamp) {
+      return 'CHECKED_OUT';
+    }
+    return 'ABSENT';
+  }
 }
 
 // Export singleton instance
 export const attendanceService = new AttendanceService();
+
+// Export standalone functions for easier importing
+export const listAttendanceRecords = attendanceService.listAttendanceRecords.bind(attendanceService);
+export const updateAttendanceVerification = attendanceService.updateAttendanceVerification.bind(attendanceService);

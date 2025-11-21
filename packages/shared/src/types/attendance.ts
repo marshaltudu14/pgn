@@ -23,6 +23,8 @@ export interface LocationPath {
 export interface DailyAttendanceRecord {
   id: string;
   employeeId: string;
+  humanReadableEmployeeId?: string; // PGN-YYYY-NNNN format
+  employeeName?: string; // First + Last name
   date: string; // YYYY-MM-DD format
   checkInTime?: Date;
   checkOutTime?: Date;
@@ -30,6 +32,7 @@ export interface DailyAttendanceRecord {
   checkOutLocation?: LocationData;
   locationPath?: LocationPath[]; // Array of location points during work hours
   status: 'CHECKED_IN' | 'CHECKED_OUT' | 'ABSENT';
+  verificationStatus?: VerificationStatus;
   workHours?: number;
   notes?: string;
   createdAt: Date;
@@ -197,4 +200,32 @@ export interface LocationUpdateRequest {
   location: LocationData;
   timestamp: Date;
   batteryLevel?: number;
+}
+
+// Additional types needed by the web dashboard
+export interface AttendanceListParams {
+  page?: number;
+  limit?: number;
+  date?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  status?: string;
+  verificationStatus?: VerificationStatus;
+  employeeId?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface AttendanceListResponse {
+  records: DailyAttendanceRecord[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface UpdateVerificationRequest {
+  verificationStatus: VerificationStatus;
+  verificationNotes?: string;
 }

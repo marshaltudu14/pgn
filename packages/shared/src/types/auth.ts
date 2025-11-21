@@ -38,6 +38,8 @@ export interface RefreshRequest {
 
 export interface RefreshResponse {
   token: string;
+  refreshToken: string;
+  expiresIn: number;
 }
 
 export interface LogoutRequest {
@@ -146,3 +148,4 @@ export interface GeneratedUserId {
   sequence: number;
   year: number;
 }
+

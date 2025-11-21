@@ -195,6 +195,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                       role="combobox"
                       className="w-full justify-between h-12"
                       type="button"
+                      onClick={() => field.onChange(selectedCities)}
                     >
                       {selectedCities.length > 0
                         ? `${selectedCities.length} cit${selectedCities.length > 1 ? 'ies' : 'y'} selected`

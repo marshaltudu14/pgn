@@ -161,10 +161,6 @@ export class SessionManager {
       );
 
       const values = await AsyncStorage.multiGet(authKeys);
-      values.forEach(([key, value]) => {
-        const displayValue = key.includes('token') ? `${value?.substring(0, 20)}...` : value;
-        console.log(`Token Debug - ${key}: ${displayValue}`);
-      });
     } catch (error) {
       console.warn('Error debugging stored tokens:', error);
     }

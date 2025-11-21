@@ -38,6 +38,7 @@
     "concurrently": "^8.2.2",
     "prettier": "^3.0.0",
     "shadcn": "^3.5.0",
+    "supabase": "^2.58.5",
     "typescript": "^5.9.2"
   },
   "engines": {

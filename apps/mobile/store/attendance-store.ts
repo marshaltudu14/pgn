@@ -12,17 +12,18 @@ import {
 } from '@pgn/shared';
 import { api } from '@/services/api-client';
 import * as Location from 'expo-location';
+import * as Battery from 'expo-battery';
 // Utility functions
 import {
   isCameraAvailable,
   takePhoto,
   pickPhotoFromLibrary,
   validatePhoto,
+  CameraError,
   compressPhoto,
   toggleCameraType,
   PhotoCaptureResult,
-  CameraOptions,
-  CameraError
+  CameraOptions
 } from '@/utils/camera';
 import {
   isLocationAvailable,
@@ -273,7 +274,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             
-            const deviceInfo = request.deviceInfo || get().getDeviceInfo();
+            const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
             // Build API request
             const apiRequest = {
@@ -370,7 +371,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             
-            const deviceInfo = request.deviceInfo || get().getDeviceInfo();
+            const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
             // Build API request
             const apiRequest: any = {
@@ -457,7 +458,7 @@ export const useAttendance = create<AttendanceStoreState>()(
 
           try {
             
-            const deviceInfo = request.deviceInfo || get().getDeviceInfo();
+            const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
             // Build checkout request with emergency method
             const emergencyRequest = {
@@ -668,13 +669,24 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         // Get current device information
-        getDeviceInfo: (): DeviceInfo => {
-          return {
-            batteryLevel: undefined, // Will be filled by caller
-            platform: 'mobile',
-            version: '1.0.0',
-            model: 'React Native Device'
-          };
+        getDeviceInfo: async (): Promise<DeviceInfo> => {
+          try {
+            const batteryLevel = await Battery.getBatteryLevelAsync();
+            return {
+              batteryLevel: batteryLevel > 0 ? Math.round(batteryLevel * 100) : undefined,
+              platform: 'mobile',
+              version: '1.0.0',
+              model: 'React Native Device'
+            };
+          } catch (error) {
+            const state = get();
+            return {
+              batteryLevel: state.batteryLevel || undefined,
+              platform: 'mobile',
+              version: '1.0.0',
+              model: 'React Native Device'
+            };
+          }
         },
 
         // Check if error should be queued for offline processing
@@ -746,7 +758,10 @@ export const useAttendance = create<AttendanceStoreState>()(
           } catch (error) {
             set({
               isTakingPhoto: false,
-              error: error instanceof Error ? error.message : 'Failed to capture photo'
+              // Don't set error for user cancellation - let the caller handle it
+              error: (error instanceof CameraError && error.code === 'PHOTO_CAPTURE_CANCELED')
+                ? null
+                : error instanceof Error ? error.message : 'Failed to capture photo'
             });
             throw error;
           }

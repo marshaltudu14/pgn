@@ -26,6 +26,7 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
     // Parse request body
     const body = await req.json();
 
+    
     // Validate required fields
     if (!body.location || !body.selfieData) {
       const response = NextResponse.json(
@@ -57,6 +58,7 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
     // Process check-in through service
     const result = await attendanceService.checkIn(user.employeeId, checkInRequest);
 
+    
     if (!result.success) {
       const response = NextResponse.json(
         {

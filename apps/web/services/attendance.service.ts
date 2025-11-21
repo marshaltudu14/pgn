@@ -59,15 +59,11 @@ export class AttendanceService {
         check_in_timestamp: request.timestamp.toISOString(),
         check_in_latitude: request.location.latitude,
         check_in_longitude: request.location.longitude,
-        check_in_location_name: request.location.address || await this.reverseGeocode(request.location),
-        check_in_selfie_data: request.selfie,
         check_in_selfie_url: photoUrl,
-        check_in_face_confidence: 0, // Will be set by face recognition service
         battery_level_at_check_in: request.deviceInfo?.batteryLevel || null,
         path_data: [],
         verification_status: 'PENDING' as VerificationStatus,
-        last_location_update: new Date().toISOString(),
-        device_info: request.deviceInfo || null
+        last_location_update: new Date().toISOString()
       };
 
       let attendanceRecord;
@@ -172,10 +168,7 @@ export class AttendanceService {
         check_out_timestamp: checkOutTime.toISOString(),
         check_out_latitude: request.location.latitude,
         check_out_longitude: request.location.longitude,
-        check_out_location_name: request.location.address || await this.reverseGeocode(request.location),
-        check_out_selfie_data: request.selfie,
         check_out_selfie_url: photoUrl,
-        check_out_face_confidence: 0, // Will be set by face recognition service
         check_out_method: request.method || 'MANUAL' as CheckOutMethod,
         check_out_reason: request.reason || null,
         battery_level_at_check_out: request.deviceInfo?.batteryLevel || null,
@@ -339,13 +332,9 @@ export class AttendanceService {
         check_out_timestamp: checkOutTime.toISOString(),
         check_out_latitude: location.latitude,
         check_out_longitude: location.longitude,
-        check_out_location_name: (location as any).address || 'Emergency Check-out', // eslint-disable-line @typescript-eslint/no-explicit-any
-        check_out_selfie_data: request.selfieData || null,
         check_out_selfie_url: emergencySelfieUrl,
-        check_out_face_confidence: null, // No face recognition for emergency
         check_out_method: request.method,
         check_out_reason: request.reason,
-        battery_level_at_check_out: null,
         total_work_hours: workHours,
         last_location_update: new Date().toISOString(),
         verification_status: 'FLAGGED' as VerificationStatus,
@@ -443,14 +432,12 @@ export class AttendanceService {
     try {
       const supabase = await createClient();
 
-      // Parse date components
+      // Generate file path for storage
       const dateObj = new Date(date);
       const year = dateObj.getFullYear();
       const month = String(dateObj.getMonth() + 1).padStart(2, '0');
       const day = String(dateObj.getDate()).padStart(2, '0');
       const timestamp = Date.now();
-
-      // File path: attendance/year/month/date/employeeId/type-timestamp.jpg
       const filePath = `attendance/${year}/${month}/${day}/${employeeId}/${type}-${timestamp}.jpg`;
 
       // Convert base64 to blob

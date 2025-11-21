@@ -22,6 +22,7 @@ import {
 import { getCurrentLocation } from '@/utils/location';
 import { CheckInMobileRequest, CheckOutMobileRequest } from '@pgn/shared';
 import { COLORS } from '@/constants';
+import { showToast } from '@/utils/toast';
 
 interface CheckInOutModalProps {
   visible: boolean;
@@ -94,21 +95,23 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           setCapturedPhoto(photo);
           setStep('preview');
         }).catch((error) => {
-          Alert.alert(
-            'Camera Error',
-            error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
-            [{ text: 'OK', onPress: () => setStep('camera') }]
-          );
+          // Don't show error for user cancellation - just close the modal
+          if (error instanceof Error && error.message.includes('PHOTO_CAPTURE_CANCELED')) {
+            onClose(); // User voluntarily canceled, close the modal
+          } else {
+            Alert.alert(
+              'Camera Error',
+              error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
+              [{ text: 'OK', onPress: () => setStep('camera') }]
+            );
+          }
         }).finally(() => {
           setIsCapturing(false);
         });
       }, 500);
     } catch {
-      Alert.alert(
-        'Location Required',
-        'Unable to get your current location. Please ensure GPS is enabled and try again.',
-        [{ text: 'OK', onPress: onClose }]
-      );
+      showToast.error('Unable to get your current location. Please ensure GPS is enabled and try again.');
+      onClose();
     }
   }, [onClose, capturePhoto, validateCapturedPhoto]);
 
@@ -123,7 +126,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       // Get current location (permissions already handled by permissions screen)
       await fetchLocation();
     } catch {
-      Alert.alert('Error', 'Failed to initialize attendance. Please try again.');
+      showToast.error('Failed to initialize attendance. Please try again.');
       onClose();
     }
   }, [onClose, fetchLocation]);
@@ -143,9 +146,8 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           !error.includes('token') &&
           !error.includes('Authentication') &&
           !error.includes('Login')) {
-        Alert.alert('Error', error, [
-          { text: 'OK', onPress: clearError }
-        ]);
+        showToast.error(error);
+        clearError();
       }
     }
   }, [error, clearError]);
@@ -172,11 +174,16 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       setCapturedPhoto(photo);
       setStep('preview');
     } catch (error) {
-      Alert.alert(
-        'Camera Error',
-        error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
-        [{ text: 'OK', onPress: () => setStep('camera') }]
-      );
+      // Don't show error for user cancellation - just close the modal
+      if (error instanceof Error && error.message.includes('PHOTO_CAPTURE_CANCELED')) {
+        onClose(); // User voluntarily canceled, close the modal
+      } else {
+        Alert.alert(
+          'Camera Error',
+          error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
+          [{ text: 'OK', onPress: () => setStep('camera') }]
+        );
+      }
     } finally {
       setIsCapturing(false);
     }
@@ -184,7 +191,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const confirmPhoto = async () => {
     if (!capturedPhoto) {
-      Alert.alert('Error', 'No photo captured. Please try again.');
+      showToast.error('No photo captured. Please try again.');
       return;
     }
 
@@ -228,11 +235,11 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       }
 
       if (result.success) {
-        Alert.alert(
-          'Success',
-          result.message || (mode === 'checkin' ? 'Checked in successfully!' : 'Checked out successfully!'),
-          [{ text: 'OK', onPress: onClose }]
+        showToast.success(
+          mode === 'checkin' ? 'Checked in successfully!' : 'Checked out successfully!',
+          result.message
         );
+        onClose();
       } else {
         throw new Error(result.message || 'Attendance failed');
       }
@@ -246,11 +253,8 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           !errorMessage.includes('token') &&
           !errorMessage.includes('Authentication') &&
           !errorMessage.includes('Login')) {
-        Alert.alert(
-          'Attendance Error',
-          errorMessage,
-          [{ text: 'OK', onPress: () => setStep('camera') }]
-        );
+        showToast.error(errorMessage);
+        setStep('camera');
       } else {
         // For authentication errors, silently go back to camera step
         // AuthGuard will handle the authentication flow

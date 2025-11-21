@@ -211,7 +211,7 @@ export class AuthService {
           humanReadableId: employee.human_readable_id,
           employmentStatus: employee.employment_status,
           canLogin: employee.can_login,
-        }, { expiresIn: '7d' }); // 7 days for refresh token
+        });
 
         // Create authenticated user object
         const authenticatedUser: AuthenticatedUser = {

@@ -175,6 +175,8 @@ export class AuthService {
         const response = {
           message: 'Login successful',
           token: '', // No JWT for admin users
+          refreshToken: '', // No refresh token for admin users
+          expiresIn: 0, // No expiration for admin users
           employee: authenticatedUser,
         };
                 return response;
@@ -203,6 +205,14 @@ export class AuthService {
           canLogin: employee.can_login,
         });
 
+        // Generate refresh token for React Native app (longer lived)
+        const refreshToken = jwtService.generateToken({
+          employeeId: employee.id,
+          humanReadableId: employee.human_readable_id,
+          employmentStatus: employee.employment_status,
+          canLogin: employee.can_login,
+        }, { expiresIn: '7d' }); // 7 days for refresh token
+
         // Create authenticated user object
         const authenticatedUser: AuthenticatedUser = {
           id: employee.id,
@@ -216,6 +226,8 @@ export class AuthService {
         const response = {
           message: 'Login successful',
           token,
+          refreshToken,
+          expiresIn: 900, // 15 minutes for access token
           employee: authenticatedUser,
         };
         return response;

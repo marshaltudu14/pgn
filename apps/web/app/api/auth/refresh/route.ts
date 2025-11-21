@@ -24,8 +24,13 @@ const refreshHandler = async (req: NextRequest): Promise<NextResponse> => {
       // Attempt token refresh using auth service
       const refreshResponse = await authService.refreshToken(body);
 
-      // Return success response
-      const response = NextResponse.json(refreshResponse);
+      // Return success response wrapped in API response structure
+      const apiResponse = {
+        success: true,
+        data: refreshResponse,
+      };
+
+      const response = NextResponse.json(apiResponse);
 
       return addSecurityHeaders(response);
 

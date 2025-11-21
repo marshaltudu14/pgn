@@ -59,7 +59,13 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       canLogin: authService.canLoginWithStatus(currentEmploymentStatus),
     };
 
-    const response = NextResponse.json(userProfile);
+    // Return success response wrapped in API response structure
+    const apiResponse = {
+      success: true,
+      data: userProfile,
+    };
+
+    const response = NextResponse.json(apiResponse);
 
     return addSecurityHeaders(response);
 

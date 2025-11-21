@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtService } from './jwt';
 import { JWTPayload } from '@pgn/shared';
+import { createClient } from '../utils/supabase/server';
 
 // Interface for authenticated requests with user payload
 export interface AuthenticatedRequest extends NextRequest {
@@ -184,6 +185,45 @@ export async function validateMobileToken(request: NextRequest): Promise<{
 }
 
 /**
+ * Validates admin user session via Supabase Auth
+ */
+export async function validateAdminSession(_request: NextRequest): Promise<{
+  valid: boolean;
+  user?: { id: string; email?: string; user_metadata?: Record<string, unknown> };
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return {
+        valid: false,
+        error: 'No authenticated admin session found'
+      };
+    }
+
+    // Check if user has admin role
+    if (user.user_metadata?.role !== 'admin') {
+      return {
+        valid: false,
+        error: 'Access denied - admin role required'
+      };
+    }
+
+    return {
+      valid: true,
+      user
+    };
+  } catch {
+    return {
+      valid: false,
+      error: 'Admin session validation failed'
+    };
+  }
+}
+
+/**
  * Creates a security middleware that blocks external requests
  */
 export function createSecurityMiddleware() {
@@ -313,20 +353,70 @@ export function withSecurity<T extends unknown[]>(
       });
     }
 
-    // Token validation only if authentication is required
+    // Authentication validation only if authentication is required
     if (requireAuth) {
-      const tokenCheck = await validateMobileToken(req);
+      const securityCheck = validateRequestSecurity(req);
+      let authResult;
 
-      if (!tokenCheck.valid || !tokenCheck.payload) {
-        console.warn(`🔐 Security: Invalid token - ${tokenCheck.error}`, {
-          url: req.url,
-          userAgent: req.headers.get('User-Agent')?.substring(0, 100),
-        });
+      if (securityCheck.clientType === 'mobile') {
+        // Mobile clients: validate JWT token
+        authResult = await validateMobileToken(req);
 
+        if (!authResult.valid || !authResult.payload) {
+          console.warn(`🔐 Security: Invalid mobile token - ${authResult.error}`, {
+            url: req.url,
+            userAgent: req.headers.get('User-Agent')?.substring(0, 100),
+          });
+
+          return NextResponse.json({
+            success: false,
+            error: 'Authentication failed',
+            message: authResult.error || 'Mobile token validation failed',
+            code: 'AUTHENTICATION_FAILED'
+          }, {
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+        }
+
+        // Attach mobile user info to request for downstream handlers
+        const authenticatedRequest = req as AuthenticatedRequest;
+        authenticatedRequest.user = authResult.payload;
+
+      } else if (securityCheck.clientType === 'web') {
+        // Web clients: validate admin session via Supabase Auth
+        authResult = await validateAdminSession(req);
+
+        if (!authResult.valid) {
+          console.warn(`🔐 Security: Invalid admin session - ${authResult.error}`, {
+            url: req.url,
+            userAgent: req.headers.get('User-Agent')?.substring(0, 100),
+          });
+
+          return NextResponse.json({
+            success: false,
+            error: 'Authentication failed',
+            message: authResult.error || 'Admin session validation failed',
+            code: 'AUTHENTICATION_FAILED'
+          }, {
+            status: 401,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+        }
+
+        // For admin users, we don't attach to AuthenticatedRequest since they're not JWTPayload
+        // The handler can check if it's an admin user by looking at the absence of JWT payload
+
+      } else {
+        // Unknown client type
         return NextResponse.json({
           success: false,
           error: 'Authentication failed',
-          message: tokenCheck.error || 'Token validation failed',
+          message: 'Unknown client type',
           code: 'AUTHENTICATION_FAILED'
         }, {
           status: 401,
@@ -335,10 +425,6 @@ export function withSecurity<T extends unknown[]>(
           }
         });
       }
-
-      // Attach user info to request for downstream handlers
-      const authenticatedRequest = req as AuthenticatedRequest;
-      authenticatedRequest.user = tokenCheck.payload;
     }
 
     // Call the original handler

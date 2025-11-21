@@ -28,7 +28,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { MapPin, X, ChevronDown, Check } from 'lucide-react';
 import { EmployeeFormData } from './types';
 import { useRegionsStore } from '@/app/lib/stores/regionsStore';
@@ -120,7 +119,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   const handleCitySelect = (city: string, state: string) => {
     const currentCities = [...selectedCities];
     const existingIndex = currentCities.findIndex(
-      c => c.city === city
+      c => c.city === city && c.state === state
     );
 
     if (existingIndex >= 0) {
@@ -131,7 +130,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       currentCities.push({ city, state });
     }
 
-    form.setValue('assigned_cities', currentCities);
+    form.setValue('assigned_cities', currentCities, { shouldValidate: true, shouldDirty: true });
   };
 
   // Handle scroll to load more cities
@@ -150,7 +149,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   const removeCity = (index: number) => {
     const currentCities = [...selectedCities];
     currentCities.splice(index, 1);
-    form.setValue('assigned_cities', currentCities);
+    form.setValue('assigned_cities', currentCities, { shouldValidate: true, shouldDirty: true });
   };
 
   
@@ -185,7 +184,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
         <FormField
           control={form.control}
           name="assigned_cities"
-          render={({ field: _field }) => (
+          render={({ field }) => (
             <FormItem>
               <FormLabel>Assigned Cities</FormLabel>
               <FormControl>
@@ -195,6 +194,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                       variant="outline"
                       role="combobox"
                       className="w-full justify-between h-12"
+                      type="button"
                     >
                       {selectedCities.length > 0
                         ? `${selectedCities.length} cit${selectedCities.length > 1 ? 'ies' : 'y'} selected`
@@ -224,7 +224,6 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                                 key={pair.id}
                                 value={pair.display}
                                 onSelect={() => handleCitySelect(pair.city, pair.state)}
-                                disabled={isSelected}
                               >
                                 <div className={cn(
                                   "mr-2 h-4 w-4 rounded-sm border border-primary",
@@ -252,26 +251,43 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                 </Popover>
               </FormControl>
               {selectedCities.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
-                  {selectedCities.map((cityAssignment, index) => (
-                    <Badge
-                      key={`${cityAssignment.city}-${cityAssignment.state}-${index}`}
-                      variant="secondary"
-                      className="text-xs justify-between items-center gap-1 px-2 py-1"
-                    >
-                      <span className="truncate flex-1">{cityAssignment.city}, {cityAssignment.state}</span>
-                      <button
-                        type="button"
-                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-secondary-80"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          removeCity(index);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                <div className="mt-4">
+                  <div className="text-sm font-medium text-foreground mb-2">
+                    Selected Cities ({selectedCities.length})
+                  </div>
+                  <div className="border rounded-md p-3 bg-muted/20 max-h-40 overflow-y-auto">
+                    <div className="space-y-2">
+                      {selectedCities.map((cityAssignment, index) => (
+                        <div
+                          key={`${cityAssignment.city}-${cityAssignment.state}-${index}`}
+                          className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">
+                              {cityAssignment.city}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {cityAssignment.state}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              removeCity(index);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                            <span className="sr-only">Remove {cityAssignment.city}, {cityAssignment.state}</span>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
               <FormMessage />

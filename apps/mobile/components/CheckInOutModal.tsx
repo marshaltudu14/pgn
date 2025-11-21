@@ -136,9 +136,17 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   useEffect(() => {
     if (error) {
-      Alert.alert('Error', error, [
-        { text: 'OK', onPress: clearError }
-      ]);
+      // Only show non-authentication errors to the user
+      // Authentication errors are handled globally by AuthGuard
+      if (!error.includes('authorization') &&
+          !error.includes('unauthorized') &&
+          !error.includes('token') &&
+          !error.includes('Authentication') &&
+          !error.includes('Login')) {
+        Alert.alert('Error', error, [
+          { text: 'OK', onPress: clearError }
+        ]);
+      }
     }
   }, [error, clearError]);
 
@@ -229,11 +237,25 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
         throw new Error(result.message || 'Attendance failed');
       }
     } catch (error) {
-      Alert.alert(
-        'Attendance Error',
-        error instanceof Error ? error.message : 'Failed to process attendance. Please try again.',
-        [{ text: 'OK', onPress: () => setStep('camera') }]
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process attendance. Please try again.';
+
+      // Only show non-authentication errors to the user
+      // Authentication errors are handled globally by AuthGuard
+      if (!errorMessage.includes('authorization') &&
+          !errorMessage.includes('unauthorized') &&
+          !errorMessage.includes('token') &&
+          !errorMessage.includes('Authentication') &&
+          !errorMessage.includes('Login')) {
+        Alert.alert(
+          'Attendance Error',
+          errorMessage,
+          [{ text: 'OK', onPress: () => setStep('camera') }]
+        );
+      } else {
+        // For authentication errors, silently go back to camera step
+        // AuthGuard will handle the authentication flow
+        setStep('camera');
+      }
     }
   };
 

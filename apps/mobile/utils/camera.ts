@@ -86,9 +86,9 @@ export async function takePhoto(
       throw new CameraError('CAMERA_PERMISSION_DENIED', 'Camera permission is required');
     }
 
-    // Use expo-image-picker like dukancard
+    // Use expo-image-picker with correct API
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // Use array of MediaType strings
       allowsEditing: false, // We'll handle cropping ourselves
       quality: 1, // Maximum quality, we'll compress later
       aspect: options.aspectRatio ? [options.aspectRatio, options.aspectRatio] : undefined,
@@ -135,7 +135,7 @@ export async function pickPhotoFromLibrary(options: {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'], // Use array of MediaType strings
       allowsEditing: options.allowsEditing || false,
       quality: options.quality || 0.8,
       base64: true,

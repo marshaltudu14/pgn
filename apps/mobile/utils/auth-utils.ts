@@ -8,19 +8,23 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Session interface for JWT token management like dukancard
-interface Session {
+export interface Session {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
   expiresAt?: number; // Calculated expiry timestamp
 }
 
-// Storage keys
+// Storage keys - using same keys as auth-store for backward compatibility
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: '@pgn_access_token',
-  REFRESH_TOKEN: '@pgn_refresh_token',
-  EXPIRES_AT: '@pgn_expires_at',
-  EXPIRES_IN: '@pgn_expires_in',
+  ACCESS_TOKEN: 'pgn_auth_token',
+  REFRESH_TOKEN: 'pgn_refresh_token',
+  EXPIRES_AT: 'pgn_expires_at',
+  EXPIRES_IN: 'pgn_expires_in',
+  // Additional keys for employee data
+  EMPLOYEE_DATA: 'pgn_employee_data',
+  USER_ID: 'pgn_user_id',
+  LAST_LOGIN: 'pgn_last_login',
 };
 
 /**
@@ -92,6 +96,9 @@ export class SessionManager {
       STORAGE_KEYS.REFRESH_TOKEN,
       STORAGE_KEYS.EXPIRES_IN,
       STORAGE_KEYS.EXPIRES_AT,
+      STORAGE_KEYS.EMPLOYEE_DATA,
+      STORAGE_KEYS.USER_ID,
+      STORAGE_KEYS.LAST_LOGIN,
     ]);
   }
 
@@ -140,6 +147,26 @@ export class SessionManager {
     } catch (error) {
       console.warn('Error getting refresh token:', error);
       return null;
+    }
+  }
+
+  /**
+   * Debug method to check what tokens are currently stored
+   */
+  static async debugStoredTokens(): Promise<void> {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const authKeys = keys.filter(key =>
+        key.includes('pgn') || key.includes('auth') || key.includes('token')
+      );
+
+      const values = await AsyncStorage.multiGet(authKeys);
+      values.forEach(([key, value]) => {
+        const displayValue = key.includes('token') ? `${value?.substring(0, 20)}...` : value;
+        console.log(`Token Debug - ${key}: ${displayValue}`);
+      });
+    } catch (error) {
+      console.warn('Error debugging stored tokens:', error);
     }
   }
 }

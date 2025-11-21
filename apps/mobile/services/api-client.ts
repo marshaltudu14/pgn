@@ -8,13 +8,13 @@
 import { SessionManager } from '@/utils/auth-utils';
 
 // API Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = __DEV__ ? 'http://192.168.31.23:3000/api' : 'https://pgnwork.com/api';
 
 // Public endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [
-  '/api/auth/login',
-  '/api/auth/refresh-token',
-  '/api/auth/logout',
+  '/auth/login',
+  '/auth/refresh-token',
+  '/auth/logout',
 ];
 
 // Device info for security tracking
@@ -157,7 +157,6 @@ async function refreshTokenAPI(refreshToken: string): Promise<boolean> {
         'User-Agent': 'pgn-mobile-app/1.0.0',
       },
       body: JSON.stringify({ token: refreshToken }),
-      signal: AbortSignal.timeout(10000), // 10 second timeout for refresh
     });
 
     const responseData = await response.json();
@@ -204,8 +203,10 @@ export async function apiCall<T = any>(
       if (!session || SessionManager.isSessionExpired(session)) {
         // Try to refresh token
         const refreshToken = await SessionManager.getRefreshToken();
+
         if (refreshToken) {
           const refreshSuccess = await refreshTokenAPI(refreshToken);
+
           if (!refreshSuccess) {
             return {
               success: false,
@@ -214,6 +215,7 @@ export async function apiCall<T = any>(
           }
           // Get updated session after refresh
           const newAccessToken = await SessionManager.getAccessToken();
+
           if (newAccessToken) {
             headers.Authorization = `Bearer ${newAccessToken}`;
           }
@@ -231,10 +233,17 @@ export async function apiCall<T = any>(
     // Merge with provided headers
     Object.assign(headers, options.headers);
 
+    console.log('🔍 API Client: About to send fetch request with headers:', {
+      url,
+      method: options.method || 'GET',
+      hasAuthHeader: !!headers.Authorization,
+      contentType: headers['Content-Type'],
+      userAgent: headers['User-Agent']
+    });
+
     const response = await fetch(url, {
       ...options,
       headers,
-      signal: AbortSignal.timeout(15000), // 15 second timeout
     });
 
     const responseData = await response.json();
@@ -334,7 +343,6 @@ export async function checkApiConnectivity(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'HEAD',
-      signal: AbortSignal.timeout(5000),
     });
     return response.status < 500;
   } catch {

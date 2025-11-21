@@ -121,7 +121,7 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
-            const responseData = response.data;
+            const responseData = response.data.data;
             if (!responseData) {
               return {
                 success: false,
@@ -129,7 +129,16 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
-            // Store session using SessionManager
+  
+          // Debug: Log the full response structure
+            console.log('🔍 Auth Store: Full API response:', response);
+            console.log('🔍 Auth Store: Response data:', responseData);
+            console.log('🔍 Auth Store: Response data keys:', Object.keys(responseData || {}));
+            console.log('🔍 Auth Store: Token value:', responseData.token);
+            console.log('🔍 Auth Store: Refresh token value:', responseData.refreshToken);
+            console.log('🔍 Auth Store: Employee value:', responseData.employee);
+
+            // Store session using SessionManager (single source of truth)
             await SessionManager.saveSession({
               accessToken: responseData.token,
               refreshToken: responseData.refreshToken || '',
@@ -179,7 +188,7 @@ export const useAuth = create<AuthStoreState>()(
           set({ isLoading: true, error: null });
 
           try {
-            const authToken = await AsyncStorage.getItem('pgn_auth_token');
+            const authToken = await SessionManager.getAccessToken();
             if (!authToken) {
               throw new Error('No authentication token found');
             }
@@ -245,13 +254,20 @@ export const useAuth = create<AuthStoreState>()(
               throw new Error(response.error || 'Token refresh failed');
             }
 
-            const responseData = response.data;
+            const responseData = response.data.data;
             if (!responseData?.token) {
               throw new Error('Invalid refresh response');
             }
 
-            // Store new tokens
-            await AsyncStorage.setItem('pgn_auth_token', responseData.token);
+            // Update session with new token
+            const currentSession = await SessionManager.loadSession();
+            if (currentSession) {
+              await SessionManager.saveSession({
+                accessToken: responseData.token,
+                refreshToken: currentSession.refreshToken,
+                expiresIn: responseData.expiresIn || 900,
+              });
+            }
 
             get().setupTokenRefresh(responseData.token);
 
@@ -265,7 +281,7 @@ export const useAuth = create<AuthStoreState>()(
         // Refresh user data
         refreshUserData: async (): Promise<void> => {
           try {
-            const authToken = await AsyncStorage.getItem('pgn_auth_token');
+            const authToken = await SessionManager.getAccessToken();
             if (!authToken) {
               throw new Error('No authentication token found');
             }
@@ -314,23 +330,9 @@ export const useAuth = create<AuthStoreState>()(
               }
             }
 
-            // Try to get stored token from AsyncStorage (backward compatibility)
-            const token = await AsyncStorage.getItem('pgn_auth_token');
-            if (!token) {
-              return null;
-            }
-
-            // Basic token validation and create session for backward compatibility
-            const isValid = get().validateToken(token);
-            if (isValid) {
-              // Create session from stored token for seamless migration
-              const newSession: Session = {
-                accessToken: token,
-                refreshToken: await AsyncStorage.getItem('pgn_refresh_token') || '',
-                expiresIn: 900, // 15 minutes
-                expiresAt: Date.now() + 900 * 1000,
-              };
-              setSession(newSession);
+            // Try to get stored token from SessionManager
+            const token = await SessionManager.getAccessToken();
+            if (token) {
               return token;
             }
 
@@ -457,7 +459,7 @@ export const useAuth = create<AuthStoreState>()(
 
             const timeoutId = setTimeout(async () => {
               try {
-                const currentToken = await AsyncStorage.getItem('pgn_refresh_token');
+                const currentToken = await SessionManager.getRefreshToken();
                 if (currentToken) {
                   await get().refreshToken(currentToken);
                 }
@@ -472,10 +474,11 @@ export const useAuth = create<AuthStoreState>()(
           }
         },
 
-        // Clear local tokens
+        // Clear all auth data using SessionManager (single source of truth)
         clearLocalTokens: async (): Promise<void> => {
           try {
-            await AsyncStorage.multiRemove(['pgn_auth_token', 'pgn_refresh_token', 'pgn_employee_data', 'pgn_user_id', 'pgn_last_login']);
+            await SessionManager.clearSession();
+            await AsyncStorage.removeItem('pgn_employee_data');
           } catch (error) {
             console.error('❌ Failed to clear local tokens:', error);
           }
@@ -486,10 +489,12 @@ export const useAuth = create<AuthStoreState>()(
           try {
             const userDataStr = await AsyncStorage.getItem('pgn_employee_data');
             const userData = userDataStr ? JSON.parse(userDataStr) : null;
-            const authToken = await AsyncStorage.getItem('pgn_auth_token');
 
-            // If no token or user data, not authenticated
-            if (!authToken || !userData) {
+            // Try to get session from SessionManager (single source of truth)
+            const session = await SessionManager.loadSession();
+
+            // If no session or user data, not authenticated
+            if (!session || !userData) {
               return {
                 isAuthenticated: false,
                 isLoading: false,
@@ -499,14 +504,10 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
-            // Validate the token by making a lightweight API call
-            // For now, we'll do basic token validation (in a real app, you might want to validate with the server)
-            const currentState = get();
-            const isValidToken = currentState.validateToken(authToken);
-
-            if (!isValidToken) {
-              // Clear invalid tokens
-              await currentState.clearLocalTokens();
+            // Validate the token by checking if session is expired
+            if (SessionManager.isSessionExpired(session)) {
+              // Clear expired session
+              await SessionManager.clearSession();
               return {
                 isAuthenticated: false,
                 isLoading: false,

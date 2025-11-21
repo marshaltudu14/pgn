@@ -32,8 +32,13 @@ const logoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       // Attempt logout using auth service with the validated token
       const logoutResponse = await authService.logout({ token });
 
-      // Return success response
-      const response = NextResponse.json(logoutResponse);
+      // Return success response wrapped in API response structure
+      const apiResponse = {
+        success: true,
+        data: logoutResponse,
+      };
+
+      const response = NextResponse.json(apiResponse);
 
       return addSecurityHeaders(response);
 

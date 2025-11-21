@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest } from '@pgn/shared';
 import { useUIStore } from './uiStore';
+import { useAuthStore } from './authStore';
 
 /**
  * Transform technical error messages into user-friendly ones
@@ -121,6 +122,26 @@ interface EmployeeState {
   refetch: () => Promise<void>;
 }
 
+// Helper function to get authentication headers
+const getAuthHeaders = () => {
+  const token = useAuthStore.getState().token;
+
+  // For web requests, identify the client for security middleware
+  // Web users are authenticated via Supabase sessions handled by middleware
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-client-info': 'pgn-web-client',
+    'User-Agent': 'pgn-admin-dashboard/1.0.0',
+  };
+
+  // Add Authorization header only if we have a token (for mobile users)
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   employees: [],
   selectedEmployee: null,
@@ -164,7 +185,9 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       if (queryParams.sort_by) queryString.set('sort_by', queryParams.sort_by);
       if (queryParams.sort_order) queryString.set('sort_order', queryParams.sort_order);
 
-      const response = await fetch(`/api/employees?${queryString}`);
+      const response = await fetch(`/api/employees?${queryString}`, {
+        headers: getAuthHeaders(),
+      });
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -205,9 +228,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     try {
       const response = await fetch('/api/employees', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(employeeData),
       });
 
@@ -253,9 +274,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     try {
       const response = await fetch(`/api/employees/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(employeeData),
       });
 
@@ -301,9 +320,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     try {
       const response = await fetch(`/api/employees/${id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ newPassword }),
       });
 
@@ -338,9 +355,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     try {
       const response = await fetch(`/api/employees/${id}/status`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(request),
       });
 

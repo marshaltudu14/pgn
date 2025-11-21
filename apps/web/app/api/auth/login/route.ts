@@ -48,10 +48,7 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
         // Attempt login using auth service
       const loginResponse = await authService.login(body);
 
-        // Debug: Log what the auth service returns
-      console.log('🔍 Login Route: Auth service response:', loginResponse);
-
-      // Return success response wrapped in API response structure
+        // Return success response wrapped in API response structure
       const apiResponse = {
         success: true,
         data: {
@@ -61,9 +58,6 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
           employee: loginResponse.employee,
         },
       };
-
-      // Debug: Log what the route returns
-      console.log('🔍 Login Route: Final API response:', apiResponse);
 
       const response = NextResponse.json(apiResponse);
 

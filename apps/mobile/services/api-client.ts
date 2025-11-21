@@ -233,14 +233,7 @@ export async function apiCall<T = any>(
     // Merge with provided headers
     Object.assign(headers, options.headers);
 
-    console.log('🔍 API Client: About to send fetch request with headers:', {
-      url,
-      method: options.method || 'GET',
-      hasAuthHeader: !!headers.Authorization,
-      contentType: headers['Content-Type'],
-      userAgent: headers['User-Agent']
-    });
-
+    
     const response = await fetch(url, {
       ...options,
       headers,

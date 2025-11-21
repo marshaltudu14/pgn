@@ -130,14 +130,7 @@ export const useAuth = create<AuthStoreState>()(
             }
 
   
-          // Debug: Log the full response structure
-            console.log('🔍 Auth Store: Full API response:', response);
-            console.log('🔍 Auth Store: Response data:', responseData);
-            console.log('🔍 Auth Store: Response data keys:', Object.keys(responseData || {}));
-            console.log('🔍 Auth Store: Token value:', responseData.token);
-            console.log('🔍 Auth Store: Refresh token value:', responseData.refreshToken);
-            console.log('🔍 Auth Store: Employee value:', responseData.employee);
-
+          
             // Store session using SessionManager (single source of truth)
             await SessionManager.saveSession({
               accessToken: responseData.token,

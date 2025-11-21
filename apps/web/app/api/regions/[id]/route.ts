@@ -2,39 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRegionById, updateRegion, deleteRegion } from '@/services/regions.service';
 import { updateRegionSchema } from '@pgn/shared';
 import { z } from 'zod';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 
 // GET /api/regions/[id] - Get a specific region
-export async function GET(
+const getRegionByIdHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> => {
   try {
     const { id } = await params;
     const region = await getRegionById(id);
 
     if (!region) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Region not found' },
         { status: 404 }
       );
+      return addSecurityHeaders(response);
     }
 
-    return NextResponse.json(region);
+    const response = NextResponse.json(region);
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching region:', error);
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
 
 // PUT /api/regions/[id] - Update a specific region
-export async function PUT(
+const updateRegionHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> => {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -44,64 +48,77 @@ export async function PUT(
 
     const region = await updateRegion(id, validatedData);
 
-    return NextResponse.json(region);
+    const response = NextResponse.json(region);
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error updating region:', error);
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Invalid request body', details: error.errors },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           { error: error.message },
           { status: 404 }
         );
+        return addSecurityHeaders(response);
       }
       if (error.message.includes('already exists')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           { error: error.message },
           { status: 409 }
         );
+        return addSecurityHeaders(response);
       }
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
 
 // DELETE /api/regions/[id] - Delete a specific region
-export async function DELETE(
+const deleteRegionHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> => {
   try {
     const { id } = await params;
     await deleteRegion(id);
 
-    return NextResponse.json({ message: 'Region deleted successfully' });
+    const response = NextResponse.json({ message: 'Region deleted successfully' });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error deleting region:', error);
 
     if (error instanceof Error) {
       if (error.message.includes('not found')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           { error: error.message },
           { status: 404 }
         );
+        return addSecurityHeaders(response);
       }
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
+
+// Export with security middleware
+export const GET = withSecurity(getRegionByIdHandler);
+export const PUT = withSecurity(updateRegionHandler);
+export const DELETE = withSecurity(deleteRegionHandler);

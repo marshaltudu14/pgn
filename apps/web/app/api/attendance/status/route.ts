@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth-middleware';
+import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
-import { AuthenticatedRequest } from '@/lib/auth-middleware';
 
 /**
  * GET /api/attendance/status
@@ -10,15 +9,15 @@ import { AuthenticatedRequest } from '@/lib/auth-middleware';
  */
 const statusHandler = async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Get authenticated user from request
-    const authenticatedReq = req as AuthenticatedRequest;
-    const user = authenticatedReq.user;
+    // Get authenticated user from request (security middleware attaches user)
+    const user = (req as AuthenticatedRequest).user;
 
     if (!user || !user.employeeId) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid authentication' },
         { status: 401 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Get attendance status from service
@@ -32,21 +31,20 @@ const statusHandler = async (req: NextRequest): Promise<NextResponse> => {
 
     // Set cache headers for status requests (short cache for real-time data)
     response.headers.set('Cache-Control', 'private, max-age=10');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-
-    return response;
+    return addSecurityHeaders(response);
 
   } catch (error) {
     console.error('Attendance status API error:', error);
 
     // Handle unexpected errors
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         error: 'Internal Server Error',
         message: 'Failed to fetch attendance status'
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
 };
 
@@ -54,17 +52,15 @@ const statusHandler = async (req: NextRequest): Promise<NextResponse> => {
  * Handle unsupported methods
  */
 export async function POST(): Promise<NextResponse> {
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       error: 'Method Not Allowed',
       message: 'Only GET method is supported for attendance status'
     },
     { status: 405 }
   );
+  return addSecurityHeaders(response);
 }
 
-// Export with authentication middleware
-export const GET = withAuth(statusHandler, {
-  requireAuth: true,
-  checkEmploymentStatus: true
-});
+// Export with security middleware
+export const GET = withSecurity(statusHandler);

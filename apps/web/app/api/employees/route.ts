@@ -4,8 +4,9 @@ import {
   getEmployeeByEmail
 } from '@/services/employee.service';
 import { CreateEmployeeRequest, EmployeeListParams, EmploymentStatus } from '@pgn/shared';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 
-export async function GET(request: NextRequest) {
+const getEmployeesHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     const { searchParams } = new URL(request.url);
 
@@ -24,14 +25,15 @@ export async function GET(request: NextRequest) {
     const { listEmployees } = await import('@/services/employee.service');
     const result = await listEmployees(params);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: result,
       message: 'Employees retrieved successfully'
     });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching employees:', error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: 'Failed to fetch employees',
@@ -39,46 +41,50 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
 
-export async function POST(request: NextRequest) {
+const createEmployeeHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     const body = await request.json();
 
     // Validate required fields
     if (!body.first_name || !body.last_name || !body.email) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: 'First name, last name, and email are required'
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: 'Invalid email format'
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Check if email is already taken by an existing employee
     const existingEmployee = await getEmployeeByEmail(body.email);
     if (existingEmployee) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: 'An employee with this email address already exists. Please use the Edit Employee page to update their information instead.'
         },
         { status: 409 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Prepare employee data
@@ -96,11 +102,12 @@ export async function POST(request: NextRequest) {
     // Create employee
     const newEmployee = await createEmployee(createData);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: newEmployee,
       message: 'Employee created successfully'
     });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error creating employee:', error);
 
@@ -110,48 +117,52 @@ export async function POST(request: NextRequest) {
       if (error.message.includes('A user with this email address has already been registered')) {
         // This shouldn't happen anymore since we handle existing auth users
         // but keeping it as a fallback
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'An error occurred while processing the auth user. Please try again.'
           },
           { status: 500 }
         );
+        return addSecurityHeaders(response);
       }
 
       // Handle row-level security policy errors
       if (error.message.includes('new row violates row-level security policy')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'You do not have permission to create employees. Please contact your administrator.'
           },
           { status: 403 }
         );
+        return addSecurityHeaders(response);
       }
 
       // Handle duplicate key errors
       if (error.message.includes('duplicate key')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'Employee with this email or user ID already exists'
           },
           { status: 409 }
         );
+        return addSecurityHeaders(response);
       }
 
       // Pass through the actual error message
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: error.message
         },
         { status: 500 }
       );
+      return addSecurityHeaders(response);
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: 'Failed to create employee',
@@ -159,5 +170,9 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
+
+export const GET = withSecurity(getEmployeesHandler);
+export const POST = withSecurity(createEmployeeHandler);

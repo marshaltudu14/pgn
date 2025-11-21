@@ -6,34 +6,37 @@ import {
   resetEmployeePassword
 } from '@/services/employee.service';
 import { UpdateEmployeeRequest, EmploymentStatus } from '@pgn/shared';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 
-export async function GET(
+const getEmployeeByIdHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> => {
   try {
     const { id } = await params;
 
     const employee = await getEmployeeById(id);
 
     if (!employee) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: 'Employee not found'
         },
         { status: 404 }
       );
+      return addSecurityHeaders(response);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: employee,
       message: 'Employee retrieved successfully'
     });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching employee:', error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: 'Failed to fetch employee',
@@ -41,13 +44,14 @@ export async function GET(
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
 
-export async function PUT(
+const updateEmployeeHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+): Promise<NextResponse> => {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -56,26 +60,28 @@ export async function PUT(
     if (body.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(body.email)) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'Invalid email format'
           },
           { status: 400 }
         );
+        return addSecurityHeaders(response);
       }
 
       // Check if email is already taken by another employee
       const { getEmployeeByEmail } = await import('@/services/employee.service');
       const existingEmployee = await getEmployeeByEmail(body.email);
       if (existingEmployee && existingEmployee.id !== id) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'Email is already taken by another employee'
           },
           { status: 409 }
         );
+        return addSecurityHeaders(response);
       }
     }
 
@@ -93,28 +99,30 @@ export async function PUT(
     // Update employee
     const updatedEmployee = await updateEmployee(id, updateData);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: updatedEmployee,
       message: 'Employee updated successfully'
     });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error updating employee:', error);
 
     // Handle specific error cases
     if (error instanceof Error) {
       if (error.message.includes('duplicate key')) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'Employee with this email already exists'
           },
           { status: 409 }
         );
+        return addSecurityHeaders(response);
       }
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: 'Failed to update employee',
@@ -122,15 +130,16 @@ export async function PUT(
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
-}
+};
 
 const VALID_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'];
 
-export async function PATCH(
+const patchEmployeeHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -272,10 +281,10 @@ export async function PATCH(
   }
 }
 
-export async function POST(
+const postEmployeeHandler = async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -327,13 +336,14 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Password reset successfully'
     });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error resetting password:', error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: false,
         error: 'Failed to reset password',
@@ -341,5 +351,12 @@ export async function POST(
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
 }
+
+// Export with security middleware
+export const GET = withSecurity(getEmployeeByIdHandler);
+export const PUT = withSecurity(updateEmployeeHandler);
+export const PATCH = withSecurity(patchEmployeeHandler);
+export const POST = withSecurity(postEmployeeHandler);

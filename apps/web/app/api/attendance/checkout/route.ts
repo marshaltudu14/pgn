@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth-middleware';
+import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
 import { CheckOutRequest, CheckOutMethod, EmergencyCheckOutRequest } from '@pgn/shared';
-import { AuthenticatedRequest } from '@/lib/auth-middleware';
 
 /**
  * POST /api/attendance/checkout
@@ -12,15 +11,15 @@ import { AuthenticatedRequest } from '@/lib/auth-middleware';
  */
 const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Get authenticated user from request
-    const authenticatedReq = req as AuthenticatedRequest;
-    const user = authenticatedReq.user;
+    // Get authenticated user from request (security middleware attaches user)
+    const user = (req as AuthenticatedRequest).user;
 
     if (!user || !user.employeeId) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid authentication' },
         { status: 401 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Parse request body
@@ -49,7 +48,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       const result = await attendanceService.emergencyCheckOut(user.employeeId, emergencyRequest);
 
       if (!result.success) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           {
             success: false,
             error: 'Emergency check-out failed',
@@ -57,6 +56,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
           },
           { status: 400 }
         );
+        return addSecurityHeaders(response);
       }
 
       // Return emergency check-out success response
@@ -75,24 +75,20 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
         }
       });
 
-      // Set security headers
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-      response.headers.set('Pragma', 'no-cache');
-      response.headers.set('X-Content-Type-Options', 'nosniff');
-
-      return response;
+      return addSecurityHeaders(response);
     }
 
     // Handle regular check-out
     // Validate required fields for regular check-out
     if (!body.location || !body.selfieData) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           error: 'Bad Request',
           message: 'Location and selfie data are required for regular check-out'
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Build check-out request
@@ -117,7 +113,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
     const result = await attendanceService.checkOut(user.employeeId, checkOutRequest);
 
     if (!result.success) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: 'Check-out failed',
@@ -125,6 +121,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Return success response
@@ -143,35 +140,32 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       }
     });
 
-    // Set security headers
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-
-    return response;
+    return addSecurityHeaders(response);
 
   } catch (error) {
     console.error('Check-out API error:', error);
 
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           error: 'Bad Request',
           message: 'Invalid request body format'
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Handle unexpected errors
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         error: 'Internal Server Error',
         message: 'Check-out failed due to server error'
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
 };
 
@@ -179,17 +173,15 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
  * Handle unsupported methods
  */
 export async function GET(): Promise<NextResponse> {
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       error: 'Method Not Allowed',
       message: 'Only POST method is supported for check-out'
     },
     { status: 405 }
   );
+  return addSecurityHeaders(response);
 }
 
-// Export with authentication middleware
-export const POST = withAuth(checkoutHandler, {
-  requireAuth: true,
-  checkEmploymentStatus: true
-});
+// Export with security middleware
+export const POST = withSecurity(checkoutHandler);

@@ -280,7 +280,7 @@ describe('NetworkMonitor', () => {
     it('should handle errors in listener callbacks gracefully', async () => {
       const errorListener = jest.fn(() => {
         // Don't actually throw error, just simulate that it could happen
-        console.log('Listener called');
+        // Listener called
       });
       const normalListener = jest.fn();
 

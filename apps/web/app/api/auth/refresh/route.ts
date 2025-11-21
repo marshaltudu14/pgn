@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRateLimit, apiRateLimit } from '@/lib/rate-limit';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';
 import { RefreshRequest } from '@pgn/shared';
@@ -9,7 +10,7 @@ import { RefreshRequest } from '@pgn/shared';
  *
  * Validates an existing token and generates a new token with updated expiration
  */
-export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse> => {
+const refreshHandler = async (req: NextRequest): Promise<NextResponse> => {
   try {
     // Parse request body
     const body = await req.json() as RefreshRequest;
@@ -26,12 +27,7 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
       // Return success response
       const response = NextResponse.json(refreshResponse);
 
-      // Set security headers
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-      response.headers.set('Pragma', 'no-cache');
-      response.headers.set('X-Content-Type-Options', 'nosniff');
-
-      return response;
+      return addSecurityHeaders(response);
 
     } catch (refreshError) {
       const errorMessage = refreshError instanceof Error ? refreshError.message : 'Token refresh failed';
@@ -42,11 +38,15 @@ export const POST = withRateLimit(async (req: NextRequest): Promise<NextResponse
     console.error('Token refresh API error:', error);
     return AuthErrorService.serverError('An unexpected error occurred during token refresh');
   }
-}, apiRateLimit);
+};
+
+// Export with security middleware and rate limiting
+export const POST = withRateLimit(withSecurity(refreshHandler), apiRateLimit);
 
 /**
  * Handle unsupported methods
  */
 export async function GET(): Promise<NextResponse> {
-  return AuthErrorService.methodNotAllowedError('GET', ['POST']);
+  const response = AuthErrorService.methodNotAllowedError('GET', ['POST']);
+  return addSecurityHeaders(response);
 }

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth-middleware';
+import { withSecurity, AuthenticatedRequest } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
 import { CheckInRequest } from '@pgn/shared';
-import { AuthenticatedRequest } from '@/lib/auth-middleware';
+import { addSecurityHeaders } from '@/lib/security-middleware';
 
 /**
  * POST /api/attendance/checkin
@@ -11,15 +11,16 @@ import { AuthenticatedRequest } from '@/lib/auth-middleware';
  */
 const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
   try {
-    // Get authenticated user from request
+    // Get authenticated user from request (attached by security middleware)
     const authenticatedReq = req as AuthenticatedRequest;
     const user = authenticatedReq.user;
 
     if (!user || !user.employeeId) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid authentication' },
         { status: 401 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Parse request body
@@ -27,13 +28,14 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
 
     // Validate required fields
     if (!body.location || !body.selfieData) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           error: 'Bad Request',
           message: 'Location and selfie data are required'
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Build check-in request
@@ -56,7 +58,7 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
     const result = await attendanceService.checkIn(user.employeeId, checkInRequest);
 
     if (!result.success) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: false,
           error: 'Check-in failed',
@@ -64,6 +66,7 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Return success response
@@ -79,35 +82,33 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       }
     });
 
-    // Set security headers
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    response.headers.set('Pragma', 'no-cache');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-
-    return response;
+    // Add security headers
+    return addSecurityHeaders(response);
 
   } catch (error) {
     console.error('Check-in API error:', error);
 
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           error: 'Bad Request',
           message: 'Invalid request body format'
         },
         { status: 400 }
       );
+      return addSecurityHeaders(response);
     }
 
     // Handle unexpected errors
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         error: 'Internal Server Error',
         message: 'Check-in failed due to server error'
       },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
 };
 
@@ -115,17 +116,15 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
  * Handle unsupported methods
  */
 export async function GET(): Promise<NextResponse> {
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       error: 'Method Not Allowed',
       message: 'Only POST method is supported for check-in'
     },
     { status: 405 }
   );
+  return addSecurityHeaders(response);
 }
 
-// Export with authentication middleware and rate limiting
-export const POST = withAuth(checkinHandler, {
-  requireAuth: true,
-  checkEmploymentStatus: true
-});
+// Export with security middleware
+export const POST = withSecurity(checkinHandler);

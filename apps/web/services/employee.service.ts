@@ -105,9 +105,7 @@ export async function createEmployee(
         );
       }
 
-      console.log(
-        `Updated password for existing auth user: ${createData.email}`
-      );
+          // Updated password for existing auth user: ${createData.email}
     } else {
       // Create new auth user
       const authResult = await createAuthUser(

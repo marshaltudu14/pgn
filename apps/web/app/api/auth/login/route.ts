@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withRateLimit, createRateLimit } from '@/lib/rate-limit';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';
@@ -50,12 +51,7 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
       // Return success response
       const response = NextResponse.json(loginResponse);
 
-      // Set security headers
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-      response.headers.set('Pragma', 'no-cache');
-      response.headers.set('X-Content-Type-Options', 'nosniff');
-
-      return response;
+      return addSecurityHeaders(response);
 
     } catch (loginError) {
       // Track failed login attempt for rate limiting (only for non-admin users)
@@ -106,7 +102,14 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
   }
 };
 
-export const POST = withRateLimit(loginHandler, createRateLimit({
+// Login should be public (no token validation) but still block external requests
+// Only mobile apps should be able to call login
+const loginWithSecurity = withSecurity(loginHandler, {
+  requireAuth: false // Login doesn't require existing authentication
+});
+
+// Apply rate limiting on top of security middleware
+export const POST = withRateLimit(loginWithSecurity, createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   maxRequests: 20, // 20 attempts per IP per 15 minutes
   message: 'Too many login attempts from this IP, please try again later.',
@@ -121,5 +124,6 @@ export const POST = withRateLimit(loginHandler, createRateLimit({
  * Handle unsupported methods
  */
 export async function GET(): Promise<NextResponse> {
-  return AuthErrorService.methodNotAllowedError('GET', ['POST']);
+  const response = AuthErrorService.methodNotAllowedError('GET', ['POST']);
+  return addSecurityHeaders(response);
 }

@@ -1,17 +1,30 @@
 import { renderHook, act } from '@testing-library/react-hooks';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, useUser, useIsAuthenticated, useAuthLoading, useAuthError } from '../auth-store';
-import { apiClient } from '@/services/api-client';
+import { api } from '@/services/api-client';
 import {
   AuthenticatedUser,
   LoginRequest,
+  LoginResponse,
+  LogoutResponse,
+  RefreshResponse,
 } from '@pgn/shared';
+import { ApiResponse } from '@/services/api-client';
 
 // Mock dependencies
 jest.mock('@/services/api-client');
 jest.mock('@react-native-async-storage/async-storage');
 
-const mockApiClient = apiClient as jest.Mocked<typeof apiClient>;
+// Create proper mock interface for api
+interface MockApi {
+  get: jest.MockedFunction<<T = any>(endpoint: string, options?: any) => Promise<ApiResponse<T>>>;
+  post: jest.MockedFunction<<T = any>(endpoint: string, data?: any, options?: any) => Promise<ApiResponse<T>>>;
+  put: jest.MockedFunction<<T = any>(endpoint: string, data?: any, options?: any) => Promise<ApiResponse<T>>>;
+  delete: jest.MockedFunction<<T = any>(endpoint: string, options?: any) => Promise<ApiResponse<T>>>;
+  patch: jest.MockedFunction<<T = any>(endpoint: string, data?: any, options?: any) => Promise<ApiResponse<T>>>;
+}
+
+const mockApi = api as unknown as MockApi;
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 
 // Mock implementation for user data
@@ -43,18 +56,18 @@ describe('Auth Store', () => {
     mockAsyncStorage.setItem.mockResolvedValue();
     mockAsyncStorage.multiRemove.mockResolvedValue();
 
-    // Mock API client methods
-    mockApiClient.login.mockResolvedValue({
-      message: 'Login successful',
-      token: 'mock-token',
-      employee: createMockUser(),
+    // Mock API methods
+    mockApi.post.mockResolvedValue({
+      success: true,
+      data: {
+        message: 'Login successful',
+        token: 'mock-token',
+        employee: createMockUser(),
+      },
     });
-    mockApiClient.logout.mockResolvedValue({
-      message: 'Logout successful',
-    });
-    mockApiClient.getCurrentUser.mockResolvedValue(createMockUser());
-    mockApiClient.refreshToken.mockResolvedValue({
-      token: 'new-refresh-token',
+    mockApi.get.mockResolvedValue({
+      success: true,
+      data: createMockUser(),
     });
   });
 
@@ -95,10 +108,13 @@ describe('Auth Store', () => {
       };
 
       const expectedUser = createMockUser();
-      mockApiClient.login.mockResolvedValue({
-        message: 'Login successful',
-        token: 'mock-token',
-        employee: expectedUser,
+      mockApi.post.mockResolvedValue({
+        success: true,
+        data: {
+          message: 'Login successful',
+          token: 'mock-token',
+          employee: expectedUser,
+        },
       });
 
       const { result } = renderHook(() => useAuth());
@@ -129,7 +145,7 @@ describe('Auth Store', () => {
         password: 'wrongpassword',
       };
 
-      mockApiClient.login.mockRejectedValue(new Error('Invalid credentials'));
+      mockApi.post.mockRejectedValue(new Error('Invalid credentials'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -155,7 +171,7 @@ describe('Auth Store', () => {
         password: 'password123',
       };
 
-      mockApiClient.login.mockRejectedValue(new Error('Network error'));
+      mockApi.post.mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -236,7 +252,7 @@ describe('Auth Store', () => {
     });
 
     it('should clear state even if logout API fails', async () => {
-      mockApiClient.logout.mockRejectedValue(new Error('API error'));
+      mockApi.post.mockRejectedValue(new Error('API error'));
 
       const { result } = renderHook(() => useAuth());
 
@@ -328,10 +344,13 @@ describe('Auth Store', () => {
       const { result } = renderHook(() => useAuth());
 
       // First, let's login to set some state
-      mockApiClient.login.mockResolvedValue({
-        message: 'Login successful',
-        token: 'mock-token',
-        employee: createMockUser(),
+      mockApi.post.mockResolvedValue({
+        success: true,
+        data: {
+          message: 'Login successful',
+          token: 'mock-token',
+          employee: createMockUser(),
+        },
       });
 
       await act(async () => {
@@ -399,7 +418,10 @@ describe('Auth Store', () => {
 
     it('should refresh user data successfully', async () => {
       const updatedUser = createMockUser({ fullName: 'Updated User' });
-      mockApiClient.getCurrentUser.mockResolvedValue(updatedUser);
+      mockApi.get.mockResolvedValue({
+        success: true,
+        data: updatedUser,
+      });
       mockAsyncStorage.getItem.mockResolvedValue('mock-token');
 
       const { result } = renderHook(() => useAuth());
@@ -423,7 +445,7 @@ describe('Auth Store', () => {
     });
 
     it('should handle refresh user data failure gracefully', async () => {
-      mockApiClient.getCurrentUser.mockRejectedValue(new Error('API error'));
+      mockApi.get.mockRejectedValue(new Error('API error'));
       mockAsyncStorage.getItem.mockResolvedValue('mock-token');
 
       const { result } = renderHook(() => useAuth());
@@ -458,18 +480,18 @@ describe('Auth Store', () => {
       // Invalid formats
       expect(result.current.validateToken('short')).toBe(false);
       expect(result.current.validateToken('')).toBe(false);
-      expect(result.current.validateToken('only.one.part')).toBe(false);
-      expect(result.current.validateToken('too.many.parts.here')).toBe(true); // Still validates format
+      expect(result.current.validateToken('only.one.part')).toBe(true); // Has 3 parts, validates format
+      expect(result.current.validateToken('too.many.parts.here')).toBe(false); // More than 3 parts, invalid
     });
 
     it('should parse auth errors correctly', () => {
       const { result } = renderHook(() => useAuth());
 
-      // Network errors
-      expect(result.current.parseAuthError(new Error('NETWORK_ERROR'))).toBe('Network error. Please check your internet connection.');
-      expect(result.current.parseAuthError(new Error('TIMEOUT'))).toBe('Request timed out. Please try again.');
-      expect(result.current.parseAuthError(new Error('UNAUTHORIZED'))).toBe('Invalid email or password.');
-      expect(result.current.parseAuthError(new Error('FORBIDDEN'))).toBe('Access denied. You may not have permission to login.');
+      // Network errors - these should hit the instanceof Error check and get mapped
+      expect(result.current.parseAuthError(new Error('Network error: NETWORK_ERROR detected'))).toBe('Network error. Please check your internet connection.');
+      expect(result.current.parseAuthError(new Error('Request TIMEOUT: Connection failed'))).toBe('Request timed out. Please try again.');
+      expect(result.current.parseAuthError(new Error('Authentication UNAUTHORIZED: Invalid credentials'))).toBe('Invalid email or password.');
+      expect(result.current.parseAuthError(new Error('Access FORBIDDEN: Permission denied'))).toBe('Access denied. You may not have permission to login.');
 
       // Generic errors
       expect(result.current.parseAuthError(new Error('Random error'))).toBe('Random error');

@@ -10,8 +10,7 @@ import {
   CheckInMobileRequest,
   CheckOutMobileRequest
 } from '@pgn/shared';
-import { apiClient } from '@/services/api-client';
-import { API_ENDPOINTS } from '@/constants/api';
+import { api } from '@/services/api-client';
 import * as Location from 'expo-location';
 // Utility functions
 import {
@@ -206,41 +205,33 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isLoading: true, error: null });
 
           try {
-            // Get token from auth store since AuthGuard ensures user is authenticated
-            const { useAuth } = await import('@/store/auth-store');
-            const authStore = useAuth.getState();
-            const token = await authStore.getValidToken();
+            const statusResponse = await api.get<{ success: boolean; data: AttendanceStatusResponse }>('/attendance/status');
 
-            if (!token) {
-              throw new Error('No authentication token available');
+            if (!statusResponse.success) {
+              throw new Error(statusResponse.error || 'Failed to get attendance status');
             }
 
-            const status = await apiClient.request<{ success: boolean; data: AttendanceStatusResponse }>(
-              API_ENDPOINTS.ATTENDANCE_STATUS,
-              {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                },
-              }
-            );
+            const data = statusResponse.data?.data;
+            if (!data) {
+              throw new Error('Invalid attendance status response');
+            }
 
             set({
-              currentStatus: status.data.status,
+              currentStatus: data.status,
               isLoading: false,
               error: null,
-              checkInTime: status.data.checkInTime,
-              checkOutTime: status.data.checkOutTime,
-              workHours: status.data.workHours,
-              totalDistance: status.data.totalDistance,
-              lastLocationUpdate: status.data.lastLocationUpdate,
-              batteryLevel: status.data.batteryLevel,
-              verificationStatus: status.data.verificationStatus,
-              requiresCheckOut: status.data.requiresCheckOut,
+              checkInTime: data.checkInTime,
+              checkOutTime: data.checkOutTime,
+              workHours: data.workHours,
+              totalDistance: data.totalDistance,
+              lastLocationUpdate: data.lastLocationUpdate,
+              batteryLevel: data.batteryLevel,
+              verificationStatus: data.verificationStatus,
+              requiresCheckOut: data.requiresCheckOut,
             });
 
             // Start location tracking if checked in
-            if (status.data.status === 'CHECKED_IN') {
+            if (data.status === 'CHECKED_IN') {
               await get().startLocationTracking();
             }
 
@@ -281,15 +272,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-            // Get token from auth store since AuthGuard ensures user is authenticated
-            const { useAuth } = await import('@/store/auth-store');
-            const authStore = useAuth.getState();
-            const token = await authStore.getValidToken();
-
-            if (!token) {
-              throw new Error('No authentication token available');
-            }
-
+            
             const deviceInfo = request.deviceInfo || get().getDeviceInfo();
 
             // Build API request
@@ -307,23 +290,23 @@ export const useAttendance = create<AttendanceStoreState>()(
             };
 
             // Make API call
-            const response = await apiClient.request<{ success: boolean; data: any; message: string }>(
-              API_ENDPOINTS.ATTENDANCE_CHECKIN,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(apiRequest),
-              }
-            );
+            const response = await api.post<{ success: boolean; data: any; message: string }>('/attendance/checkin', apiRequest);
+
+            if (!response.success) {
+              throw new Error(response.error || 'Failed to check in');
+            }
+
+            const responseData = response.data?.data;
+            if (!responseData) {
+              throw new Error('Invalid check-in response');
+            }
 
             const result: AttendanceResponse = {
-              success: response.success,
-              message: response.message,
-              timestamp: new Date(response.data.timestamp),
-              checkInTime: new Date(response.data.checkInTime),
-              verificationStatus: response.data.verificationStatus
+              success: response.data?.success || false,
+              message: response.data?.message || 'Check-in successful',
+              timestamp: new Date(responseData.timestamp),
+              checkInTime: new Date(responseData.checkInTime),
+              verificationStatus: responseData.verificationStatus
             };
 
             if (result.success) {
@@ -386,15 +369,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-            // Get token from auth store since AuthGuard ensures user is authenticated
-            const { useAuth } = await import('@/store/auth-store');
-            const authStore = useAuth.getState();
-            const token = await authStore.getValidToken();
-
-            if (!token) {
-              throw new Error('No authentication token available');
-            }
-
+            
             const deviceInfo = request.deviceInfo || get().getDeviceInfo();
 
             // Build API request
@@ -423,24 +398,24 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             // Make API call
-            const response = await apiClient.request<{ success: boolean; data: any; message: string }>(
-              API_ENDPOINTS.ATTENDANCE_CHECKOUT,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(apiRequest),
-              }
-            );
+            const response = await api.post<{ success: boolean; data: any; message: string }>('/attendance/checkout', apiRequest);
+
+            if (!response.success) {
+              throw new Error(response.error || 'Failed to check out');
+            }
+
+            const responseData = response.data?.data;
+            if (!responseData) {
+              throw new Error('Invalid check-out response');
+            }
 
             const result: AttendanceResponse = {
-              success: response.success,
-              message: response.message,
-              timestamp: new Date(response.data.timestamp),
-              checkOutTime: new Date(response.data.checkOutTime),
-              workHours: response.data.workHours,
-              verificationStatus: response.data.verificationStatus
+              success: response.data?.success || false,
+              message: response.data?.message || 'Check-out successful',
+              timestamp: new Date(responseData.timestamp),
+              checkOutTime: new Date(responseData.checkOutTime),
+              workHours: responseData.workHours,
+              verificationStatus: responseData.verificationStatus
             };
 
             if (result.success) {
@@ -481,15 +456,7 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingOut: true, error: null });
 
           try {
-            // Get token from auth store since AuthGuard ensures user is authenticated
-            const { useAuth } = await import('@/store/auth-store');
-            const authStore = useAuth.getState();
-            const token = await authStore.getValidToken();
-
-            if (!token) {
-              throw new Error('No authentication token available');
-            }
-
+            
             const deviceInfo = request.deviceInfo || get().getDeviceInfo();
 
             // Build checkout request with emergency method
@@ -509,24 +476,24 @@ export const useAttendance = create<AttendanceStoreState>()(
             };
 
             // Make API call
-            const response = await apiClient.request<{ success: boolean; data: any; message: string }>(
-              API_ENDPOINTS.ATTENDANCE_CHECKOUT,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(emergencyRequest),
-              }
-            );
+            const response = await api.post<{ success: boolean; data: any; message: string }>('/attendance/checkout', emergencyRequest);
+
+            if (!response.success) {
+              throw new Error(response.error || 'Failed to check out');
+            }
+
+            const responseData = response.data?.data;
+            if (!responseData) {
+              throw new Error('Invalid check-out response');
+            }
 
             const result: AttendanceResponse = {
-              success: response.success,
-              message: response.message,
-              timestamp: new Date(response.data.timestamp),
-              checkOutTime: new Date(response.data.checkOutTime),
-              workHours: response.data.workHours,
-              verificationStatus: response.data.verificationStatus
+              success: response.data?.success || false,
+              message: response.data?.message || 'Check-out successful',
+              timestamp: new Date(responseData.timestamp),
+              checkOutTime: new Date(responseData.checkOutTime),
+              workHours: responseData.workHours,
+              verificationStatus: responseData.verificationStatus
             };
 
             if (result.success) {

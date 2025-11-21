@@ -6,7 +6,8 @@ import {
   LoginRequest,
   AuthenticationResult,
 } from '@pgn/shared';
-import { apiClient } from '@/services/api-client';
+import { api } from '@/services/api-client';
+import { SessionManager, type Session } from '@/utils/auth-utils';
 
 interface AuthStoreState {
   // Authentication state
@@ -15,6 +16,7 @@ interface AuthStoreState {
   user: AuthenticatedUser | null;
   error: string | null;
   lastActivity: number;
+  session: Session | null;
 
   // UI state
   isLoggingIn: boolean;
@@ -40,6 +42,11 @@ interface AuthStoreState {
   // Session management
   handleSessionExpiration: () => Promise<void>;
 
+  // Session management methods
+  setSession: (session: Session | null) => void;
+  clearSession: () => void;
+  isTokenExpired: () => boolean;
+
   // Utility methods
   parseAuthError: (error: any) => string;
   setupTokenRefresh: (token: string) => void;
@@ -60,6 +67,7 @@ export const useAuth = create<AuthStoreState>()(
         user: null,
         error: null,
         lastActivity: Date.now(),
+        session: null,
         isLoggingIn: false,
         tokenRefreshPromise: null,
         tokenRefreshTimeout: null,
@@ -104,28 +112,48 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Call API
-            const response = await apiClient.login(credentials);
+            const response = await api.post('/auth/login', credentials);
 
-            // Store tokens securely
-            await Promise.all([
-              AsyncStorage.setItem('pgn_auth_token', response.token),
-              AsyncStorage.setItem('pgn_employee_data', JSON.stringify(response.employee)),
-            ]);
+            if (!response.success) {
+              return {
+                success: false,
+                error: response.error || 'Login failed',
+              };
+            }
 
-            // Setup token refresh
-            get().setupTokenRefresh(response.token);
+            const responseData = response.data;
+            if (!responseData) {
+              return {
+                success: false,
+                error: 'Invalid login response',
+              };
+            }
+
+            // Store session using SessionManager
+            await SessionManager.saveSession({
+              accessToken: responseData.token,
+              refreshToken: responseData.refreshToken || '',
+              expiresIn: responseData.expiresIn || 900, // Use backend value or default
+            });
+
+            // Store employee data separately
+            await AsyncStorage.setItem('pgn_employee_data', JSON.stringify(responseData.employee));
+
+            // Load session to store state
+            const currentSession = await SessionManager.loadSession();
 
             set({
               isAuthenticated: true,
               isLoggingIn: false,
-              user: response.employee,
+              user: responseData.employee,
               error: null,
               lastActivity: Date.now(),
+              session: currentSession,
             });
 
             return {
               success: true,
-              user: response.employee,
+              user: responseData.employee,
             };
           } catch (error) {
             console.error('❌ Login failed:', error);
@@ -157,12 +185,13 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Call logout API
-            await apiClient.logout(authToken);
+            await api.post('/auth/logout', { token: authToken });
 
             // Clear local tokens
             await get().clearLocalTokens();
 
-            // Clear local auth state
+            // Clear session and local auth state
+            get().clearSession();
             set({
               isAuthenticated: false,
               isLoading: false,
@@ -179,7 +208,8 @@ export const useAuth = create<AuthStoreState>()(
             // Still clear local tokens on error
             await get().clearLocalTokens();
 
-            // Still clear local state on error
+            // Still clear session and local state on error
+            get().clearSession();
             set({
               isAuthenticated: false,
               isLoading: false,
@@ -209,14 +239,23 @@ export const useAuth = create<AuthStoreState>()(
         // Refresh authentication token
         refreshToken: async (refreshToken: string): Promise<any> => {
           try {
-            const response = await apiClient.refreshToken(refreshToken);
+            const response = await api.post('/auth/refresh-token', { token: refreshToken });
+
+            if (!response.success) {
+              throw new Error(response.error || 'Token refresh failed');
+            }
+
+            const responseData = response.data;
+            if (!responseData?.token) {
+              throw new Error('Invalid refresh response');
+            }
 
             // Store new tokens
-            await AsyncStorage.setItem('pgn_auth_token', response.token);
+            await AsyncStorage.setItem('pgn_auth_token', responseData.token);
 
-            get().setupTokenRefresh(response.token);
+            get().setupTokenRefresh(responseData.token);
 
-            return response;
+            return responseData;
           } catch (error) {
             console.error('❌ Token refresh failed:', error);
             throw new Error('Failed to refresh token');
@@ -232,27 +271,70 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Get updated user data from API
-            const updatedUser = await apiClient.getCurrentUser(authToken);
+            const userResponse = await api.get('/auth/user');
 
-            if (updatedUser) {
-              set({ user: updatedUser });
+            if (userResponse.success && userResponse.data) {
+              set({ user: userResponse.data });
             }
           } catch (error) {
             console.error('❌ Failed to refresh user data:', error);
           }
         },
 
-        // Get valid authentication token
+        // Get valid authentication token with refresh capability
         getValidToken: async (): Promise<string | null> => {
           try {
+            // Check if we have a current session
+            const { session, isTokenExpired, setSession } = get();
+
+            if (session && session.accessToken && !isTokenExpired()) {
+              return session.accessToken;
+            }
+
+            // If session exists but is expired, try to refresh
+            if (session && session.refreshToken && isTokenExpired()) {
+              try {
+                const refreshResult = await get().refreshToken(session.refreshToken);
+                if (refreshResult && refreshResult.token) {
+                  // Create new session with refreshed token
+                  const newSession: Session = {
+                    accessToken: refreshResult.token,
+                    refreshToken: session.refreshToken,
+                    expiresIn: refreshResult.expiresIn || 900, // 15 minutes default
+                    expiresAt: Date.now() + (refreshResult.expiresIn || 900) * 1000,
+                  };
+                  setSession(newSession);
+                  return newSession.accessToken;
+                }
+              } catch (refreshError) {
+                console.error('❌ Token refresh failed:', refreshError);
+                // Clear expired session
+                setSession(null);
+                return null;
+              }
+            }
+
+            // Try to get stored token from AsyncStorage (backward compatibility)
             const token = await AsyncStorage.getItem('pgn_auth_token');
             if (!token) {
               return null;
             }
 
-            // Basic token validation
+            // Basic token validation and create session for backward compatibility
             const isValid = get().validateToken(token);
-            return isValid ? token : null;
+            if (isValid) {
+              // Create session from stored token for seamless migration
+              const newSession: Session = {
+                accessToken: token,
+                refreshToken: await AsyncStorage.getItem('pgn_refresh_token') || '',
+                expiresIn: 900, // 15 minutes
+                expiresAt: Date.now() + 900 * 1000,
+              };
+              setSession(newSession);
+              return token;
+            }
+
+            return null;
           } catch (error) {
             console.error('❌ Failed to validate token:', error);
             return null;
@@ -288,12 +370,14 @@ export const useAuth = create<AuthStoreState>()(
 
         // Reset store
         reset: () => {
+          get().clearSession();
           set({
             isAuthenticated: false,
             isLoading: false,
             user: null,
             error: null,
             lastActivity: Date.now(),
+            session: null,
             isLoggingIn: false,
             tokenRefreshPromise: null,
             tokenRefreshTimeout: null,
@@ -302,10 +386,6 @@ export const useAuth = create<AuthStoreState>()(
 
         // Parse authentication errors
         parseAuthError: (error: any): string => {
-          if (error && typeof error === 'object' && 'message' in error) {
-            return error.message;
-          }
-
           if (error instanceof Error) {
             // Handle specific error cases
             if (error.message.includes('NETWORK_ERROR')) {
@@ -327,10 +407,18 @@ export const useAuth = create<AuthStoreState>()(
             return error.message;
           }
 
+          if (error && typeof error === 'object' && 'message' in error) {
+            return error.message;
+          }
+
+          if (typeof error === 'string') {
+            return error;
+          }
+
           return 'An unexpected error occurred. Please try again.';
         },
 
-        // Validate token structure
+        // Validate token with proper JWT validation
         validateToken: (token: string): boolean => {
           try {
             // Basic token structure validation
@@ -338,10 +426,16 @@ export const useAuth = create<AuthStoreState>()(
               return false;
             }
 
-            // In a production app, you would validate the JWT token here
-            // For now, we'll just check if the token format looks reasonable
+            // Check JWT format (should have 3 parts separated by dots)
             const parts = token.split('.');
-            return parts.length === 3; // JWT should have 3 parts
+            if (parts.length !== 3) {
+              return false;
+            }
+
+            // For now, check basic JWT structure
+            // In production, we would decode and validate the JWT properly
+            // The server will handle full JWT validation
+            return true;
           } catch {
             return false;
           }
@@ -440,6 +534,23 @@ export const useAuth = create<AuthStoreState>()(
             };
           }
         },
+
+        // Session management methods
+        setSession: (session: Session | null) => {
+          set({ session });
+        },
+
+        clearSession: () => {
+          set({ session: null });
+        },
+
+        isTokenExpired: (): boolean => {
+          const { session } = get();
+          if (!session || !session.expiresAt) {
+            return true;
+          }
+          return Date.now() >= session.expiresAt;
+        },
       }),
       {
         name: 'auth-store',
@@ -447,6 +558,7 @@ export const useAuth = create<AuthStoreState>()(
         partialize: (state) => ({
           user: state.user,
           isAuthenticated: state.isAuthenticated,
+          session: state.session,
           // Don't persist error or loading states
         }),
       }

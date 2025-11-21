@@ -1,196 +1,367 @@
-import {
-  LoginRequest,
-  LoginResponse,
-  RefreshRequest,
-  RefreshResponse,
-  LogoutRequest,
-  LogoutResponse,
-  AuthenticatedUser
-} from '@pgn/shared';
-import {
-  API_BASE_URL,
-  API_ENDPOINTS,
-  buildApiUrl,
-  getApiHeaders
-} from '@/constants/api';
+/**
+ * PGN API Client - Following Dukancard's Proven Patterns
+ *
+ * This API client implements the exact same authentication and error handling
+ * patterns as dukancard's proven enterprise-grade API client.
+ */
 
+import { SessionManager } from '@/utils/auth-utils';
+
+// API Configuration
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+
+// Public endpoints that don't require authentication
+const PUBLIC_ENDPOINTS = [
+  '/api/auth/login',
+  '/api/auth/refresh-token',
+  '/api/auth/logout',
+];
+
+// Device info for security tracking
+const getDeviceInfo = () => {
+  return {
+    platform: 'mobile',
+    timestamp: Date.now(),
+    version: '1.0.0',
+    client: 'pgn-mobile-client'
+  };
+};
+
+// Error types matching dukancard's pattern
 export interface ApiError {
   error: string;
   message: string;
   employmentStatus?: string;
   retryAfter?: number;
+  context?: string;
 }
 
-export interface NetworkConfig {
-  baseURL: string;
-  timeout: number;
-  retryAttempts: number;
-  retryDelay: number;
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
 }
 
-class ApiClient {
-  private baseURL: string;
-  private timeout: number;
-  private retryAttempts: number;
-  private retryDelay: number;
+export interface AppError {
+  code: string;
+  title: string;
+  message: string;
+  details?: any;
+  retry?: boolean;
+}
 
-  constructor(config: Partial<NetworkConfig> = {}) {
-    this.baseURL = config.baseURL || API_BASE_URL;
-    this.timeout = config.timeout || 15000; // 15 seconds for mobile
-    this.retryAttempts = config.retryAttempts || 3;
-    this.retryDelay = config.retryDelay || 1000; // 1 second
+// Error handling matching dukancard's pattern
+export function createAppError(code: string, title: string, message: string, details?: any): AppError {
+  return {
+    code,
+    title,
+    message,
+    details,
+    retry: ['network', 'timeout'].includes(code),
+  };
+}
+
+export function handleApiError(error: Error | null): AppError {
+  if (!error) {
+    return createAppError('unknown', 'Unknown Error', 'An unexpected error occurred');
   }
 
-  private async fetchWithTimeout(
-    url: string,
-    options: RequestInit,
-    attempt: number = 1
-  ): Promise<Response> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+  const errorMessage = error.message.toLowerCase();
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          ...getApiHeaders(),
-          ...options.headers,
-        },
-      });
-
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      // Retry logic for network errors
-      if (attempt < this.retryAttempts && this.shouldRetry(error)) {
-        await this.delay(this.retryDelay * attempt); // Exponential backoff
-        return this.fetchWithTimeout(url, options, attempt + 1);
-      }
-
-      throw error;
-    }
-  }
-
-  private shouldRetry(error: any): boolean {
-    // Retry for network errors, timeouts, and aborts
-    return (
-      error.name === 'TypeError' || // Network error
-      error.name === 'AbortError' || // Timeout
-      error.message?.includes('Network request failed')
+  if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+    return createAppError(
+      'network',
+      'Network Error',
+      'Please check your internet connection and try again.',
+      { originalError: error.message }
     );
   }
 
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  if (errorMessage.includes('timeout')) {
+    return createAppError(
+      'timeout',
+      'Request Timeout',
+      'The request took too long. Please try again.',
+      { originalError: error.message }
+    );
   }
 
-  private async handleResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const apiError: ApiError = {
-        error: errorData.error || 'HTTP_ERROR',
-        message: errorData.message || `HTTP ${response.status}: ${response.statusText}`,
-        employmentStatus: errorData.employmentStatus,
-        retryAfter: response.headers.get('Retry-After')
-          ? parseInt(response.headers.get('Retry-After')!)
-          : undefined,
-      };
+  if (errorMessage.includes('token has expired') || errorMessage.includes('unauthorized')) {
+    return createAppError(
+      'unauthorized',
+      'Session Expired',
+      'Your session has expired. Please sign in again.',
+      { originalError: error.message }
+    );
+  }
 
-      console.error('❌ API Error:', apiError);
-      throw new Error(`${apiError.error}: ${apiError.message}`);
+  if (errorMessage.includes('forbidden')) {
+    return createAppError(
+      'forbidden',
+      'Access Denied',
+      'You do not have permission to perform this action.',
+      { originalError: error.message }
+    );
+  }
+
+  if (errorMessage.includes('not found')) {
+    return createAppError(
+      'not_found',
+      'Not Found',
+      'The requested resource was not found.',
+      { originalError: error.message }
+    );
+  }
+
+  if (errorMessage.includes('rate limit')) {
+    return createAppError(
+      'rate_limit',
+      'Too Many Requests',
+      'Please wait a moment before trying again.',
+      { originalError: error.message }
+    );
+  }
+
+  if (errorMessage.includes('validation')) {
+    return createAppError(
+      'validation',
+      'Invalid Data',
+      'Please check your input and try again.',
+      { originalError: error.message }
+    );
+  }
+
+  return createAppError(
+    'server',
+    'Server Error',
+    'Something went wrong. Please try again later.',
+    { originalError: error.message }
+  );
+}
+
+// Helper to check if endpoint is public
+function isPublicEndpoint(endpoint: string): boolean {
+  return PUBLIC_ENDPOINTS.some(publicEndpoint => endpoint.includes(publicEndpoint));
+}
+
+// Refresh token API call
+async function refreshTokenAPI(refreshToken: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'x-client-info': 'pgn-mobile-client',
+        'User-Agent': 'pgn-mobile-app/1.0.0',
+      },
+      body: JSON.stringify({ token: refreshToken }),
+      signal: AbortSignal.timeout(10000), // 10 second timeout for refresh
+    });
+
+    const responseData = await response.json();
+
+    if (response.ok && responseData.accessToken) {
+      // Save new session to storage
+      await SessionManager.saveSession({
+        accessToken: responseData.accessToken,
+        refreshToken: responseData.refreshToken || refreshToken,
+        expiresIn: responseData.expiresIn || 900, // Default 15 minutes
+      });
+      return true;
     }
 
-    const data = await response.json();
-    return data;
+    return false;
+  } catch (error) {
+    console.warn('Token refresh failed:', error);
+    return false;
   }
+}
 
-  public async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = buildApiUrl(endpoint);
+// Core API call function following dukancard's pattern
+export async function apiCall<T = any>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+  try {
+    const url = `${API_BASE_URL}${endpoint}`;
 
-    try {
-      const response = await this.fetchWithTimeout(url, options);
-      return this.handleResponse<T>(response);
-    } catch (error) {
-      console.error('💥 API Request Failed:', {
-        endpoint,
-        method: options.method,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'x-client-info': 'pgn-mobile-client',
+      'User-Agent': 'pgn-mobile-app/1.0.0',
+    };
 
-      if (error instanceof Error) {
-        throw error;
+    // Add authorization header for private endpoints
+    if (!isPublicEndpoint(endpoint)) {
+      // Get current session from storage
+      const session = await SessionManager.loadSession();
+
+      // Check if token is valid
+      if (!session || SessionManager.isSessionExpired(session)) {
+        // Try to refresh token
+        const refreshToken = await SessionManager.getRefreshToken();
+        if (refreshToken) {
+          const refreshSuccess = await refreshTokenAPI(refreshToken);
+          if (!refreshSuccess) {
+            return {
+              success: false,
+              error: "Missing authorization token"
+            };
+          }
+          // Get updated session after refresh
+          const newAccessToken = await SessionManager.getAccessToken();
+          if (newAccessToken) {
+            headers.Authorization = `Bearer ${newAccessToken}`;
+          }
+        } else {
+          return {
+            success: false,
+            error: "Missing authorization token"
+          };
+        }
       } else {
-        throw new Error('Network request failed');
+        headers.Authorization = `Bearer ${session.accessToken}`;
       }
     }
-  }
 
-  // Authentication endpoints
-  async login(credentials: LoginRequest): Promise<LoginResponse> {
-    return this.request<LoginResponse>(API_ENDPOINTS.LOGIN, {
-      method: 'POST',
-      body: JSON.stringify(credentials),
+    // Merge with provided headers
+    Object.assign(headers, options.headers);
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(15000), // 15 second timeout
     });
-  }
 
-  async refreshToken(refreshToken: string): Promise<RefreshResponse> {
-    return this.request<RefreshResponse>(API_ENDPOINTS.REFRESH_TOKEN, {
-      method: 'POST',
-      body: JSON.stringify({ token: refreshToken } as RefreshRequest),
-    });
-  }
+    const responseData = await response.json();
 
-  async logout(authToken: string): Promise<LogoutResponse> {
-    return this.request<LogoutResponse>(API_ENDPOINTS.LOGOUT, {
-      method: 'POST',
-      body: JSON.stringify({ token: authToken } as LogoutRequest),
-    });
-  }
+    if (!response.ok) {
+      // Handle specific HTTP status codes
+      if (response.status === 401) {
+        // Clear session from storage
+        await SessionManager.clearSession();
+        return {
+          success: false,
+          error: "Authentication failed. Please login again."
+        };
+      }
 
-  async getCurrentUser(authToken: string): Promise<AuthenticatedUser> {
-    return this.request<AuthenticatedUser>(API_ENDPOINTS.GET_USER, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-      },
-    });
-  }
+      if (response.status === 403) {
+        return {
+          success: false,
+          error: "Access denied. You don't have permission to perform this action."
+        };
+      }
 
-  // Utility methods for checking connectivity
-  async checkConnectivity(): Promise<boolean> {
-    try {
-      // Simple connectivity check by attempting to reach the auth endpoint
-      const response = await this.fetchWithTimeout(
-        buildApiUrl(API_ENDPOINTS.LOGIN),
-        { method: 'GET' }, // Will get 405 Method Not Allowed, but that's fine for connectivity check
-        1 // No retries for connectivity check
-      );
+      if (response.status === 429) {
+        return {
+          success: false,
+          error: "Too many requests. Please wait before trying again."
+        };
+      }
 
-      return response.status === 405; // 405 means server is reachable
-    } catch {
-      return false;
+      if (response.status >= 500) {
+        return {
+          success: false,
+          error: "Server error. Please try again later."
+        };
+      }
+
+      // Return error from API response if available
+      return {
+        success: false,
+        error: responseData.error || responseData.message || 'Request failed',
+      };
     }
-  }
 
-  // Method to get the current configuration
-  getConfig(): NetworkConfig {
     return {
-      baseURL: this.baseURL,
-      timeout: this.timeout,
-      retryAttempts: this.retryAttempts,
-      retryDelay: this.retryDelay,
+      success: true,
+      data: responseData,
+    };
+
+  } catch (error) {
+    console.error('API Call Error:', {
+      endpoint,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    const appError = handleApiError(error instanceof Error ? error : null);
+
+    return {
+      success: false,
+      error: appError.message,
     };
   }
 }
 
-// Create singleton instance
-export const apiClient = new ApiClient();
+// Convenience methods matching dukancard's pattern
+export const api = {
+  get: <T = any>(endpoint: string, options?: Omit<RequestInit, 'method' | 'body'>) =>
+    apiCall<T>(endpoint, { ...options, method: 'GET' }),
 
-// Export the class for testing
-export { ApiClient };
+  post: <T = any>(endpoint: string, data?: any, options?: Omit<RequestInit, 'method' | 'body'>) =>
+    apiCall<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+
+  put: <T = any>(endpoint: string, data?: any, options?: Omit<RequestInit, 'method' | 'body'>) =>
+    apiCall<T>(endpoint, {
+      ...options,
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+
+  delete: <T = any>(endpoint: string, options?: Omit<RequestInit, 'method' | 'body'>) =>
+    apiCall<T>(endpoint, { ...options, method: 'DELETE' }),
+
+  patch: <T = any>(endpoint: string, data?: any, options?: Omit<RequestInit, 'method' | 'body'>) =>
+    apiCall<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+};
+
+// Utility function for checking connectivity
+export async function checkApiConnectivity(): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(5000),
+    });
+    return response.status < 500;
+  } catch {
+    return false;
+  }
+}
+
+// Export the main apiCall function for direct usage
+export { apiCall as default };
+
+// Legacy exports for compatibility
+export const apiClient = {
+  login: async (credentials: { email: string; password: string }) => {
+    return api.post('/auth/login', credentials);
+  },
+
+  refreshToken: async (refreshToken: string) => {
+    return api.post('/auth/refresh-token', { token: refreshToken });
+  },
+
+  logout: async (authToken: string) => {
+    return api.post('/auth/logout', { token: authToken });
+  },
+
+  getCurrentUser: async () => {
+    return api.get('/auth/user');
+  },
+
+  checkConnectivity: checkApiConnectivity,
+};

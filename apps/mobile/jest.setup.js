@@ -205,6 +205,18 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 
+// Mock @react-native-async-storage/async-storage
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  getAllKeys: jest.fn(),
+  multiGet: jest.fn(),
+  multiSet: jest.fn(),
+  multiRemove: jest.fn(),
+  clear: jest.fn(),
+}));
+
 // Mock expo-location
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(() => ({ status: 'granted' })),
@@ -270,3 +282,30 @@ jest.mock('expo-camera', () => ({
 }));
 
 // Ignore react-native-specific modules
+
+// Mock API constants for tests
+jest.mock('@/constants/api', () => ({
+  buildApiUrl: jest.fn((endpoint: string) => `http://localhost:3000/api${endpoint}`),
+  getApiHeaders: jest.fn(() => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'x-client-info': 'pgn-mobile-client',
+    'User-Agent': 'PGN-Mobile/1.0',
+  })),
+  API_BASE_URL: 'http://localhost:3000',
+  API_ENDPOINTS: {
+    LOGIN: "/auth/login",
+    REFRESH_TOKEN: "/auth/refresh",
+    LOGOUT: "/auth/logout",
+    GET_USER: "/employees/me",
+    EMPLOYEES: "/employees",
+    EMPLOYEE_BY_ID: "/employees",
+    ATTENDANCE_CHECKIN: "/attendance/checkin",
+    ATTENDANCE_CHECKOUT: "/attendance/checkout",
+    ATTENDANCE_STATUS: "/attendance/status",
+  },
+  API_HEADERS: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+}));

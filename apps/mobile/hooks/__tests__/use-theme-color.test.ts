@@ -1,9 +1,44 @@
 import { renderHook } from '@testing-library/react-hooks';
 import { useThemeColor } from '../use-theme-color';
-import { useColorScheme } from 'react-native';
 
-// Extract mock from global jest.setup.js mock
-const mockUseColorScheme = useColorScheme as jest.MockedFunction<typeof useColorScheme>;
+// Mock useColorScheme
+const mockUseColorScheme = jest.fn();
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+    Version: '14.0',
+    select: jest.fn((obj) => obj.ios),
+  },
+  Dimensions: {
+    get: jest.fn(() => ({ width: 375, height: 667, scale: 2, fontScale: 1 })),
+  },
+  PixelRatio: {
+    get: jest.fn(() => 2),
+    getFontScale: jest.fn(() => 1),
+    getPixelSizeForLayoutSize: jest.fn((layoutSize) => layoutSize * 2),
+    roundToNearestPixel: jest.fn((layoutSize) => layoutSize),
+  },
+  Alert: {
+    alert: jest.fn(),
+  },
+  StyleSheet: {
+    create: jest.fn((styles) => styles),
+    flatten: jest.fn((style) => style),
+    compose: jest.fn((style1, style2) => ({ ...style1, ...style2 })),
+  },
+  Animated: {
+    Value: jest.fn(),
+    event: jest.fn(),
+    timing: jest.fn(() => ({ start: jest.fn() })),
+    spring: jest.fn(() => ({ start: jest.fn() })),
+    decay: jest.fn(() => ({ start: jest.fn() })),
+    seq: jest.fn(),
+    parallel: jest.fn(),
+    stagger: jest.fn(),
+    delay: jest.fn(),
+  },
+  useColorScheme: () => mockUseColorScheme(),
+}));
 
 describe('useThemeColor', () => {
   beforeEach(() => {

@@ -142,7 +142,7 @@ export default function DashboardLayoutClient({
               <div className="flex items-center gap-4">
                 <ThemeToggle />
                 <span className="text-sm font-medium text-foreground">
-                  {user?.fullName || user?.email}
+                  {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email}
                 </span>
               </div>
             </header>

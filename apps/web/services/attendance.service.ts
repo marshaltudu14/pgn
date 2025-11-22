@@ -37,6 +37,7 @@ interface DatabaseAttendanceRecord {
   last_location_update: string | null;
   battery_level_at_check_in: number | null;
   battery_level_at_check_out: number | null;
+  device: string | null;
   verification_status: string | null;
   verified_by: string | null;
   verified_at: string | null;
@@ -83,12 +84,9 @@ export class AttendanceService {
         };
       }
 
-      if (existingAttendance && existingAttendance.check_in_timestamp) {
-        return {
-          success: false,
-          message: 'Employee already checked in today'
-        };
-      }
+      // Allow multiple check-ins per day for disruptions
+      // This helps employees resume work after app crashes, network issues, etc.
+      // No restriction - employees can always check in to start/resume work
 
       // Upload selfie to storage
       const photoUrl = await this.uploadSelfieToStorage(
@@ -107,6 +105,7 @@ export class AttendanceService {
         check_in_longitude: request.location.longitude,
         check_in_selfie_url: photoUrl,
         battery_level_at_check_in: request.deviceInfo?.batteryLevel || null,
+        device: request.deviceInfo?.model || null,
         path_data: [],
         verification_status: 'PENDING' as VerificationStatus,
         last_location_update: new Date().toISOString()
@@ -662,6 +661,7 @@ export class AttendanceService {
       verificationStatus: record.verification_status as VerificationStatus,
       workHours: record.total_work_hours ? Number(record.total_work_hours) : undefined,
       notes: record.verification_notes || undefined,
+      device: record.device || undefined,
       createdAt: new Date(record.created_at),
       updatedAt: new Date(record.updated_at),
     }));
@@ -764,6 +764,7 @@ export class AttendanceService {
       verificationStatus: recordData.verification_status as VerificationStatus,
       workHours: recordData.total_work_hours ? Number(recordData.total_work_hours) : undefined,
       notes: recordData.verification_notes || undefined,
+      device: recordData.device || undefined,
       createdAt: new Date(recordData.created_at),
       updatedAt: new Date(recordData.updated_at),
     };

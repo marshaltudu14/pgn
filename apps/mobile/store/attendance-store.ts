@@ -287,6 +287,7 @@ export const useAttendance = create<AttendanceStoreState>()(
 
         // Check in with location and selfie
         checkIn: async (request: CheckInMobileRequest): Promise<AttendanceResponse> => {
+          console.log('[ATTENDANCE STORE] Starting check-in process');
           set({ isCheckingIn: true, error: null });
 
           try {
@@ -295,12 +296,19 @@ export const useAttendance = create<AttendanceStoreState>()(
             const employeeId = authStore.user?.humanReadableId;
             const employeeName = authStore.user?.firstName;
 
+            console.log('[ATTENDANCE STORE] Auth user info:', {
+              employeeId,
+              employeeName,
+              hasService: get().isServiceAvailable
+            });
+
             if (get().isServiceAvailable && employeeId && employeeName) {
               await locationForegroundService.handleCrashRecovery(employeeId);
             }
 
             // Get current location if not provided
             if (!request.location) {
+              console.log('[ATTENDANCE STORE] No location provided, getting current location...');
               try {
                 const location = await getCurrentLocation();
                 request.location = {
@@ -310,7 +318,13 @@ export const useAttendance = create<AttendanceStoreState>()(
                   timestamp: location.timestamp.getTime(),
                   address: location.address
                 };
-              } catch {
+                console.log('[ATTENDANCE STORE] Got current location:', {
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  accuracy: location.accuracy
+                });
+              } catch (locationError) {
+                console.error('[ATTENDANCE STORE] Failed to get location:', locationError);
                 set({
                   isCheckingIn: false,
                   error: 'Location is required for check-in',
@@ -322,8 +336,13 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-            
             const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
+
+            console.log('[ATTENDANCE STORE] Device info:', {
+              batteryLevel: deviceInfo.batteryLevel,
+              platform: deviceInfo.platform,
+              hasSelfie: !!request.selfie
+            });
 
             // Build API request
             const apiRequest = {
@@ -335,31 +354,65 @@ export const useAttendance = create<AttendanceStoreState>()(
                 address: request.location.address
               },
               selfieData: request.selfie,
-              faceConfidence: request.faceConfidence || 0,
               deviceInfo
             };
+
+            console.log('[ATTENDANCE STORE] Making API call to /attendance/checkin...');
+            console.log('[ATTENDANCE STORE] API request payload:', {
+              hasLocation: !!apiRequest.location,
+              hasSelfieData: !!apiRequest.selfieData,
+              hasDeviceInfo: !!apiRequest.deviceInfo
+            });
 
             // Make API call
             const response = await api.post<{ success: boolean; data: any; message: string }>('/attendance/checkin', apiRequest);
 
+            console.log('[ATTENDANCE STORE] API response received:', {
+              success: response.success,
+              hasData: !!response.data,
+              hasError: !!response.error,
+              errorMessage: response.error
+            });
+
             if (!response.success) {
+              console.error('[ATTENDANCE STORE] API call failed:', {
+                error: response.error,
+                success: response.success
+              });
               throw new Error(response.error || 'Failed to check in');
             }
 
             const responseData = response.data?.data;
+            console.log('[ATTENDANCE STORE] Processing response data:', {
+              hasResponseData: !!responseData,
+              responseDataKeys: responseData ? Object.keys(responseData) : null
+            });
+
             if (!responseData) {
+              console.error('[ATTENDANCE STORE] No response data found');
               throw new Error('Invalid check-in response');
             }
 
             const result: AttendanceResponse = {
-              success: response.data?.success || false,
+              success: response.success,
               message: response.data?.message || 'Check-in successful',
               timestamp: new Date(responseData.timestamp),
               checkInTime: new Date(responseData.checkInTime),
-              verificationStatus: responseData.verificationStatus
+              verificationStatus: responseData.verificationStatus,
+              attendanceId: responseData.attendanceId
             };
 
+            console.log('[ATTENDANCE STORE] Built result object:', {
+              success: result.success,
+              message: result.message,
+              hasTimestamp: !!result.timestamp,
+              hasCheckInTime: !!result.checkInTime,
+              verificationStatus: result.verificationStatus,
+              attendanceId: result.attendanceId
+            });
+
             if (result.success) {
+              console.log('[ATTENDANCE STORE] Check-in successful, updating state');
               set({
                 currentStatus: 'CHECKED_IN',
                 isCheckingIn: false,
@@ -376,11 +429,12 @@ export const useAttendance = create<AttendanceStoreState>()(
             return result;
 
           } catch (error) {
-            console.error('Check-in failed:', error);
+            console.error('[ATTENDANCE STORE] Check-in failed:', error);
             const errorMessage = error instanceof Error ? error.message : 'Check-in failed';
 
+            console.log('[ATTENDANCE STORE] Setting error state and closing modal gracefully');
             set({
-              isCheckingIn: false,
+              isCheckingIn: false, // Ensure this is set to false to close modal
               error: errorMessage,
             });
 
@@ -460,12 +514,13 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             const result: AttendanceResponse = {
-              success: response.data?.success || false,
+              success: response.success,
               message: response.data?.message || 'Check-out successful',
               timestamp: new Date(responseData.timestamp),
               checkOutTime: new Date(responseData.checkOutTime),
               workHours: responseData.workHours,
-              verificationStatus: responseData.verificationStatus
+              verificationStatus: responseData.verificationStatus,
+              attendanceId: responseData.attendanceId
             };
 
             if (result.success) {
@@ -538,12 +593,13 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             const result: AttendanceResponse = {
-              success: response.data?.success || false,
+              success: response.success,
               message: response.data?.message || 'Check-out successful',
               timestamp: new Date(responseData.timestamp),
               checkOutTime: new Date(responseData.checkOutTime),
               workHours: responseData.workHours,
-              verificationStatus: responseData.verificationStatus
+              verificationStatus: responseData.verificationStatus,
+              attendanceId: responseData.attendanceId
             };
 
             if (result.success) {
@@ -1105,19 +1161,27 @@ export const useAttendance = create<AttendanceStoreState>()(
         getDeviceInfo: async (): Promise<DeviceInfo> => {
           try {
             const batteryLevel = await Battery.getBatteryLevelAsync();
+
+            // Get device info
+            const deviceInfo = await import('react-native-device-info');
+            const deviceModel = deviceInfo.default.getModel();
+            const deviceBrand = deviceInfo.default.getBrand();
+            const deviceSystemVersion = deviceInfo.default.getSystemVersion();
+
             return {
               batteryLevel: batteryLevel > 0 ? Math.round(batteryLevel * 100) : undefined,
               platform: 'mobile',
               version: '1.0.0',
-              model: 'React Native Device'
+              model: `${deviceBrand} ${deviceModel}` || 'Unknown Device'
             };
           } catch (error) {
             const state = get();
+            console.warn('[ATTENDANCE STORE] Could not get device info:', error);
             return {
               batteryLevel: state.batteryLevel || undefined,
               platform: 'mobile',
               version: '1.0.0',
-              model: 'React Native Device'
+              model: 'Unknown Device'
             };
           }
         },

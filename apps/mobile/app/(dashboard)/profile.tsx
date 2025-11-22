@@ -60,7 +60,7 @@ export default function ProfileScreen() {
         {
           icon: User,
           label: 'Full Name',
-          value: user?.fullName || 'N/A',
+          value: (user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : 'N/A',
         },
         {
           icon: Mail,
@@ -137,12 +137,12 @@ export default function ProfileScreen() {
               />
             ) : (
               <Text className="text-white text-3xl font-bold">
-                {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+                {user?.firstName?.charAt(0).toUpperCase() || 'U'}
               </Text>
             )}
           </View>
           <Text className="text-white text-2xl font-bold">
-            {user?.fullName || 'User'}
+            {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : 'User'}
           </Text>
           <Text className={colorScheme === 'dark' ? 'text-gray-300' : 'text-blue-100'}>
             {user?.humanReadableId || 'PGN-2024-0001'}

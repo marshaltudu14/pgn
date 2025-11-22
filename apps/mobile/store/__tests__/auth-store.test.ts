@@ -31,8 +31,8 @@ const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
 const createMockUser = (overrides: Partial<AuthenticatedUser> = {}): AuthenticatedUser => ({
   id: 'test-user-id',
   humanReadableId: 'PGN-2024-0001',
-  fullName: 'Test User',
   firstName: 'Test',
+  lastName: 'User',
   email: 'test@example.com',
   employmentStatus: 'ACTIVE',
   canLogin: true,
@@ -418,7 +418,7 @@ describe('Auth Store', () => {
     });
 
     it('should refresh user data successfully', async () => {
-      const updatedUser = createMockUser({ fullName: 'Updated User' });
+      const updatedUser = createMockUser({ firstName: 'Updated', lastName: 'User' });
       mockApi.get.mockResolvedValue({
         success: true,
         data: updatedUser,
@@ -435,14 +435,16 @@ describe('Auth Store', () => {
         });
       });
 
-      expect(result.current.user?.fullName).toBe('Test User');
+      expect(result.current.user?.firstName).toBe('Test');
+      expect(result.current.user?.lastName).toBe('User');
 
       // Now refresh user data
       await act(async () => {
         await result.current.refreshUserData();
       });
 
-      expect(result.current.user?.fullName).toBe('Updated User');
+      expect(result.current.user?.firstName).toBe('Updated');
+      expect(result.current.user?.lastName).toBe('User');
     });
 
     it('should handle refresh user data failure gracefully', async () => {

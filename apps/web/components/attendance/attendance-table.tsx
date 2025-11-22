@@ -68,6 +68,7 @@ export function AttendanceTable({
                     <TableHead>Check Out</TableHead>
                     <TableHead>Work Hours</TableHead>
                     <TableHead>Distance</TableHead>
+                    <TableHead>Device</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -81,6 +82,7 @@ export function AttendanceTable({
                       <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
                       <TableCell className="text-right">
                         <Skeleton className="h-8 w-8 rounded ml-auto" />
@@ -142,6 +144,7 @@ export function AttendanceTable({
                   <TableHead>Check Out</TableHead>
                   <TableHead>Work Hours</TableHead>
                   <TableHead>Distance</TableHead>
+                  <TableHead>Device</TableHead>
                   <TableHead>Verification</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -192,6 +195,11 @@ export function AttendanceTable({
                         ) : (
                           '-'
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-muted-foreground">
+                        {record.device || '-'}
                       </div>
                     </TableCell>
                     <TableCell>

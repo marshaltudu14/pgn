@@ -35,7 +35,8 @@ describe('useAuthStore', () => {
   const mockUser: AuthenticatedUser = {
     id: 'test-id',
     humanReadableId: 'PGN-2024-0001',
-    fullName: 'Test User',
+    firstName: 'Test',
+    lastName: 'User',
     email: 'test@example.com',
     department: 'Engineering',
     region: 'North',
@@ -48,7 +49,8 @@ describe('useAuthStore', () => {
   const mockAdminUser: AuthenticatedUser = {
     ...mockUser,
     email: 'admin@example.com',
-    fullName: 'Admin User'
+    firstName: 'Admin',
+    lastName: 'User'
   };
 
   beforeEach(() => {
@@ -295,7 +297,8 @@ describe('useAuthStore', () => {
       const adminUser = {
         ...mockUser,
         email: 'test.admin@company.com',
-        fullName: 'Test Admin'
+        firstName: 'Test',
+        lastName: 'Admin'
       };
 
       (fetch as jest.Mock).mockResolvedValueOnce({

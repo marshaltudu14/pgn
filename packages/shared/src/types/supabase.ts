@@ -30,6 +30,7 @@ export type Database = {
           check_out_selfie_url: string | null
           check_out_timestamp: string | null
           created_at: string | null
+          device: string | null
           employee_id: string
           id: string
           last_location_update: string | null
@@ -57,6 +58,7 @@ export type Database = {
           check_out_selfie_url?: string | null
           check_out_timestamp?: string | null
           created_at?: string | null
+          device?: string | null
           employee_id: string
           id?: string
           last_location_update?: string | null
@@ -84,6 +86,7 @@ export type Database = {
           check_out_selfie_url?: string | null
           check_out_timestamp?: string | null
           created_at?: string | null
+          device?: string | null
           employee_id?: string
           id?: string
           last_location_update?: string | null
@@ -118,7 +121,6 @@ export type Database = {
           assigned_cities: Json | null
           can_login: boolean | null
           created_at: string | null
-          device_info: Json | null
           email: string
           employment_status: string
           employment_status_changed_at: string | null
@@ -136,7 +138,6 @@ export type Database = {
           assigned_cities?: Json | null
           can_login?: boolean | null
           created_at?: string | null
-          device_info?: Json | null
           email: string
           employment_status?: string
           employment_status_changed_at?: string | null
@@ -154,7 +155,6 @@ export type Database = {
           assigned_cities?: Json | null
           can_login?: boolean | null
           created_at?: string | null
-          device_info?: Json | null
           email?: string
           employment_status?: string
           employment_status_changed_at?: string | null

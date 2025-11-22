@@ -35,6 +35,7 @@ export interface DailyAttendanceRecord {
   verificationStatus?: VerificationStatus;
   workHours?: number;
   notes?: string;
+  device?: string; // Device model used for check-in (e.g., Samsung Galaxy S23)
   createdAt: Date;
   updatedAt: Date;
 }

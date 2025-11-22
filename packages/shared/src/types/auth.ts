@@ -60,8 +60,8 @@ export interface AuthErrorResponse {
 export interface AuthenticatedUser {
   id: string;
   humanReadableId: string;
-  fullName: string;
-  firstName: string; // First name only
+  firstName: string;
+  lastName: string;
   email: string;
   employmentStatus: EmploymentStatus;
   canLogin: boolean;

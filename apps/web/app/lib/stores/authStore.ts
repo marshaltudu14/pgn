@@ -128,7 +128,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
-          useUIStore.getState().showNotification(`Welcome back, ${loginResponse.employee.fullName}!`, 'success');
+          useUIStore.getState().showNotification(`Welcome back, ${loginResponse.employee.firstName} ${loginResponse.employee.lastName}!`, 'success');
 
           return { success: true };
         } catch (error) {

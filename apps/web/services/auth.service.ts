@@ -33,7 +33,8 @@ export class AuthService {
       return {
         id: user.id,
         humanReadableId: user.email || '',
-        fullName: userMetadata.full_name || user.email || '',
+        firstName: userMetadata.first_name || userMetadata.full_name?.split(' ')[0] || user.email || '',
+        lastName: userMetadata.last_name || userMetadata.full_name?.split(' ').slice(1).join(' ') || '',
         email: user.email || '',
         employmentStatus: 'ACTIVE' as EmploymentStatus,
         canLogin: true,
@@ -166,7 +167,8 @@ export class AuthService {
         const authenticatedUser: AuthenticatedUser = {
           id: authData.user.id,
           humanReadableId: authEmail,
-          fullName: userMetadata.full_name || authEmail,
+          firstName: userMetadata.first_name || userMetadata.full_name?.split(' ')[0] || authEmail,
+          lastName: userMetadata.last_name || userMetadata.full_name?.split(' ').slice(1).join(' ') || '',
           email: authEmail,
           employmentStatus: 'ACTIVE',
           canLogin: true,
@@ -217,7 +219,8 @@ export class AuthService {
         const authenticatedUser: AuthenticatedUser = {
           id: employee.id,
           humanReadableId: employee.human_readable_id,
-          fullName: employee.full_name || authEmail,
+          firstName: employee.first_name,
+          lastName: employee.last_name,
           email: authEmail,
           employmentStatus: employee.employment_status,
           canLogin: employee.can_login,

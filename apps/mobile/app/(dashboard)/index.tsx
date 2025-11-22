@@ -80,10 +80,9 @@ export default function HomeScreen() {
     loadWeeklyStats();
   }, []);
 
-  // Get first name from full name
-  const getFirstName = (fullName?: string) => {
-    if (!fullName) return 'User';
-    return fullName.split(' ')[0];
+  // Get first name
+  const getFirstName = () => {
+    return user?.firstName || 'User';
   };
 
   // Get status info
@@ -129,7 +128,7 @@ export default function HomeScreen() {
         <View style={homeStyles.headerRow}>
           <View style={homeStyles.headerLeft}>
             <Text style={[homeStyles.userName, { color: colors.text }]}>
-              {getFirstName(user?.fullName)}
+              {getFirstName()}
             </Text>
             <Text style={[homeStyles.userSubtitle, { color: colors.textSecondary }]}>
               {user?.humanReadableId || 'N/A'}

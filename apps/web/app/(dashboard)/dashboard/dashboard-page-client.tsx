@@ -31,7 +31,7 @@ export default function DashboardPageClient() {
     >
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-foreground">
-          Welcome back, {user?.fullName || user?.email}!
+          Welcome back, {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email}!
         </h2>
         <p className="text-muted-foreground">
           {isAdmin ? 'You have administrator access' : 'You have regular user access'}

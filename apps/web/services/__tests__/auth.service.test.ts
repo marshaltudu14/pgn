@@ -100,7 +100,8 @@ describe('AuthService', () => {
         employee: {
           id: mockEmployeeData.id,
           humanReadableId: mockEmployeeData.human_readable_user_id,
-          fullName: 'John Doe',
+          firstName: 'John',
+          lastName: 'Doe',
           email: validLoginRequest.email,
           employmentStatus: mockEmployeeData.employment_status,
           canLogin: mockEmployeeData.can_login,
@@ -214,7 +215,8 @@ describe('AuthService', () => {
         employee: {
           id: 'admin-auth-id',
           humanReadableId: 'admin@company.com',
-          fullName: 'Admin User',
+          firstName: 'Admin',
+          lastName: 'User',
           email: 'admin@company.com',
           employmentStatus: 'ACTIVE',
           canLogin: true,

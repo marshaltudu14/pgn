@@ -17,7 +17,7 @@ function DashboardScreenWrapper({ children }: { children: React.ReactNode }) {
     <View
       style={{
         flex: 1,
-        paddingBottom: insets.bottom + 60, // Account for bottom nav height + safe area (removed the extra 10)
+        paddingBottom: insets.bottom,
       }}
     >
       {children}

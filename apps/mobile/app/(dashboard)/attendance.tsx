@@ -1,245 +1,255 @@
-import React from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
-  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+  FlatList,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { showToast } from '@/utils/toast';
-import { Calendar, MapPin, Clock, CheckCircle } from 'lucide-react-native';
+import { useAttendance } from '@/store/attendance-store';
+import { DailyAttendanceRecord } from '@pgn/shared';
+import { createAttendanceStyles } from '@/styles/attendance/attendance-styles';
+import { COLORS } from '@/constants';
+import AttendanceSkeleton from '@/components/AttendanceSkeleton';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 
 export default function AttendanceScreen() {
+  const colorScheme = useColorScheme();
+  const styles = createAttendanceStyles();
+  const flatListRef = useRef<FlatList>(null);
 
-  const handleCheckIn = () => {
-    showToast.info('Check In', 'Face recognition check-in will be available in Phase 2.');
+  // Use the attendance store
+  const {
+    attendanceHistory,
+    isHistoryLoading,
+    isRefreshingHistory,
+    fetchAttendanceHistory,
+    loadMoreAttendanceHistory,
+    refreshAttendanceHistory,
+  } = useAttendance();
+
+  // Theme colors - Black for dark mode, White for light mode
+  const colors = {
+    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+    textSecondary: colorScheme === 'dark' ? '#8E8E93' : '#3C3C43',
+    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
+    border: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
+    primary: COLORS.SAFFRON,
+    success: COLORS.SUCCESS,
+    warning: COLORS.WARNING,
+    error: COLORS.ERROR,
+    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
+    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
   };
 
-  const handleCheckOut = () => {
-    showToast.info('Check Out', 'Face recognition check-out will be available in Phase 2.');
+  // Load initial data
+  const loadInitialData = useCallback(async () => {
+    try {
+      await fetchAttendanceHistory();
+    } catch {
+      showToast.error('Error', 'Failed to load attendance data');
+    }
+  }, [fetchAttendanceHistory]);
+
+  // Load more data (infinite scroll)
+  const loadMoreData = useCallback(async () => {
+    try {
+      await loadMoreAttendanceHistory();
+    } catch {
+      showToast.error('Error', 'Failed to load more data');
+    }
+  }, [loadMoreAttendanceHistory]);
+
+  // Refresh data
+  const onRefresh = useCallback(async () => {
+    try {
+      await refreshAttendanceHistory();
+    } catch {
+      showToast.error('Error', 'Failed to refresh data');
+    }
+  }, [refreshAttendanceHistory]);
+
+  // Format time
+  const formatTime = (date: Date | string | null) => {
+    if (!date) return '--:--';
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const mockAttendanceData = [
-    {
-      date: '2024-01-15',
-      checkIn: '09:00 AM',
-      checkOut: '06:00 PM',
-      status: 'present',
-      location: 'Office'
-    },
-    {
-      date: '2024-01-14',
-      checkIn: '08:45 AM',
-      checkOut: '05:30 PM',
-      status: 'present',
-      location: 'Office'
-    },
-    {
-      date: '2024-01-13',
-      checkIn: '09:15 AM',
-      checkOut: '--:--',
-      status: 'checked_out',
-      location: 'Office'
-    },
-  ];
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  // Format distance
+  const formatDistance = (meters: number | null) => {
+    if (!meters) return '0 km';
+    if (meters < 1000) return `${meters}m`;
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  // Get verification status info
+  const getVerificationStatus = (status: string | null) => {
+    switch (status) {
+      case 'AUTO_APPROVED':
+        return { color: colors.success, icon: CheckCircle, text: 'Approved' };
+      case 'MANUAL_REVIEW':
+        return { color: colors.warning, icon: AlertCircle, text: 'Review' };
+      case 'REJECTED':
+        return { color: colors.error, icon: XCircle, text: 'Rejected' };
+      default:
+        return { color: colors.textTertiary, icon: Clock, text: 'Pending' };
+    }
+  };
+
+  // Render attendance item
+  const renderAttendanceItem = ({ item }: { item: DailyAttendanceRecord; index: number }) => {
+    const verificationStatus = getVerificationStatus(item.verificationStatus || null);
+    const StatusIcon = verificationStatus.icon;
+
+    return (
+      <View style={[
+        styles.attendanceItem,
+        { backgroundColor: colors.background }
+      ]}>
+        <View style={styles.attendanceRow}>
+          {/* Date and Status */}
+          <View style={styles.dateSection}>
+            <View style={styles.dateRow}>
+              <Calendar size={16} color={colors.textSecondary} />
+              <Text style={[styles.dateText, { color: colors.text }]}>{formatDate(item.date)}</Text>
+            </View>
+            <View style={styles.statusBadge}>
+              <StatusIcon size={14} color={verificationStatus.color} />
+              <Text style={[styles.statusText, { color: verificationStatus.color }]}>
+                {verificationStatus.text}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Times row */}
+        <View style={styles.timesRow}>
+          <View style={styles.timeColumn}>
+            <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>In</Text>
+            <Text style={[styles.timeValue, { color: colors.text }]}>{formatTime(item.checkInTime || null)}</Text>
+          </View>
+          <View style={styles.timeColumn}>
+            <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Out</Text>
+            <Text style={[styles.timeValue, { color: colors.text }]}>{formatTime(item.checkOutTime || null)}</Text>
+          </View>
+          <View style={styles.timeColumn}>
+            <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Hours</Text>
+            <Text style={[styles.timeValue, { color: colors.primary }]}>
+              {item.workHours ? `${item.workHours.toFixed(1)}h` : '--'}
+            </Text>
+          </View>
+          <View style={styles.timeColumn}>
+            <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>Distance</Text>
+            <Text style={[styles.timeValue, { color: colors.textSecondary }]}>
+              {item.locationPath && item.locationPath.length > 0
+                ? formatDistance((item.locationPath.length - 1) * 100)
+                : '--'
+              }
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // Render header
+  const renderHeader = () => (
+    <View style={[styles.header, { backgroundColor: colors.background }]}>
+      <Text style={[styles.headerTitle, { color: colors.text }]}>Attendance</Text>
+    </View>
+  );
+
+  // Render footer
+  const renderFooter = () => {
+    if (!isHistoryLoading || isRefreshingHistory) return null;
+    return (
+      <View style={styles.footer}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={[styles.footerText, { color: colors.textSecondary }]}>Loading more records...</Text>
+      </View>
+    );
+  };
+
+  // Render empty state
+  const renderEmptyState = () => (
+    <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
+      <Calendar size={48} color={colors.textTertiary} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No Attendance Records</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        Your attendance history will appear here once you start checking in and out
+      </Text>
+    </View>
+  );
+
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  if (isHistoryLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <StatusBar
+          barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.statusBar}
+        />
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading attendance...</Text>
+          <AttendanceSkeleton />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50" showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View className="bg-green-600 pt-12 pb-6 px-6">
-        <View className="items-center">
-          <Text className="text-white text-2xl font-bold mb-2">
-            Attendance
-          </Text>
-          <Text className="text-green-100 text-sm">
-            Track your work hours and location
-          </Text>
-        </View>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.statusBar}
+      />
 
-      {/* Today&apos;s Status */}
-      <View className="px-6 py-6">
-        <View className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <Text className="text-gray-900 text-lg font-semibold mb-4">
-            Today&apos;s Status
-          </Text>
-
-          <View className="flex-row justify-between items-center mb-4">
-            <View className="flex-row items-center">
-              <View className="w-12 h-12 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <Clock size={24} color="#6B7280" />
-              </View>
-              <View>
-                <Text className="text-gray-500 text-xs">Current Time</Text>
-                <Text className="text-gray-900 font-semibold">--:--</Text>
-              </View>
-            </View>
-            <View className="bg-yellow-100 px-3 py-1 rounded-full">
-              <Text className="text-yellow-800 text-xs font-medium">Not Checked In</Text>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View className="flex-row space-x-3">
-            <TouchableOpacity
-              onPress={handleCheckIn}
-              className="flex-1 bg-green-600 rounded-lg p-4 items-center"
-            >
-              <CheckCircle size={24} color="white" className="mb-1" />
-              <Text className="text-white font-semibold">Check In</Text>
-              <Text className="text-green-100 text-xs mt-1">Start workday</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleCheckOut}
-              className="flex-1 bg-red-600 rounded-lg p-4 items-center opacity-50"
-              disabled
-            >
-              <Clock size={24} color="white" className="mb-1" />
-              <Text className="text-white font-semibold">Check Out</Text>
-              <Text className="text-red-100 text-xs mt-1">End workday</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Quick Stats */}
-        <View className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <Text className="text-gray-900 text-lg font-semibold mb-4">
-            This Week
-          </Text>
-
-          <View className="grid grid-cols-3 gap-4">
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-green-600">5</Text>
-              <Text className="text-gray-500 text-xs">Days Present</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-blue-600">40</Text>
-              <Text className="text-gray-500 text-xs">Hours Total</Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-2xl font-bold text-purple-600">8h</Text>
-              <Text className="text-gray-500 text-xs">Avg/Day</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Recent Attendance */}
-        <View className="bg-white rounded-xl shadow-sm p-6">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-gray-900 text-lg font-semibold">
-              Recent Attendance
-            </Text>
-            <TouchableOpacity onPress={() => showToast.info('History', 'Full attendance history coming soon!')}>
-              <Text className="text-blue-600 text-sm">View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {mockAttendanceData.map((record, index) => (
-            <View
-              key={index}
-              className={`flex-row items-center justify-between py-3 ${
-                index !== mockAttendanceData.length - 1 ? 'border-b border-gray-100' : ''
-              }`}
-            >
-              <View className="flex-1">
-                <View className="flex-row items-center mb-1">
-                  <Calendar size={16} color="#6B7280" className="mr-2" />
-                  <Text className="text-gray-900 font-medium text-sm">{record.date}</Text>
-                </View>
-                <View className="flex-row items-center">
-                  <View className="mr-4">
-                    <Text className="text-gray-500 text-xs">Check In</Text>
-                    <Text className="text-gray-700 text-sm font-medium">{record.checkIn}</Text>
-                  </View>
-                  <View className="mr-4">
-                    <Text className="text-gray-500 text-xs">Check Out</Text>
-                    <Text className="text-gray-700 text-sm font-medium">{record.checkOut}</Text>
-                  </View>
-                  <View className="flex-row items-center">
-                    <MapPin size={16} color="#6B7280" className="mr-1" />
-                    <Text className="text-gray-500 text-xs">{record.location}</Text>
-                  </View>
-                </View>
-              </View>
-              <View className={`px-2 py-1 rounded-full ${
-                record.status === 'present'
-                  ? 'bg-green-100'
-                  : record.status === 'checked_out'
-                  ? 'bg-blue-100'
-                  : 'bg-red-100'
-              }`}>
-                <Text className={`text-xs font-medium ${
-                  record.status === 'present'
-                    ? 'text-green-800'
-                    : record.status === 'checked_out'
-                    ? 'text-blue-800'
-                    : 'text-red-800'
-                }`}>
-                  {record.status === 'present' ? 'Present' :
-                   record.status === 'checked_out' ? 'Checked Out' : 'Absent'}
-                </Text>
-              </View>
-            </View>
-          ))}
-
-          <TouchableOpacity
-            onPress={() => showToast.info('Load More', 'Loading more records will be available soon!')}
-            className="items-center py-3"
-          >
-            <Text className="text-blue-600 text-sm">Load More</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Coming Soon Features */}
-        <View className="mt-6">
-          <Text className="text-gray-900 text-lg font-semibold mb-4">
-            Coming Soon (Phase 2)
-          </Text>
-          <View className="space-y-3">
-            <View className="bg-gray-100 rounded-lg p-4 opacity-75">
-              <View className="flex-row items-center">
-                <Text className="text-xl mr-3">📸</Text>
-                <View className="flex-1">
-                  <Text className="text-gray-700 font-medium text-sm">
-                    Face Recognition Check-in
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    Secure attendance verification
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View className="bg-gray-100 rounded-lg p-4 opacity-75">
-              <View className="flex-row items-center">
-                <Text className="text-xl mr-3">🗺️</Text>
-                <View className="flex-1">
-                  <Text className="text-gray-700 font-medium text-sm">
-                    Location Verification
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    GPS-based location tracking
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View className="bg-gray-100 rounded-lg p-4 opacity-75">
-              <View className="flex-row items-center">
-                <Text className="text-xl mr-3">📊</Text>
-                <View className="flex-1">
-                  <Text className="text-gray-700 font-medium text-sm">
-                    Detailed Reports
-                  </Text>
-                  <Text className="text-gray-500 text-xs">
-                    Comprehensive attendance analytics
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      <FlatList
+        ref={flatListRef}
+        data={attendanceHistory}
+        renderItem={renderAttendanceItem}
+        keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshingHistory}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+        onEndReached={loadMoreData}
+        onEndReachedThreshold={0.5}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={!isHistoryLoading ? renderEmptyState : null}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={attendanceHistory.length === 0 ? styles.emptyListContainer : styles.listContainer}
+        style={{ backgroundColor: colors.background }}
+        ItemSeparatorComponent={() => (
+          <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+        )}
+      />
+    </SafeAreaView>
   );
 }

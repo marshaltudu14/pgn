@@ -8,7 +8,10 @@ import {
   AttendanceStatus,
   AttendanceStatusResponse,
   CheckInMobileRequest,
-  CheckOutMobileRequest
+  CheckOutMobileRequest,
+  DailyAttendanceRecord,
+  AttendanceListParams,
+  AttendanceListResponse
 } from '@pgn/shared';
 import { api } from '@/services/api-client';
 import * as Location from 'expo-location';
@@ -75,6 +78,15 @@ interface AttendanceStoreState {
   requiresVerification: boolean;
   requiresCheckOut: boolean;
 
+  // Attendance history state
+  attendanceHistory: DailyAttendanceRecord[];
+  isHistoryLoading: boolean;
+  historyError: string | null;
+  currentPage: number;
+  totalPages: number;
+  hasMoreHistory: boolean;
+  isRefreshingHistory: boolean;
+
   // Location tracking state
   locationHistory: LocationData[];
   movementThreshold: number; // meters
@@ -96,6 +108,12 @@ interface AttendanceStoreState {
   checkIn: (request: CheckInMobileRequest) => Promise<AttendanceResponse>;
   checkOut: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
   emergencyCheckOut: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
+
+  // Attendance history actions
+  fetchAttendanceHistory: (params?: AttendanceListParams) => Promise<void>;
+  loadMoreAttendanceHistory: () => Promise<void>;
+  refreshAttendanceHistory: () => Promise<void>;
+  clearAttendanceHistory: () => void;
 
   // Location tracking
   startLocationTracking: () => Promise<void>;
@@ -149,6 +167,16 @@ export const useAttendance = create<AttendanceStoreState>()(
         verificationStatus: 'PENDING',
         requiresVerification: false,
         requiresCheckOut: false,
+
+        // Attendance history initial state
+        attendanceHistory: [],
+        isHistoryLoading: false,
+        historyError: null,
+        currentPage: 1,
+        totalPages: 1,
+        hasMoreHistory: true,
+        isRefreshingHistory: false,
+
         locationHistory: [],
         movementThreshold: 50, // 50 meters threshold
         locationWatcher: null,
@@ -530,6 +558,267 @@ export const useAttendance = create<AttendanceStoreState>()(
           }
         },
 
+        // Fetch attendance history
+        fetchAttendanceHistory: async (params: AttendanceListParams = {}) => {
+          set({ isHistoryLoading: true, historyError: null });
+
+          try {
+            // Default parameters
+            const requestParams: AttendanceListParams = {
+              page: 1,
+              limit: 20,
+              sortBy: 'attendance_date',
+              sortOrder: 'desc',
+              ...params
+            };
+
+            // Build query string
+            const queryString = new URLSearchParams(
+              Object.entries(requestParams).reduce((acc, [key, value]) => {
+                if (value !== undefined) {
+                  acc[key] = value.toString();
+                }
+                return acc;
+              }, {} as Record<string, string>)
+            ).toString();
+
+            const url = queryString ? `/attendance?${queryString}` : '/attendance';
+            const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
+
+            if (!response.success || !response.data) {
+              throw new Error(response.error || 'Failed to fetch attendance history');
+            }
+
+            // The actual data is in response.data (no more double wrapping)
+            const data = response.data;
+            if (!data || !data.records) {
+              throw new Error('Invalid attendance history response structure');
+            }
+            const attendanceRecords: DailyAttendanceRecord[] = data.records.map((record: any) => ({
+              id: record.id,
+              employeeId: record.employeeId,
+              humanReadableEmployeeId: record.humanReadableEmployeeId,
+              employeeName: record.employeeName,
+              date: record.date,
+              checkInTime: record.checkInTime,
+              checkOutTime: record.checkOutTime,
+              checkInLocation: record.checkInLocation,
+              checkOutLocation: record.checkOutLocation,
+              locationPath: record.locationPath || [],
+              status: record.status,
+              verificationStatus: record.verificationStatus,
+              workHours: record.workHours,
+              notes: record.notes,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+            }));
+
+            set({
+              attendanceHistory: attendanceRecords,
+              isHistoryLoading: false,
+              historyError: null,
+              currentPage: data.page,
+              totalPages: data.totalPages,
+              hasMoreHistory: data.hasMore && attendanceRecords.length >= 20,
+            });
+
+          } catch (error) {
+            console.error('Failed to fetch attendance history:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch attendance history';
+
+            set({
+              isHistoryLoading: false,
+              historyError: errorMessage,
+            });
+          }
+        },
+
+        // Load more attendance history (infinite scroll)
+        loadMoreAttendanceHistory: async () => {
+          const { isHistoryLoading, hasMoreHistory, currentPage } = get();
+
+          if (isHistoryLoading || !hasMoreHistory) {
+            return;
+          }
+
+          set({ isHistoryLoading: true, historyError: null });
+
+          try {
+            const nextPage = currentPage + 1;
+            const requestParams: AttendanceListParams = {
+              page: nextPage,
+              limit: 20,
+              sortBy: 'attendance_date',
+              sortOrder: 'desc',
+            };
+
+            // Build query string
+            const queryString = new URLSearchParams(
+              Object.entries(requestParams).reduce((acc, [key, value]) => {
+                if (value !== undefined) {
+                  acc[key] = value.toString();
+                }
+                return acc;
+              }, {} as Record<string, string>)
+            ).toString();
+
+            const url = queryString ? `/attendance?${queryString}` : '/attendance';
+            const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
+
+            if (!response.success || !response.data) {
+              throw new Error(response.error || 'Failed to load more attendance history');
+            }
+
+            // The actual data is in response.data (no more double wrapping)
+            const data = response.data;
+            if (!data || !data.records) {
+              throw new Error('Invalid attendance history response structure');
+            }
+            const newRecords: DailyAttendanceRecord[] = data.records.map((record: any) => ({
+              id: record.id,
+              employeeId: record.employee_id,
+              date: record.attendance_date,
+              checkInTime: record.check_in_timestamp ? new Date(record.check_in_timestamp) : undefined,
+              checkOutTime: record.check_out_timestamp ? new Date(record.check_out_timestamp) : undefined,
+              checkInLocation: record.check_in_latitude && record.check_in_longitude ? {
+                latitude: record.check_in_latitude,
+                longitude: record.check_in_longitude,
+                accuracy: record.check_in_accuracy || undefined,
+                timestamp: record.check_in_timestamp ? new Date(record.check_in_timestamp) : new Date(),
+                address: record.check_in_address || undefined
+              } : undefined,
+              checkOutLocation: record.check_out_latitude && record.check_out_longitude ? {
+                latitude: record.check_out_latitude,
+                longitude: record.check_out_longitude,
+                accuracy: record.check_out_accuracy || undefined,
+                timestamp: record.check_out_timestamp ? new Date(record.check_out_timestamp) : new Date(),
+                address: record.check_out_address || undefined
+              } : undefined,
+              checkInSelfieUrl: record.check_in_selfie_url,
+              checkOutSelfieUrl: record.check_out_selfie_url,
+              checkOutMethod: record.check_out_method as any,
+              checkOutReason: record.check_out_reason,
+              workHours: record.total_work_hours ? parseFloat(record.total_work_hours) : undefined,
+              totalDistance: record.total_distance_meters || undefined,
+              locationPath: record.path_data || [],
+              lastLocationUpdate: record.last_location_update ? new Date(record.last_location_update) : undefined,
+              batteryLevelAtCheckIn: record.battery_level_at_check_in,
+              batteryLevelAtCheckOut: record.battery_level_at_check_out,
+              verificationStatus: record.verification_status as any,
+              verifiedBy: record.verified_by,
+              verifiedAt: record.verified_at ? new Date(record.verified_at) : undefined,
+              verificationNotes: record.verification_notes,
+              status: record.status as any,
+              createdAt: record.created_at ? new Date(record.created_at) : new Date(),
+              updatedAt: record.updated_at ? new Date(record.updated_at) : new Date(),
+            }));
+
+            set(state => ({
+              attendanceHistory: [...state.attendanceHistory, ...newRecords],
+              isHistoryLoading: false,
+              historyError: null,
+              currentPage: nextPage,
+              totalPages: data.totalPages,
+              hasMoreHistory: nextPage < data.totalPages && newRecords.length >= 20,
+            }));
+
+          } catch (error) {
+            console.error('Failed to load more attendance history:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to load more attendance history';
+
+            set({
+              isHistoryLoading: false,
+              historyError: errorMessage,
+            });
+          }
+        },
+
+        // Refresh attendance history
+        refreshAttendanceHistory: async () => {
+          set({ isRefreshingHistory: true, historyError: null });
+
+          try {
+            const requestParams: AttendanceListParams = {
+              page: 1,
+              limit: 20,
+              sortBy: 'attendance_date',
+              sortOrder: 'desc',
+            };
+
+            // Build query string
+            const queryString = new URLSearchParams(
+              Object.entries(requestParams).reduce((acc, [key, value]) => {
+                if (value !== undefined) {
+                  acc[key] = value.toString();
+                }
+                return acc;
+              }, {} as Record<string, string>)
+            ).toString();
+
+            const url = queryString ? `/attendance?${queryString}` : '/attendance';
+            const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
+
+            if (!response.success || !response.data) {
+              throw new Error(response.error || 'Failed to refresh attendance history');
+            }
+
+            // The actual data is in response.data (no more double wrapping)
+            const data = response.data;
+            if (!data || !data.records) {
+              throw new Error('Invalid attendance history response structure');
+            }
+            const attendanceRecords: DailyAttendanceRecord[] = data.records.map((record: any) => ({
+              id: record.id,
+              employeeId: record.employeeId,
+              humanReadableEmployeeId: record.humanReadableEmployeeId,
+              employeeName: record.employeeName,
+              date: record.date,
+              checkInTime: record.checkInTime,
+              checkOutTime: record.checkOutTime,
+              checkInLocation: record.checkInLocation,
+              checkOutLocation: record.checkOutLocation,
+              locationPath: record.locationPath || [],
+              status: record.status,
+              verificationStatus: record.verificationStatus,
+              workHours: record.workHours,
+              notes: record.notes,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+            }));
+
+            set({
+              attendanceHistory: attendanceRecords,
+              isRefreshingHistory: false,
+              historyError: null,
+              currentPage: data.page,
+              totalPages: data.totalPages,
+              hasMoreHistory: data.hasMore && attendanceRecords.length >= 20,
+            });
+
+          } catch (error) {
+            console.error('Failed to refresh attendance history:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to refresh attendance history';
+
+            set({
+              isRefreshingHistory: false,
+              historyError: errorMessage,
+            });
+          }
+        },
+
+        // Clear attendance history
+        clearAttendanceHistory: () => {
+          set({
+            attendanceHistory: [],
+            isHistoryLoading: false,
+            historyError: null,
+            currentPage: 1,
+            totalPages: 1,
+            hasMoreHistory: true,
+            isRefreshingHistory: false,
+          });
+        },
+
         // Start background location tracking
         startLocationTracking: async () => {
           try {
@@ -814,6 +1103,16 @@ export const useAttendance = create<AttendanceStoreState>()(
             verificationStatus: 'PENDING',
             requiresVerification: false,
             requiresCheckOut: false,
+
+            // Reset attendance history
+            attendanceHistory: [],
+            isHistoryLoading: false,
+            historyError: null,
+            currentPage: 1,
+            totalPages: 1,
+            hasMoreHistory: true,
+            isRefreshingHistory: false,
+
             locationHistory: [],
             locationWatcher: null,
             offlineQueue: [],

@@ -121,16 +121,15 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
-            const responseData = response.data.data;
-            if (!responseData) {
+            // Check response structure - the data is in response.data (no more double wrapping)
+            const responseData = response.data;
+            if (!responseData || !responseData.token) {
               return {
                 success: false,
-                error: 'Invalid login response',
+                error: 'Invalid login response structure',
               };
             }
 
-  
-          
             // Store session using SessionManager (single source of truth)
             await SessionManager.saveSession({
               accessToken: responseData.token,
@@ -139,7 +138,9 @@ export const useAuth = create<AuthStoreState>()(
             });
 
             // Store employee data separately
-            await AsyncStorage.setItem('pgn_employee_data', JSON.stringify(responseData.employee));
+            if (responseData.employee) {
+              await AsyncStorage.setItem('pgn_employee_data', JSON.stringify(responseData.employee));
+            }
 
             // Load session to store state
             const currentSession = await SessionManager.loadSession();
@@ -147,7 +148,7 @@ export const useAuth = create<AuthStoreState>()(
             set({
               isAuthenticated: true,
               isLoggingIn: false,
-              user: responseData.employee,
+              user: responseData.employee || null,
               error: null,
               lastActivity: Date.now(),
               session: currentSession,
@@ -155,7 +156,7 @@ export const useAuth = create<AuthStoreState>()(
 
             return {
               success: true,
-              user: responseData.employee,
+              user: responseData.employee || null,
             };
           } catch (error) {
             console.error('❌ Login failed:', error);
@@ -241,28 +242,30 @@ export const useAuth = create<AuthStoreState>()(
         // Refresh authentication token
         refreshToken: async (refreshToken: string): Promise<any> => {
           try {
-            const response = await api.post('/auth/refresh-token', { token: refreshToken });
+            const response = await api.post('/auth/refresh', { token: refreshToken });
 
             if (!response.success) {
               throw new Error(response.error || 'Token refresh failed');
             }
 
-            const responseData = response.data.data;
+            // Check response structure - the data is in response.data (no more double wrapping)
+            const responseData = response.data;
             if (!responseData?.token) {
-              throw new Error('Invalid refresh response');
+              throw new Error('Invalid refresh response structure');
             }
 
-            // Update session with new token
+            // Update session with new token and new refresh token
+            await SessionManager.saveSession({
+              accessToken: responseData.token,
+              refreshToken: responseData.refreshToken || refreshToken, // Use new refresh token if provided
+              expiresIn: responseData.expiresIn || 900,
+            });
+
+            // Update current session state
             const currentSession = await SessionManager.loadSession();
             if (currentSession) {
-              await SessionManager.saveSession({
-                accessToken: responseData.token,
-                refreshToken: currentSession.refreshToken,
-                expiresIn: responseData.expiresIn || 900,
-              });
+              get().setSession(currentSession);
             }
-
-            get().setupTokenRefresh(responseData.token);
 
             return responseData;
           } catch (error) {
@@ -342,7 +345,8 @@ export const useAuth = create<AuthStoreState>()(
 
           // Check if session has expired (15 minutes)
           const sessionTimeout = 15 * 60 * 1000; // 15 minutes
-          const isSessionExpired = Date.now() - lastActivity > sessionTimeout;
+          const timeSinceActivity = Date.now() - lastActivity;
+          const isSessionExpired = timeSinceActivity > sessionTimeout;
 
           return isAuthenticated && !isSessionExpired;
         },
@@ -497,9 +501,44 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
+            // Check if access token is expired but refresh token is available
+            if (SessionManager.isSessionExpired(session) && session.refreshToken) {
+              try {
+                // Attempt to refresh the token
+                const refreshSuccess = await get().refreshToken(session.refreshToken);
+
+                if (refreshSuccess) {
+                  // Token refreshed successfully, load new session
+                  const newSession = await SessionManager.loadSession();
+                  if (newSession && !SessionManager.isSessionExpired(newSession)) {
+                    return {
+                      isAuthenticated: true,
+                      isLoading: false,
+                      user: userData as AuthenticatedUser,
+                      error: null,
+                      lastActivity: Date.now(),
+                      session: newSession,
+                    };
+                  }
+                }
+              } catch (refreshError) {
+                console.warn('❌ Automatic token refresh failed:', refreshError);
+              }
+
+              // Clear expired session if refresh failed
+              await SessionManager.clearSession();
+              return {
+                isAuthenticated: false,
+                isLoading: false,
+                user: null,
+                error: null,
+                lastActivity: Date.now(),
+              };
+            }
+
             // Validate the token by checking if session is expired
             if (SessionManager.isSessionExpired(session)) {
-              // Clear expired session
+              // Clear expired session (no refresh token available)
               await SessionManager.clearSession();
               return {
                 isAuthenticated: false,
@@ -516,6 +555,7 @@ export const useAuth = create<AuthStoreState>()(
               user: userData as AuthenticatedUser,
               error: null,
               lastActivity: Date.now(),
+              session: session,
             };
           } catch (error) {
             console.error('❌ Failed to get auth state:', error);

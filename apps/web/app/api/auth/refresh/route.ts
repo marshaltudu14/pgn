@@ -45,8 +45,8 @@ const refreshHandler = async (req: NextRequest): Promise<NextResponse> => {
   }
 };
 
-// Export with security middleware and rate limiting
-export const POST = withRateLimit(withSecurity(refreshHandler), apiRateLimit);
+// Export with security middleware (no auth required) and rate limiting
+export const POST = withRateLimit(withSecurity(refreshHandler, { requireAuth: false }), apiRateLimit);
 
 /**
  * Handle unsupported methods

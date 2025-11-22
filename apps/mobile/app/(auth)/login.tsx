@@ -1,6 +1,6 @@
 import LoginForm from '@/components/LoginForm';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuth } from '@/store/auth-store';
+import { useAuth, useIsAuthenticated } from '@/store/auth-store';
 import { LoginRequest } from '@pgn/shared';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -17,7 +17,8 @@ import { createLoginScreenStyles } from '@/styles/auth/login-styles';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoggingIn, error, isAuthenticated } = useAuth();
+  const { login, isLoggingIn, error } = useAuth();
+  const isAuthenticated = useIsAuthenticated();
 
   // Handle post-login redirection
   React.useEffect(() => {
@@ -30,14 +31,10 @@ export default function LoginScreen() {
     try {
       // The login function will handle loading states and update the auth store
       // The useEffect below will handle the redirection when isAuthenticated changes
-      const result = await login(credentials);
-
-      if (result.success) {
-        // Authentication successful, useEffect will handle navigation
-      }
+      await login(credentials);
       // Error handling is done in the auth store and LoginForm component
     } catch (error) {
-      console.error('❌ Login: Unexpected error during login', error);
+      console.error('Login: Unexpected error during login', error);
       // The auth store handles the error state, no need to do anything here
     }
   };

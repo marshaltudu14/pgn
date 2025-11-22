@@ -13,7 +13,7 @@ const API_BASE_URL = __DEV__ ? 'http://192.168.31.23:3000/api' : 'https://pgnwor
 // Public endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [
   '/auth/login',
-  '/auth/refresh-token',
+  '/auth/refresh',
   '/auth/logout',
 ];
 
@@ -145,40 +145,64 @@ function isPublicEndpoint(endpoint: string): boolean {
   return PUBLIC_ENDPOINTS.some(publicEndpoint => endpoint.includes(publicEndpoint));
 }
 
-// Refresh token API call
+// Global refresh lock to prevent concurrent refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+// Refresh token API call following dukancard's pattern
 async function refreshTokenAPI(refreshToken: string): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'x-client-info': 'pgn-mobile-client',
-        'User-Agent': 'pgn-mobile-app/1.0.0',
-      },
-      body: JSON.stringify({ token: refreshToken }),
-    });
-
-    const responseData = await response.json();
-
-    if (response.ok && responseData.accessToken) {
-      // Save new session to storage
-      await SessionManager.saveSession({
-        accessToken: responseData.accessToken,
-        refreshToken: responseData.refreshToken || refreshToken,
-        expiresIn: responseData.expiresIn || 900, // Default 15 minutes
-      });
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    console.warn('Token refresh failed:', error);
-    return false;
+  // If already refreshing, return the existing promise
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
   }
+
+  // Set refresh lock and create promise
+  isRefreshing = true;
+  refreshPromise = (async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'x-client-info': 'pgn-mobile-client',
+          'User-Agent': 'pgn-mobile-app/1.0.0',
+        },
+        body: JSON.stringify({ token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const responseData = await response.json();
+
+      // Check for successful response with proper structure
+      if (responseData.success && responseData.data?.token) {
+        // Save new session to storage
+        await SessionManager.saveSession({
+          accessToken: responseData.data.token,
+          refreshToken: responseData.data.refreshToken || refreshToken,
+          expiresIn: responseData.data.expiresIn || 900,
+        });
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return false;
+    } finally {
+      // Clear refresh lock
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
-// Core API call function following dukancard's pattern
+// Core API call function following dukancard's pattern with automatic token refresh
 export async function apiCall<T = any>(
   endpoint: string,
   options: RequestInit = {}
@@ -186,8 +210,8 @@ export async function apiCall<T = any>(
   try {
     const url = `${API_BASE_URL}${endpoint}`;
 
-    // Prepare headers
-    const headers: Record<string, string> = {
+    // Prepare base headers
+    const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'x-client-info': 'pgn-mobile-client',
@@ -195,63 +219,73 @@ export async function apiCall<T = any>(
     };
 
     // Add authorization header for private endpoints
+    const authHeaders: Record<string, string> = {};
     if (!isPublicEndpoint(endpoint)) {
-      // Get current session from storage
       const session = await SessionManager.loadSession();
-
-      // Check if token is valid
-      if (!session || SessionManager.isSessionExpired(session)) {
-        // Try to refresh token
-        const refreshToken = await SessionManager.getRefreshToken();
-
-        if (refreshToken) {
-          const refreshSuccess = await refreshTokenAPI(refreshToken);
-
-          if (!refreshSuccess) {
-            return {
-              success: false,
-              error: "Missing authorization token"
-            };
-          }
-          // Get updated session after refresh
-          const newAccessToken = await SessionManager.getAccessToken();
-
-          if (newAccessToken) {
-            headers.Authorization = `Bearer ${newAccessToken}`;
-          }
-        } else {
-          return {
-            success: false,
-            error: "Missing authorization token"
-          };
-        }
-      } else {
-        headers.Authorization = `Bearer ${session.accessToken}`;
+      if (session?.accessToken && !SessionManager.isSessionExpired(session)) {
+        authHeaders.Authorization = `Bearer ${session.accessToken}`;
       }
     }
 
-    // Merge with provided headers
-    Object.assign(headers, options.headers);
+    // Combine all headers
+    const headers = {
+      ...baseHeaders,
+      ...authHeaders,
+      ...options.headers,
+    };
 
-    
     const response = await fetch(url, {
       ...options,
       headers,
     });
 
+    // Handle 401 with automatic token refresh and retry
+    if (response.status === 401 && !isPublicEndpoint(endpoint)) {
+      try {
+        const session = await SessionManager.loadSession();
+        if (session?.refreshToken) {
+          // Try to refresh token
+          const refreshSuccess = await refreshTokenAPI(session.refreshToken);
+
+          if (refreshSuccess) {
+            // Retry the original request with new token
+            const newSession = await SessionManager.loadSession();
+            const retryHeaders = {
+              ...baseHeaders,
+              Authorization: `Bearer ${newSession?.accessToken}`,
+              ...options.headers,
+            };
+
+            const retryResponse = await fetch(url, {
+              ...options,
+              headers: retryHeaders,
+            });
+
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              return {
+                success: true,
+                data: retryData,
+              };
+            }
+          }
+        }
+      } catch (refreshError) {
+        console.error('Automatic token refresh failed:', refreshError);
+      }
+
+      // Refresh failed or retry failed, clear session
+      await SessionManager.clearSession();
+      return {
+        success: false,
+        error: "Session expired. Please login again.",
+      };
+    }
+
     const responseData = await response.json();
 
     if (!response.ok) {
       // Handle specific HTTP status codes
-      if (response.status === 401) {
-        // Clear session from storage
-        await SessionManager.clearSession();
-        return {
-          success: false,
-          error: "Authentication failed. Please login again."
-        };
-      }
-
       if (response.status === 403) {
         return {
           success: false,
@@ -280,6 +314,13 @@ export async function apiCall<T = any>(
       };
     }
 
+    // Check if response is already wrapped in our API structure
+    if (responseData && typeof responseData === 'object' && 'success' in responseData && 'data' in responseData) {
+      // Response is already wrapped, return as-is
+      return responseData;
+    }
+
+    // Otherwise, wrap the response
     return {
       success: true,
       data: responseData,
@@ -353,7 +394,7 @@ export const apiClient = {
   },
 
   refreshToken: async (refreshToken: string) => {
-    return api.post('/auth/refresh-token', { token: refreshToken });
+    return api.post('/auth/refresh', { token: refreshToken });
   },
 
   logout: async (authToken: string) => {

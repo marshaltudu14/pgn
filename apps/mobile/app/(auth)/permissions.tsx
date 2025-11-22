@@ -354,7 +354,7 @@ export default function PermissionsScreen({
                     styles.permissionDescription,
                     colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
                   ]}>
-                    Required for attendance tracking and verification
+                    Required for attendance tracking. Need &quot;Allow all the time&quot; access for background location tracking during work hours.
                   </Text>
                 </View>
                 {permissions.location === 'granted' && (

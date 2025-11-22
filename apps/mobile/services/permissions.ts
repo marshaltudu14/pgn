@@ -40,8 +40,18 @@ export class PermissionService {
   // Check if location permission is granted
   async checkLocationPermission(): Promise<PermissionStatus> {
     try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      return status as PermissionStatus;
+      // Check both foreground and background permissions
+      const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
+      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+
+      // Consider location granted only if both foreground and background are granted
+      if (foregroundStatus === 'granted' && backgroundStatus === 'granted') {
+        return 'granted';
+      } else if (foregroundStatus === 'denied' || backgroundStatus === 'denied') {
+        return 'denied';
+      } else {
+        return 'undetermined';
+      }
     } catch (error) {
       console.error('Error checking location permission:', error);
       return 'denied';
@@ -62,8 +72,18 @@ export class PermissionService {
   // Request location permission
   async requestLocationPermission(): Promise<PermissionStatus> {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      return status as PermissionStatus;
+      // First request foreground permission
+      const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
+
+      if (foregroundStatus !== 'granted') {
+        return foregroundStatus as PermissionStatus;
+      }
+
+      // Then request background permission for "Allow all the time"
+      const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
+
+      // Return background status since we need both for full functionality
+      return backgroundStatus as PermissionStatus;
     } catch (error) {
       console.error('Error requesting location permission:', error);
       return 'denied';
@@ -183,7 +203,7 @@ export class PermissionService {
   showPermissionRationale(permission: 'camera' | 'location'): void {
     const rationale = permission === 'camera'
       ? 'Camera permission is required for attendance check-in/out selfies and face recognition authentication.'
-      : 'Location permission is required for attendance tracking and ensuring you are at the correct work location.';
+      : 'Location permission is required for attendance tracking and ensuring you are at the correct work location. We need &quot;Allow all the time&quot; access to track your location during work hours even when the app is in the background.';
 
     Alert.alert(
       `${permission === 'camera' ? 'Camera' : 'Location'} Permission Required`,

@@ -61,6 +61,7 @@ export interface AuthenticatedUser {
   id: string;
   humanReadableId: string;
   fullName: string;
+  firstName: string; // First name only
   email: string;
   employmentStatus: EmploymentStatus;
   canLogin: boolean;

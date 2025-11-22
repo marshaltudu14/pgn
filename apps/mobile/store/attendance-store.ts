@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashMode } from 'expo-camera';
+import { useAuth } from './auth-store';
 import {
   AttendanceResponse,
   LocationData,
@@ -16,6 +17,7 @@ import {
 import { api } from '@/services/api-client';
 import * as Location from 'expo-location';
 import * as Battery from 'expo-battery';
+import { locationForegroundService } from '@/services/location-foreground-service';
 // Utility functions
 import {
   isCameraAvailable,
@@ -30,10 +32,7 @@ import {
 } from '@/utils/camera';
 import {
   isLocationAvailable,
-  getCurrentLocation,
-  startLocationTracking,
-  stopLocationTracking,
-  hasSignificantMovement
+  getCurrentLocation
 } from '@/utils/location';
 
 export interface AttendanceQueueItem {
@@ -87,10 +86,13 @@ interface AttendanceStoreState {
   hasMoreHistory: boolean;
   isRefreshingHistory: boolean;
 
-  // Location tracking state
+  // Location tracking state (updated for native service)
   locationHistory: LocationData[];
-  movementThreshold: number; // meters
-  locationWatcher: Location.LocationSubscription | null;
+
+  // Native service state
+  serviceStatus: any; // ServiceStatus from native service
+  pendingDataCount: any; // PendingDataCount from native service
+  isServiceAvailable: boolean;
 
   // Offline queue state
   offlineQueue: AttendanceQueueItem[];
@@ -115,10 +117,16 @@ interface AttendanceStoreState {
   refreshAttendanceHistory: () => Promise<void>;
   clearAttendanceHistory: () => void;
 
-  // Location tracking
+  // Location tracking (native service)
   startLocationTracking: () => Promise<void>;
   stopLocationTracking: () => Promise<void>;
   updateLocation: (location: LocationData) => void;
+
+  // Native service methods
+  initializeLocationService: () => Promise<void>;
+  syncPendingData: () => Promise<void>;
+  clearEmployeeLocationData: (employeeId: string) => Promise<void>;
+  checkServiceStatus: () => Promise<void>;
 
   // Permissions and initialization
   initializePermissions: () => Promise<void>;
@@ -178,8 +186,12 @@ export const useAttendance = create<AttendanceStoreState>()(
         isRefreshingHistory: false,
 
         locationHistory: [],
-        movementThreshold: 50, // 50 meters threshold
-        locationWatcher: null,
+
+        // Native service state
+        serviceStatus: null,
+        pendingDataCount: null,
+        isServiceAvailable: false,
+
         offlineQueue: [],
         offlineQueueCount: 0,
         isOnline: true,
@@ -278,6 +290,15 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingIn: true, error: null });
 
           try {
+            // Handle crash recovery - sync any pending data from previous session
+            const authStore = useAuth.getState();
+            const employeeId = authStore.user?.humanReadableId;
+            const employeeName = authStore.user?.firstName;
+
+            if (get().isServiceAvailable && employeeId && employeeName) {
+              await locationForegroundService.handleCrashRecovery(employeeId);
+            }
+
             // Get current location if not provided
             if (!request.location) {
               try {
@@ -819,85 +840,208 @@ export const useAttendance = create<AttendanceStoreState>()(
           });
         },
 
-        // Start background location tracking
-        startLocationTracking: async () => {
+        // Initialize native location service
+        initializeLocationService: async () => {
           try {
-            if (get().isLocationTracking) {
-              return; // Already tracking
+            console.log('[AttendanceStore] Initializing native location service...');
+            const isAvailable = await locationForegroundService.initialize();
+
+            set({
+              isServiceAvailable: isAvailable,
+              error: isAvailable ? null : 'Location service not available',
+            });
+
+            if (isAvailable) {
+              await get().checkServiceStatus();
             }
-
-            // Define tracking options for attendance
-            const trackingOptions = {
-              accuracy: Location.Accuracy.Balanced as Location.Accuracy,
-              timeInterval: 5 * 60 * 1000, // 5 minutes
-              distanceInterval: 0, // No distance filter
-              showsBackgroundLocationIndicator: true,
-              foregroundService: {
-                notificationTitle: 'PGN Attendance Tracking',
-                notificationBody: 'Your location is being tracked during work hours',
-              },
-            };
-
-            const watcher = await startLocationTracking(trackingOptions, (location) => {
-              get().updateLocation(location);
-            });
-
-            set({
-              isLocationTracking: true,
-              lastLocationUpdate: new Date(),
-              locationWatcher: watcher,
-            });
-
           } catch (error) {
-            console.error('Failed to start location tracking:', error);
+            console.error('[AttendanceStore] Failed to initialize location service:', error);
             set({
-              error: 'Failed to start location tracking',
+              error: error instanceof Error ? error.message : 'Failed to initialize location service',
             });
           }
         },
 
-        // Stop background location tracking
+        // Check service status
+        checkServiceStatus: async () => {
+          try {
+            if (!get().isServiceAvailable) {
+              return;
+            }
+
+            const status = await locationForegroundService.getServiceStatus();
+            const pendingCount = await locationForegroundService.getPendingDataCount('current_user'); // Replace with actual employee ID
+
+            set({
+              serviceStatus: status,
+              pendingDataCount: pendingCount,
+              isLocationTracking: status.isRunning,
+              lastLocationUpdate: status.durationMs ? new Date(Date.now() - status.durationMs) : null,
+            });
+
+            console.log('[AttendanceStore] Service status:', status);
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to check service status:', error);
+          }
+        },
+
+        // Start background location tracking (using native service)
+        startLocationTracking: async () => {
+          try {
+            if (get().isLocationTracking) {
+              console.log('[AttendanceStore] Already tracking');
+              return; // Already tracking
+            }
+
+            if (!get().isServiceAvailable) {
+              throw new Error('Location service not available');
+            }
+
+            // Get current employee info from auth context
+            const authStore = useAuth.getState();
+            const employeeId = authStore.user?.humanReadableId;
+            const employeeName = authStore.user?.firstName;
+
+            if (!employeeId || !employeeName) {
+              throw new Error('Employee information not available');
+            }
+
+            console.log(`[AttendanceStore] Starting native location tracking for ${employeeId}`);
+
+            const success = await locationForegroundService.startTracking(employeeId, employeeName);
+
+            if (success) {
+              set({
+                isLocationTracking: true,
+                lastLocationUpdate: new Date(),
+                error: null,
+              });
+
+              // Check service status after starting
+              await get().checkServiceStatus();
+
+              console.log('[AttendanceStore] Native location tracking started successfully');
+            } else {
+              throw new Error('Failed to start native location tracking');
+            }
+
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to start location tracking:', error);
+            set({
+              error: error instanceof Error ? error.message : 'Failed to start location tracking',
+            });
+          }
+        },
+
+        // Stop background location tracking (using native service)
         stopLocationTracking: async () => {
           try {
             if (!get().isLocationTracking) {
+              console.log('[AttendanceStore] Not tracking, nothing to stop');
               return; // Not tracking
             }
 
-            await stopLocationTracking(get().locationWatcher);
+            if (!get().isServiceAvailable) {
+              console.warn('[AttendanceStore] Service not available, updating state only');
+              set({
+                isLocationTracking: false,
+                lastLocationUpdate: null,
+              });
+              return;
+            }
+
+            console.log('[AttendanceStore] Stopping native location tracking');
+
+            const checkOutData = JSON.stringify({
+              checkOutTime: new Date().toISOString(),
+              deviceInfo: await get().getDeviceInfo(),
+            });
+
+            const success = await locationForegroundService.stopTracking(checkOutData);
 
             set({
               isLocationTracking: false,
               lastLocationUpdate: null,
-              locationWatcher: null,
+              error: success ? null : 'Failed to stop location tracking cleanly',
             });
 
+            // Update service status
+            await get().checkServiceStatus();
+
+            console.log('[AttendanceStore] Native location tracking stopped');
           } catch (error) {
-            console.error('Failed to stop location tracking:', error);
+            console.error('[AttendanceStore] Failed to stop location tracking:', error);
           }
         },
 
-        // Update location in store
+        // Update location in store (modified for native service - no 50m filter)
         updateLocation: (location: LocationData) => {
-          const { locationHistory, movementThreshold } = get();
+          const { locationHistory } = get();
           const lastLocation = locationHistory[locationHistory.length - 1];
 
-          // Only add location if it meets movement threshold
-          if (!lastLocation || hasSignificantMovement(lastLocation, location, movementThreshold)) {
+          // Add every location (no movement threshold filter)
+          set({
+            locationHistory: [...locationHistory, location],
+            lastLocationUpdate: new Date(),
+          });
+
+          // Keep only recent location history (last 100 points)
+          const maxHistoryLength = 100;
+          if (locationHistory.length > maxHistoryLength) {
+            set(state => ({
+              locationHistory: state.locationHistory.slice(-maxHistoryLength),
+            }));
+          }
+        },
+
+        // Sync pending data to server
+        syncPendingData: async () => {
+          try {
+            if (!get().isServiceAvailable) {
+              console.warn('[AttendanceStore] Service not available, cannot sync');
+              return;
+            }
+
+            console.log('[AttendanceStore] Syncing pending location data...');
+
+            const syncResult = await locationForegroundService.syncPendingDataForEmployee('current_employee_id'); // Replace with actual employee ID
+
+            console.log('[AttendanceStore] Sync result:', syncResult);
+
+            if (syncResult.totalSynced > 0) {
+              set({
+                error: null, // Clear any previous errors
+              });
+            }
+
+            // Update pending data count after sync
+            await get().checkServiceStatus();
+
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to sync pending data:', error);
             set({
-              locationHistory: [...locationHistory, location],
-              lastLocationUpdate: new Date(),
+              error: error instanceof Error ? error.message : 'Failed to sync pending data',
+            });
+          }
+        },
+
+        // Clear employee location data (for new check-in)
+        clearEmployeeLocationData: async (employeeId: string) => {
+          try {
+            console.log(`[AttendanceStore] Clearing location data for employee: ${employeeId}`);
+
+            if (get().isServiceAvailable) {
+              await locationForegroundService.clearEmployeeData(employeeId);
+            }
+
+            // Clear local location history
+            set({
+              locationHistory: [],
             });
 
-            // Keep only recent location history (last 100 points)
-            const maxHistoryLength = 100;
-            if (locationHistory.length > maxHistoryLength) {
-              set(state => ({
-                locationHistory: state.locationHistory.slice(-maxHistoryLength),
-              }));
-            }
-          } else {
-            // Update last location update even without significant movement
-            set({ lastLocationUpdate: new Date() });
+            console.log('[AttendanceStore] Employee location data cleared');
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to clear employee data:', error);
           }
         },
 
@@ -1114,7 +1258,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             isRefreshingHistory: false,
 
             locationHistory: [],
-            locationWatcher: null,
             offlineQueue: [],
             offlineQueueCount: 0,
             isOnline: true,

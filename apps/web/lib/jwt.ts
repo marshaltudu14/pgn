@@ -60,7 +60,7 @@ export class JWTService {
     try {
       const verifyOptions = {
         issuer: 'pgn-auth',
-        audience: 'pgn-web', // Web application audience
+        audience: ['pgn-web', 'pgn-mobile'] as [string, string], // Accept both web and mobile audiences
       };
 
       const decoded = jwt.verify(token, this.secret, verifyOptions) as unknown as JWTPayload;

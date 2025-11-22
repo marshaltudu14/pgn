@@ -40,6 +40,7 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
@@ -96,7 +97,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "./plugins/withLocationTrackingService",
+        {
+          "packageName": "com.pgn.mobile"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

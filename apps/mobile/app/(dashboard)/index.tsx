@@ -5,14 +5,16 @@ import {
 } from 'react-native';
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useNetworkMonitor } from '@/hooks/use-network-monitor';
 import { generateDemoAttendanceData } from '@/data/demo-attendance';
 import { COLORS } from '@/constants';
 import { homeStyles } from '@/styles/dashboard/home-styles';
-import { Calendar, Clock, TrendingUp, Activity } from 'lucide-react-native';
+import { Calendar, Clock, TrendingUp, Activity, Wifi, WifiOff } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
+  const { connectionDisplayInfo } = useNetworkMonitor();
   const [weeklyStats, setWeeklyStats] = useState({
     daysPresent: 0,
     totalHours: 0,
@@ -133,10 +135,22 @@ export default function HomeScreen() {
               {user?.humanReadableId || 'N/A'}
             </Text>
           </View>
-          <View style={[homeStyles.statusBadge, { backgroundColor: `${statusInfo.color}20` }]}>
-            <Text style={[homeStyles.statusText, { color: statusInfo.color }]}>
-              {statusInfo.text}
-            </Text>
+          <View style={homeStyles.headerRight}>
+            <View style={[homeStyles.statusBadge, { backgroundColor: `${statusInfo.color}20` }]}>
+              <Text style={[homeStyles.statusText, { color: statusInfo.color }]}>
+                {statusInfo.text}
+              </Text>
+            </View>
+            <View style={[homeStyles.networkStatusBadge, { backgroundColor: `${connectionDisplayInfo.color}20` }]}>
+              {connectionDisplayInfo.icon === 'Wifi' ? (
+                <Wifi size={14} color={connectionDisplayInfo.color} />
+              ) : (
+                <WifiOff size={14} color={connectionDisplayInfo.color} />
+              )}
+              <Text style={[homeStyles.networkStatusText, { color: connectionDisplayInfo.color }]}>
+                {connectionDisplayInfo.text}
+              </Text>
+            </View>
           </View>
         </View>
       </View>

@@ -17,6 +17,10 @@ export const homeStyles = StyleSheet.create({
   headerLeft: {
     flex: 1,
   },
+  headerRight: {
+    alignItems: 'flex-end' as const,
+    gap: 6,
+  },
   userName: {
     fontSize: 24,
     fontWeight: '700' as const,
@@ -37,6 +41,19 @@ export const homeStyles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '600' as const,
+    fontFamily: 'System',
+  },
+  networkStatusBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  networkStatusText: {
+    fontSize: 11,
+    fontWeight: '500' as const,
     fontFamily: 'System',
   },
 

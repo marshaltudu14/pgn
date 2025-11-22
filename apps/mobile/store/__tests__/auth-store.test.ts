@@ -32,6 +32,7 @@ const createMockUser = (overrides: Partial<AuthenticatedUser> = {}): Authenticat
   id: 'test-user-id',
   humanReadableId: 'PGN-2024-0001',
   fullName: 'Test User',
+  firstName: 'Test',
   email: 'test@example.com',
   employmentStatus: 'ACTIVE',
   canLogin: true,

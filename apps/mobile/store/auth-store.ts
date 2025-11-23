@@ -105,6 +105,15 @@ export const useAuth = create<AuthStoreState>()(
           try {
             // Validate input
             if (!credentials.email || !credentials.password) {
+              // Clear loading state and set error for validation failure
+              set({
+                isAuthenticated: false,
+                isLoggingIn: false,
+                user: null,
+                error: 'Email and password are required',
+                lastActivity: Date.now(),
+              });
+
               return {
                 success: false,
                 error: 'Email and password are required',
@@ -115,6 +124,15 @@ export const useAuth = create<AuthStoreState>()(
             const response = await api.post('/auth/login', credentials);
 
             if (!response.success) {
+              // Clear loading state and set error before returning
+              set({
+                isAuthenticated: false,
+                isLoggingIn: false,
+                user: null,
+                error: response.error || 'Login failed',
+                lastActivity: Date.now(),
+              });
+
               return {
                 success: false,
                 error: response.error || 'Login failed',
@@ -124,6 +142,15 @@ export const useAuth = create<AuthStoreState>()(
             // Check response structure - the data is in response.data (no more double wrapping)
             const responseData = response.data;
             if (!responseData || !responseData.token) {
+              // Clear loading state and set error for invalid response structure
+              set({
+                isAuthenticated: false,
+                isLoggingIn: false,
+                user: null,
+                error: 'Invalid login response structure',
+                lastActivity: Date.now(),
+              });
+
               return {
                 success: false,
                 error: 'Invalid login response structure',
@@ -383,8 +410,49 @@ export const useAuth = create<AuthStoreState>()(
           });
         },
 
-        // Parse authentication errors
+        // Parse authentication errors using error codes
         parseAuthError: (error: any): string => {
+          // If error is an object with error code, use code-based mapping
+          if (error && typeof error === 'object' && 'code' in error) {
+            const errorCode = error.code;
+
+            switch (errorCode) {
+              case 'INVALID_CREDENTIALS':
+                return 'Invalid email or password.';
+              case 'ACCOUNT_NOT_FOUND':
+                return 'Employee account not found - contact administrator';
+              case 'ACCOUNT_SUSPENDED':
+                return 'Account suspended - contact administrator';
+              case 'EMPLOYMENT_ENDED':
+                return 'Employment ended - thank you for your service';
+              case 'EMPLOYMENT_TERMINATED':
+                return 'Employment terminated - contact HR';
+              case 'EMPLOYMENT_ON_LEAVE':
+                return 'Currently on leave - contact administrator if access needed';
+              case 'ACCOUNT_ACCESS_DENIED':
+                return 'Account access denied';
+              case 'EMAIL_NOT_CONFIRMED':
+                return 'Please confirm your email address';
+              case 'RATE_LIMITED':
+                return 'Too many login attempts. Please try again later';
+              case 'ACCESS_DENIED':
+                return 'Access denied. You may not have permission to login.';
+              case 'SESSION_EXPIRED':
+              case 'TOKEN_EXPIRED':
+                return 'Your session has expired. Please sign in again.';
+              case 'VALIDATION_ERROR':
+                return 'Invalid input. Please check your information and try again.';
+              case 'SERVER_ERROR':
+                return 'Server error. Please try again later.';
+              case 'NETWORK_ERROR':
+                return 'Network error. Please check your internet connection.';
+              default:
+                // Fall back to message if available
+                return error.message || 'An unexpected error occurred. Please try again.';
+            }
+          }
+
+          // Fallback to text-based parsing for backwards compatibility
           if (error instanceof Error) {
             // Handle specific error cases
             if (error.message.includes('NETWORK_ERROR')) {
@@ -395,11 +463,15 @@ export const useAuth = create<AuthStoreState>()(
               return 'Request timed out. Please try again.';
             }
 
-            if (error.message.includes('UNAUTHORIZED')) {
+            if (error.message.includes('Authentication failed') ||
+                error.message.includes('UNAUTHORIZED') ||
+                error.message.includes('Invalid email or password') ||
+                error.message.includes('Invalid login credentials')) {
               return 'Invalid email or password.';
             }
 
-            if (error.message.includes('FORBIDDEN')) {
+            if (error.message.includes('FORBIDDEN') ||
+                error.message.includes('Access denied')) {
               return 'Access denied. You may not have permission to login.';
             }
 

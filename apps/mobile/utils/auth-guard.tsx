@@ -77,24 +77,45 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
       const result = await permissionService.checkAllPermissions();
       setPermissions(result.permissions);
 
-      if (!result.allGranted) {
-        // Check if any permissions are denied or undetermined
-        if (
-          result.deniedPermissions.length > 0 ||
-          result.undeterminedPermissions.length > 0
-        ) {
-          // Try to request permissions
-          const requestResult = await permissionService.requestAllPermissions();
-          setPermissions(requestResult.permissions);
 
-          if (!requestResult.allGranted) {
-            // Still not granted, show permission screen
-            setShowPermissionsScreen(true);
-          }
+        allGranted: result.allGranted,
+        permissions: result.permissions,
+        deniedPermissions: result.deniedPermissions,
+        undeterminedPermissions: result.undeterminedPermissions,
+      });
+
+      // Check if ALL required permissions are granted
+      if (!result.allGranted) {
+
+
+        // Try to request all permissions
+        const requestResult = await permissionService.requestAllPermissions();
+        setPermissions(requestResult.permissions);
+
+
+          allGranted: requestResult.allGranted,
+          permissions: requestResult.permissions,
+        });
+
+        // If after requesting, STILL not all permissions are granted, show permission screen
+        if (!requestResult.allGranted) {
+
+
+            camera: requestResult.permissions.camera,
+            location: requestResult.permissions.location,
+            notifications: requestResult.permissions.notifications,
+          });
+          setShowPermissionsScreen(true);
+        } else {
+
         }
+      } else {
+
       }
     } catch (error) {
       console.error('Error checking permissions:', error);
+      // Show permission screen on error to be safe
+      setShowPermissionsScreen(true);
     } finally {
       setPermissionsChecked(true);
     }
@@ -121,21 +142,41 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
   }
 
   // Show permission screen if permissions are not granted and permission checking is enabled
-  if (shouldCheckPermissions && showPermissionsScreen && permissions) {
+  if (shouldCheckPermissions && showPermissionsScreen) {
+
     return (
       <SafeAreaView
         style={{ flex: 1 }}
         edges={['top', 'left', 'right', 'bottom']}
       >
         <PermissionsScreen
-          permissions={permissions}
+          permissions={permissions || { camera: 'denied', location: 'denied', notifications: 'denied' }}
           onPermissionsGranted={handlePermissionsGranted}
         />
       </SafeAreaView>
     );
   }
 
+  // Final check: if we're here and shouldCheckPermissions is true, ensure all permissions are granted
+  if (shouldCheckPermissions && permissions) {
+    const allGranted = permissions.camera === 'granted' &&
+                      permissions.location === 'granted' &&
+                      permissions.notifications === 'granted';
+
+    if (!allGranted) {
+
+
+        camera: permissions.camera,
+        location: permissions.location,
+        notifications: permissions.notifications,
+      });
+      setShowPermissionsScreen(true);
+      return null; // Will re-render with permission screen
+    }
+  }
+
   // Render children if all checks pass
+
   return <>{children}</>;
 }
 

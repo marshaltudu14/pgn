@@ -1,10 +1,11 @@
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 import notifee, { AuthorizationStatus } from '@notifee/react-native';
 import { Platform, Linking } from 'react-native';
 import { showToast } from '@/utils/toast';
 
-export type PermissionStatus = 'granted' | 'denied' | 'undetermined';
+export type PermissionStatus = 'granted' | 'denied' | 'undetermined' | 'blocked';
 
 export interface AppPermissions {
   camera: PermissionStatus;
@@ -64,22 +65,26 @@ export class PermissionService {
   // Check if notification permission is granted
   async checkNotificationPermission(): Promise<PermissionStatus> {
     try {
-      const settings = await notifee.getNotificationSettings();
-      console.log('[PermissionService] Notification settings:', settings.authorizationStatus);
+      // Use expo-notifications for permission checking (more reliable)
+      const settings = await Notifications.getPermissionsAsync();
 
-      switch (settings.authorizationStatus) {
-        case AuthorizationStatus.AUTHORIZED:
-          return 'granted';
-        case AuthorizationStatus.DENIED:
-          return 'denied';
-        case AuthorizationStatus.NOT_DETERMINED:
-          return 'undetermined';
-        case AuthorizationStatus.PROVISIONAL:
-          // On iOS, provisional is considered granted for basic functionality
-          return 'granted';
-        default:
-          return 'denied';
+
+      // Check if permissions are granted or provisionally granted (iOS)
+      if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
+        return 'granted';
       }
+
+      // Check if denied
+      if (settings.status === 'denied') {
+        return 'denied';
+      }
+
+      // Check if undetermined
+      if (settings.status === 'undetermined') {
+        return 'undetermined';
+      }
+
+      return 'denied';
     } catch (error) {
       console.error('Error checking notification permission:', error);
       return 'denied';
@@ -121,23 +126,35 @@ export class PermissionService {
   // Request notification permission
   async requestNotificationPermission(): Promise<PermissionStatus> {
     try {
-      console.log('[PermissionService] Requesting notification permission...');
-      const settings = await notifee.requestPermission();
-      console.log('[PermissionService] Notification permission result:', settings.authorizationStatus);
 
-      switch (settings.authorizationStatus) {
-        case AuthorizationStatus.AUTHORIZED:
-          return 'granted';
-        case AuthorizationStatus.DENIED:
-          return 'denied';
-        case AuthorizationStatus.NOT_DETERMINED:
-          return 'undetermined';
-        case AuthorizationStatus.PROVISIONAL:
-          // On iOS, provisional is considered granted for basic functionality
-          return 'granted';
-        default:
-          return 'denied';
+
+      // Use expo-notifications for permission requesting (latest best practice)
+      const settings = await Notifications.requestPermissionsAsync({
+        ios: {
+          allowAlert: true,
+          allowBadge: true,
+          allowSound: true,
+        },
+      });
+
+
+
+      // Check if permissions are granted or provisionally granted (iOS)
+      if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
+        return 'granted';
       }
+
+      // Check if denied
+      if (settings.status === 'denied') {
+        return 'denied';
+      }
+
+      // Check if undetermined
+      if (settings.status === 'undetermined') {
+        return 'undetermined';
+      }
+
+      return 'denied';
     } catch (error) {
       console.error('Error requesting notification permission:', error);
       return 'denied';

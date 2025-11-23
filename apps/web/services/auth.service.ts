@@ -154,8 +154,11 @@ export class AuthService {
           throw new Error('Please confirm your email address');
         } else if (authError?.message?.includes('Too many requests')) {
           throw new Error('Too many login attempts. Please try again later');
+        } else if (authError?.message?.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password');
         } else {
-          throw new Error('Login failed. Please check your credentials');
+          // Always return a generic message for security (don't expose specific auth errors)
+          throw new Error('Invalid email or password');
         }
       }
 

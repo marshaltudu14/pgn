@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { AuthErrorResponse, EmploymentStatus } from '@pgn/shared';
+import { AuthErrorResponse, EmploymentStatus, AuthErrorCode } from '@pgn/shared';
 
 /**
  * Standardized error responses for authentication
@@ -12,6 +12,7 @@ export class AuthErrorService {
     const errorResponse: AuthErrorResponse = {
       error: 'Validation error',
       message,
+      code: 'VALIDATION_ERROR',
     };
     return NextResponse.json(errorResponse, { status });
   }
@@ -19,10 +20,11 @@ export class AuthErrorService {
   /**
    * Create an authentication error response
    */
-  static authError(message: string = 'Authentication failed'): NextResponse {
+  static authError(message: string = 'Authentication failed', code: AuthErrorCode = 'INVALID_CREDENTIALS'): NextResponse {
     const errorResponse: AuthErrorResponse = {
       error: 'Authentication failed',
       message,
+      code,
     };
     return NextResponse.json(errorResponse, { status: 401 });
   }
@@ -32,11 +34,13 @@ export class AuthErrorService {
    */
   static accessDeniedError(
     message: string,
-    employmentStatus?: EmploymentStatus
+    employmentStatus?: EmploymentStatus,
+    code: AuthErrorCode = 'ACCESS_DENIED'
   ): NextResponse {
     const errorResponse: AuthErrorResponse = {
       error: 'Access denied',
       message,
+      code,
       ...(employmentStatus && { employmentStatus }),
     };
     return NextResponse.json(errorResponse, { status: 403 });
@@ -52,6 +56,7 @@ export class AuthErrorService {
     const errorResponse: AuthErrorResponse = {
       error: 'Rate limit exceeded',
       message,
+      code: 'RATE_LIMITED',
       ...(retryAfter && { retryAfter }),
     };
 
@@ -72,6 +77,7 @@ export class AuthErrorService {
     const errorResponse: AuthErrorResponse = {
       error: 'Internal server error',
       message,
+      code: 'SERVER_ERROR',
     };
     return NextResponse.json(errorResponse, { status: 500 });
   }
@@ -115,10 +121,28 @@ export const EmploymentStatusMessages: Record<EmploymentStatus, string> = {
 };
 
 /**
+ * Employment status to error code mapping
+ */
+export const EmploymentStatusErrorCodes: Record<EmploymentStatus, AuthErrorCode> = {
+  ACTIVE: 'ACCOUNT_ACCESS_DENIED',
+  SUSPENDED: 'ACCOUNT_SUSPENDED',
+  RESIGNED: 'EMPLOYMENT_ENDED',
+  TERMINATED: 'EMPLOYMENT_TERMINATED',
+  ON_LEAVE: 'EMPLOYMENT_ON_LEAVE',
+};
+
+/**
  * Get employment status message
  */
 export function getEmploymentStatusMessage(status: EmploymentStatus): string {
   return EmploymentStatusMessages[status];
+}
+
+/**
+ * Get employment status error code
+ */
+export function getEmploymentStatusErrorCode(status: EmploymentStatus): AuthErrorCode {
+  return EmploymentStatusErrorCodes[status];
 }
 
 /**
@@ -134,6 +158,7 @@ export function canLoginWithStatus(status: EmploymentStatus): boolean {
 export function createEmploymentStatusError(status: EmploymentStatus): NextResponse {
   return AuthErrorService.accessDeniedError(
     getEmploymentStatusMessage(status),
-    status
+    status,
+    getEmploymentStatusErrorCode(status)
   );
 }

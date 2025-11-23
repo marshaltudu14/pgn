@@ -813,6 +813,51 @@ export class AttendanceService {
   }
 }
 
+/**
+ * Generate signed URL for attendance selfie images (for private bucket access)
+ */
+export async function generateAttendanceImageUrl(imagePath: string): Promise<string> {
+  const supabase = createClient();
+
+  try {
+    const { data, error } = await supabase.storage
+      .from('attendance-selfies')
+      .createSignedUrl(imagePath, 60 * 60); // 1 hour expiry
+
+    if (error) {
+      console.error('Error generating signed URL:', error);
+      throw error;
+    }
+
+    return data.signedUrl;
+  } catch (error) {
+    console.error('Failed to generate image URL:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate signed URLs for multiple attendance images
+ */
+export async function generateAttendanceImageUrls(imagePaths: string[]): Promise<{ [key: string]: string }> {
+  const urls: { [key: string]: string } = {};
+
+  await Promise.all(
+    imagePaths.map(async (imagePath) => {
+      if (imagePath) {
+        try {
+          urls[imagePath] = await generateAttendanceImageUrl(imagePath);
+        } catch (error) {
+          console.error(`Failed to generate URL for ${imagePath}:`, error);
+          urls[imagePath] = ''; // Set empty string on failure
+        }
+      }
+    })
+  );
+
+  return urls;
+}
+
 // Export singleton instance
 export const attendanceService = new AttendanceService();
 

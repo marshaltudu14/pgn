@@ -6,7 +6,7 @@ import {
 import { useAuth } from '@/store/auth-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useNetworkMonitor } from '@/hooks/use-network-monitor';
-import { generateDemoAttendanceData } from '@/data/demo-attendance';
+import { API_BASE_URL } from '@/services/api';
 import { COLORS } from '@/constants';
 import { homeStyles } from '@/styles/dashboard/home-styles';
 import { Calendar, Clock, TrendingUp, Activity, Wifi, WifiOff } from 'lucide-react-native';
@@ -41,7 +41,26 @@ export default function HomeScreen() {
   // Load weekly stats data
   const loadWeeklyStats = async () => {
     try {
-      const attendanceData = await generateDemoAttendanceData(1, 50);
+      if (!user?.humanReadableId) {
+        return;
+      }
+
+      // Call attendance history API
+      const response = await fetch(`${API_BASE_URL}/attendance/history/${user.humanReadableId}?days=7`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.humanReadableId}`, // Using employeeId as token for now
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch attendance history for stats');
+        return;
+      }
+
+      const data = await response.json();
+      const attendanceData = data.records || [];
 
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -52,9 +71,9 @@ export default function HomeScreen() {
         (record.workHours !== undefined || record.checkInTime !== undefined)
       );
 
-      // Calculate stats with more realistic demo values
+      // Calculate stats
       const daysPresent = weekData.filter(r => r.checkInTime).length;
-      const totalHours = weekData.reduce((sum, record) => sum + (record.workHours || 8.5), 0); // Default to 8.5h for demo
+      const totalHours = weekData.reduce((sum, record) => sum + (record.workHours || 0), 0);
       const avgHours = daysPresent > 0 ? totalHours / daysPresent : 0;
       const totalDistance = weekData.reduce((sum, record) => sum + ((record.locationPath?.length || 0) * 100), 0);
 

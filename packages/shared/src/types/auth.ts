@@ -50,9 +50,28 @@ export interface LogoutResponse {
   message: string;
 }
 
+// Authentication error codes for consistent error handling
+export type AuthErrorCode =
+  | 'INVALID_CREDENTIALS'
+  | 'ACCOUNT_NOT_FOUND'
+  | 'ACCOUNT_SUSPENDED'
+  | 'EMPLOYMENT_ENDED'
+  | 'EMPLOYMENT_TERMINATED'
+  | 'EMPLOYMENT_ON_LEAVE'
+  | 'ACCOUNT_ACCESS_DENIED'
+  | 'EMAIL_NOT_CONFIRMED'
+  | 'RATE_LIMITED'
+  | 'VALIDATION_ERROR'
+  | 'SERVER_ERROR'
+  | 'NETWORK_ERROR'
+  | 'SESSION_EXPIRED'
+  | 'TOKEN_EXPIRED'
+  | 'ACCESS_DENIED';
+
 export interface AuthErrorResponse {
   error: string;
   message: string;
+  code: AuthErrorCode;
   employmentStatus?: EmploymentStatus;
   retryAfter?: number;
 }

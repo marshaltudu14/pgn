@@ -74,7 +74,7 @@ class LocationForegroundService {
       }
 
       this.isInitialized = true;
-      console.log('[LocationForegroundService] Initialized successfully');
+
       return true;
     } catch (error) {
       console.error('[LocationForegroundService] Initialization failed:', error);
@@ -94,12 +94,12 @@ class LocationForegroundService {
         }
       }
 
-      console.log(`[LocationForegroundService] Starting tracking for employee: ${employeeId}`);
+
 
       const success = await LocationTrackingModule.startLocationTracking(employeeId, employeeName);
 
       if (success) {
-        console.log('[LocationForegroundService] Tracking started successfully');
+
       } else {
         console.error('[LocationForegroundService] Failed to start tracking');
       }
@@ -121,12 +121,12 @@ class LocationForegroundService {
         return true;
       }
 
-      console.log('[LocationForegroundService] Stopping location tracking');
+
 
       const success = await LocationTrackingModule.stopLocationTracking(checkOutData || null);
 
       if (success) {
-        console.log('[LocationForegroundService] Tracking stopped successfully');
+
       } else {
         console.error('[LocationForegroundService] Failed to stop tracking');
       }
@@ -249,7 +249,7 @@ class LocationForegroundService {
         return true; // Nothing to clear
       }
 
-      console.log(`[LocationForegroundService] Clearing data for employee: ${employeeId}`);
+
       return await LocationTrackingModule.clearEmployeeData(employeeId);
     } catch (error) {
       console.error('[LocationForegroundService] Error clearing employee data:', error);
@@ -295,7 +295,7 @@ class LocationForegroundService {
 
       const result = await LocationTrackingModule.syncPendingDataToServer(apiUrl, authToken);
 
-      console.log('[LocationForegroundService] Sync result:', result);
+
       return result;
     } catch (error) {
       console.error('[LocationForegroundService] Error syncing pending data:', error);
@@ -326,7 +326,7 @@ class LocationForegroundService {
         };
       }
 
-      console.log(`[LocationForegroundService] Syncing pending data for employee: ${employeeId}`);
+
 
       // Get pending locations
       const pendingLocations = await this.getPendingLocations(employeeId);
@@ -379,7 +379,7 @@ class LocationForegroundService {
         totalFailed: failedLocations + failedCheckOuts
       };
 
-      console.log(`[LocationForegroundService] Sync completed for ${employeeId}:`, result);
+
       return result;
     } catch (error) {
       console.error('[LocationForegroundService] Error syncing employee data:', error);
@@ -443,7 +443,7 @@ class LocationForegroundService {
    */
   async handleCrashRecovery(employeeId: string): Promise<void> {
     try {
-      console.log(`[LocationForegroundService] Handling crash recovery for ${employeeId}`);
+
 
       // First, sync any pending data from previous session
       await this.syncPendingDataForEmployee(employeeId);
@@ -451,7 +451,7 @@ class LocationForegroundService {
       // Clear local storage for fresh check-in
       await this.clearEmployeeData(employeeId);
 
-      console.log('[LocationForegroundService] Crash recovery completed');
+
     } catch (error) {
       console.error('[LocationForegroundService] Error during crash recovery:', error);
     }

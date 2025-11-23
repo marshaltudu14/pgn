@@ -200,7 +200,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         isTakingPhoto: false,
         lastPhotoCapture: null,
 
-        // Initialize permissions only (no API calls - AuthGuard handles authentication)
+        // Initialize permissions and check service status
         initializePermissions: async () => {
           try {
             // Check permissions
@@ -212,10 +212,20 @@ export const useAttendance = create<AttendanceStoreState>()(
               locationPermission: locationAvailable,
             });
 
-            // Note: We do NOT fetch attendance status here.
-            // The attendance status should only be fetched when explicitly needed
-            // (e.g., when user clicks attendance button or opens attendance screen)
-            // AuthGuard ensures user is authenticated, so no auth checks needed here.
+            // Initialize location service and check if tracking is already active
+            await get().initializeLocationService();
+
+            // Check if service is already running (persisted across restarts)
+            const isTracking = locationTrackingServiceNotifee.isTrackingActive();
+            if (isTracking) {
+                set({
+                currentStatus: 'CHECKED_IN',
+                isLocationTracking: true,
+                lastLocationUpdate: new Date(),
+                checkInTime: new Date(),
+                requiresCheckOut: true,
+              });
+            }
 
           } catch (error) {
             console.error('Failed to initialize permissions:', error);
@@ -246,35 +256,60 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isLoading: true, error: null });
 
           try {
-            const statusResponse = await api.get<{ success: boolean; data: AttendanceStatusResponse }>('/attendance/status');
+            const authStore = useAuth.getState();
+            const employeeId = authStore.user?.humanReadableId;
 
-            if (!statusResponse.success) {
-              throw new Error(statusResponse.error || 'Failed to get attendance status');
+            if (!employeeId) {
+              throw new Error('Employee ID not available');
             }
 
-            const data = statusResponse.data?.data;
-            if (!data) {
-              throw new Error('Invalid attendance status response');
-            }
-
-            set({
-              currentStatus: data.status,
-              isLoading: false,
-              error: null,
-              checkInTime: data.checkInTime,
-              checkOutTime: data.checkOutTime,
-              workHours: data.workHours,
-              totalDistance: data.totalDistance,
-              lastLocationUpdate: data.lastLocationUpdate,
-              batteryLevel: data.batteryLevel,
-              verificationStatus: data.verificationStatus,
-              requiresCheckOut: data.requiresCheckOut,
+            // Call attendance status API
+            const response = await fetch(`${API_BASE_URL}/attendance/status/${employeeId}`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${employeeId}`, // Using employeeId as token for now
+              },
             });
 
-            // Start location tracking if checked in
-            if (data.status === 'CHECKED_IN') {
-              await get().startLocationTracking();
+            if (!response.ok) {
+              const errorText = await response.text();
+              let errorMessage = `Failed to fetch attendance status (${response.status})`;
+
+              try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+              } catch {
+                errorMessage = errorText || errorMessage;
+              }
+
+              set({
+                isLoading: false,
+                error: errorMessage,
+              });
+
+              return;
             }
+
+            const apiData = await response.json();
+
+            // Convert API response to store format
+            set({
+              currentStatus: apiData.status || 'CHECKED_OUT',
+              isLoading: false,
+              error: null,
+              checkInTime: apiData.checkInTime ? new Date(apiData.checkInTime) : undefined,
+              checkOutTime: apiData.checkOutTime ? new Date(apiData.checkOutTime) : undefined,
+              workHours: apiData.workHours,
+              totalDistance: apiData.totalDistance,
+              lastLocationUpdate: apiData.lastLocationUpdate ? new Date(apiData.lastLocationUpdate) : undefined,
+              batteryLevel: apiData.batteryLevel,
+              verificationStatus: apiData.verificationStatus || 'PENDING',
+              requiresCheckOut: apiData.requiresCheckOut || false,
+            });
+
+            // Note: Don't automatically start location tracking on status fetch
+            // Let the user explicitly check in to start tracking
 
           } catch (error) {
             console.error('Failed to fetch attendance status:', error);
@@ -290,15 +325,6 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingIn: true, error: null });
 
           try {
-            // Handle crash recovery - sync any pending data from previous session
-            const authStore = useAuth.getState();
-            const employeeId = authStore.user?.humanReadableId;
-            const employeeName = authStore.user?.firstName;
-
-            if (get().isServiceAvailable && employeeId && employeeName) {
-              // Notifee doesn't need crash recovery handling
-            }
-
             // Get current location if not provided
             if (!request.location) {
               try {
@@ -366,12 +392,29 @@ export const useAttendance = create<AttendanceStoreState>()(
                 isCheckingIn: false,
                 checkInTime: result.checkInTime,
                 error: null,
-                verificationStatus: (result.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED') || 'PENDING',
+                verificationStatus: result.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED',
                 requiresVerification: result.verificationStatus === 'PENDING'
               });
 
-              // Start location tracking
-              await get().startLocationTracking();
+              // Start location tracking using Notifee
+                const authStore = useAuth.getState();
+              const employeeId = authStore.user?.humanReadableId;
+              const employeeName = authStore.user?.firstName;
+
+              if (employeeId && employeeName) {
+                try {
+                  const success = await locationTrackingServiceNotifee.startTracking(employeeId, employeeName);
+                  if (success) {
+                    set({
+                      isLocationTracking: true,
+                      lastLocationUpdate: new Date(),
+                    });
+                    }
+                } catch (trackingError) {
+                  console.warn('[AttendanceStore] Failed to start location tracking:', trackingError);
+                  // Don't fail check-in if tracking fails
+                }
+              }
             }
 
             return result;
@@ -381,7 +424,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             const errorMessage = error instanceof Error ? error.message : 'Check-in failed';
 
             set({
-              isCheckingIn: false, // Ensure this is set to false to close modal
+              isCheckingIn: false,
               error: errorMessage,
             });
 
@@ -420,54 +463,68 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-            
             const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
             // Build API request
-            const apiRequest: any = {
+            const apiRequest: CheckOutMobileRequest = {
+              employeeId: request.employeeId,
               location: {
                 latitude: request.location.latitude,
                 longitude: request.location.longitude,
-                accuracy: request.location.accuracy,
-                timestamp: request.location.timestamp ? new Date(request.location.timestamp).toISOString() : new Date().toISOString(),
-                address: request.location.address
+                accuracy: request.location.accuracy || 0,
+                timestamp: request.location.timestamp || Date.now(),
+                address: request.location.address || undefined,
               },
-              selfieData: request.selfie,
-              faceConfidence: request.faceConfidence || 0,
-              deviceInfo
+              selfieImage: request.selfieImage,
+              confidenceScore: request.confidenceScore,
+              deviceInfo: deviceInfo,
+              checkoutNotes: request.checkoutNotes,
             };
 
-            // Add last location data if available
-            if (request.lastLocationData) {
-              apiRequest.lastLocationData = {
-                latitude: request.lastLocationData.latitude,
-                longitude: request.lastLocationData.longitude,
-                accuracy: request.lastLocationData.accuracy,
-                timestamp: request.lastLocationData.timestamp ? new Date(request.lastLocationData.timestamp).toISOString() : new Date().toISOString(),
-                address: request.lastLocationData.address
+            // Call check-out API
+            const response = await fetch(`${API_BASE_URL}/attendance/checkout`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${request.employeeId}`, // Using employeeId as token for now
+              },
+              body: JSON.stringify(apiRequest),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              let errorMessage = `Check-out failed (${response.status})`;
+
+              try {
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.message || errorMessage;
+              } catch {
+                errorMessage = errorText || errorMessage;
+              }
+
+              set({
+                isCheckingOut: false,
+                error: errorMessage,
+              });
+
+              return {
+                success: false,
+                message: errorMessage
               };
             }
 
-            // Make API call
-            const response = await api.post<any>('/attendance/checkout', apiRequest);
+            const apiResponse: AttendanceResponse = await response.json();
+            const checkOutTime = new Date(apiResponse.timestamp);
 
-            if (!response.success) {
-              throw new Error(response.error || 'Failed to check out');
-            }
-
-            const responseData = response.data;
-            if (!responseData) {
-              throw new Error('Invalid check-out response');
-            }
-
+            // Convert API response to store format
             const result: AttendanceResponse = {
-              success: response.success,
-              message: response.message || 'Check-out successful',
-              timestamp: new Date(responseData.timestamp),
-              checkOutTime: new Date(responseData.checkOutTime),
-              workHours: responseData.workHours,
-              verificationStatus: responseData.verificationStatus,
-              attendanceId: responseData.attendanceId
+              success: apiResponse.success,
+              message: apiResponse.message,
+              timestamp: checkOutTime,
+              checkOutTime: checkOutTime,
+              workHours: apiResponse.workHours,
+              verificationStatus: apiResponse.verificationStatus,
+              attendanceId: apiResponse.attendanceId
             };
 
             if (result.success) {
@@ -477,12 +534,26 @@ export const useAttendance = create<AttendanceStoreState>()(
                 checkOutTime: result.checkOutTime,
                 workHours: result.workHours,
                 error: null,
-                verificationStatus: (result.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED') || 'PENDING',
+                verificationStatus: result.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED',
                 requiresVerification: result.verificationStatus === 'PENDING'
               });
 
-              // Stop location tracking
-              await get().stopLocationTracking();
+              // Stop location tracking using Notifee
+              try {
+                const checkOutData = JSON.stringify({
+                  checkOutTime: checkOutTime.toISOString(),
+                  deviceInfo: deviceInfo,
+                });
+                const success = await locationTrackingServiceNotifee.stopTracking(checkOutData);
+                if (success) {
+                  set({
+                    isLocationTracking: false,
+                    lastLocationUpdate: null,
+                  });
+                }
+              } catch (trackingError) {
+                // Don't fail check-out if tracking fails
+              }
             }
 
             return result;
@@ -846,12 +917,9 @@ export const useAttendance = create<AttendanceStoreState>()(
         // Initialize native location service
         initializeLocationService: async () => {
           try {
-            console.log('[AttendanceStore] Initializing native location service...');
-            const isAvailable = await locationTrackingServiceNotifee.initialize();
+                const isAvailable = await locationTrackingServiceNotifee.initialize();
 
-            console.log('[AttendanceStore] Service availability:', isAvailable);
-            console.log('[AttendanceStore] Notifee service initialized');
-
+  
             set({
               isServiceAvailable: isAvailable,
               error: isAvailable ? null : 'Location service not available',
@@ -885,98 +953,32 @@ export const useAttendance = create<AttendanceStoreState>()(
               lastLocationUpdate: state.isTracking ? new Date() : null,
             });
 
-            console.log('[AttendanceStore] Service status:', isTracking ? 'tracking' : 'idle');
-          } catch (error) {
+              } catch (error) {
             console.error('[AttendanceStore] Failed to check service status:', error);
           }
         },
 
-        // Start background location tracking (using native service)
+        // Start background location tracking (now integrated into checkIn)
         startLocationTracking: async () => {
-          try {
-            console.log('[AttendanceStore] Starting location tracking...');
-            if (get().isLocationTracking) {
-              console.log('[AttendanceStore] Already tracking, skipping');
-              return; // Already tracking
-            }
-
-            // Get current employee info from auth context
-            const authStore = useAuth.getState();
-            const employeeId = authStore.user?.humanReadableId;
-            const employeeName = authStore.user?.firstName;
-
-            console.log('[AttendanceStore] Employee info:', { employeeId, employeeName, isServiceAvailable: get().isServiceAvailable });
-
-            if (!employeeId || !employeeName) {
-              console.warn('[AttendanceStore] Employee info missing, cannot start tracking');
-              return; // Employee info not available, silently fail
-            }
-
-            // Try to start native location tracking if available
-            if (get().isServiceAvailable) {
-              try {
-                console.log('[AttendanceStore] Attempting to start native location tracking...');
-                const success = await locationTrackingServiceNotifee.startTracking(employeeId, employeeName);
-                console.log('[AttendanceStore] Native tracking result:', success);
-
-                if (success) {
-                  set({
-                    isLocationTracking: true,
-                    lastLocationUpdate: new Date(),
-                    error: null,
-                  });
-
-                  // Check service status after starting
-                  await get().checkServiceStatus();
-                  console.log('[AttendanceStore] Native tracking started successfully');
-                  return;
-                } else {
-                  console.warn('[AttendanceStore] Native tracking returned false');
-                }
-              } catch (nativeError) {
-                console.warn('[AttendanceStore] Native location tracking failed:', nativeError);
-              }
-            } else {
-              console.warn('[AttendanceStore] Service not available, skipping native tracking');
-            }
-
-            // Fallback: Set tracking state to true even without native service
-            // This allows the app to continue functioning
-            set({
-              isLocationTracking: true,
-              lastLocationUpdate: new Date(),
-              error: null,
-            });
-
-            console.log('[AttendanceStore] Using fallback tracking mode');
-
-          } catch (error) {
-            console.error('[AttendanceStore] Failed to start location tracking:', error);
-            set({
-              error: error instanceof Error ? error.message : 'Failed to start location tracking',
-            });
-          }
+            // This method is kept for compatibility but tracking is now handled in checkIn
         },
 
         // Stop background location tracking (using native service)
         stopLocationTracking: async () => {
           try {
             if (!get().isLocationTracking) {
-              console.log('[AttendanceStore] Not tracking, nothing to stop');
-              return; // Not tracking
+                return; // Not tracking
             }
 
             if (!get().isServiceAvailable) {
-              console.warn('[AttendanceStore] Service not available, updating state only');
-              set({
+                set({
                 isLocationTracking: false,
                 lastLocationUpdate: null,
               });
               return;
             }
 
-            console.log('[AttendanceStore] Stopping native location tracking');
-
+    
             const checkOutData = JSON.stringify({
               checkOutTime: new Date().toISOString(),
               deviceInfo: await get().getDeviceInfo(),
@@ -993,8 +995,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Update service status
             await get().checkServiceStatus();
 
-            console.log('[AttendanceStore] Native location tracking stopped');
-          } catch (error) {
+              } catch (error) {
             console.error('[AttendanceStore] Failed to stop location tracking:', error);
           }
         },
@@ -1023,17 +1024,14 @@ export const useAttendance = create<AttendanceStoreState>()(
         syncPendingData: async () => {
           try {
             if (!get().isServiceAvailable) {
-              console.warn('[AttendanceStore] Service not available, cannot sync');
-              return;
+                  return;
             }
 
-            console.log('[AttendanceStore] Syncing pending location data...');
-
+      
             // Notifee doesn't have sync functionality - data is sent directly
             const syncResult = { synced: 0, failed: 0 };
 
-            console.log('[AttendanceStore] Sync result:', syncResult);
-
+      
             if (syncResult.synced > 0) {
               set({
                 error: null, // Clear any previous errors
@@ -1054,8 +1052,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         // Clear employee location data (for new check-in)
         clearEmployeeLocationData: async (employeeId: string) => {
           try {
-            console.log(`[AttendanceStore] Clearing location data for employee: ${employeeId}`);
-
+      
             if (get().isServiceAvailable) {
               // Notifee doesn't need data clearing handled this way
             }
@@ -1065,8 +1062,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               locationHistory: [],
             });
 
-            console.log('[AttendanceStore] Employee location data cleared');
-          } catch (error) {
+                } catch (error) {
             console.error('[AttendanceStore] Failed to clear employee data:', error);
           }
         },

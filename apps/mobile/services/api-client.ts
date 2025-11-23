@@ -31,6 +31,7 @@ const getDeviceInfo = () => {
 export interface ApiError {
   error: string;
   message: string;
+  code: string;
   employmentStatus?: string;
   retryAfter?: number;
   context?: string;
@@ -41,6 +42,7 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+  code?: string;
 }
 
 export interface AppError {
@@ -308,9 +310,23 @@ export async function apiCall<T = any>(
       }
 
       // Return error from API response if available
+      // For 401 errors, always prefer the message field for user-friendly errors
+      if (response.status === 401) {
+        const authMessage = responseData.message || responseData.error || 'Invalid email or password.';
+        return {
+          success: false,
+          error: authMessage,
+          // Include the error code for better client-side handling
+          code: responseData.code || 'INVALID_CREDENTIALS',
+        };
+      }
+
+      // For other errors, use standard error extraction
+      const errorMessage = responseData.message || responseData.error || 'Request failed';
       return {
         success: false,
-        error: responseData.error || responseData.message || 'Request failed',
+        error: errorMessage,
+        code: responseData.code || 'SERVER_ERROR',
       };
     }
 

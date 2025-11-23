@@ -72,38 +72,68 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
       // Handle specific employment status errors
       const errorMessage = loginError instanceof Error ? loginError.message : 'Login failed';
 
-      // Check if it's an employment status related error
-      const employmentStatusErrors = [
-        'Account suspended - contact administrator',
-        'Employment ended - thank you for your service',
-        'Employment terminated - contact HR',
-        'Currently on leave - contact administrator if access needed',
-        'Account access denied'
-      ];
-
-      if (employmentStatusErrors.some(err => errorMessage === err)) {
-        return AuthErrorService.accessDeniedError(errorMessage);
+      // Check if it's an employment status related error using text patterns
+      if (errorMessage.includes('Account suspended')) {
+        return AuthErrorService.accessDeniedError(
+          'Account suspended - contact administrator',
+          undefined,
+          'ACCOUNT_SUSPENDED'
+        );
       }
 
-      // Handle credential errors with user-friendly messages
-      const credentialErrors = [
-        'Invalid email or password',
-        'Login failed. Please check your credentials',
-        'Please confirm your email address',
-        'Too many login attempts. Please try again later'
-      ];
+      if (errorMessage.includes('Employment ended')) {
+        return AuthErrorService.accessDeniedError(
+          'Employment ended - thank you for your service',
+          undefined,
+          'EMPLOYMENT_ENDED'
+        );
+      }
 
-      if (credentialErrors.some(err => errorMessage === err)) {
-        return AuthErrorService.authError(errorMessage);
+      if (errorMessage.includes('Employment terminated')) {
+        return AuthErrorService.accessDeniedError(
+          'Employment terminated - contact HR',
+          undefined,
+          'EMPLOYMENT_TERMINATED'
+        );
+      }
+
+      if (errorMessage.includes('Currently on leave')) {
+        return AuthErrorService.accessDeniedError(
+          'Currently on leave - contact administrator if access needed',
+          undefined,
+          'EMPLOYMENT_ON_LEAVE'
+        );
+      }
+
+      if (errorMessage.includes('Account access denied')) {
+        return AuthErrorService.accessDeniedError(
+          'Account access denied',
+          undefined,
+          'ACCOUNT_ACCESS_DENIED'
+        );
+      }
+
+      // Handle credential errors with specific codes
+      if (errorMessage.includes('Invalid email or password') ||
+          errorMessage.includes('Login failed. Please check your credentials')) {
+        return AuthErrorService.authError('Invalid email or password', 'INVALID_CREDENTIALS');
+      }
+
+      if (errorMessage.includes('Please confirm your email address')) {
+        return AuthErrorService.authError('Please confirm your email address', 'EMAIL_NOT_CONFIRMED');
+      }
+
+      if (errorMessage.includes('Too many login attempts')) {
+        return AuthErrorService.authError('Too many login attempts. Please try again later', 'RATE_LIMITED');
       }
 
       // Handle employee not found errors
       if (errorMessage.includes('Employee account not found')) {
-        return AuthErrorService.authError('Employee account not found - contact administrator');
+        return AuthErrorService.authError('Employee account not found - contact administrator', 'ACCOUNT_NOT_FOUND');
       }
 
       // Handle other errors with a generic message for security
-      return AuthErrorService.authError('Login failed. Please check your credentials and try again');
+      return AuthErrorService.authError('Login failed. Please check your credentials and try again', 'INVALID_CREDENTIALS');
     }
 
   } catch {

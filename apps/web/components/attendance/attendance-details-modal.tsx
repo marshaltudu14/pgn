@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -36,7 +36,6 @@ import {
   XCircle,
   AlertTriangle,
   MapPin,
-  Smartphone,
   LogIn,
   LogOut,
 } from 'lucide-react';
@@ -82,6 +81,64 @@ export function AttendanceDetailsModal({
 }: AttendanceDetailsModalProps) {
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('PENDING');
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [signedUrls, setSignedUrls] = useState<{ checkIn?: string; checkOut?: string }>({});
+
+  // Function to get JWT token from localStorage (assuming admin session)
+  const getAuthToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_token');
+    }
+    return null;
+  };
+
+  // Fetch signed URLs for images
+  useEffect(() => {
+    if (!attendanceRecord || !open) return;
+
+    const fetchSignedUrls = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+
+      try {
+        const imagePaths = [
+          attendanceRecord.checkInSelfieUrl,
+          attendanceRecord.checkOutSelfieUrl
+        ].filter(Boolean) as string[];
+
+        const urls: typeof signedUrls = {};
+
+        await Promise.all(
+          imagePaths.map(async (imagePath, index) => {
+            try {
+              const response = await fetch(`/api/attendance/image?path=${encodeURIComponent(imagePath)}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                if (index === 0 && attendanceRecord.checkInSelfieUrl) {
+                  urls.checkIn = data.signedUrl;
+                }
+                if (index === 1 && attendanceRecord.checkOutSelfieUrl) {
+                  urls.checkOut = data.signedUrl;
+                }
+              }
+            } catch (error) {
+              console.error(`Failed to fetch signed URL for ${imagePath}:`, error);
+            }
+          })
+        );
+
+        setSignedUrls(urls);
+      } catch (error) {
+        console.error('Error fetching signed URLs:', error);
+      }
+    };
+
+    fetchSignedUrls();
+  }, [attendanceRecord, open]);
 
   // Reset form when record changes
   if (attendanceRecord) {
@@ -210,12 +267,9 @@ export function AttendanceDetailsModal({
                 {attendanceRecord.device && (
                   <div className="flex justify-between items-center py-1">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Device</span>
-                    <div className="flex items-center gap-1">
-                      <Smartphone className="h-3 w-3 text-gray-500" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {attendanceRecord.device}
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {attendanceRecord.device}
+                    </span>
                   </div>
                 )}
               </div>
@@ -236,7 +290,7 @@ export function AttendanceDetailsModal({
                     <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                       {attendanceRecord.checkInSelfieUrl ? (
                         <Image
-                          src={attendanceRecord.checkInSelfieUrl}
+                          src={signedUrls.checkIn || ''}
                           alt="Check-in selfie"
                           width={128}
                           height={128}
@@ -322,7 +376,7 @@ export function AttendanceDetailsModal({
                     <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                       {attendanceRecord.checkOutSelfieUrl ? (
                         <Image
-                          src={attendanceRecord.checkOutSelfieUrl}
+                          src={signedUrls.checkOut || ''}
                           alt="Check-out selfie"
                           width={128}
                           height={128}

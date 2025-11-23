@@ -65,6 +65,7 @@ interface AttendanceState {
   error: string | null;
   updateError: string | null;
   filter: AttendanceFilters;
+  signedImageUrls: { [key: string]: string }; // Cache for signed URLs
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -76,6 +77,8 @@ interface AttendanceState {
 
   fetchAttendanceRecords: (params?: Partial<AttendanceListParams>) => Promise<void>;
   updateAttendanceVerification: (recordId: string, status: VerificationStatus, notes?: string) => Promise<void>;
+  getSignedImageUrl: (imagePath: string) => Promise<string>;
+  getSignedImageUrls: (imagePaths: string[]) => Promise<{ [key: string]: string }>;
   setSelectedAttendance: (attendance: DailyAttendanceRecord | null) => void;
   setFilters: (filters: Partial<AttendanceFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -113,6 +116,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   error: null,
   updateError: null,
   filter: {},
+  signedImageUrls: {},
   pagination: {
     currentPage: 1,
     totalPages: 1,
@@ -236,6 +240,72 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       useUIStore.getState().showNotification(userFriendlyMessage, 'error');
       throw error; // Re-throw so the calling component can handle it
     }
+  },
+
+  getSignedImageUrl: async (imagePath: string) => {
+    if (!imagePath) return '';
+
+    const { signedImageUrls } = get();
+
+    // Return cached URL if available
+    if (signedImageUrls[imagePath]) {
+      return signedImageUrls[imagePath];
+    }
+
+    try {
+      const response = await fetch(`/api/attendance/image?path=${encodeURIComponent(imagePath)}`, {
+        headers: getAuthHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.signedUrl) {
+        console.error('Failed to generate signed URL for image:', imagePath);
+        return '';
+      }
+
+      // Cache the URL
+      set((state) => ({
+        signedImageUrls: {
+          ...state.signedImageUrls,
+          [imagePath]: result.signedUrl,
+        },
+      }));
+
+      return result.signedUrl;
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      return '';
+    }
+  },
+
+  getSignedImageUrls: async (imagePaths: string[]) => {
+    const { signedImageUrls } = get();
+    const urls: { [key: string]: string } = { ...signedImageUrls };
+
+    await Promise.all(
+      imagePaths.map(async (imagePath) => {
+        if (!imagePath || urls[imagePath]) return; // Skip if no path or already cached
+
+        try {
+          const response = await fetch(`/api/attendance/image?path=${encodeURIComponent(imagePath)}`, {
+            headers: getAuthHeaders(),
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.signedUrl) {
+            urls[imagePath] = result.signedUrl;
+          }
+        } catch (error) {
+          console.error(`Failed to generate signed URL for ${imagePath}:`, error);
+        }
+      })
+    );
+
+    // Update cache
+    set({ signedImageUrls: urls });
+    return urls;
   },
 
   setSelectedAttendance: (attendance) => {

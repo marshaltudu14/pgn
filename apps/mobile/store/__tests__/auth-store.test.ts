@@ -10,10 +10,19 @@ import {
   RefreshResponse,
 } from '@pgn/shared';
 import { ApiResponse } from '@/services/api-client';
+import { SessionManager } from '@/utils/auth-utils';
 
 // Mock dependencies
 jest.mock('@/services/api-client');
 jest.mock('@react-native-async-storage/async-storage');
+jest.mock('@/utils/auth-utils', () => ({
+  SessionManager: {
+    clearSession: jest.fn(),
+    loadSession: jest.fn(),
+    saveSession: jest.fn(),
+    isSessionExpired: jest.fn(() => false),
+  },
+}));
 
 // Create proper mock interface for api
 interface MockApi {
@@ -510,13 +519,8 @@ describe('Auth Store', () => {
         await result.current.clearLocalTokens();
       });
 
-      expect(mockAsyncStorage.multiRemove).toHaveBeenCalledWith([
-        'pgn_auth_token',
-        'pgn_refresh_token',
-        'pgn_employee_data',
-        'pgn_user_id',
-        'pgn_last_login',
-      ]);
+      expect(SessionManager.clearSession).toHaveBeenCalled();
+      expect(mockAsyncStorage.removeItem).toHaveBeenCalledWith('pgn_employee_data');
     });
 
     it('should get current auth state correctly', async () => {

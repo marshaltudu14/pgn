@@ -264,24 +264,10 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             // Call attendance status API
-            const response = await fetch(`${API_BASE_URL}/attendance/status/${employeeId}`, {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${employeeId}`, // Using employeeId as token for now
-              },
-            });
+            const response = await api.get('/attendance/status');
 
-            if (!response.ok) {
-              const errorText = await response.text();
-              let errorMessage = `Failed to fetch attendance status (${response.status})`;
-
-              try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.message || errorMessage;
-              } catch {
-                errorMessage = errorText || errorMessage;
-              }
+            if (!response.success) {
+              const errorMessage = response.error || 'Failed to fetch attendance status';
 
               set({
                 isLoading: false,
@@ -291,7 +277,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               return;
             }
 
-            const apiData = await response.json();
+            const apiData = response.data;
 
             // Convert API response to store format
             set({
@@ -465,9 +451,9 @@ export const useAttendance = create<AttendanceStoreState>()(
 
             const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
-            // Build API request
+            // Build API request (handle both old and new interface)
+            const checkoutRequest = request as any; // Use type assertion to handle both interfaces
             const apiRequest: CheckOutMobileRequest = {
-              employeeId: request.employeeId,
               location: {
                 latitude: request.location.latitude,
                 longitude: request.location.longitude,
@@ -475,32 +461,24 @@ export const useAttendance = create<AttendanceStoreState>()(
                 timestamp: request.location.timestamp || Date.now(),
                 address: request.location.address || undefined,
               },
-              selfieImage: request.selfieImage,
-              confidenceScore: request.confidenceScore,
+              selfie: checkoutRequest.selfieImage || checkoutRequest.selfie,
+              faceConfidence: checkoutRequest.confidenceScore || checkoutRequest.faceConfidence,
               deviceInfo: deviceInfo,
-              checkoutNotes: request.checkoutNotes,
+              reason: checkoutRequest.checkoutNotes || checkoutRequest.reason,
             };
 
             // Call check-out API
-            const response = await fetch(`${API_BASE_URL}/attendance/checkout`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${request.employeeId}`, // Using employeeId as token for now
-              },
-              body: JSON.stringify(apiRequest),
-            });
+            const authStore = useAuth.getState();
+            const employeeId = authStore.user?.humanReadableId;
 
-            if (!response.ok) {
-              const errorText = await response.text();
-              let errorMessage = `Check-out failed (${response.status})`;
+            if (!employeeId) {
+              throw new Error('Employee ID not available');
+            }
 
-              try {
-                const errorData = JSON.parse(errorText);
-                errorMessage = errorData.message || errorMessage;
-              } catch {
-                errorMessage = errorText || errorMessage;
-              }
+            const response = await api.post('/attendance/checkout', apiRequest);
+
+            if (!response.success) {
+              const errorMessage = response.error || 'Check-out failed';
 
               set({
                 isCheckingOut: false,
@@ -513,8 +491,8 @@ export const useAttendance = create<AttendanceStoreState>()(
               };
             }
 
-            const apiResponse: AttendanceResponse = await response.json();
-            const checkOutTime = new Date(apiResponse.timestamp);
+            const apiResponse: AttendanceResponse = response.data;
+            const checkOutTime = apiResponse.timestamp ? new Date(apiResponse.timestamp) : new Date();
 
             // Convert API response to store format
             const result: AttendanceResponse = {

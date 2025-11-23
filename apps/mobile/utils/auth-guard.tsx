@@ -77,40 +77,16 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
       const result = await permissionService.checkAllPermissions();
       setPermissions(result.permissions);
 
-
-        allGranted: result.allGranted,
-        permissions: result.permissions,
-        deniedPermissions: result.deniedPermissions,
-        undeterminedPermissions: result.undeterminedPermissions,
-      });
-
       // Check if ALL required permissions are granted
       if (!result.allGranted) {
-
-
         // Try to request all permissions
         const requestResult = await permissionService.requestAllPermissions();
         setPermissions(requestResult.permissions);
 
-
-          allGranted: requestResult.allGranted,
-          permissions: requestResult.permissions,
-        });
-
         // If after requesting, STILL not all permissions are granted, show permission screen
         if (!requestResult.allGranted) {
-
-
-            camera: requestResult.permissions.camera,
-            location: requestResult.permissions.location,
-            notifications: requestResult.permissions.notifications,
-          });
           setShowPermissionsScreen(true);
-        } else {
-
         }
-      } else {
-
       }
     } catch (error) {
       console.error('Error checking permissions:', error);
@@ -164,12 +140,6 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
                       permissions.notifications === 'granted';
 
     if (!allGranted) {
-
-
-        camera: permissions.camera,
-        location: permissions.location,
-        notifications: permissions.notifications,
-      });
       setShowPermissionsScreen(true);
       return null; // Will re-render with permission screen
     }

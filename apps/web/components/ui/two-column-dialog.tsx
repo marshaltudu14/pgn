@@ -68,7 +68,7 @@ export function TwoColumnDialog({
       {/* Dialog Container */}
       <div
         ref={dialogRef}
-        className={`relative ${maxWidth} w-full mx-4 max-h-[90vh] bg-white dark:bg-black rounded-lg shadow-2xl overflow-hidden flex flex-col`}
+        className={`relative ${maxWidth} w-full mx-4 max-h-[90vh] md:max-h-[90vh] bg-white dark:bg-black rounded-lg shadow-2xl overflow-hidden flex flex-col md:h-auto`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-black">
@@ -93,7 +93,7 @@ export function TwoColumnDialog({
         </div>
 
         {/* Content - Two Column Layout */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 md:overflow-hidden overflow-y-auto md:overflow-y-hidden">
           {children}
         </div>
       </div>
@@ -108,7 +108,7 @@ interface TwoColumnDialogContentProps {
 
 export function TwoColumnDialogContent({ children, className = '' }: TwoColumnDialogContentProps) {
   return (
-    <div className={`flex flex-col md:flex-row h-[calc(90vh-80px)] bg-white dark:bg-black ${className}`}>
+    <div className={`flex flex-col md:flex-row bg-white dark:bg-black md:h-[calc(90vh-80px)] md:overflow-hidden ${className}`}>
       {children}
     </div>
   );
@@ -121,7 +121,7 @@ interface TwoColumnDialogLeftProps {
 
 export function TwoColumnDialogLeft({ children, className = '' }: TwoColumnDialogLeftProps) {
   return (
-    <div className={`w-full md:w-1/2 h-full md:h-auto md:flex-shrink-0 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black ${className}`}>
+    <div className={`w-full md:w-1/2 md:h-full md:flex-shrink-0 border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black ${className}`}>
       {children}
     </div>
   );
@@ -134,7 +134,7 @@ interface TwoColumnDialogRightProps {
 
 export function TwoColumnDialogRight({ children, className = '' }: TwoColumnDialogRightProps) {
   return (
-    <div className={`w-full md:w-1/2 h-full md:h-auto overflow-y-auto bg-white dark:bg-black ${className}`}>
+    <div className={`w-full md:w-1/2 md:h-full md:flex-shrink-0 md:overflow-y-auto bg-white dark:bg-black ${className}`}>
       {children}
     </div>
   );

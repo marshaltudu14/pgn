@@ -1,5 +1,6 @@
 import { api, checkApiConnectivity } from '../api-client';
 import { ApiError } from '../api-client';
+import { SessionManager } from '@/utils/auth-utils';
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -31,6 +32,16 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   getItem: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
+}));
+
+// Mock SessionManager
+jest.mock('@/utils/auth-utils', () => ({
+  SessionManager: {
+    loadSession: jest.fn(),
+    saveSession: jest.fn(),
+    clearSession: jest.fn(),
+    isSessionExpired: jest.fn(() => false),
+  },
 }));
 
 describe('API Client', () => {
@@ -181,6 +192,9 @@ describe('API Client', () => {
 
   describe('Error Handling', () => {
     it('should handle 401 errors', async () => {
+      // Mock SessionManager to return no session so it doesn't try to refresh token
+      (SessionManager.loadSession as jest.Mock).mockResolvedValue(null);
+
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 401,
@@ -191,8 +205,8 @@ describe('API Client', () => {
       const result = await api.get('/protected');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Authentication failed. Please login again.');
-      expect(mockAuthState.clearSession).toHaveBeenCalled();
+      expect(result.error).toBe('Session expired. Please login again.');
+      expect(SessionManager.clearSession).toHaveBeenCalled();
     });
 
     it('should handle 403 errors', async () => {

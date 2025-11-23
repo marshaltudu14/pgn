@@ -28,6 +28,7 @@ import {
   VerificationStatus,
   VERIFICATION_STATUS_CONFIG,
 } from '@pgn/shared';
+import { useAttendanceStore } from '@/app/lib/stores/attendanceStore';
 import {
   Clock,
   User,
@@ -81,64 +82,24 @@ export function AttendanceDetailsModal({
 }: AttendanceDetailsModalProps) {
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('PENDING');
   const [verificationNotes, setVerificationNotes] = useState('');
-  const [signedUrls, setSignedUrls] = useState<{ checkIn?: string; checkOut?: string }>({});
 
-  // Function to get JWT token from localStorage (assuming admin session)
-  const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
-    }
-    return null;
-  };
+  const { getSignedImageUrls, signedImageUrls } = useAttendanceStore();
 
-  // Fetch signed URLs for images
+  // Fetch signed URLs for images using Zustand store
   useEffect(() => {
     if (!attendanceRecord || !open) return;
 
     const fetchSignedUrls = async () => {
-      const token = getAuthToken();
-      if (!token) return;
+      const imagePaths = [
+        attendanceRecord.checkInSelfieUrl,
+        attendanceRecord.checkOutSelfieUrl
+      ].filter(Boolean) as string[];
 
-      try {
-        const imagePaths = [
-          attendanceRecord.checkInSelfieUrl,
-          attendanceRecord.checkOutSelfieUrl
-        ].filter(Boolean) as string[];
-
-        const urls: typeof signedUrls = {};
-
-        await Promise.all(
-          imagePaths.map(async (imagePath, index) => {
-            try {
-              const response = await fetch(`/api/attendance/image?path=${encodeURIComponent(imagePath)}`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                }
-              });
-
-              if (response.ok) {
-                const data = await response.json();
-                if (index === 0 && attendanceRecord.checkInSelfieUrl) {
-                  urls.checkIn = data.signedUrl;
-                }
-                if (index === 1 && attendanceRecord.checkOutSelfieUrl) {
-                  urls.checkOut = data.signedUrl;
-                }
-              }
-            } catch (error) {
-              console.error(`Failed to fetch signed URL for ${imagePath}:`, error);
-            }
-          })
-        );
-
-        setSignedUrls(urls);
-      } catch (error) {
-        console.error('Error fetching signed URLs:', error);
-      }
+      await getSignedImageUrls(imagePaths);
     };
 
     fetchSignedUrls();
-  }, [attendanceRecord, open]);
+  }, [attendanceRecord, open, getSignedImageUrls]);
 
   // Reset form when record changes
   if (attendanceRecord) {
@@ -290,7 +251,7 @@ export function AttendanceDetailsModal({
                     <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                       {attendanceRecord.checkInSelfieUrl ? (
                         <Image
-                          src={signedUrls.checkIn || ''}
+                          src={signedImageUrls[attendanceRecord.checkInSelfieUrl] || ''}
                           alt="Check-in selfie"
                           width={128}
                           height={128}
@@ -376,7 +337,7 @@ export function AttendanceDetailsModal({
                     <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                       {attendanceRecord.checkOutSelfieUrl ? (
                         <Image
-                          src={signedUrls.checkOut || ''}
+                          src={signedImageUrls[attendanceRecord.checkOutSelfieUrl] || ''}
                           alt="Check-out selfie"
                           width={128}
                           height={128}

@@ -109,7 +109,8 @@
       "Bash(mv:*)",
       "Bash(timeout:*)",
       "mcp__ide__executeCode",
-      "Bash(jupyter notebook:*)"
+      "Bash(jupyter notebook:*)",
+      "Bash(supabase storage list:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
 } from 'react-native';
 import { useAuth } from '@/store/auth-store';
+import { useAttendance } from '@/store/attendance-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useNetworkMonitor } from '@/hooks/use-network-monitor';
-import { API_BASE_URL } from '@/services/api';
 import { COLORS } from '@/constants';
 import { homeStyles } from '@/styles/dashboard/home-styles';
 import { Calendar, Clock, TrendingUp, Activity, Wifi, WifiOff } from 'lucide-react-native';
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const { fetchAttendanceHistory, attendanceHistory } = useAttendance();
   const colorScheme = useColorScheme();
   const { connectionDisplayInfo } = useNetworkMonitor();
   const [weeklyStats, setWeeklyStats] = useState({
@@ -39,43 +40,37 @@ export default function HomeScreen() {
   };
 
   // Load weekly stats data
-  const loadWeeklyStats = async () => {
+  const loadWeeklyStats = useCallback(async () => {
     try {
       if (!user?.humanReadableId) {
         return;
       }
 
-      // Call attendance history API
-      const response = await fetch(`${API_BASE_URL}/attendance/history/${user.humanReadableId}?days=7`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${user.humanReadableId}`, // Using employeeId as token for now
-        },
-      });
-
-      if (!response.ok) {
-        console.error('Failed to fetch attendance history for stats');
-        return;
-      }
-
-      const data = await response.json();
-      const attendanceData = data.records || [];
-
+      // Calculate date range for last 7 days
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      const today = new Date();
+
+      // Use attendance store to fetch history
+      await fetchAttendanceHistory({
+        employeeId: user.humanReadableId,
+        dateFrom: oneWeekAgo.toISOString().split('T')[0],
+        dateTo: today.toISOString().split('T')[0],
+        limit: 100
+      });
+
+      const attendanceData = attendanceHistory;
 
       // Filter for records that have meaningful data (checked in)
-      const weekData = attendanceData.filter(record =>
-        new Date(record.date) >= oneWeekAgo &&
+      const weekData = attendanceData.filter((record) =>
         (record.workHours !== undefined || record.checkInTime !== undefined)
       );
 
       // Calculate stats
-      const daysPresent = weekData.filter(r => r.checkInTime).length;
-      const totalHours = weekData.reduce((sum, record) => sum + (record.workHours || 0), 0);
+      const daysPresent = weekData.filter((r) => r.checkInTime).length;
+      const totalHours = weekData.reduce((sum: number, record) => sum + (record.workHours || 0), 0);
       const avgHours = daysPresent > 0 ? totalHours / daysPresent : 0;
-      const totalDistance = weekData.reduce((sum, record) => sum + ((record.locationPath?.length || 0) * 100), 0);
+      const totalDistance = weekData.reduce((sum: number, record) => sum + ((record.locationPath?.length || 0) * 100), 0);
 
       setWeeklyStats({
         daysPresent,
@@ -87,7 +82,7 @@ export default function HomeScreen() {
       // Silently handle error
       console.error('Error loading weekly stats:', error);
     }
-  };
+  }, [user?.humanReadableId, fetchAttendanceHistory, attendanceHistory]);
 
   // Format distance
   const formatDistance = (meters: number) => {
@@ -97,7 +92,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadWeeklyStats();
-  }, []);
+  }, [loadWeeklyStats]);
 
   // Get first name
   const getFirstName = () => {

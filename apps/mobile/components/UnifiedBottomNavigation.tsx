@@ -1,11 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { COLORS } from '@/constants';
-import { useAuth } from '@/store/auth-store';
-import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
 
 interface TabItem {
   key: string;
@@ -67,7 +65,6 @@ export default function UnifiedBottomNavigation({
 }: UnifiedBottomNavigationProps) {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
-  const auth = useAuth();
 
   
   const handleHomePress = () => {

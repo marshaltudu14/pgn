@@ -817,11 +817,11 @@ export class AttendanceService {
  * Generate signed URL for attendance selfie images (for private bucket access)
  */
 export async function generateAttendanceImageUrl(imagePath: string): Promise<string> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   try {
     const { data, error } = await supabase.storage
-      .from('attendance-selfies')
+      .from('attendance')
       .createSignedUrl(imagePath, 60 * 60); // 1 hour expiry
 
     if (error) {

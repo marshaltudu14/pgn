@@ -32,7 +32,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.validationError(message);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Validation error', message },
+        { error: 'Validation error', message, code: 'VALIDATION_ERROR' },
         { status: 400 }
       );
       expect(response.status).toBe(400);
@@ -43,7 +43,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.validationError(message, 422);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Validation error', message },
+        { error: 'Validation error', message, code: 'VALIDATION_ERROR' },
         { status: 422 }
       );
       expect(response.status).toBe(422);
@@ -55,7 +55,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.authError();
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Authentication failed', message: 'Authentication failed' },
+        { error: 'Authentication failed', message: 'Authentication failed', code: 'INVALID_CREDENTIALS' },
         { status: 401 }
       );
       expect(response.status).toBe(401);
@@ -66,7 +66,7 @@ describe('AuthErrorService', () => {
       AuthErrorService.authError(message);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Authentication failed', message },
+        { error: 'Authentication failed', message, code: 'INVALID_CREDENTIALS' },
         { status: 401 }
       );
     });
@@ -78,7 +78,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.accessDeniedError(message);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Access denied', message },
+        { error: 'Access denied', message, code: 'ACCESS_DENIED' },
         { status: 403 }
       );
       expect(response.status).toBe(403);
@@ -90,7 +90,7 @@ describe('AuthErrorService', () => {
       AuthErrorService.accessDeniedError(message, status);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Access denied', message, employmentStatus: status },
+        { error: 'Access denied', message, employmentStatus: status, code: 'ACCESS_DENIED' },
         { status: 403 }
       );
     });
@@ -101,7 +101,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.rateLimitError();
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Rate limit exceeded', message: 'Too many requests, please try again later.' },
+        { error: 'Rate limit exceeded', message: 'Too many requests, please try again later.', code: 'RATE_LIMITED' },
         { status: 429 }
       );
       expect(response.status).toBe(429);
@@ -112,7 +112,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.rateLimitError(undefined, retryAfter);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Rate limit exceeded', message: 'Too many requests, please try again later.', retryAfter },
+        { error: 'Rate limit exceeded', message: 'Too many requests, please try again later.', retryAfter, code: 'RATE_LIMITED' },
         { status: 429 }
       );
       expect(response.headers.set).toHaveBeenCalledWith('Retry-After', '60');
@@ -124,7 +124,7 @@ describe('AuthErrorService', () => {
       const response = AuthErrorService.serverError();
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { error: 'Internal server error', message: 'An unexpected error occurred' },
+        { error: 'Internal server error', message: 'An unexpected error occurred', code: 'SERVER_ERROR' },
         { status: 500 }
       );
       expect(response.status).toBe(500);
@@ -182,10 +182,11 @@ describe('Employment Status Utilities', () => {
       createEmploymentStatusError(status);
       
       expect(NextResponse.json).toHaveBeenCalledWith(
-        { 
-          error: 'Access denied', 
+        {
+          error: 'Access denied',
           message: EmploymentStatusMessages.SUSPENDED,
-          employmentStatus: status 
+          employmentStatus: status,
+          code: 'ACCOUNT_SUSPENDED'
         },
         { status: 403 }
       );

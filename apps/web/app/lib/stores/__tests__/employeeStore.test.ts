@@ -16,6 +16,15 @@ jest.mock('../uiStore', () => ({
   }
 }));
 
+// Mock the auth store
+jest.mock('../authStore', () => ({
+  useAuthStore: {
+    getState: () => ({
+      token: null // No token for web admin users
+    })
+  }
+}));
+
 // Mock fetch
 global.fetch = jest.fn();
 
@@ -224,7 +233,14 @@ describe('useEmployeeStore', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/employees?page=2&limit=10&search=John&employment_status=ACTIVE&primary_region=North&sort_by=first_name&sort_order=asc'
+        '/api/employees?page=2&limit=10&search=John&employment_status=ACTIVE&primary_region=North&sort_by=first_name&sort_order=asc',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-client-info': 'pgn-web-client',
+            'User-Agent': 'pgn-admin-dashboard/1.0.0'
+          }
+        }
       );
     });
 
@@ -247,7 +263,14 @@ describe('useEmployeeStore', () => {
       await store.fetchEmployees();
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/employees?page=1&limit=20&sort_by=created_at&sort_order=desc'
+        '/api/employees?page=1&limit=20&sort_by=created_at&sort_order=desc',
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-client-info': 'pgn-web-client',
+            'User-Agent': 'pgn-admin-dashboard/1.0.0'
+          }
+        }
       );
     });
   });
@@ -291,6 +314,8 @@ describe('useEmployeeStore', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-client-info': 'pgn-web-client',
+          'User-Agent': 'pgn-admin-dashboard/1.0.0'
         },
         body: JSON.stringify(mockCreateEmployeeData),
       });
@@ -603,7 +628,13 @@ describe('useEmployeeStore', () => {
       const store = useEmployeeStore.getState();
       await store.refetch();
 
-      expect(fetch).toHaveBeenCalledWith('/api/employees?page=1&limit=20&sort_by=created_at&sort_order=desc');
+      expect(fetch).toHaveBeenCalledWith('/api/employees?page=1&limit=20&sort_by=created_at&sort_order=desc', {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-info': 'pgn-web-client',
+          'User-Agent': 'pgn-admin-dashboard/1.0.0'
+        }
+      });
     });
   });
 

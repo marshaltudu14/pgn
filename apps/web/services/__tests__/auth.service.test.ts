@@ -34,6 +34,7 @@ jest.mock('@/utils/supabase/server', () => ({
 jest.mock('@/lib/jwt', () => ({
   jwtService: {
     generateToken: jest.fn(),
+    generateRefreshToken: jest.fn(),
     refreshToken: jest.fn(),
     validateToken: jest.fn(),
   },
@@ -90,13 +91,17 @@ describe('AuthService', () => {
 
       // Mock JWT generation
       const mockToken = 'mock.jwt.token';
+      const mockRefreshToken = 'mock.refresh.token';
       (jwtService.generateToken as jest.Mock).mockReturnValue(mockToken);
+      (jwtService.generateRefreshToken as jest.Mock).mockReturnValue(mockRefreshToken);
 
       const result = await authService.login(validLoginRequest);
 
       expect(result).toEqual({
         message: 'Login successful',
         token: mockToken,
+        refreshToken: mockRefreshToken,
+        expiresIn: 900, // 15 minutes
         employee: {
           id: mockEmployeeData.id,
           humanReadableId: mockEmployeeData.human_readable_user_id,
@@ -212,6 +217,8 @@ describe('AuthService', () => {
       expect(result).toEqual({
         message: 'Login successful',
         token: '', // No JWT for admin users
+        refreshToken: '', // No refresh token for admin users
+        expiresIn: 0, // No expiration for admin users
         employee: {
           id: 'admin-auth-id',
           humanReadableId: 'admin@company.com',
@@ -267,12 +274,16 @@ describe('AuthService', () => {
 
       // Mock new token generation
       const mockNewToken = 'new.jwt.token';
+      const mockNewRefreshToken = 'new.refresh.token';
       (jwtService.generateToken as jest.Mock).mockReturnValue(mockNewToken);
+      (jwtService.generateRefreshToken as jest.Mock).mockReturnValue(mockNewRefreshToken);
 
       const result = await authService.refreshToken(validRefreshRequest);
 
       expect(result).toEqual({
         token: mockNewToken,
+        refreshToken: mockNewRefreshToken,
+        expiresIn: 900, // 15 minutes
       });
 
       expect(jwtService.validateToken).toHaveBeenCalledWith('existing.jwt.token');

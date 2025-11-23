@@ -99,6 +99,9 @@ interface AttendanceStoreState {
   offlineQueueCount: number;
   isOnline: boolean;
 
+  // Image cache state
+  signedImageUrls: { [key: string]: string };
+
   // Camera state
   cameraPermission: boolean;
   locationPermission: boolean;

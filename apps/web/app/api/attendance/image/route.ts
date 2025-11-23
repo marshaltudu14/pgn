@@ -13,7 +13,10 @@ const imageHandler = async (req: NextRequest): Promise<NextResponse> => {
     const { searchParams } = new URL(req.url);
     const imagePath = searchParams.get('path');
 
+    console.log('🔍 [DEBUG] Attendance image API called with path:', imagePath);
+
     if (!imagePath) {
+      console.log('❌ [ERROR] Missing image path parameter in attendance image API');
       const response = NextResponse.json(
         { error: 'Missing image path parameter' },
         { status: 400 }
@@ -21,8 +24,12 @@ const imageHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
+    console.log('🔍 [DEBUG] Generating signed URL for attendance image:', imagePath);
+
     // Generate signed URL using service layer
     const signedUrl = await generateAttendanceImageUrl(imagePath);
+
+    console.log('✅ [SUCCESS] Generated signed URL successfully for path:', imagePath, 'URL length:', signedUrl.length);
 
     const response = NextResponse.json({
       signedUrl,
@@ -31,7 +38,7 @@ const imageHandler = async (req: NextRequest): Promise<NextResponse> => {
     return addSecurityHeaders(response);
 
   } catch (error) {
-    console.error('Error in attendance image API:', error);
+    console.error('❌ [ERROR] Error in attendance image API:', error);
     const response = NextResponse.json(
       { error: 'Failed to generate image URL' },
       { status: 500 }

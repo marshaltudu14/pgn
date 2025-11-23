@@ -89,13 +89,28 @@ export function AttendanceDetailsModal({
   useEffect(() => {
     if (!attendanceRecord || !open) return;
 
+    console.log('🔍 [DEBUG] AttendanceDetailsModal: Fetching signed URLs for attendance record:', attendanceRecord.id);
+
     const fetchSignedUrls = async () => {
       const imagePaths = [
         attendanceRecord.checkInSelfieUrl,
         attendanceRecord.checkOutSelfieUrl
       ].filter(Boolean) as string[];
 
-      await getSignedImageUrls(imagePaths);
+      console.log('🔍 [DEBUG] AttendanceDetailsModal: Image paths to fetch:', imagePaths);
+
+      if (imagePaths.length === 0) {
+        console.log('🔍 [DEBUG] AttendanceDetailsModal: No image paths found for this record');
+        return;
+      }
+
+      const urls = await getSignedImageUrls(imagePaths);
+
+      console.log('🔍 [DEBUG] AttendanceDetailsModal: Got signed URLs:', {
+        checkIn: !!urls[attendanceRecord.checkInSelfieUrl!],
+        checkOut: !!urls[attendanceRecord.checkOutSelfieUrl!],
+        totalUrls: Object.keys(urls).length
+      });
     };
 
     fetchSignedUrls();
@@ -121,14 +136,28 @@ export function AttendanceDetailsModal({
 
   if (!attendanceRecord) return null;
 
-  // Convert path data format for map
-  const mapPathData = attendanceRecord.locationPath?.map(point => ({
-    latitude: point.latitude,
-    longitude: point.longitude,
-    timestamp: point.timestamp,
-    accuracy: point.accuracy,
-    batteryLevel: point.batteryLevel,
-  })) || [];
+  // Convert path data format for map with validation
+  const mapPathData = attendanceRecord.locationPath
+    ?.filter(point => {
+      const lat = typeof point.latitude === 'string' ? parseFloat(point.latitude) : point.latitude;
+      const lng = typeof point.longitude === 'string' ? parseFloat(point.longitude) : point.longitude;
+      return !isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    })
+    .map(point => ({
+      latitude: point.latitude,
+      longitude: point.longitude,
+      timestamp: point.timestamp,
+      accuracy: point.accuracy,
+      batteryLevel: point.batteryLevel,
+    })) || [];
+
+  // Check if we have valid check-in coordinates (minimum requirement for showing map)
+  const hasValidCheckInLocation = !!(
+    attendanceRecord.checkInLocation?.latitude &&
+    attendanceRecord.checkInLocation?.longitude &&
+    !isNaN(typeof attendanceRecord.checkInLocation.latitude === 'string' ? parseFloat(attendanceRecord.checkInLocation.latitude) : attendanceRecord.checkInLocation.latitude) &&
+    !isNaN(typeof attendanceRecord.checkInLocation.longitude === 'string' ? parseFloat(attendanceRecord.checkInLocation.longitude) : attendanceRecord.checkInLocation.longitude)
+  );
 
   return (
     <TwoColumnDialog
@@ -150,12 +179,24 @@ export function AttendanceDetailsModal({
               <MapPin className="h-5 w-5 text-blue-600" />
               <h3 className="text-lg font-semibold">Location & Path</h3>
             </div>
-            <AttendancePathMap
-              checkInLocation={attendanceRecord.checkInLocation}
-              checkOutLocation={attendanceRecord.checkOutLocation}
-              locationPath={mapPathData}
-              height="500px"
-            />
+            {hasValidCheckInLocation ? (
+              <AttendancePathMap
+                checkInLocation={attendanceRecord.checkInLocation}
+                checkOutLocation={attendanceRecord.checkOutLocation}
+                locationPath={mapPathData}
+                height="500px"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96 bg-gray-100 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                <div className="text-center">
+                  <MapPin className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 dark:text-gray-400 font-medium">No Check-in Location Available</p>
+                  <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
+                    No check-in coordinates recorded for this attendance
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Path Statistics */}
             {attendanceRecord.locationPath && attendanceRecord.locationPath.length > 0 && (
@@ -248,27 +289,46 @@ export function AttendanceDetailsModal({
                 <div className="flex gap-6">
                   {/* Left: Image */}
                   <div className="flex-shrink-0">
-                    <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
                       {attendanceRecord.checkInSelfieUrl ? (
-                        <Image
-                          src={signedImageUrls[attendanceRecord.checkInSelfieUrl] || ''}
-                          alt="Check-in selfie"
-                          width={128}
-                          height={128}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML = `
-                              <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
+                        <>
+                          <Image
+                            src={signedImageUrls[attendanceRecord.checkInSelfieUrl] || ''}
+                            alt="Check-in selfie"
+                            width={128}
+                            height={128}
+                            className="w-full h-full object-cover"
+                            onLoad={() => {
+                              console.log('✅ [SUCCESS] Check-in image loaded successfully for path:', attendanceRecord.checkInSelfieUrl);
+                            }}
+                            onError={(e) => {
+                              console.error('❌ [ERROR] Check-in image failed to load:', {
+                                imagePath: attendanceRecord.checkInSelfieUrl,
+                                signedUrl: signedImageUrls[attendanceRecord.checkInSelfieUrl],
+                                hasSignedUrl: !!signedImageUrls[attendanceRecord.checkInSelfieUrl],
+                                urlLength: signedImageUrls[attendanceRecord.checkInSelfieUrl]?.length
+                              });
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = `
+                                <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                  </svg>
+                                </div>
+                              `;
+                            }}
+                          />
+                          {!signedImageUrls[attendanceRecord.checkInSelfieUrl] && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                              <div className="text-center text-gray-400">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto mb-2"></div>
+                                <span className="text-xs">Loading...</span>
                               </div>
-                            `;
-                          }}
-                        />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                           <span className="text-sm">--</span>
@@ -334,27 +394,46 @@ export function AttendanceDetailsModal({
                 <div className="flex gap-6">
                   {/* Left: Image */}
                   <div className="flex-shrink-0">
-                    <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
                       {attendanceRecord.checkOutSelfieUrl ? (
-                        <Image
-                          src={signedImageUrls[attendanceRecord.checkOutSelfieUrl] || ''}
-                          alt="Check-out selfie"
-                          width={128}
-                          height={128}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML = `
-                              <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
+                        <>
+                          <Image
+                            src={signedImageUrls[attendanceRecord.checkOutSelfieUrl] || ''}
+                            alt="Check-out selfie"
+                            width={128}
+                            height={128}
+                            className="w-full h-full object-cover"
+                            onLoad={() => {
+                              console.log('✅ [SUCCESS] Check-out image loaded successfully for path:', attendanceRecord.checkOutSelfieUrl);
+                            }}
+                            onError={(e) => {
+                              console.error('❌ [ERROR] Check-out image failed to load:', {
+                                imagePath: attendanceRecord.checkOutSelfieUrl,
+                                signedUrl: signedImageUrls[attendanceRecord.checkOutSelfieUrl],
+                                hasSignedUrl: !!signedImageUrls[attendanceRecord.checkOutSelfieUrl],
+                                urlLength: signedImageUrls[attendanceRecord.checkOutSelfieUrl]?.length
+                              });
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = `
+                                <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                  </svg>
+                                </div>
+                              `;
+                            }}
+                          />
+                          {!signedImageUrls[attendanceRecord.checkOutSelfieUrl] && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                              <div className="text-center text-gray-400">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto mb-2"></div>
+                                <span className="text-xs">Loading...</span>
                               </div>
-                            `;
-                          }}
-                        />
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                           <span className="text-sm">--</span>
@@ -521,19 +600,26 @@ export function AttendanceDetailsModal({
 }
 
 // Helper function to calculate total distance from path data
-function calculateTotalDistance(path: Array<{ latitude: number; longitude: number }>): number {
-  if (path.length < 2) return 0;
+function calculateTotalDistance(path: Array<{ latitude: number | string; longitude: number | string }>): number {
+  if (!path || path.length < 2) return 0;
 
   let totalDistance = 0;
   for (let i = 1; i < path.length; i++) {
     const prev = path[i - 1];
     const curr = path[i];
-    totalDistance += calculateDistance(
-      prev.latitude,
-      prev.longitude,
-      curr.latitude,
-      curr.longitude
-    );
+
+    // Convert coordinates to numbers and validate
+    const prevLat = typeof prev.latitude === 'string' ? parseFloat(prev.latitude) : prev.latitude;
+    const prevLng = typeof prev.longitude === 'string' ? parseFloat(prev.longitude) : prev.longitude;
+    const currLat = typeof curr.latitude === 'string' ? parseFloat(curr.latitude) : curr.latitude;
+    const currLng = typeof curr.longitude === 'string' ? parseFloat(curr.longitude) : curr.longitude;
+
+    // Skip invalid coordinates
+    if (isNaN(prevLat) || isNaN(prevLng) || isNaN(currLat) || isNaN(currLng)) continue;
+    if (prevLat < -90 || prevLat > 90 || currLat < -90 || currLat > 90) continue;
+    if (prevLng < -180 || prevLng > 180 || currLng < -180 || currLng > 180) continue;
+
+    totalDistance += calculateDistance(prevLat, prevLng, currLat, currLng);
   }
 
   return totalDistance / 1000; // Convert to kilometers

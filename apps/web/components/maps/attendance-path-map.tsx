@@ -1,33 +1,11 @@
 /**
- * Attendance Path Map Component
- * Uses OpenStreetMap with Leaflet to display location path and check-in/out points
+ * Simple Attendance Path Map Component
+ * Uses Leaflet with a straightforward implementation
  */
 
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-
-// Dynamically import Leaflet and its CSS to avoid SSR issues
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const importLeaflet = async () => {
-  const L = await import('leaflet');
-
-  // Import CSS with a workaround for TypeScript
-  if (typeof window !== 'undefined') {
-    await import('leaflet/dist/leaflet.css');
-  }
-
-  // Fix Leaflet's default icon issue with webpack
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  });
-
-  return L;
-};
 
 interface LocationPoint {
   latitude: number;
@@ -52,35 +30,6 @@ interface AttendancePathMapProps {
   height?: string;
 }
 
-// Custom icons for check-in and check-out points
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const createCustomIcon = (L: any, type: 'checkin' | 'checkout') => {
-  const color = type === 'checkin' ? '#10b981' : '#ef4444';
-  const symbol = type === 'checkin' ? '🟢' : '🔴';
-
-  return L.divIcon({
-    html: `
-      <div style="
-        background-color: ${color};
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-      ">
-        ${symbol}
-      </div>
-    `,
-    className: 'custom-marker',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-  });
-};
-
 export function AttendancePathMap({
   checkInLocation,
   checkOutLocation,
@@ -88,24 +37,15 @@ export function AttendancePathMap({
   className = '',
   height = '400px',
 }: AttendancePathMapProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [L, setL] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Function to reset map view to check-in location
+  // Function to reset map to check-in location
   const resetMapToCheckIn = () => {
-    if (mapInstanceRef.current && checkInLocation) {
-      const lat = typeof checkInLocation.latitude === 'string'
-        ? parseFloat(checkInLocation.latitude)
-        : checkInLocation.latitude;
-      const lng = typeof checkInLocation.longitude === 'string'
-        ? parseFloat(checkInLocation.longitude)
-        : checkInLocation.longitude;
+    if (mapInstanceRef.current && checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
+      const lat = Number(checkInLocation.latitude);
+      const lng = Number(checkInLocation.longitude);
 
       if (!isNaN(lat) && !isNaN(lng)) {
         mapInstanceRef.current.setView([lat, lng], 15);
@@ -114,49 +54,75 @@ export function AttendancePathMap({
   };
 
   useEffect(() => {
-    let mounted = true;
+    let L: any;
 
-    const loadLeaflet = async () => {
+    const initializeMap = async () => {
       try {
-        const leaflet = await importLeaflet();
-        if (mounted) {
-          setL(leaflet);
-          setIsLoading(false);
+        // Dynamically import Leaflet
+        const leafletModule = await import('leaflet');
+        L = leafletModule.default;
+
+        // Import CSS
+        if (typeof window !== 'undefined') {
+          await import('leaflet/dist/leaflet.css');
         }
+
+        // Fix default icon paths
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
+
+        if (!mapRef.current) return;
+
+        // Check if map is already initialized
+        if (mapRef.current._leaflet_id) {
+          console.log('Map already initialized, skipping...');
+          return;
+        }
+
+        // Determine initial center (prefer check-in location)
+        let initialLat = 22.18118290; // Default coordinates
+        let initialLng = 84.87733770;
+        let initialZoom = 13;
+
+        if (checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
+          initialLat = Number(checkInLocation.latitude);
+          initialLng = Number(checkInLocation.longitude);
+          initialZoom = 15;
+        } else if (checkOutLocation && checkOutLocation.latitude && checkOutLocation.longitude) {
+          initialLat = Number(checkOutLocation.latitude);
+          initialLng = Number(checkOutLocation.longitude);
+          initialZoom = 15;
+        }
+
+        // Initialize map
+        const map = L.map(mapRef.current).setView([initialLat, initialLng], initialZoom);
+
+        // Add OpenStreetMap tiles
+        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map);
+
+        // Store map instance
+        mapInstanceRef.current = map;
+
+        // Add markers after a short delay to ensure map is ready
+        setTimeout(() => {
+          addMarkersAndPath(L, map);
+          setIsMapReady(true);
+        }, 100);
+
       } catch (error) {
-        console.error('Failed to load Leaflet:', error);
-        if (mounted) {
-          setIsLoading(false);
-        }
+        console.error('Failed to initialize map:', error);
+        setIsMapReady(false);
       }
     };
 
-    loadLeaflet();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!L || !mapRef.current || isLoading) return;
-
-    try {
-      // Initialize map with OpenStreetMap tiles
-      const map = L.map(mapRef.current).setView([0, 0], 13);
-
-      // Add OpenStreetMap tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      mapInstanceRef.current = map;
-      // Defer state update to avoid synchronous setState in effect
-      setTimeout(() => setIsMapReady(true), 0);
-    } catch (error) {
-      console.error('Failed to initialize map:', error);
-    }
+    initializeMap();
 
     // Cleanup
     return () => {
@@ -165,44 +131,46 @@ export function AttendancePathMap({
         mapInstanceRef.current = null;
       }
     };
-  }, [L, isLoading]);
+  }, []); // Only run once on mount
 
+  // Update markers when location data changes
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!mapInstanceRef.current || !isMapReady || !L) return;
+    if (isMapReady && mapInstanceRef.current) {
+      const L = window.L;
+      if (L) {
+        addMarkersAndPath(L, mapInstanceRef.current);
+      }
+    }
+  }, [isMapReady, checkInLocation, checkOutLocation, locationPath]);
 
-    const map = mapInstanceRef.current;
+  function addMarkersAndPath(L: any, map: any) {
+    if (!map || !L) return;
 
-    // Clear existing layers
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Clear existing markers
     map.eachLayer((layer: any) => {
-      // Check if it's a marker or polyline based on methods available
-      if (layer.bindPopup !== undefined) {
+      if (layer instanceof L.Marker || layer instanceof L.Polyline) {
         map.removeLayer(layer);
       }
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const markers: any[] = [];
-    const bounds = new L.LatLngBounds();
+    const bounds = L.latLngBounds();
 
-    // Add check-in marker (convert string coordinates to numbers if needed)
-    if (checkInLocation) {
-      const lat = typeof checkInLocation.latitude === 'string'
-        ? parseFloat(checkInLocation.latitude)
-        : checkInLocation.latitude;
-      const lng = typeof checkInLocation.longitude === 'string'
-        ? parseFloat(checkInLocation.longitude)
-        : checkInLocation.longitude;
-
-      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-        const checkInMarker = L.marker(
-          [lat, lng],
-          { icon: createCustomIcon(L, 'checkin') }
-        );
+    // Add check-in marker
+    if (checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
+      const checkInMarker = L.marker([
+        Number(checkInLocation.latitude),
+        Number(checkInLocation.longitude)
+      ], {
+        icon: L.divIcon({
+          html: '<div style="background-color: #10b981; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px;">🟢</div>',
+          className: 'custom-marker',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        })
+      });
 
       checkInMarker.bindPopup(`
-        <div class="text-sm">
+        <div style="font-size: 14px;">
           <strong>Check-in</strong><br>
           ${checkInLocation.address || 'Location recorded'}<br>
           <small>Accuracy: ${checkInLocation.accuracy ? `±${checkInLocation.accuracy}m` : 'N/A'}</small>
@@ -210,28 +178,25 @@ export function AttendancePathMap({
       `);
 
       checkInMarker.addTo(map);
-      markers.push(checkInMarker);
-      bounds.extend([lat, lng]);
-      }
+      bounds.extend([Number(checkInLocation.latitude), Number(checkInLocation.longitude)]);
     }
 
-    // Add check-out marker (convert string coordinates to numbers if needed)
-    if (checkOutLocation) {
-      const lat = typeof checkOutLocation.latitude === 'string'
-        ? parseFloat(checkOutLocation.latitude)
-        : checkOutLocation.latitude;
-      const lng = typeof checkOutLocation.longitude === 'string'
-        ? parseFloat(checkOutLocation.longitude)
-        : checkOutLocation.longitude;
-
-      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-        const checkOutMarker = L.marker(
-          [lat, lng],
-          { icon: createCustomIcon(L, 'checkout') }
-        );
+    // Add check-out marker
+    if (checkOutLocation && checkOutLocation.latitude && checkOutLocation.longitude) {
+      const checkOutMarker = L.marker([
+        Number(checkOutLocation.latitude),
+        Number(checkOutLocation.longitude)
+      ], {
+        icon: L.divIcon({
+          html: '<div style="background-color: #ef4444; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px;">🔴</div>',
+          className: 'custom-marker',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        })
+      });
 
       checkOutMarker.bindPopup(`
-        <div class="text-sm">
+        <div style="font-size: 14px;">
           <strong>Check-out</strong><br>
           ${checkOutLocation.address || 'Location recorded'}<br>
           <small>Accuracy: ${checkOutLocation.accuracy ? `±${checkOutLocation.accuracy}m` : 'N/A'}</small>
@@ -239,44 +204,36 @@ export function AttendancePathMap({
       `);
 
       checkOutMarker.addTo(map);
-      markers.push(checkOutMarker);
-      bounds.extend([lat, lng]);
-      }
+      bounds.extend([Number(checkOutLocation.latitude), Number(checkOutLocation.longitude)]);
     }
 
-    // Add path polyline if we have path data
-    if (locationPath.length > 1) {
-      const pathCoordinates = locationPath.map(point => {
-        const lat = typeof point.latitude === 'string'
-          ? parseFloat(point.latitude)
-          : point.latitude;
-        const lng = typeof point.longitude === 'string'
-          ? parseFloat(point.longitude)
-          : point.longitude;
+    // Add path polyline
+    if (locationPath && locationPath.length > 1) {
+      const validPathData = locationPath.filter(point =>
+        point.latitude && point.longitude &&
+        !isNaN(Number(point.latitude)) && !isNaN(Number(point.latitude))
+      );
 
-        return [lat, lng] as [number, number];
-      }).filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng)); // Filter out invalid coordinates
+      if (validPathData.length > 1) {
+        const pathCoordinates = validPathData.map(point => [
+          Number(point.latitude),
+          Number(point.longitude)
+        ]);
 
-      const polyline = L.polyline(pathCoordinates, {
-        color: '#3b82f6',
-        weight: 4,
-        opacity: 0.7,
-      });
+        const polyline = L.polyline(pathCoordinates, {
+          color: '#3b82f6',
+          weight: 4,
+          opacity: 0.7,
+        }).addTo(map);
 
-      polyline.addTo(map);
+        // Extend bounds to include all path points
+        pathCoordinates.forEach(coord => {
+          bounds.extend(coord);
+        });
 
-      // Add battery level indicators for path points
-      locationPath.forEach((point, index) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (point.batteryLevel !== undefined && index % 3 === 0) { // Show every 3rd point to avoid clutter
-          const lat = typeof point.latitude === 'string'
-            ? parseFloat(point.latitude)
-            : point.latitude;
-          const lng = typeof point.longitude === 'string'
-            ? parseFloat(point.longitude)
-            : point.longitude;
-
-          if (!isNaN(lat) && !isNaN(lng)) {
+        // Add battery indicators for some points
+        validPathData.forEach((point, index) => {
+          if (index % 5 === 0 && point.batteryLevel !== undefined) { // Show every 5th point
             const batteryIcon = L.divIcon({
               html: `
                 <div style="
@@ -293,10 +250,13 @@ export function AttendancePathMap({
               iconAnchor: [4, 4],
             });
 
-            const batteryMarker = L.marker([lat, lng], { icon: batteryIcon });
-            batteryMarker.addTo(map);
+            const batteryMarker = L.marker([
+              Number(point.latitude),
+              Number(point.longitude)
+            ], { icon: batteryIcon }).addTo(map);
+
             batteryMarker.bindPopup(`
-              <div class="text-xs">
+              <div style="font-size: 12px;">
                 <strong>Path Point ${index + 1}</strong><br>
                 Time: ${new Date(point.timestamp).toLocaleTimeString()}<br>
                 Battery: ${point.batteryLevel}%<br>
@@ -304,30 +264,18 @@ export function AttendancePathMap({
               </div>
             `);
           }
-
-          bounds.extend([lat, lng]);
-        }
-      });
+        });
+      }
     }
 
     // Fit map to show all markers and path
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [20, 20] });
-    } else if (checkInLocation) {
-      // If only check-in is available, center on it (with coordinate conversion)
-      const lat = typeof checkInLocation.latitude === 'string'
-        ? parseFloat(checkInLocation.latitude)
-        : checkInLocation.latitude;
-      const lng = typeof checkInLocation.longitude === 'string'
-        ? parseFloat(checkInLocation.longitude)
-        : checkInLocation.longitude;
-
-      if (!isNaN(lat) && !isNaN(lng)) {
-        map.setView([lat, lng], 15);
-      }
+    } else if (checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
+      // If only check-in is available, center on it
+      map.setView([Number(checkInLocation.latitude), Number(checkInLocation.longitude)], 15);
     }
-
-  }, [isMapReady, checkInLocation, checkOutLocation, locationPath, L]);
+  }
 
   return (
     <div className={`relative ${className}`}>
@@ -336,15 +284,16 @@ export function AttendancePathMap({
         style={{ height }}
         className="w-full rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
       />
-      {(isLoading || !isMapReady) && (
+      {!isMapReady && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
           <div className="text-gray-500 dark:text-gray-400">
-            {isLoading ? 'Loading map library...' : 'Initializing map...'}
+            Loading map...
           </div>
         </div>
       )}
+
       {/* Reset button */}
-      {isMapReady && checkInLocation && (
+      {isMapReady && checkInLocation && checkInLocation.latitude && checkInLocation.longitude && (
         <button
           onClick={resetMapToCheckIn}
           className="absolute top-4 right-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm"

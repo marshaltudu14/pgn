@@ -110,7 +110,9 @@
       "Bash(timeout:*)",
       "mcp__ide__executeCode",
       "Bash(jupyter notebook:*)",
-      "Bash(supabase storage list:*)"
+      "Bash(supabase storage list:*)",
+      "mcp__next-devtools__browser_eval",
+      "mcp__playwright__browser_network_requests"
     ],
     "deny": [],
     "ask": []

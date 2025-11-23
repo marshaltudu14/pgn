@@ -618,16 +618,36 @@ export class AttendanceService {
       query = query.eq('employee_id', params.employeeId);
     }
 
-    // Get total count for pagination
-    const { count, error: countError } = await supabase
+    // Get total count for pagination - apply same filters as main query
+    let countQuery = supabase
       .from('daily_attendance')
-      .select('*', { count: 'exact', head: true })
-      .match({
-        ...(params.date && { attendance_date: params.date }),
-        ...(params.status && { status: params.status }),
-        ...(params.verificationStatus && { verification_status: params.verificationStatus }),
-        ...(params.employeeId && { employee_id: params.employeeId }),
-      });
+      .select('*', { count: 'exact', head: true });
+
+    // Apply the same filters as the main query
+    if (params.date) {
+      countQuery = countQuery.eq('attendance_date', params.date);
+    } else {
+      if (params.dateFrom) {
+        countQuery = countQuery.gte('attendance_date', params.dateFrom);
+      }
+      if (params.dateTo) {
+        countQuery = countQuery.lte('attendance_date', params.dateTo);
+      }
+    }
+
+    if (params.status) {
+      countQuery = countQuery.eq('status', params.status);
+    }
+
+    if (params.verificationStatus) {
+      countQuery = countQuery.eq('verification_status', params.verificationStatus);
+    }
+
+    if (params.employeeId) {
+      countQuery = countQuery.eq('employee_id', params.employeeId);
+    }
+
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       console.error('Error getting attendance count:', countError);
@@ -661,8 +681,8 @@ export class AttendanceService {
       checkOutTime: record.check_out_timestamp ? new Date(record.check_out_timestamp) : undefined,
       checkInLocation: record.check_in_latitude && record.check_in_longitude
         ? {
-            latitude: record.check_in_latitude,
-            longitude: record.check_in_longitude,
+            latitude: typeof record.check_in_latitude === 'string' ? parseFloat(record.check_in_latitude) : record.check_in_latitude,
+            longitude: typeof record.check_in_longitude === 'string' ? parseFloat(record.check_in_longitude) : record.check_in_longitude,
             accuracy: 10, // Default accuracy if not stored
             timestamp: record.check_in_timestamp ? new Date(record.check_in_timestamp) : new Date(record.attendance_date),
             address: undefined, // Would need geocoding service for address
@@ -670,8 +690,8 @@ export class AttendanceService {
         : undefined,
       checkOutLocation: record.check_out_latitude && record.check_out_longitude
         ? {
-            latitude: record.check_out_latitude,
-            longitude: record.check_out_longitude,
+            latitude: typeof record.check_out_latitude === 'string' ? parseFloat(record.check_out_latitude) : record.check_out_latitude,
+            longitude: typeof record.check_out_longitude === 'string' ? parseFloat(record.check_out_longitude) : record.check_out_longitude,
             accuracy: 10, // Default accuracy if not stored
             timestamp: record.check_out_timestamp ? new Date(record.check_out_timestamp) : new Date(record.attendance_date),
             address: undefined, // Would need geocoding service for address
@@ -764,8 +784,8 @@ export class AttendanceService {
       checkOutTime: recordData.check_out_timestamp ? new Date(recordData.check_out_timestamp) : undefined,
       checkInLocation: recordData.check_in_latitude && recordData.check_in_longitude
         ? {
-            latitude: recordData.check_in_latitude,
-            longitude: recordData.check_in_longitude,
+            latitude: typeof recordData.check_in_latitude === 'string' ? parseFloat(recordData.check_in_latitude) : recordData.check_in_latitude,
+            longitude: typeof recordData.check_in_longitude === 'string' ? parseFloat(recordData.check_in_longitude) : recordData.check_in_longitude,
             accuracy: 10,
             timestamp: recordData.check_in_timestamp ? new Date(recordData.check_in_timestamp) : new Date(recordData.attendance_date),
             address: undefined,
@@ -773,8 +793,8 @@ export class AttendanceService {
         : undefined,
       checkOutLocation: recordData.check_out_latitude && recordData.check_out_longitude
         ? {
-            latitude: recordData.check_out_latitude,
-            longitude: recordData.check_out_longitude,
+            latitude: typeof recordData.check_out_latitude === 'string' ? parseFloat(recordData.check_out_latitude) : recordData.check_out_latitude,
+            longitude: typeof recordData.check_out_longitude === 'string' ? parseFloat(recordData.check_out_longitude) : recordData.check_out_longitude,
             accuracy: 10,
             timestamp: recordData.check_out_timestamp ? new Date(recordData.check_out_timestamp) : new Date(recordData.attendance_date),
             address: undefined,
@@ -820,18 +840,21 @@ export async function generateAttendanceImageUrl(imagePath: string): Promise<str
   const supabase = await createClient();
 
   try {
+    console.log('🔍 [DEBUG] Generating signed URL for image path:', imagePath);
+
     const { data, error } = await supabase.storage
       .from('attendance')
       .createSignedUrl(imagePath, 60 * 60); // 1 hour expiry
 
     if (error) {
-      console.error('Error generating signed URL:', error);
+      console.error('❌ [ERROR] Error generating signed URL for path:', imagePath, 'Error:', error);
       throw error;
     }
 
+    console.log('✅ [SUCCESS] Signed URL generated for path:', imagePath, 'URL length:', data.signedUrl?.length);
     return data.signedUrl;
   } catch (error) {
-    console.error('Failed to generate image URL:', error);
+    console.error('❌ [ERROR] Failed to generate image URL for path:', imagePath, 'Error:', error);
     throw error;
   }
 }

@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { COLORS } from '@/constants';
+import { useAuth } from '@/store/auth-store';
+import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
 
 interface TabItem {
   key: string;
@@ -65,6 +67,46 @@ export default function UnifiedBottomNavigation({
 }: UnifiedBottomNavigationProps) {
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+
+  // Test function for foreground service
+  const handleTestForegroundService = async () => {
+    try {
+      const authStore = useAuth.getState();
+      const employeeId = authStore.user?.humanReadableId;
+      const employeeName = authStore.user?.firstName;
+
+      if (!employeeId || !employeeName) {
+        Alert.alert('Error', 'User information not available');
+        return;
+      }
+
+      if (locationTrackingServiceNotifee.isTrackingActive()) {
+        // Stop tracking if active
+        console.log('[UnifiedBottomNavigation] Stopping foreground service...');
+        const success = await locationTrackingServiceNotifee.stopTracking('Test stopped');
+        Alert.alert(
+          'Service Stopped',
+          success ? 'Foreground service stopped successfully' : 'Failed to stop service'
+        );
+      } else {
+        // Start tracking if not active
+        console.log('[UnifiedBottomNavigation] Starting foreground service...');
+        const success = await locationTrackingServiceNotifee.startTracking(employeeId, employeeName);
+
+        // Also test a simple notification
+        const testSuccess = await locationTrackingServiceNotifee.testNotification();
+
+        Alert.alert(
+          'Service Status',
+          `Foreground service: ${success ? 'Started' : 'Failed to start'}\nTest notification: ${testSuccess ? 'Sent' : 'Failed to send'}`
+        );
+      }
+    } catch (error) {
+      console.error('[UnifiedBottomNavigation] Test error:', error);
+      Alert.alert('Error', `Failed to test service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
   const handleHomePress = () => {
     if (onTabChange) onTabChange('home');
@@ -138,9 +180,9 @@ export default function UnifiedBottomNavigation({
             backgroundColor: isCheckedIn ? '#ef4444' : '#10b981', // Red for checkout, green for checkin
           },
         ]}
-        onPress={onCheckInOut}
+        onPress={handleTestForegroundService}
       >
-        {isCheckedIn ? (
+        {locationTrackingServiceNotifee.isTrackingActive() ? (
           <ArrowDown size={28} color="white" />
         ) : (
           <ArrowUp size={28} color="white" />

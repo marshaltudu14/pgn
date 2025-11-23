@@ -48,7 +48,12 @@
         "USE_BIOMETRIC",
         "USE_FINGERPRINT",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "ACCESS_NOTIFICATION_POLICY"
       ]
     },
     "web": {
@@ -98,12 +103,7 @@
         }
       ],
       "expo-secure-store",
-      [
-        "./plugins/withLocationTrackingService",
-        {
-          "packageName": "com.pgn.mobile"
-        }
-      ]
+      "./app.plugin.js"
     ],
     "experiments": {
       "typedRoutes": true,

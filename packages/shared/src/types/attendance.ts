@@ -30,6 +30,8 @@ export interface DailyAttendanceRecord {
   checkOutTime?: Date;
   checkInLocation?: LocationData;
   checkOutLocation?: LocationData;
+  checkInSelfieUrl?: string; // Supabase storage URL for check-in selfie
+  checkOutSelfieUrl?: string; // Supabase storage URL for check-out selfie
   locationPath?: LocationPath[]; // Array of location points during work hours
   status: 'CHECKED_IN' | 'CHECKED_OUT' | 'ABSENT';
   verificationStatus?: VerificationStatus;

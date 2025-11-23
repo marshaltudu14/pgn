@@ -1,12 +1,15 @@
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import { Platform, Linking, Alert } from 'react-native';
+import notifee, { AuthorizationStatus } from '@notifee/react-native';
+import { Platform, Linking } from 'react-native';
+import { showToast } from '@/utils/toast';
 
 export type PermissionStatus = 'granted' | 'denied' | 'undetermined';
 
 export interface AppPermissions {
   camera: PermissionStatus;
   location: PermissionStatus;
+  notifications: PermissionStatus;
 }
 
 export interface PermissionCheckResult {
@@ -58,6 +61,31 @@ export class PermissionService {
     }
   }
 
+  // Check if notification permission is granted
+  async checkNotificationPermission(): Promise<PermissionStatus> {
+    try {
+      const settings = await notifee.getNotificationSettings();
+      console.log('[PermissionService] Notification settings:', settings.authorizationStatus);
+
+      switch (settings.authorizationStatus) {
+        case AuthorizationStatus.AUTHORIZED:
+          return 'granted';
+        case AuthorizationStatus.DENIED:
+          return 'denied';
+        case AuthorizationStatus.NOT_DETERMINED:
+          return 'undetermined';
+        case AuthorizationStatus.PROVISIONAL:
+          // On iOS, provisional is considered granted for basic functionality
+          return 'granted';
+        default:
+          return 'denied';
+      }
+    } catch (error) {
+      console.error('Error checking notification permission:', error);
+      return 'denied';
+    }
+  }
+
   // Request camera permission
   async requestCameraPermission(): Promise<PermissionStatus> {
     try {
@@ -90,19 +118,47 @@ export class PermissionService {
     }
   }
 
+  // Request notification permission
+  async requestNotificationPermission(): Promise<PermissionStatus> {
+    try {
+      console.log('[PermissionService] Requesting notification permission...');
+      const settings = await notifee.requestPermission();
+      console.log('[PermissionService] Notification permission result:', settings.authorizationStatus);
+
+      switch (settings.authorizationStatus) {
+        case AuthorizationStatus.AUTHORIZED:
+          return 'granted';
+        case AuthorizationStatus.DENIED:
+          return 'denied';
+        case AuthorizationStatus.NOT_DETERMINED:
+          return 'undetermined';
+        case AuthorizationStatus.PROVISIONAL:
+          // On iOS, provisional is considered granted for basic functionality
+          return 'granted';
+        default:
+          return 'denied';
+      }
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      return 'denied';
+    }
+  }
+
   // Check all required app permissions
   async checkAllPermissions(): Promise<PermissionCheckResult> {
-    const [cameraStatus, locationStatus] = await Promise.all([
+    const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
       this.checkCameraPermission(),
       this.checkLocationPermission(),
+      this.checkNotificationPermission(),
     ]);
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
       location: locationStatus,
+      notifications: notificationStatus,
     };
 
-    const allGranted = cameraStatus === 'granted' && locationStatus === 'granted';
+    const allGranted = cameraStatus === 'granted' && locationStatus === 'granted' && notificationStatus === 'granted';
     const deniedPermissions = Object.entries(permissions)
       .filter(([_, status]) => status === 'denied')
       .map(([permission]) => permission);
@@ -120,17 +176,19 @@ export class PermissionService {
 
   // Request all required permissions
   async requestAllPermissions(): Promise<PermissionCheckResult> {
-    const [cameraStatus, locationStatus] = await Promise.all([
+    const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
       this.requestCameraPermission(),
       this.requestLocationPermission(),
+      this.requestNotificationPermission(),
     ]);
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
       location: locationStatus,
+      notifications: notificationStatus,
     };
 
-    const allGranted = cameraStatus === 'granted' && locationStatus === 'granted';
+    const allGranted = cameraStatus === 'granted' && locationStatus === 'granted' && notificationStatus === 'granted';
     const deniedPermissions = Object.entries(permissions)
       .filter(([_, status]) => status === 'denied')
       .map(([permission]) => permission);
@@ -157,20 +215,12 @@ export class PermissionService {
         return true;
       } else {
         // Web - cannot open settings programmatically
-        Alert.alert(
-          'Browser Settings',
-          'Please enable camera and location permissions in your browser settings.',
-          [{ text: 'OK' }]
-        );
+        showToast.error('Please enable camera and location permissions in your browser settings.');
         return false;
       }
     } catch (error) {
       console.error('Error opening app settings:', error);
-      Alert.alert(
-        'Settings Unavailable',
-        'Unable to open settings. Please enable permissions manually.',
-        [{ text: 'OK' }]
-      );
+      showToast.error('Unable to open settings. Please enable permissions manually.');
       return false;
     }
   }
@@ -200,19 +250,26 @@ export class PermissionService {
   }
 
   // Show rationale for why permissions are needed
-  showPermissionRationale(permission: 'camera' | 'location'): void {
-    const rationale = permission === 'camera'
-      ? 'Camera permission is required for attendance check-in/out selfies and face recognition authentication.'
-      : 'Location permission is required for attendance tracking and ensuring you are at the correct work location. We need &quot;Allow all the time&quot; access to track your location during work hours even when the app is in the background.';
+  showPermissionRationale(permission: 'camera' | 'location' | 'notifications'): void {
+    let rationale = '';
+    let permissionName = '';
 
-    Alert.alert(
-      `${permission === 'camera' ? 'Camera' : 'Location'} Permission Required`,
-      rationale,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Grant Permission', style: 'default' }
-      ]
-    );
+    switch (permission) {
+      case 'camera':
+        rationale = 'Camera permission is required for attendance check-in/out selfies and face recognition authentication.';
+        permissionName = 'Camera';
+        break;
+      case 'location':
+        rationale = 'Location permission is required for attendance tracking and ensuring you are at the correct work location.';
+        permissionName = 'Location';
+        break;
+      case 'notifications':
+        rationale = 'Notification permission is required for attendance tracking alerts and important work updates.';
+        permissionName = 'Notifications';
+        break;
+    }
+
+    showToast.info(`${permissionName} permission is required. ${rationale}`);
   }
 }
 

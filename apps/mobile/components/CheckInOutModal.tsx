@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Animated,
   Image,
@@ -95,15 +94,22 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           setCapturedPhoto(photo);
           setStep('preview');
         }).catch((error) => {
-          // Don't show error for user cancellation - just close the modal
-          if (error instanceof Error && error.message.includes('PHOTO_CAPTURE_CANCELED')) {
-            onClose(); // User voluntarily canceled, close the modal
+          // Don't show error for user cancellation - just close the modal silently
+          // This is expected behavior when user closes camera without taking photo
+          if (
+            (error instanceof Error && (
+              error.message.includes('PHOTO_CAPTURE_CANCELED') ||
+              error.message.includes('User canceled photo capture')
+            )) ||
+            (error as any)?.code === 'PHOTO_CAPTURE_CANCELED'
+          ) {
+            // User voluntarily closed camera without taking photo - this is normal behavior
+            // Just close the modal silently without any error message
+            onClose();
           } else {
-            Alert.alert(
-              'Camera Error',
-              error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
-              [{ text: 'OK', onPress: () => setStep('camera') }]
-            );
+            // Only show error toasts for actual errors (permission denied, camera failure, etc.)
+            showToast.error(error instanceof Error ? error.message : 'Failed to capture photo. Please try again.');
+            onClose(); // Close modal on camera error to prevent getting stuck
           }
         }).finally(() => {
           setIsCapturing(false);
@@ -174,15 +180,22 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       setCapturedPhoto(photo);
       setStep('preview');
     } catch (error) {
-      // Don't show error for user cancellation - just close the modal
-      if (error instanceof Error && error.message.includes('PHOTO_CAPTURE_CANCELED')) {
-        onClose(); // User voluntarily canceled, close the modal
+      // Don't show error for user cancellation - just close the modal silently
+      // This is expected behavior when user closes camera without taking photo
+      if (
+        (error instanceof Error && (
+          error.message.includes('PHOTO_CAPTURE_CANCELED') ||
+          error.message.includes('User canceled photo capture')
+        )) ||
+        (error as any)?.code === 'PHOTO_CAPTURE_CANCELED'
+      ) {
+        // User voluntarily closed camera without taking photo - this is normal behavior
+        // Just close the modal silently without any error message
+        onClose();
       } else {
-        Alert.alert(
-          'Camera Error',
-          error instanceof Error ? error.message : 'Failed to capture photo. Please try again.',
-          [{ text: 'OK', onPress: () => setStep('camera') }]
-        );
+        // Only show error toasts for actual errors (permission denied, camera failure, etc.)
+        showToast.error(error instanceof Error ? error.message : 'Failed to capture photo. Please try again.');
+        onClose(); // Close modal on camera error to prevent getting stuck
       }
     } finally {
       setIsCapturing(false);
@@ -254,11 +267,11 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           !errorMessage.includes('Authentication') &&
           !errorMessage.includes('Login')) {
         showToast.error(errorMessage);
-        setStep('camera');
+        onClose(); // Close modal on error to prevent getting stuck
       } else {
-        // For authentication errors, silently go back to camera step
+        // For authentication errors, silently close the modal
         // AuthGuard will handle the authentication flow
-        setStep('camera');
+        onClose();
       }
     }
   };

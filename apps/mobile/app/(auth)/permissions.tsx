@@ -12,6 +12,7 @@ import {
   Shield,
   Settings,
   CheckCircle,
+  Bell,
 } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { permissionService, AppPermissions } from '@/services/permissions';
@@ -28,7 +29,7 @@ export default function PermissionsScreen({
 }: PermissionsScreenProps) {
   const colorScheme = useColorScheme();
   const [permissions, setPermissions] = useState<AppPermissions>(
-    initialPermissions || { camera: 'denied', location: 'denied' }
+    initialPermissions || { camera: 'denied', location: 'denied', notifications: 'denied' }
   );
   const [isChecking, setIsChecking] = useState(false);
 
@@ -256,7 +257,7 @@ export default function PermissionsScreen({
     }
   };
 
-  const allGranted = permissions.camera === 'granted' && permissions.location === 'granted';
+  const allGranted = permissions.camera === 'granted' && permissions.location === 'granted' && permissions.notifications === 'granted';
   const hasAnyBlocked = Object.values(permissions).some(status => status === 'blocked');
 
   return (
@@ -287,7 +288,7 @@ export default function PermissionsScreen({
           ]}>
             {allGranted
               ? 'All required permissions are enabled. You can now use the app.'
-              : 'PGN needs camera and location access for attendance tracking'
+              : 'PGN needs camera, location, and notification access for attendance tracking'
             }
           </Text>
         </View>
@@ -358,6 +359,40 @@ export default function PermissionsScreen({
                   </Text>
                 </View>
                 {permissions.location === 'granted' && (
+                  <View style={styles.checkIconContainer}>
+                    <CheckCircle size={16} color="#10B981" />
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.permissionItem}>
+                <View style={[
+                  styles.permissionIconContainer,
+                  permissions.notifications === 'granted'
+                    ? styles.permissionIconContainerGranted
+                    : styles.permissionIconContainerDefault
+                ]}>
+                  {permissions.notifications === 'granted' ? (
+                    <CheckCircle size={24} color="#10B981" />
+                  ) : (
+                    <Bell size={24} color="#FFB74D" />
+                  )}
+                </View>
+                <View style={styles.permissionTextContainer}>
+                  <Text style={[
+                    styles.permissionTitle,
+                    colorScheme === 'dark' ? styles.permissionTitleDark : styles.permissionTitleLight
+                  ]}>
+                    Notification Access
+                  </Text>
+                  <Text style={[
+                    styles.permissionDescription,
+                    colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
+                  ]}>
+                    Required for attendance tracking alerts and important work updates
+                  </Text>
+                </View>
+                {permissions.notifications === 'granted' && (
                   <View style={styles.checkIconContainer}>
                     <CheckCircle size={16} color="#10B981" />
                   </View>

@@ -1,7 +1,7 @@
 import * as Location from 'expo-location';
-import { Alert } from 'react-native';
 import { permissionService } from '@/services/permissions';
 import { COLORS } from '@/constants';
+import { showToast } from '@/utils/toast';
 
 export interface LocationData {
   latitude: number;
@@ -229,14 +229,7 @@ export async function promptEnableLocationServices(): Promise<void> {
   try {
     const enabled = await Location.hasServicesEnabledAsync();
     if (!enabled) {
-      Alert.alert(
-        'Location Services Required',
-        'Please enable location services in your device settings to use this feature.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'OK' }
-        ]
-      );
+      showToast.error('Location services are disabled. Please enable location services in your device settings to use this feature.');
     }
   } catch (error) {
     console.error('Failed to prompt for location services:', error);

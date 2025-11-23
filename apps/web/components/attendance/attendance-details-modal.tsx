@@ -1,18 +1,11 @@
 /**
- * Attendance Details Modal Component
- * Shows detailed information about an attendance record
+ * Attendance Details Modal Component (Redesigned)
+ * Custom two-column dialog with OpenStreetMap integration for attendance details
  */
 
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -23,8 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  TwoColumnDialog,
+  TwoColumnDialogContent,
+  TwoColumnDialogLeft,
+  TwoColumnDialogRight,
+} from '@/components/ui/two-column-dialog';
+import { AttendancePathMap } from '@/components/maps/attendance-path-map';
 import {
   DailyAttendanceRecord,
   VerificationStatus,
@@ -33,14 +31,17 @@ import {
 import {
   Clock,
   User,
-  Calendar,
   Route,
-  Camera,
   CheckCircle,
   XCircle,
   AlertTriangle,
+  MapPin,
+  Smartphone,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import Image from 'next/image';
 
 // Simple inline status badge
 const StatusBadge = ({ status }: { status?: string }) => {
@@ -102,263 +103,345 @@ export function AttendanceDetailsModal({
 
   if (!attendanceRecord) return null;
 
+  // Convert path data format for map
+  const mapPathData = attendanceRecord.locationPath?.map(point => ({
+    latitude: point.latitude,
+    longitude: point.longitude,
+    timestamp: point.timestamp,
+    accuracy: point.accuracy,
+    batteryLevel: point.batteryLevel,
+  })) || [];
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Attendance Details
-          </DialogTitle>
-          <DialogDescription>
-            View and manage attendance verification for{' '}
-            {format(new Date(attendanceRecord.date), 'MMMM dd, yyyy')}
-          </DialogDescription>
-        </DialogHeader>
+    <TwoColumnDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Attendance Details"
+      description={
+        attendanceRecord.humanReadableEmployeeId
+          ? `${attendanceRecord.humanReadableEmployeeId} • ${format(new Date(attendanceRecord.date), 'MMMM dd, yyyy')}`
+          : `${format(new Date(attendanceRecord.date), 'MMMM dd, yyyy')}`
+      }
+      maxWidth="max-w-7xl"
+    >
+      <TwoColumnDialogContent>
+        {/* LEFT COLUMN - MAP */}
+        <TwoColumnDialogLeft className="flex flex-col">
+          <div className="flex-1 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">Location & Path</h3>
+            </div>
+            <AttendancePathMap
+              checkInLocation={attendanceRecord.checkInLocation}
+              checkOutLocation={attendanceRecord.checkOutLocation}
+              locationPath={mapPathData}
+              height="500px"
+            />
 
-        {updateError && (
-          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-4">
-            <p className="text-red-800 dark:text-red-200">{updateError}</p>
-          </div>
-        )}
-
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Employee ID</Label>
-                  <p className="font-mono">{attendanceRecord.employeeId}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Date</Label>
-                  <p>{format(new Date(attendanceRecord.date), 'EEEE, MMMM dd, yyyy')}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <div className="mt-1">
-                    <StatusBadge status={attendanceRecord.status} />
+            {/* Path Statistics */}
+            {attendanceRecord.locationPath && attendanceRecord.locationPath.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <Route className="h-4 w-4" />
+                    <span className="font-medium">Distance</span>
                   </div>
+                  <p className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                    {calculateTotalDistance(attendanceRecord.locationPath).toFixed(2)} km
+                  </p>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Verification Status</Label>
-                  <div className="mt-1">
-                    <StatusBadge status={attendanceRecord.verificationStatus || 'PENDING'} />
+                <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <MapPin className="h-4 w-4" />
+                    <span className="font-medium">Path Points</span>
+                  </div>
+                  <p className="text-lg font-semibold text-green-900 dark:text-green-100">
+                    {attendanceRecord.locationPath.length}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </TwoColumnDialogLeft>
+
+        {/* RIGHT COLUMN - DETAILS */}
+        <TwoColumnDialogRight className="flex flex-col">
+          <div className="p-6 space-y-6">
+            {/* Error Display */}
+            {updateError && (
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-3">
+                <p className="text-red-800 dark:text-red-200 text-sm">{updateError}</p>
+              </div>
+            )}
+
+            {/* Minimal List-style Information */}
+            <div className="space-y-4">
+              {/* Section Headers */}
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                <User className="h-4 w-4" />
+                Employee Details
+              </div>
+
+              {/* Employee Information List */}
+              <div className="space-y-3 pl-6">
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Employee ID</span>
+                  <span className="text-sm font-mono font-medium text-gray-900 dark:text-gray-100">
+                    {attendanceRecord.humanReadableEmployeeId || attendanceRecord.employeeId}
+                  </span>
+                </div>
+                {attendanceRecord.employeeName && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Name</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {attendanceRecord.employeeName}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
+                  <StatusBadge status={attendanceRecord.status} />
+                </div>
+                <div className="flex justify-between items-center py-1">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Verification</span>
+                  <StatusBadge status={attendanceRecord.verificationStatus || 'PENDING'} />
+                </div>
+                {attendanceRecord.device && (
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Device</span>
+                    <div className="flex items-center gap-1">
+                      <Smartphone className="h-3 w-3 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {attendanceRecord.device}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Check-in Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                <LogIn className="h-4 w-4 text-green-600" />
+                Check-in
+              </div>
+
+              <div className="pl-6">
+                {/* Two-column layout: Image on left, Details on right */}
+                <div className="flex gap-6">
+                  {/* Left: Image */}
+                  <div className="flex-shrink-0">
+                    <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      {attendanceRecord.checkInSelfieUrl ? (
+                        <Image
+                          src={attendanceRecord.checkInSelfieUrl}
+                          alt="Check-in selfie"
+                          width={128}
+                          height={128}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                              </div>
+                            `;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <span className="text-sm">--</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Details */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Time</span>
+                      <div className="text-right">
+                        {attendanceRecord.checkInTime ? (
+                          <>
+                            <div className="text-sm font-medium text-green-700 dark:text-green-400">
+                              {format(new Date(attendanceRecord.checkInTime), 'hh:mm a')}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500">
+                              {format(new Date(attendanceRecord.checkInTime), 'MMM dd, yyyy')}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-500">--</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-start py-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Location</span>
+                      <div className="text-right max-w-xs">
+                        {attendanceRecord.checkInLocation ? (
+                          <>
+                            <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                              {attendanceRecord.checkInLocation.address ||
+                               `${attendanceRecord.checkInLocation.latitude.toFixed(4)}, ${attendanceRecord.checkInLocation.longitude.toFixed(4)}`}
+                            </div>
+                            {attendanceRecord.checkInLocation.accuracy && (
+                              <div className="text-xs text-gray-500 dark:text-gray-500">
+                                Accuracy: ±{attendanceRecord.checkInLocation.accuracy}m
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-500">--</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Check-in Information */}
-          {attendanceRecord.checkInTime && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Check-in Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Time</Label>
-                    <p className="text-lg font-semibold">
-                      {format(new Date(attendanceRecord.checkInTime), 'hh:mm:ss a')}
-                    </p>
-                  </div>
-                  {attendanceRecord.checkInLocation && (
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Location
-                      </Label>
-                      <p className="font-mono text-sm">
-                        {attendanceRecord.checkInLocation.latitude.toFixed(6)}, {attendanceRecord.checkInLocation.longitude.toFixed(6)}
-                      </p>
-                      {attendanceRecord.checkInLocation.address && (
-                        <p className="text-sm text-muted-foreground">
-                          {attendanceRecord.checkInLocation.address}
-                        </p>
-                      )}
-                      {attendanceRecord.checkInLocation.accuracy && (
-                        <p className="text-xs text-muted-foreground">
-                          Accuracy: ±{attendanceRecord.checkInLocation.accuracy}m
-                        </p>
-                      )}
-                    </div>
-                  )}
-                                  </div>
-              </CardContent>
-            </Card>
-          )}
+            {/* Check-out Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                <LogOut className="h-4 w-4 text-red-600" />
+                Check-out
+              </div>
 
-          {/* Check-out Information */}
-          {attendanceRecord.checkOutTime && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Check-out Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Time</Label>
-                    <p className="text-lg font-semibold">
-                      {format(new Date(attendanceRecord.checkOutTime), 'hh:mm:ss a')}
-                    </p>
-                  </div>
-                  {attendanceRecord.checkOutLocation && (
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground">
-                        Location
-                      </Label>
-                      <p className="font-mono text-sm">
-                        {attendanceRecord.checkOutLocation.latitude.toFixed(6)}, {attendanceRecord.checkOutLocation.longitude.toFixed(6)}
-                      </p>
-                      {attendanceRecord.checkOutLocation.address && (
-                        <p className="text-sm text-muted-foreground">
-                          {attendanceRecord.checkOutLocation.address}
-                        </p>
-                      )}
-                      {attendanceRecord.checkOutLocation.accuracy && (
-                        <p className="text-xs text-muted-foreground">
-                          Accuracy: ±{attendanceRecord.checkOutLocation.accuracy}m
-                        </p>
+              <div className="pl-6">
+                {/* Two-column layout: Image on left, Details on right */}
+                <div className="flex gap-6">
+                  {/* Left: Image */}
+                  <div className="flex-shrink-0">
+                    <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      {attendanceRecord.checkOutSelfieUrl ? (
+                        <Image
+                          src={attendanceRecord.checkOutSelfieUrl}
+                          alt="Check-out selfie"
+                          width={128}
+                          height={128}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                              </div>
+                            `;
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <span className="text-sm">--</span>
+                        </div>
                       )}
                     </div>
-                  )}
-                                  </div>
-              </CardContent>
-            </Card>
-          )}
+                  </div>
 
-          {/* Path Summary */}
-          {attendanceRecord.locationPath && attendanceRecord.locationPath.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Route className="h-5 w-5" />
-                  Location Path Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Total Distance</Label>
-                    <p className="text-lg font-semibold">
-                      {calculateTotalDistance(attendanceRecord.locationPath).toFixed(2)} km
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Path Points</Label>
-                    <p className="text-lg font-semibold">{attendanceRecord.locationPath.length} points</p>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="text-sm font-medium text-muted-foreground">Start Location</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {attendanceRecord.locationPath[0]?.latitude.toFixed(6)}, {attendanceRecord.locationPath[0]?.longitude.toFixed(6)}
-                    </p>
-                  </div>
-                  {attendanceRecord.locationPath.length > 1 && (
-                    <div className="md:col-span-2">
-                      <Label className="text-sm font-medium text-muted-foreground">End Location</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {attendanceRecord.locationPath[attendanceRecord.locationPath.length - 1]?.latitude.toFixed(6)}, {attendanceRecord.locationPath[attendanceRecord.locationPath.length - 1]?.longitude.toFixed(6)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Work Summary */}
-          {attendanceRecord.workHours && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Work Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Total Work Hours</Label>
-                    <p className="text-lg font-semibold">{attendanceRecord.workHours.toFixed(1)} hours</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Selfie Images */}
-          {(attendanceRecord.checkInLocation || attendanceRecord.checkOutLocation) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Camera className="h-5 w-5" />
-                  Verification Images
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {attendanceRecord.checkInLocation && (
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground mb-2 block">Check-in Selfie</Label>
-                      <div className="border rounded-lg p-4 text-center text-muted-foreground">
-                        <Camera className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-sm">Image not available</p>
+                  {/* Right: Details */}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Time</span>
+                      <div className="text-right">
+                        {attendanceRecord.checkOutTime ? (
+                          <>
+                            <div className="text-sm font-medium text-red-700 dark:text-red-400">
+                              {format(new Date(attendanceRecord.checkOutTime), 'hh:mm a')}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-500">
+                              {format(new Date(attendanceRecord.checkOutTime), 'MMM dd, yyyy')}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-500">--</div>
+                        )}
                       </div>
                     </div>
-                  )}
-                  {attendanceRecord.checkOutLocation && (
-                    <div>
-                      <Label className="text-sm font-medium text-muted-foreground mb-2 block">Check-out Selfie</Label>
-                      <div className="border rounded-lg p-4 text-center text-muted-foreground">
-                        <Camera className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-sm">Image not available</p>
+
+                    <div className="flex justify-between items-start py-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Location</span>
+                      <div className="text-right max-w-xs">
+                        {attendanceRecord.checkOutLocation ? (
+                          <>
+                            <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                              {attendanceRecord.checkOutLocation.address ||
+                               `${attendanceRecord.checkOutLocation.latitude.toFixed(4)}, ${attendanceRecord.checkOutLocation.longitude.toFixed(4)}`}
+                            </div>
+                            {attendanceRecord.checkOutLocation.accuracy && (
+                              <div className="text-xs text-gray-500 dark:text-gray-500">
+                                Accuracy: ±{attendanceRecord.checkOutLocation.accuracy}m
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-500">--</div>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            </div>
 
-          {/* Verification Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Verification Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            {/* Work Summary */}
+            {attendanceRecord.workHours && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-gray-100 uppercase tracking-wider">
+                  <Clock className="h-4 w-4" />
+                  Work Summary
+                </div>
+
+                <div className="space-y-3 pl-6">
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Total Hours</span>
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {attendanceRecord.workHours.toFixed(1)}h
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Date</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {format(new Date(attendanceRecord.date), 'EEEE, MMMM dd, yyyy')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+  
+            {/* Verification Actions */}
+            <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div>
-                <Label htmlFor="verificationStatus">Verification Status</Label>
+                <Label htmlFor="verificationStatus" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Verification Status
+                </Label>
                 <Select
                   value={verificationStatus}
                   onValueChange={(value) => setVerificationStatus(value as VerificationStatus)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-1 w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {VERIFICATION_STATUSES.map((status) => (
                       <SelectItem key={status.value} value={status.value}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full justify-center">
                           {status.value === 'VERIFIED' && <CheckCircle className="h-4 w-4 text-green-600" />}
                           {status.value === 'REJECTED' && <XCircle className="h-4 w-4 text-red-600" />}
                           {status.value === 'FLAGGED' && <AlertTriangle className="h-4 w-4 text-orange-600" />}
                           {status.value === 'PENDING' && <Clock className="h-4 w-4 text-yellow-600" />}
-                          <div>
-                            <div className="font-medium">{status.label}</div>
-                            <div className="text-xs text-muted-foreground">{status.description}</div>
-                          </div>
+                          <span className="font-medium">{status.label}</span>
                         </div>
                       </SelectItem>
                     ))}
@@ -367,26 +450,31 @@ export function AttendanceDetailsModal({
               </div>
 
               <div>
-                <Label htmlFor="verificationNotes">Verification Notes</Label>
+                <Label htmlFor="verificationNotes" className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  Notes
+                </Label>
                 <Textarea
                   id="verificationNotes"
-                  placeholder="Add notes about this verification..."
+                  placeholder="Add verification notes..."
                   value={verificationNotes}
                   onChange={(e) => setVerificationNotes(e.target.value)}
                   rows={3}
+                  className="mt-1"
                 />
               </div>
 
-              <Separator />
-
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="cursor-pointer"
+                >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleVerificationUpdate}
                   disabled={isUpdating}
-                  className={
+                  className={`cursor-pointer ${
                     verificationStatus === 'VERIFIED'
                       ? 'bg-green-600 hover:bg-green-700'
                       : verificationStatus === 'REJECTED'
@@ -394,7 +482,7 @@ export function AttendanceDetailsModal({
                       : verificationStatus === 'FLAGGED'
                       ? 'bg-orange-600 hover:bg-orange-700'
                       : undefined
-                  }
+                  }`}
                 >
                   {isUpdating ? (
                     'Updating...'
@@ -404,16 +492,16 @@ export function AttendanceDetailsModal({
                       {verificationStatus === 'REJECTED' && <XCircle className="h-4 w-4 mr-2" />}
                       {verificationStatus === 'FLAGGED' && <AlertTriangle className="h-4 w-4 mr-2" />}
                       {verificationStatus === 'PENDING' && <Clock className="h-4 w-4 mr-2" />}
-                      Update Verification
+                      Update Status
                     </>
                   )}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
+            </div>
+          </div>
+        </TwoColumnDialogRight>
+      </TwoColumnDialogContent>
+    </TwoColumnDialog>
   );
 }
 

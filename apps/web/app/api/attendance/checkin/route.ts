@@ -11,19 +11,18 @@ import { addSecurityHeaders } from '@/lib/security-middleware';
  */
 const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
   try {
-    console.log('[CHECKIN API] Starting check-in process');
+    console.log('🔍 [API DEBUG] Check-in API handler started');
 
     // Get authenticated user from request (attached by security middleware)
     const authenticatedReq = req as AuthenticatedRequest;
     const user = authenticatedReq.user;
-
-    console.log('[CHECKIN API] Authenticated user:', {
+    console.log('🔍 [API DEBUG] Authenticated user:', {
       employeeId: user?.employeeId,
       hasUser: !!user
     });
 
     if (!user || !user.employeeId) {
-      console.log('[CHECKIN API] Authentication failed - no user or employeeId');
+      console.log('❌ [API ERROR] Unauthorized - no user or employeeId');
       const response = NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid authentication' },
         { status: 401 }
@@ -32,19 +31,13 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Parse request body
+    console.log('🔍 [API DEBUG] Parsing request body...');
     const body = await req.json();
+    console.log('🔍 [API DEBUG] Request body keys:', Object.keys(body));
 
-    console.log('[CHECKIN API] Request body received:', {
-      hasLocation: !!body.location,
-      hasSelfieData: !!body.selfieData,
-      faceConfidence: body.faceConfidence,
-      hasDeviceInfo: !!body.deviceInfo
-    });
-
-    
     // Validate required fields
     if (!body.location || !body.selfieData) {
-      console.log('[CHECKIN API] Validation failed:', {
+      console.log('❌ [API ERROR] Missing required fields:', {
         hasLocation: !!body.location,
         hasSelfieData: !!body.selfieData
       });
@@ -73,36 +66,26 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       faceConfidence: body.faceConfidence || 0,
       deviceInfo: body.deviceInfo
     };
-
-    console.log('[CHECKIN API] Built check-in request:', {
+    console.log('🔍 [API DEBUG] Check-in request built:', {
       employeeId: checkInRequest.employeeId,
-      location: {
-        latitude: checkInRequest.location.latitude,
-        longitude: checkInRequest.location.longitude,
-        hasTimestamp: !!checkInRequest.location.timestamp
-      },
+      location: checkInRequest.location,
+      timestamp: checkInRequest.timestamp,
       hasSelfie: !!checkInRequest.selfie,
       faceConfidence: checkInRequest.faceConfidence,
-      hasDeviceInfo: !!checkInRequest.deviceInfo
+      deviceInfo: checkInRequest.deviceInfo
     });
 
     // Process check-in through service
-    console.log('[CHECKIN API] Calling attendance service...');
+    console.log('🔍 [API DEBUG] Calling attendance service...');
     const result = await attendanceService.checkIn(user.employeeId, checkInRequest);
-
-    console.log('[CHECKIN API] Service result:', {
+    console.log('🔍 [API DEBUG] Service result:', {
       success: result.success,
       message: result.message,
-      hasAttendanceId: !!result.attendanceId,
-      hasTimestamp: !!result.timestamp
+      attendanceId: result.attendanceId
     });
 
-  
     if (!result.success) {
-      console.log('[CHECKIN API] Service returned failure:', {
-        message: result.message,
-        success: result.success
-      });
+      console.log('❌ [API ERROR] Service returned failure:', result.message);
       const response = NextResponse.json(
         {
           success: false,
@@ -122,24 +105,20 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       checkInTime: result.checkInTime,
       verificationStatus: result.verificationStatus
     };
-
-    console.log('[CHECKIN API] Returning success response:', {
-      success: true,
-      message: result.message,
-      responseDataKeys: Object.keys(responseData)
-    });
+    console.log('🔍 [API DEBUG] Preparing success response:', responseData);
 
     const response = NextResponse.json({
       success: true,
       message: result.message,
       data: responseData
     });
+    console.log('🔍 [API DEBUG] Check-in API completed successfully');
 
     // Add security headers
     return addSecurityHeaders(response);
 
   } catch (error) {
-    console.error('Check-in API error:', error);
+    console.error('❌ [API ERROR] Check-in API error:', error);
 
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {

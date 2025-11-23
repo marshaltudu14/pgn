@@ -95,6 +95,7 @@ export async function takePhoto(
     });
 
     if (result.canceled) {
+      // User canceled the photo capture
       throw new CameraError('PHOTO_CAPTURE_CANCELED', 'User canceled photo capture');
     }
 
@@ -114,10 +115,14 @@ export async function takePhoto(
       height: asset.height,
     }, options);
 
-    
+  
     return processedPhoto;
 
   } catch (error) {
+    // If it's already a CameraError (like PHOTO_CAPTURE_CANCELED), re-throw it as-is
+    if (error instanceof CameraError) {
+      throw error;
+    }
     throw new CameraError('PHOTO_CAPTURE_ERROR', 'Failed to capture photo', error);
   }
 }

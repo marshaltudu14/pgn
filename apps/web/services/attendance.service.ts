@@ -65,10 +65,13 @@ export class AttendanceService {
    */
   async checkIn(employeeId: string, request: CheckInRequest): Promise<AttendanceResponse> {
     try {
+      console.log('🔍 [DEBUG] Check-in started for employee:', employeeId);
       const supabase = await createClient();
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      console.log('🔍 [DEBUG] Today date:', today);
 
       // Check if employee already has attendance for today
+      console.log('🔍 [DEBUG] Checking existing attendance...');
       const { data: existingAttendance, error: checkError } = await supabase
         .from('daily_attendance')
         .select('*')
@@ -76,8 +79,14 @@ export class AttendanceService {
         .eq('attendance_date', today)
         .maybeSingle();
 
+      console.log('🔍 [DEBUG] Existing attendance query result:', {
+        existingAttendance: existingAttendance ? 'Found' : 'Not found',
+        checkError: checkError?.message || 'No error',
+        existingAttendanceData: existingAttendance
+      });
+
       if (checkError) {
-        console.error('Error checking existing attendance:', checkError);
+        console.error('❌ [ERROR] Error checking existing attendance:', checkError);
         return {
           success: false,
           message: 'Failed to check existing attendance records'
@@ -88,6 +97,7 @@ export class AttendanceService {
       // This helps employees resume work after app crashes, network issues, etc.
       // No restriction - employees can always check in to start/resume work
 
+      console.log('🔍 [DEBUG] Uploading selfie to storage...');
       // Upload selfie to storage
       const photoUrl = await this.uploadSelfieToStorage(
         employeeId,
@@ -95,6 +105,7 @@ export class AttendanceService {
         today,
         'checkin'
       );
+      console.log('🔍 [DEBUG] Selfie uploaded, URL:', photoUrl);
 
       // Create or update attendance record
       const attendanceData = {
@@ -110,9 +121,11 @@ export class AttendanceService {
         verification_status: 'PENDING' as VerificationStatus,
         last_location_update: new Date().toISOString()
       };
+      console.log('🔍 [DEBUG] Attendance data prepared:', attendanceData);
 
       let attendanceRecord;
       if (existingAttendance) {
+        console.log('🔍 [DEBUG] Updating existing record with ID:', existingAttendance.id);
         // Update existing record
         const { data, error } = await supabase
           .from('daily_attendance')
@@ -121,8 +134,14 @@ export class AttendanceService {
           .select()
           .single();
 
+        console.log('🔍 [DEBUG] Update result:', {
+          data: data ? 'Success' : 'Failed',
+          error: error?.message || 'No error',
+          updatedData: data
+        });
+
         if (error) {
-          console.error('Error updating attendance record:', error);
+          console.error('❌ [ERROR] Error updating attendance record:', error);
           return {
             success: false,
             message: 'Failed to update attendance record'
@@ -130,6 +149,7 @@ export class AttendanceService {
         }
         attendanceRecord = data;
       } else {
+        console.log('🔍 [DEBUG] Creating new attendance record...');
         // Create new record
         const { data, error } = await supabase
           .from('daily_attendance')
@@ -137,8 +157,14 @@ export class AttendanceService {
           .select()
           .single();
 
+        console.log('🔍 [DEBUG] Insert result:', {
+          data: data ? 'Success' : 'Failed',
+          error: error?.message || 'No error',
+          insertedData: data
+        });
+
         if (error) {
-          console.error('Error creating attendance record:', error);
+          console.error('❌ [ERROR] Error creating attendance record:', error);
           return {
             success: false,
             message: 'Failed to create attendance record'
@@ -147,6 +173,7 @@ export class AttendanceService {
         attendanceRecord = data;
       }
 
+      console.log('🔍 [DEBUG] Check-in completed successfully, returning response');
       return {
         success: true,
         message: 'Check-in successful',
@@ -157,7 +184,7 @@ export class AttendanceService {
         verificationStatus: attendanceRecord.verification_status
       };
     } catch (error) {
-      console.error('Unexpected error during check-in:', error);
+      console.error('❌ [ERROR] Unexpected error during check-in:', error);
       return {
         success: false,
         message: 'Check-in failed due to unexpected error'

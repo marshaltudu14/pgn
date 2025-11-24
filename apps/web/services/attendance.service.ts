@@ -4,7 +4,6 @@ import {
   CheckOutRequest,
   AttendanceResponse,
   AttendanceStatusResponse,
-  LocationData,
   AttendanceStatus,
   CheckOutMethod,
   VerificationStatus,
@@ -13,7 +12,8 @@ import {
   DailyAttendanceRecord,
   AttendanceListParams,
   AttendanceListResponse,
-  UpdateVerificationRequest
+  UpdateVerificationRequest,
+  PathData,
 } from '@pgn/shared';
 
 // Interfaces for database records to avoid using any
@@ -340,334 +340,15 @@ export class AttendanceService {
         requiresCheckOut: isCheckedIn
       };
     } catch (error) {
-      console.error('Unexpected error fetching attendance status:', error);
-      throw new Error('Failed to fetch attendance status');
+      console.error('Error in getAttendanceStatus:', error);
+      throw new Error('Failed to get attendance status');
     }
   }
 
   /**
-   * Handle emergency check-out scenarios
+   * Transform database records to expected interface
    */
-  async emergencyCheckOut(employeeId: string, request: EmergencyCheckOutRequest): Promise<AttendanceResponse> {
-    try {
-      const supabase = await createClient();
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-
-      // Find today's attendance record
-      const { data: attendanceRecord, error: fetchError } = await supabase
-        .from('daily_attendance')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .eq('attendance_date', today)
-        .single();
-
-      if (fetchError || !attendanceRecord) {
-        return {
-          success: false,
-          message: 'No check-in record found for today'
-        };
-      }
-
-      if (attendanceRecord.check_out_timestamp) {
-        return {
-          success: false,
-          message: 'Employee already checked out today'
-        };
-      }
-
-      // Use last known location if provided
-      const location = request.lastLocationData || {
-        latitude: attendanceRecord.check_in_latitude || 0,
-        longitude: attendanceRecord.check_in_longitude || 0,
-        accuracy: 100,
-        timestamp: new Date()
-      };
-
-      // Calculate work hours
-      const checkInTime = new Date(attendanceRecord.check_in_timestamp!);
-      const checkOutTime = new Date();
-      const workHours = this.calculateWorkHours(checkInTime, checkOutTime);
-
-      // Upload emergency selfie if provided
-      let emergencySelfieUrl = null;
-      if (request.selfieData) {
-        emergencySelfieUrl = await this.uploadSelfieToStorage(
-          employeeId,
-          request.selfieData,
-          today,
-          'emergency-checkout'
-        );
-      }
-
-      // Update attendance record with emergency checkout information
-      const updateData = {
-        check_out_timestamp: checkOutTime.toISOString(),
-        check_out_latitude: location.latitude,
-        check_out_longitude: location.longitude,
-        check_out_selfie_url: emergencySelfieUrl,
-        check_out_method: request.method,
-        check_out_reason: request.reason,
-        total_work_hours: workHours,
-        last_location_update: new Date().toISOString(),
-        verification_status: 'FLAGGED' as VerificationStatus,
-        verification_notes: `Emergency check-out: ${request.reason}`
-      };
-
-      const { data: updatedRecord, error: updateError } = await supabase
-        .from('daily_attendance')
-        .update(updateData)
-        .eq('id', attendanceRecord.id)
-        .select()
-        .single();
-
-      if (updateError) {
-        console.error('Error updating attendance record:', updateError);
-        return {
-          success: false,
-          message: 'Failed to update attendance record'
-        };
-      }
-
-      return {
-        success: true,
-        message: 'Emergency check-out processed successfully',
-        attendanceId: updatedRecord.id,
-        timestamp: new Date(updatedRecord.check_out_timestamp!),
-        status: 'CHECKED_OUT' as AttendanceStatus,
-        checkInTime: new Date(updatedRecord.check_in_timestamp!),
-        checkOutTime: new Date(updatedRecord.check_out_timestamp!),
-        workHours: workHours,
-        verificationStatus: updatedRecord.verification_status
-      };
-    } catch (error) {
-      console.error('Unexpected error during emergency check-out:', error);
-      return {
-        success: false,
-        message: 'Emergency check-out failed due to unexpected error'
-      };
-    }
-  }
-
-  /**
-   * Update location tracking data for checked-in employees
-   */
-  async updateLocationTracking(employeeId: string, request: LocationUpdateRequest): Promise<boolean> {
-    try {
-      const supabase = await createClient();
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-
-      // Add location point to path data
-      const pathPoint = {
-        timestamp: request.timestamp.toISOString(),
-        latitude: request.location.latitude,
-        longitude: request.location.longitude,
-        battery_level: request.batteryLevel || null,
-        accuracy: request.location.accuracy || null,
-        distance_from_previous: 0 // Will be calculated in real implementation
-      };
-
-      // Update attendance record with new location point
-      const { error } = await supabase
-        .from('daily_attendance')
-        .update({
-          last_location_update: request.timestamp.toISOString(),
-          path_data: supabase.rpc('append_path_point', {
-            attendance_date: today,
-            employee_id: employeeId,
-            new_point: pathPoint
-          })
-        })
-        .eq('employee_id', employeeId)
-        .eq('attendance_date', today);
-
-      if (error) {
-        console.error('Error updating location tracking:', error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Unexpected error updating location tracking:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Upload selfie to Supabase storage
-   */
-  private async uploadSelfieToStorage(
-    employeeId: string,
-    selfieData: string,
-    date: string,
-    type: 'checkin' | 'checkout' | 'emergency-checkout'
-  ): Promise<string> {
-    try {
-      const supabase = await createClient();
-
-      // Generate file path for storage
-      const dateObj = new Date(date);
-      const year = dateObj.getFullYear();
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const day = String(dateObj.getDate()).padStart(2, '0');
-      const timestamp = Date.now();
-      const filePath = `attendance/${year}/${month}/${day}/${employeeId}/${type}-${timestamp}.jpg`;
-
-      // Convert base64 to blob
-      const base64Data = selfieData.replace(/^data:image\/[a-z]+;base64,/, '');
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'image/jpeg' });
-
-      // Upload to storage
-      const { error } = await supabase.storage
-        .from('attendance')
-        .upload(filePath, blob, {
-          contentType: 'image/jpeg',
-          cacheControl: '31536000', // 1 year
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Error uploading selfie:', error);
-        throw new Error('Failed to upload selfie');
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('attendance')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Error uploading selfie to storage:', error);
-      throw new Error('Failed to upload selfie to storage');
-    }
-  }
-
-  /**
-   * Reverse geocode location to get address
-   */
-  private async reverseGeocode(location: LocationData): Promise<string> {
-    try {
-      // This is a placeholder implementation
-      // In production, you would use a geocoding service like OpenStreetMap Nominatim
-      return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
-    } catch (error) {
-      console.error('Error reverse geocoding location:', error);
-      return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
-    }
-  }
-
-  /**
-   * Calculate work hours between two timestamps
-   */
-  private calculateWorkHours(checkInTime: Date, checkOutTime: Date): number {
-    const diffMs = checkOutTime.getTime() - checkInTime.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    return Math.round(diffHours * 100) / 100; // Round to 2 decimal places
-  }
-
-  /**
-   * List attendance records with filtering and pagination
-   */
-  async listAttendanceRecords(
-    params: AttendanceListParams
-  ): Promise<AttendanceListResponse> {
-    const supabase = await createClient();
-
-    // Start building the query
-    let query = supabase
-      .from('daily_attendance')
-      .select(`
-        *,
-        employee:employee_id (
-          id,
-          human_readable_user_id,
-          first_name,
-          last_name,
-          email
-        )
-      `)
-      .order(params.sortBy || 'attendance_date', { ascending: params.sortOrder === 'asc' });
-
-    // Apply filters
-    if (params.date) {
-      query = query.eq('attendance_date', params.date);
-    } else {
-      if (params.dateFrom) {
-        query = query.gte('attendance_date', params.dateFrom);
-      }
-      if (params.dateTo) {
-        query = query.lte('attendance_date', params.dateTo);
-      }
-    }
-
-    if (params.status) {
-      query = query.eq('status', params.status);
-    }
-
-    if (params.verificationStatus) {
-      query = query.eq('verification_status', params.verificationStatus);
-    }
-
-    if (params.employeeId) {
-      query = query.eq('employee_id', params.employeeId);
-    }
-
-    // Get total count for pagination - apply same filters as main query
-    let countQuery = supabase
-      .from('daily_attendance')
-      .select('*', { count: 'exact', head: true });
-
-    // Apply the same filters as the main query
-    if (params.date) {
-      countQuery = countQuery.eq('attendance_date', params.date);
-    } else {
-      if (params.dateFrom) {
-        countQuery = countQuery.gte('attendance_date', params.dateFrom);
-      }
-      if (params.dateTo) {
-        countQuery = countQuery.lte('attendance_date', params.dateTo);
-      }
-    }
-
-    if (params.status) {
-      countQuery = countQuery.eq('status', params.status);
-    }
-
-    if (params.verificationStatus) {
-      countQuery = countQuery.eq('verification_status', params.verificationStatus);
-    }
-
-    if (params.employeeId) {
-      countQuery = countQuery.eq('employee_id', params.employeeId);
-    }
-
-    const { count, error: countError } = await countQuery;
-
-    if (countError) {
-      console.error('Error getting attendance count:', countError);
-      throw new Error('Failed to get attendance count');
-    }
-
-    // Apply pagination
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const offset = (page - 1) * limit;
-    query = query.range(offset, offset + limit - 1);
-
-    // Execute the query
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching attendance records:', error);
-      throw new Error('Failed to fetch attendance records');
-    }
-
+  private transformAttendanceRecords(data: DatabaseAttendanceRecord[] | null): DailyAttendanceRecord[] {
     // Transform the data to match the expected interface
     const transformedRecords: DailyAttendanceRecord[] = (data || []).map((record: DatabaseAttendanceRecord) => ({
       id: record.id,
@@ -679,6 +360,8 @@ export class AttendanceService {
       date: record.attendance_date,
       checkInTime: record.check_in_timestamp ? new Date(record.check_in_timestamp) : undefined,
       checkOutTime: record.check_out_timestamp ? new Date(record.check_out_timestamp) : undefined,
+      checkInSelfieUrl: record.check_in_selfie_url || undefined,
+      checkOutSelfieUrl: record.check_out_selfie_url || undefined,
       checkInLocation: record.check_in_latitude && record.check_in_longitude
         ? {
             latitude: typeof record.check_in_latitude === 'string' ? parseFloat(record.check_in_latitude) : record.check_in_latitude,
@@ -713,19 +396,74 @@ export class AttendanceService {
       updatedAt: new Date(record.updated_at),
     }));
 
-    // Calculate pagination info
-    const total = count || 0;
-    const totalPages = Math.ceil(total / limit);
-    const hasMore = page < totalPages;
+    return transformedRecords;
+  }
 
-    return {
-      records: transformedRecords,
-      page,
-      limit,
-      total,
-      totalPages,
-      hasMore,
-    };
+  async listAttendanceRecords(params: AttendanceListParams): Promise<AttendanceListResponse> {
+    try {
+      const supabase = await createClient();
+      const { page = 1, limit = 10, date, employeeId } = params;
+      const offset = (page - 1) * limit;
+
+      let query = supabase
+        .from('daily_attendance')
+        .select(`
+          *,
+          employee:employee_id (
+            id,
+            human_readable_user_id,
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .order(params.sortBy || 'attendance_date', { ascending: params.sortOrder === 'asc' });
+
+      // Apply filters
+      if (params.date) {
+        query = query.eq('attendance_date', date);
+      }
+      if (params.employeeId) {
+        query = query.eq('employee_id', employeeId);
+      }
+      if (params.status) {
+        if (params.status === 'CHECKED_IN') {
+          query = query.is('check_in_timestamp', 'not null').is('check_out_timestamp', 'null');
+        } else if (params.status === 'CHECKED_OUT') {
+          query = query.is('check_in_timestamp', 'not null').is('check_out_timestamp', 'not null');
+        } else if (params.status === 'ABSENT') {
+          query = query.is('check_in_timestamp', 'null');
+        }
+      }
+
+      const { data, error, count } = await query
+        .range(offset, offset + limit - 1);
+
+      if (error) {
+        console.error('Error fetching attendance records:', error);
+        throw new Error('Failed to fetch attendance records');
+      }
+
+      // Transform the data
+      const transformedRecords = this.transformAttendanceRecords(data);
+
+      // Calculate pagination info
+      const total = count || 0;
+      const totalPages = Math.ceil(total / limit);
+      const hasMore = page < totalPages;
+
+      return {
+        records: transformedRecords,
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore,
+      };
+    } catch (error) {
+      console.error('Error in listAttendanceRecords:', error);
+      throw new Error('Failed to list attendance records');
+    }
   }
 
   /**
@@ -743,11 +481,16 @@ export class AttendanceService {
       updated_at: new Date().toISOString(),
     };
 
+    // Debug logging
+    console.log('Updating attendance record:', recordId);
+    console.log('Update data:', updateData);
+
     // Get the current user for verification
     const { data } = await supabase.auth.getUser();
     if (data.user) {
       updateData.verified_by = data.user.id;
       updateData.verified_at = new Date().toISOString();
+      console.log('Added verification info - verified_by:', data.user.id);
     }
 
     const { data: recordData, error } = await supabase
@@ -771,6 +514,10 @@ export class AttendanceService {
       throw new Error('Failed to update attendance verification');
     }
 
+    // Debug: Log the updated record
+    console.log('Successfully updated record. New verification_status:', recordData.verification_status);
+    console.log('Updated verification_notes:', recordData.verification_notes);
+
     // Transform the updated record
     const transformedRecord: DailyAttendanceRecord = {
       id: recordData.id,
@@ -782,6 +529,8 @@ export class AttendanceService {
       date: recordData.attendance_date,
       checkInTime: recordData.check_in_timestamp ? new Date(recordData.check_in_timestamp) : undefined,
       checkOutTime: recordData.check_out_timestamp ? new Date(recordData.check_out_timestamp) : undefined,
+      checkInSelfieUrl: recordData.check_in_selfie_url || undefined,
+      checkOutSelfieUrl: recordData.check_out_selfie_url || undefined,
       checkInLocation: recordData.check_in_latitude && recordData.check_in_longitude
         ? {
             latitude: typeof recordData.check_in_latitude === 'string' ? parseFloat(recordData.check_in_latitude) : recordData.check_in_latitude,
@@ -831,55 +580,224 @@ export class AttendanceService {
     }
     return 'ABSENT';
   }
-}
 
-/**
- * Generate signed URL for attendance selfie images (for private bucket access)
- */
-export async function generateAttendanceImageUrl(imagePath: string): Promise<string> {
-  const supabase = await createClient();
+  /**
+   * Upload selfie to Supabase storage
+   */
+  private async uploadSelfieToStorage(
+    employeeId: string,
+    selfieData: string,
+    date: string,
+    type: 'checkin' | 'checkout'
+  ): Promise<string> {
+    try {
+      const supabase = await createClient();
+      const fileName = `${employeeId}/${date}/${type}_${Date.now()}.jpg`;
 
-  try {
-    console.log('🔍 [DEBUG] Generating signed URL for image path:', imagePath);
+      // Convert base64 to blob
+      const base64Data = selfieData.replace(/^data:image\/\w+;base64,/, '');
+      const binaryData = Buffer.from(base64Data, 'base64');
 
-    const { data, error } = await supabase.storage
-      .from('attendance')
-      .createSignedUrl(imagePath, 60 * 60); // 1 hour expiry
+      const { error } = await supabase.storage
+        .from('attendance-photos')
+        .upload(fileName, binaryData, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
 
-    if (error) {
-      console.error('❌ [ERROR] Error generating signed URL for path:', imagePath, 'Error:', error);
-      throw error;
+      if (error) {
+        console.error('Error uploading selfie:', error);
+        throw new Error('Failed to upload selfie');
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('attendance-photos')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Error in uploadSelfieToStorage:', error);
+      throw new Error('Failed to upload selfie to storage');
     }
+  }
 
-    console.log('✅ [SUCCESS] Signed URL generated for path:', imagePath, 'URL length:', data.signedUrl?.length);
-    return data.signedUrl;
-  } catch (error) {
-    console.error('❌ [ERROR] Failed to generate image URL for path:', imagePath, 'Error:', error);
-    throw error;
+  /**
+   * Handle emergency check-out
+   */
+  async emergencyCheckOut(employeeId: string, request: EmergencyCheckOutRequest): Promise<AttendanceResponse> {
+    try {
+      const supabase = await createClient();
+      const today = new Date().toISOString().split('T')[0];
+
+      // Get today's attendance record
+      const { data: attendanceRecord, error } = await supabase
+        .from('daily_attendance')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('attendance_date', today)
+        .maybeSingle();
+
+      if (error || !attendanceRecord || !attendanceRecord.check_in_timestamp) {
+        return {
+          success: false,
+          message: 'No active check-in found for emergency check-out'
+        };
+      }
+
+      // Update with emergency check-out data
+      const updateData: Record<string, unknown> = {
+        check_out_timestamp: request.timestamp,
+        verification_status: 'VERIFIED' as const, // Auto-approve emergency check-outs
+        verification_notes: `Emergency check-out: ${request.reason}`,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add location if provided
+      if (request.location) {
+        updateData.check_out_latitude = request.location.latitude;
+        updateData.check_out_longitude = request.location.longitude;
+      }
+
+      const { data: updatedRecord, error: updateError } = await supabase
+        .from('daily_attendance')
+        .update(updateData)
+        .eq('id', attendanceRecord.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error updating emergency check-out:', updateError);
+        return {
+          success: false,
+          message: 'Failed to process emergency check-out'
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Emergency check-out processed successfully',
+        attendanceId: updatedRecord.id,
+        timestamp: updatedRecord.check_out_timestamp,
+        status: this.mapAttendanceStatus(updatedRecord),
+        checkInTime: updatedRecord.check_in_timestamp,
+        checkOutTime: updatedRecord.check_out_timestamp,
+        workHours: updatedRecord.total_work_hours || 0,
+        verificationStatus: 'VERIFIED'
+      };
+    } catch (error) {
+      console.error('Error in emergencyCheckOut:', error);
+      return {
+        success: false,
+        message: 'Emergency check-out failed due to server error'
+      };
+    }
+  }
+
+  /**
+   * Update location tracking for an attendance record
+   */
+  async updateLocationTracking(attendanceId: string, request: LocationUpdateRequest): Promise<boolean> {
+    try {
+      const supabase = await createClient();
+
+      // Get current attendance record to check if it's active
+      const { data: record, error } = await supabase
+        .from('daily_attendance')
+        .select('check_in_timestamp, check_out_timestamp, path_data')
+        .eq('id', attendanceId)
+        .single();
+
+      if (error || !record) {
+        console.error('Attendance record not found:', error);
+        return false;
+      }
+
+      // Don't update location for checked-out records
+      if (record.check_out_timestamp) {
+        return false;
+      }
+
+      // Get current path data or initialize empty array
+      const currentPath = record.path_data || [];
+
+      // Add new location point
+      const newPathPoint = {
+        lat: request.location.latitude,
+        lng: request.location.longitude,
+        timestamp: request.location.timestamp.toISOString(),
+        accuracy: request.location.accuracy,
+        batteryLevel: request.batteryLevel || 0
+      };
+
+      // Only add if movement exceeds threshold (50 meters) or it's the first point
+      let shouldAddPoint = currentPath.length === 0;
+
+      if (currentPath.length > 0) {
+        const lastPoint = currentPath[currentPath.length - 1];
+        const distance = this.calculateDistance(
+          lastPoint.lat, lastPoint.lng,
+          request.location.latitude, request.location.longitude
+        );
+        shouldAddPoint = distance > 50; // 50 meter threshold
+      }
+
+      let updatedPath: PathData[] = currentPath;
+      if (shouldAddPoint) {
+        updatedPath = [...currentPath, newPathPoint];
+      }
+
+      // Update record with new path data and last location info
+      const updateData = {
+        path_data: updatedPath,
+        last_location_update: new Date().toISOString(),
+        battery_level_at_check_in: request.batteryLevel
+      };
+
+      const { error: updateError } = await supabase
+        .from('daily_attendance')
+        .update(updateData)
+        .eq('id', attendanceId);
+
+      if (updateError) {
+        console.error('Error updating location:', updateError);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateLocationTracking:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Calculate work hours between check-in and check-out
+   */
+  private calculateWorkHours(checkInTime: Date, checkOutTime?: Date): number {
+    const endTime = checkOutTime || new Date();
+    const diffMs = endTime.getTime() - checkInTime.getTime();
+    return Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100; // Round to 2 decimal places
+  }
+
+  /**
+   * Calculate distance between two points in meters
+   */
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371e3; // Earth's radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
   }
 }
 
-/**
- * Generate signed URLs for multiple attendance images
- */
-export async function generateAttendanceImageUrls(imagePaths: string[]): Promise<{ [key: string]: string }> {
-  const urls: { [key: string]: string } = {};
-
-  await Promise.all(
-    imagePaths.map(async (imagePath) => {
-      if (imagePath) {
-        try {
-          urls[imagePath] = await generateAttendanceImageUrl(imagePath);
-        } catch (error) {
-          console.error(`Failed to generate URL for ${imagePath}:`, error);
-          urls[imagePath] = ''; // Set empty string on failure
-        }
-      }
-    })
-  );
-
-  return urls;
-}
 
 // Export singleton instance
 export const attendanceService = new AttendanceService();

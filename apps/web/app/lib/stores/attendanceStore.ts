@@ -65,7 +65,6 @@ interface AttendanceState {
   error: string | null;
   updateError: string | null;
   filter: AttendanceFilters;
-  signedImageUrls: { [key: string]: string }; // Cache for signed URLs
   pagination: {
     currentPage: number;
     totalPages: number;
@@ -77,8 +76,6 @@ interface AttendanceState {
 
   fetchAttendanceRecords: (params?: Partial<AttendanceListParams>) => Promise<void>;
   updateAttendanceVerification: (recordId: string, status: VerificationStatus, notes?: string) => Promise<void>;
-  getSignedImageUrl: (imagePath: string) => Promise<string>;
-  getSignedImageUrls: (imagePaths: string[]) => Promise<{ [key: string]: string }>;
   setSelectedAttendance: (attendance: DailyAttendanceRecord | null) => void;
   setFilters: (filters: Partial<AttendanceFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -116,7 +113,6 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   error: null,
   updateError: null,
   filter: {},
-  signedImageUrls: {},
   pagination: {
     currentPage: 1,
     totalPages: 1,
@@ -242,103 +238,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
     }
   },
 
-  getSignedImageUrl: async (imagePath: string) => {
-    if (!imagePath) {
-      console.log('🔍 [DEBUG] No image path provided, returning empty string');
-      return '';
-    }
-
-    const { signedImageUrls } = get();
-
-    // Return cached URL if available
-    if (signedImageUrls[imagePath]) {
-      console.log('🔍 [DEBUG] Using cached signed URL for image path:', imagePath);
-      return signedImageUrls[imagePath];
-    }
-
-    console.log('🔍 [DEBUG] Fetching new signed URL for image path:', imagePath);
-
-    try {
-      const response = await fetch(`/api/attendance/image?path=${encodeURIComponent(imagePath)}`, {
-        headers: getAuthHeaders(),
-      });
-
-      console.log('🔍 [DEBUG] Signed URL API response status:', response.status);
-
-      const result = await response.json();
-      console.log('🔍 [DEBUG] Signed URL API response:', {
-        success: !!result.signedUrl,
-        hasError: !!result.error,
-        error: result.error,
-        urlLength: result.signedUrl?.length
-      });
-
-      if (!response.ok || !result.signedUrl) {
-        console.error('❌ [ERROR] Failed to generate signed URL for image:', imagePath, 'Response:', result);
-        return '';
-      }
-
-      // Cache the URL
-      set((state) => ({
-        signedImageUrls: {
-          ...state.signedImageUrls,
-          [imagePath]: result.signedUrl,
-        },
-      }));
-
-      console.log('✅ [SUCCESS] Cached and returning signed URL for image path:', imagePath);
-      return result.signedUrl;
-    } catch (error) {
-      console.error('❌ [ERROR] Error generating signed URL for path:', imagePath, 'Error:', error);
-      return '';
-    }
-  },
-
-  getSignedImageUrls: async (imagePaths: string[]) => {
-    const { signedImageUrls } = get();
-    const urls: { [key: string]: string } = { ...signedImageUrls };
-
-    console.log('🔍 [DEBUG] Batch fetching signed URLs for image paths:', imagePaths);
-
-    await Promise.all(
-      imagePaths.map(async (imagePath) => {
-        if (!imagePath) {
-          console.log('🔍 [DEBUG] Skipping empty image path');
-          return;
-        }
-
-        if (urls[imagePath]) {
-          console.log('🔍 [DEBUG] Using cached URL for image path:', imagePath);
-          return;
-        }
-
-        console.log('🔍 [DEBUG] Fetching signed URL for image path:', imagePath);
-
-        try {
-          const response = await fetch(`/api/attendance/image?path=${encodeURIComponent(imagePath)}`, {
-            headers: getAuthHeaders(),
-          });
-
-          const result = await response.json();
-
-          if (response.ok && result.signedUrl) {
-            urls[imagePath] = result.signedUrl;
-            console.log('✅ [SUCCESS] Got signed URL for image path:', imagePath, 'URL length:', result.signedUrl.length);
-          } else {
-            console.error('❌ [ERROR] Failed to get signed URL for image path:', imagePath, 'Response:', result);
-          }
-        } catch (error) {
-          console.error(`❌ [ERROR] Failed to generate signed URL for ${imagePath}:`, error);
-        }
-      })
-    );
-
-    // Update cache
-    set({ signedImageUrls: urls });
-    console.log('🔍 [DEBUG] Updated signed URL cache with', Object.keys(urls).length, 'entries');
-    return urls;
-  },
-
+  
+  
   setSelectedAttendance: (attendance) => {
     set({ selectedAttendance: attendance });
   },

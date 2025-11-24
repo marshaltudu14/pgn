@@ -139,9 +139,20 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
-            // Check response structure - the data is in response.data (no more double wrapping)
-            const responseData = response.data;
-            if (!responseData || !responseData.token) {
+            // Handle response structure properly
+            // The API client may return wrapped or unwrapped responses
+            let responseData;
+            if (response.success && response.data && typeof response.data === 'object') {
+              // Response is in format: { success: true, data: { token, employee, ... } }
+              responseData = response.data;
+            } else {
+              // Response is in direct format
+              responseData = response;
+            }
+
+            // For admin users, token can be empty string ("") - this is intentional
+            // We need to check if token property exists, not if it's truthy
+            if (!responseData || !('token' in responseData) || !('employee' in responseData) || responseData.employee === undefined) {
               // Clear loading state and set error for invalid response structure
               set({
                 isAuthenticated: false,
@@ -154,6 +165,40 @@ export const useAuth = create<AuthStoreState>()(
               return {
                 success: false,
                 error: 'Invalid login response structure',
+              };
+            }
+
+            // Additional check: if token is provided (non-empty), it should be a string
+            // If token is empty string, that's valid for admin users
+            if (responseData.token && typeof responseData.token !== 'string') {
+              set({
+                isAuthenticated: false,
+                isLoggingIn: false,
+                user: null,
+                error: 'Invalid login response structure - invalid token type',
+                lastActivity: Date.now(),
+              });
+
+              return {
+                success: false,
+                error: 'Invalid login response structure',
+              };
+            }
+
+            // Check if this is an admin user trying to access mobile app
+            // Admin users have empty tokens ("") - they should use web dashboard instead
+            if (responseData.token === '') {
+              set({
+                isAuthenticated: false,
+                isLoggingIn: false,
+                user: null,
+                error: 'Access denied. This mobile app is for employees only. Administrators should use the web dashboard.',
+                lastActivity: Date.now(),
+              });
+
+              return {
+                success: false,
+                error: 'Access denied. This mobile app is for employees only. Administrators should use the web dashboard.',
               };
             }
 
@@ -275,7 +320,7 @@ export const useAuth = create<AuthStoreState>()(
               throw new Error(response.error || 'Token refresh failed');
             }
 
-            // Check response structure - the data is in response.data (no more double wrapping)
+            // Check response structure - the data is in response.data (single nested)
             const responseData = response.data;
             if (!responseData?.token) {
               throw new Error('Invalid refresh response structure');

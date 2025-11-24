@@ -11,7 +11,6 @@ import {
   createSecurityMiddleware,
   withSecurity,
   addSecurityHeaders,
-  AuthenticatedRequest,
   RATE_LIMIT_CONFIGS
 } from '../security-middleware';
 import { createClient } from '../../utils/supabase/server';
@@ -41,7 +40,9 @@ afterAll(() => {
 
 describe('security-middleware', () => {
   let mockRequest: NextRequest;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockSupabaseClient: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockJwtService: any;
 
   beforeEach(() => {
@@ -84,6 +85,7 @@ describe('security-middleware', () => {
           return headerValues[key.toLowerCase()] || null;
         }),
       },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   });
 
@@ -390,7 +392,8 @@ describe('security-middleware', () => {
     });
 
     it('should return CORS headers for OPTIONS requests', async () => {
-      mockRequest.method = 'OPTIONS';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mockRequest as any).method = 'OPTIONS';
       (mockRequest.headers.get as jest.Mock).mockImplementation((key: string) => {
         switch (key.toLowerCase()) {
           case 'x-client-info': return 'pgn-mobile-client';
@@ -409,7 +412,8 @@ describe('security-middleware', () => {
 
   describe('withSecurity', () => {
     it('should handle OPTIONS requests correctly', async () => {
-      mockRequest.method = 'OPTIONS';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mockRequest as any).method = 'OPTIONS';
       const mockHandler = jest.fn();
 
       const wrappedHandler = withSecurity(mockHandler);
@@ -509,7 +513,7 @@ describe('security-middleware', () => {
         headers: {
           get: jest.fn().mockReturnValue(null),
         },
-      } as any;
+      } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
       expect(() => {
         validateRequestSecurity(minimalRequest);

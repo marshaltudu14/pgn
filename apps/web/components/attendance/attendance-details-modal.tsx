@@ -5,7 +5,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -22,13 +23,12 @@ import {
   TwoColumnDialogLeft,
   TwoColumnDialogRight,
 } from '@/components/ui/two-column-dialog';
-import { AttendancePathMap } from '@/components/maps/attendance-path-map';
+import { AttendancePathMap, AttendancePathMapRef } from '@/components/maps/attendance-path-map';
 import {
   DailyAttendanceRecord,
   VerificationStatus,
   VERIFICATION_STATUS_CONFIG,
 } from '@pgn/shared';
-import { useAttendanceStore } from '@/app/lib/stores/attendanceStore';
 import {
   Clock,
   User,
@@ -39,6 +39,7 @@ import {
   MapPin,
   LogIn,
   LogOut,
+  RotateCcw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import Image from 'next/image';
@@ -61,7 +62,6 @@ interface AttendanceDetailsModalProps {
   onOpenChange: (open: boolean) => void;
   attendanceRecord: DailyAttendanceRecord | null;
   onVerificationUpdate: (recordId: string, status: VerificationStatus, notes?: string) => Promise<void>;
-  isUpdating: boolean;
   updateError?: string;
 }
 
@@ -77,45 +77,14 @@ export function AttendanceDetailsModal({
   onOpenChange,
   attendanceRecord,
   onVerificationUpdate,
-  isUpdating,
   updateError,
 }: AttendanceDetailsModalProps) {
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('PENDING');
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [isUpdatingVerification, setIsUpdatingVerification] = useState(false);
+  const mapRef = useRef<AttendancePathMapRef>(null);
 
-  const { getSignedImageUrls, signedImageUrls } = useAttendanceStore();
-
-  // Fetch signed URLs for images using Zustand store
-  useEffect(() => {
-    if (!attendanceRecord || !open) return;
-
-    console.log('🔍 [DEBUG] AttendanceDetailsModal: Fetching signed URLs for attendance record:', attendanceRecord.id);
-
-    const fetchSignedUrls = async () => {
-      const imagePaths = [
-        attendanceRecord.checkInSelfieUrl,
-        attendanceRecord.checkOutSelfieUrl
-      ].filter(Boolean) as string[];
-
-      console.log('🔍 [DEBUG] AttendanceDetailsModal: Image paths to fetch:', imagePaths);
-
-      if (imagePaths.length === 0) {
-        console.log('🔍 [DEBUG] AttendanceDetailsModal: No image paths found for this record');
-        return;
-      }
-
-      const urls = await getSignedImageUrls(imagePaths);
-
-      console.log('🔍 [DEBUG] AttendanceDetailsModal: Got signed URLs:', {
-        checkIn: !!urls[attendanceRecord.checkInSelfieUrl!],
-        checkOut: !!urls[attendanceRecord.checkOutSelfieUrl!],
-        totalUrls: Object.keys(urls).length
-      });
-    };
-
-    fetchSignedUrls();
-  }, [attendanceRecord, open, getSignedImageUrls]);
-
+  
   // Reset form when record changes
   if (attendanceRecord) {
     if (verificationStatus !== attendanceRecord.verificationStatus) {
@@ -126,11 +95,14 @@ export function AttendanceDetailsModal({
   const handleVerificationUpdate = async () => {
     if (!attendanceRecord) return;
 
+    setIsUpdatingVerification(true);
     try {
       await onVerificationUpdate(attendanceRecord.id, verificationStatus, verificationNotes);
       setVerificationNotes('');
     } catch {
       // Error handling is done by parent component
+    } finally {
+      setIsUpdatingVerification(false);
     }
   };
 
@@ -175,12 +147,26 @@ export function AttendanceDetailsModal({
         {/* LEFT COLUMN - MAP */}
         <TwoColumnDialogLeft className="flex flex-col">
           <div className="flex-1 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold">Location & Path</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold">Location & Path</h3>
+              </div>
+              {hasValidCheckInLocation && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => mapRef.current?.resetMap()}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reset
+                </Button>
+              )}
             </div>
             {hasValidCheckInLocation ? (
               <AttendancePathMap
+                ref={mapRef}
                 checkInLocation={attendanceRecord.checkInLocation}
                 checkOutLocation={attendanceRecord.checkOutLocation}
                 locationPath={mapPathData}
@@ -291,44 +277,25 @@ export function AttendanceDetailsModal({
                   <div className="flex-shrink-0">
                     <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
                       {attendanceRecord.checkInSelfieUrl ? (
-                        <>
-                          <Image
-                            src={signedImageUrls[attendanceRecord.checkInSelfieUrl] || ''}
-                            alt="Check-in selfie"
-                            width={128}
-                            height={128}
-                            className="w-full h-full object-cover"
-                            onLoad={() => {
-                              console.log('✅ [SUCCESS] Check-in image loaded successfully for path:', attendanceRecord.checkInSelfieUrl);
-                            }}
-                            onError={(e) => {
-                              console.error('❌ [ERROR] Check-in image failed to load:', {
-                                imagePath: attendanceRecord.checkInSelfieUrl,
-                                signedUrl: signedImageUrls[attendanceRecord.checkInSelfieUrl],
-                                hasSignedUrl: !!signedImageUrls[attendanceRecord.checkInSelfieUrl],
-                                urlLength: signedImageUrls[attendanceRecord.checkInSelfieUrl]?.length
-                              });
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.parentElement!.innerHTML = `
-                                <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                  </svg>
-                                </div>
-                              `;
-                            }}
-                          />
-                          {!signedImageUrls[attendanceRecord.checkInSelfieUrl] && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                              <div className="text-center text-gray-400">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto mb-2"></div>
-                                <span className="text-xs">Loading...</span>
+                        <Image
+                          src={attendanceRecord.checkInSelfieUrl}
+                          alt="Check-in selfie"
+                          width={128}
+                          height={128}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
                               </div>
-                            </div>
-                          )}
-                        </>
+                            `;
+                          }}
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                           <span className="text-sm">--</span>
@@ -396,44 +363,32 @@ export function AttendanceDetailsModal({
                   <div className="flex-shrink-0">
                     <div className="w-32 h-32 border rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
                       {attendanceRecord.checkOutSelfieUrl ? (
-                        <>
-                          <Image
-                            src={signedImageUrls[attendanceRecord.checkOutSelfieUrl] || ''}
-                            alt="Check-out selfie"
-                            width={128}
-                            height={128}
-                            className="w-full h-full object-cover"
-                            onLoad={() => {
-                              console.log('✅ [SUCCESS] Check-out image loaded successfully for path:', attendanceRecord.checkOutSelfieUrl);
-                            }}
-                            onError={(e) => {
-                              console.error('❌ [ERROR] Check-out image failed to load:', {
-                                imagePath: attendanceRecord.checkOutSelfieUrl,
-                                signedUrl: signedImageUrls[attendanceRecord.checkOutSelfieUrl],
-                                hasSignedUrl: !!signedImageUrls[attendanceRecord.checkOutSelfieUrl],
-                                urlLength: signedImageUrls[attendanceRecord.checkOutSelfieUrl]?.length
-                              });
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.parentElement!.innerHTML = `
-                                <div class="w-full h-full flex items-center justify-center text-gray-400">
-                                  <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                  </svg>
-                                </div>
-                              `;
-                            }}
-                          />
-                          {!signedImageUrls[attendanceRecord.checkOutSelfieUrl] && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                              <div className="text-center text-gray-400">
-                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-400 mx-auto mb-2"></div>
-                                <span className="text-xs">Loading...</span>
+                        <Image
+                          src={attendanceRecord.checkOutSelfieUrl}
+                          alt="Check-out selfie"
+                          width={128}
+                          height={128}
+                          className="w-full h-full object-cover"
+                          onLoad={() => {
+                            console.log('✅ [SUCCESS] Check-out image loaded successfully:', attendanceRecord.checkOutSelfieUrl);
+                          }}
+                          onError={(e) => {
+                            console.error('❌ [ERROR] Check-out image failed to load:', {
+                              imagePath: attendanceRecord.checkOutSelfieUrl,
+                              urlLength: attendanceRecord.checkOutSelfieUrl?.length
+                            });
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
                               </div>
-                            </div>
-                          )}
-                        </>
+                            `;
+                          }}
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                           <span className="text-sm">--</span>
@@ -567,7 +522,7 @@ export function AttendanceDetailsModal({
                 </Button>
                 <Button
                   onClick={handleVerificationUpdate}
-                  disabled={isUpdating}
+                  disabled={isUpdatingVerification}
                   className={`cursor-pointer ${
                     verificationStatus === 'VERIFIED'
                       ? 'bg-green-600 hover:bg-green-700'
@@ -578,8 +533,11 @@ export function AttendanceDetailsModal({
                       : undefined
                   }`}
                 >
-                  {isUpdating ? (
-                    'Updating...'
+                  {isUpdatingVerification ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Updating...
+                    </>
                   ) : (
                     <>
                       {verificationStatus === 'VERIFIED' && <CheckCircle className="h-4 w-4 mr-2" />}

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AuthenticatedUser, LoginRequest, LoginResponse, LogoutRequest } from '@pgn/shared';
+import { AuthenticatedUser, LoginRequest, LogoutRequest } from '@pgn/shared';
 import { useUIStore } from './uiStore';
 
 interface AuthState {
@@ -26,17 +26,28 @@ export const useAuthStore = create<AuthState>()(
       initialize: async () => {
         set({ isLoading: true });
         try {
-          // Check if we have a stored token
+          // Check if we have a stored session
           const storedState = get();
-          if (storedState.token) {
-            // Token exists, but we need a way to validate it
-            // For now, assume it's valid if we have user data
-            if (storedState.user) {
-              // Admin detection based on email containing 'admin' or token absence (admins don't get JWT tokens)
-              const isAdmin = storedState.user.email.includes('admin') || !storedState.token;
+          if (storedState.user && storedState.isAuthenticated) {
+            // For web dashboard, only admins should be authenticated
+            // Admin users have empty tokens, employees have JWT tokens
+            const isAdmin = !storedState.token || storedState.token === '';
+
+            if (isAdmin) {
               set({
                 isAuthenticated: true,
-                isAdmin,
+                isAdmin: true,
+                isLoading: false,
+              });
+              return;
+            } else {
+              // Employee session found in web dashboard - clear it
+              console.warn('Employee session detected in web dashboard - clearing for security');
+              set({
+                user: null,
+                token: null,
+                isAuthenticated: false,
+                isAdmin: false,
                 isLoading: false,
               });
               return;
@@ -116,19 +127,49 @@ export const useAuthStore = create<AuthState>()(
             }
           }
 
-          const loginResponse = data as LoginResponse;
-          // Admin detection: admins don't get JWT tokens, employees do
-          const isAdmin = !loginResponse.token || loginResponse.employee.email.includes('admin');
+          // API returns { success: true, data: { token, employee, ... } }
+          if (!data.success || !data.data) {
+            set({ isLoading: false });
+            return {
+              success: false,
+              error: data.error || 'Invalid response from server'
+            };
+          }
+
+          const responseData = data.data;
+          const { token, employee } = responseData;
+
+          // Check if employee data exists
+          if (!employee) {
+            set({ isLoading: false });
+            return {
+              success: false,
+              error: 'Invalid user data received from server'
+            };
+          }
+
+          // Admin detection: Only admins can login to web dashboard
+          // Admins don't get JWT tokens (empty token), employees do
+          const isAdmin = !token || token === '';
+
+          // Reject employees trying to access web dashboard
+          if (!isAdmin) {
+            set({ isLoading: false });
+            return {
+              success: false,
+              error: 'Access denied. This dashboard is for administrators only. Employees should use the mobile app.'
+            };
+          }
 
           set({
-            user: loginResponse.employee,
-            token: loginResponse.token,
+            user: employee,
+            token: token,
             isAuthenticated: true,
-            isAdmin,
+            isAdmin: true, // Force admin to true for web dashboard
             isLoading: false,
           });
 
-          useUIStore.getState().showNotification(`Welcome back, ${loginResponse.employee.firstName} ${loginResponse.employee.lastName}!`, 'success');
+          useUIStore.getState().showNotification(`Welcome back, ${employee.firstName} ${employee.lastName}!`, 'success');
 
           return { success: true };
         } catch (error) {

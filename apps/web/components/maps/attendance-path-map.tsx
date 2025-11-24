@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 
 interface LocationPoint {
   latitude: number;
@@ -28,21 +28,30 @@ interface AttendancePathMapProps {
   locationPath?: LocationPoint[];
   className?: string;
   height?: string;
+  onResetMap?: () => void;
 }
 
-export function AttendancePathMap({
+
+// Define ref interface
+export interface AttendancePathMapRef {
+  resetMap: () => void;
+}
+
+const AttendancePathMap = forwardRef<AttendancePathMapRef, AttendancePathMapProps>(({
   checkInLocation,
   checkOutLocation,
   locationPath = [],
   className = '',
   height = '400px',
-}: AttendancePathMapProps) {
+  onResetMap,
+}, ref) => {
   const mapRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
 
   // Function to reset map to check-in location
-  const resetMapToCheckIn = () => {
+  const resetMapToCheckIn = useCallback(() => {
     if (mapInstanceRef.current && checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
       const lat = Number(checkInLocation.latitude);
       const lng = Number(checkInLocation.longitude);
@@ -51,102 +60,23 @@ export function AttendancePathMap({
         mapInstanceRef.current.setView([lat, lng], 15);
       }
     }
-  };
 
-  useEffect(() => {
-    let L: any;
-
-    const initializeMap = async () => {
-      try {
-        // Dynamically import Leaflet
-        const leafletModule = await import('leaflet');
-        L = leafletModule.default;
-
-        // Import CSS
-        if (typeof window !== 'undefined') {
-          await import('leaflet/dist/leaflet.css');
-        }
-
-        // Fix default icon paths
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-        });
-
-        if (!mapRef.current) return;
-
-        // Check if map is already initialized
-        if (mapRef.current._leaflet_id) {
-          console.log('Map already initialized, skipping...');
-          return;
-        }
-
-        // Determine initial center (prefer check-in location)
-        let initialLat = 22.18118290; // Default coordinates
-        let initialLng = 84.87733770;
-        let initialZoom = 13;
-
-        if (checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
-          initialLat = Number(checkInLocation.latitude);
-          initialLng = Number(checkInLocation.longitude);
-          initialZoom = 15;
-        } else if (checkOutLocation && checkOutLocation.latitude && checkOutLocation.longitude) {
-          initialLat = Number(checkOutLocation.latitude);
-          initialLng = Number(checkOutLocation.longitude);
-          initialZoom = 15;
-        }
-
-        // Initialize map
-        const map = L.map(mapRef.current).setView([initialLat, initialLng], initialZoom);
-
-        // Add OpenStreetMap tiles
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-          maxZoom: 19,
-        }).addTo(map);
-
-        // Store map instance
-        mapInstanceRef.current = map;
-
-        // Add markers after a short delay to ensure map is ready
-        setTimeout(() => {
-          addMarkersAndPath(L, map);
-          setIsMapReady(true);
-        }, 100);
-
-      } catch (error) {
-        console.error('Failed to initialize map:', error);
-        setIsMapReady(false);
-      }
-    };
-
-    initializeMap();
-
-    // Cleanup
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []); // Only run once on mount
-
-  // Update markers when location data changes
-  useEffect(() => {
-    if (isMapReady && mapInstanceRef.current) {
-      const L = window.L;
-      if (L) {
-        addMarkersAndPath(L, mapInstanceRef.current);
-      }
+    // Also call external reset handler if provided
+    if (onResetMap) {
+      onResetMap();
     }
-  }, [isMapReady, checkInLocation, checkOutLocation, locationPath]);
+  }, [checkInLocation, onResetMap]);
 
-  function addMarkersAndPath(L: any, map: any) {
+  // Function to add markers and path to the map
+  const addMarkersAndPath = useCallback((
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    L: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    map: any) => {
     if (!map || !L) return;
 
     // Clear existing markers
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     map.eachLayer((layer: any) => {
       if (layer instanceof L.Marker || layer instanceof L.Polyline) {
         map.removeLayer(layer);
@@ -207,65 +137,56 @@ export function AttendancePathMap({
       bounds.extend([Number(checkOutLocation.latitude), Number(checkOutLocation.longitude)]);
     }
 
-    // Add path polyline
+    // Add location path
     if (locationPath && locationPath.length > 1) {
-      const validPathData = locationPath.filter(point =>
-        point.latitude && point.longitude &&
-        !isNaN(Number(point.latitude)) && !isNaN(Number(point.latitude))
-      );
+      const latLngs = locationPath.map(point => [Number(point.latitude), Number(point.longitude)]);
 
-      if (validPathData.length > 1) {
-        const pathCoordinates = validPathData.map(point => [
-          Number(point.latitude),
-          Number(point.longitude)
-        ]);
+      const polyline = L.polyline(latLngs, {
+        color: '#3b82f6',
+        weight: 4,
+        opacity: 0.7,
+        smoothFactor: 1
+      });
 
-        const polyline = L.polyline(pathCoordinates, {
-          color: '#3b82f6',
-          weight: 4,
-          opacity: 0.7,
-        }).addTo(map);
+      polyline.addTo(map);
 
-        // Extend bounds to include all path points
-        pathCoordinates.forEach(coord => {
-          bounds.extend(coord);
-        });
+      // Extend bounds to include path
+      latLngs.forEach(latLng => bounds.extend(latLng));
 
-        // Add battery indicators for some points
-        validPathData.forEach((point, index) => {
-          if (index % 5 === 0 && point.batteryLevel !== undefined) { // Show every 5th point
-            const batteryIcon = L.divIcon({
-              html: `
-                <div style="
-                  background-color: ${point.batteryLevel > 50 ? '#10b981' : point.batteryLevel > 20 ? '#f59e0b' : '#ef4444'};
-                  width: 8px;
-                  height: 8px;
-                  border-radius: 50%;
-                  border: 1px solid white;
-                  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-                " title="Battery: ${point.batteryLevel}%"></div>
-              `,
-              className: 'battery-indicator',
-              iconSize: [8, 8],
-              iconAnchor: [4, 4],
-            });
+      // Add battery indicators along the path
+      locationPath.forEach((point, index) => {
+        if (index % 5 === 0 && point.batteryLevel !== undefined) { // Show every 5th point
+          const batteryIcon = L.divIcon({
+            html: `
+              <div style="
+                background-color: ${point.batteryLevel > 50 ? '#10b981' : point.batteryLevel > 20 ? '#f59e0b' : '#ef4444'};
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                border: 1px solid white;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+              " title="Battery: ${point.batteryLevel}%"></div>
+            `,
+            className: 'battery-indicator',
+            iconSize: [8, 8],
+            iconAnchor: [4, 4],
+          });
 
-            const batteryMarker = L.marker([
-              Number(point.latitude),
-              Number(point.longitude)
-            ], { icon: batteryIcon }).addTo(map);
+          const batteryMarker = L.marker([
+            Number(point.latitude),
+            Number(point.longitude)
+          ], { icon: batteryIcon }).addTo(map);
 
-            batteryMarker.bindPopup(`
-              <div style="font-size: 12px;">
-                <strong>Path Point ${index + 1}</strong><br>
-                Time: ${new Date(point.timestamp).toLocaleTimeString()}<br>
-                Battery: ${point.batteryLevel}%<br>
-                Accuracy: ${point.accuracy ? `±${point.accuracy}m` : 'N/A'}
-              </div>
-            `);
-          }
-        });
-      }
+          batteryMarker.bindPopup(`
+            <div style="font-size: 12px;">
+              <strong>Path Point ${index + 1}</strong><br>
+              Time: ${new Date(point.timestamp).toLocaleTimeString()}<br>
+              Battery: ${point.batteryLevel}%<br>
+              Accuracy: ${point.accuracy ? `±${point.accuracy}m` : 'N/A'}
+            </div>
+          `);
+        }
+      });
     }
 
     // Fit map to show all markers and path
@@ -275,7 +196,103 @@ export function AttendancePathMap({
       // If only check-in is available, center on it
       map.setView([Number(checkInLocation.latitude), Number(checkInLocation.longitude)], 15);
     }
-  }
+  }, [checkInLocation, checkOutLocation, locationPath]);
+
+  // Expose the reset function via ref
+  useImperativeHandle(ref, () => ({
+    resetMap: resetMapToCheckIn,
+  }), [resetMapToCheckIn]);
+
+  useEffect(() => {
+    const initializeMap = async () => {
+      try {
+        // Dynamically import Leaflet
+
+        const leafletModule = await import('leaflet');
+        const L = leafletModule.default;
+
+        // Import CSS
+        if (typeof window !== 'undefined') {
+          await import('leaflet/dist/leaflet.css');
+        }
+
+        // Fix default icon paths
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
+
+        if (!mapRef.current) return;
+
+        // Check if map is already initialized
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((mapRef.current as any)._leaflet_id) {
+          console.log('Map already initialized, skipping...');
+          return;
+        }
+
+        // Determine initial center (prefer check-in location, default to Bhubaneswar)
+        let initialLat = 20.2961; // Bhubaneswar coordinates
+        let initialLng = 85.8245;
+        let initialZoom = 13;
+
+        if (checkInLocation && checkInLocation.latitude && checkInLocation.longitude) {
+          initialLat = Number(checkInLocation.latitude);
+          initialLng = Number(checkInLocation.longitude);
+          initialZoom = 15;
+        } else if (checkOutLocation && checkOutLocation.latitude && checkOutLocation.longitude) {
+          initialLat = Number(checkOutLocation.latitude);
+          initialLng = Number(checkOutLocation.longitude);
+          initialZoom = 15;
+        }
+
+        // Initialize map
+        const map = L.map(mapRef.current).setView([initialLat, initialLng], initialZoom);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(map);
+
+        // Store map instance
+        mapInstanceRef.current = map;
+
+        // Add markers after a short delay to ensure map is ready
+        setTimeout(() => {
+          addMarkersAndPath(L, map);
+          setIsMapReady(true);
+        }, 100);
+
+      } catch (error) {
+        console.error('Failed to initialize map:', error);
+        setIsMapReady(false);
+      }
+    };
+
+    initializeMap();
+
+    // Cleanup
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, [addMarkersAndPath, checkInLocation, checkOutLocation]); // Include dependencies
+
+  // Update markers when location data changes
+  useEffect(() => {
+    if (isMapReady && mapInstanceRef.current) {
+      const L = window.L;
+      if (L) {
+        addMarkersAndPath(L, mapInstanceRef.current);
+      }
+    }
+  }, [isMapReady, addMarkersAndPath]);
 
   return (
     <div className={`relative ${className}`}>
@@ -292,16 +309,10 @@ export function AttendancePathMap({
         </div>
       )}
 
-      {/* Reset button */}
-      {isMapReady && checkInLocation && checkInLocation.latitude && checkInLocation.longitude && (
-        <button
-          onClick={resetMapToCheckIn}
-          className="absolute top-4 right-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm"
-          title="Reset to check-in location"
-        >
-          📍 Reset
-        </button>
-      )}
     </div>
   );
-}
+});
+
+AttendancePathMap.displayName = 'AttendancePathMap';
+
+export { AttendancePathMap };

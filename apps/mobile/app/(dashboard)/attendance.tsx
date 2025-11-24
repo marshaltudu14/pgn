@@ -28,8 +28,8 @@ export default function AttendanceScreen() {
     isHistoryLoading,
     isRefreshingHistory,
     fetchAttendanceHistory,
-    loadMoreAttendanceHistory,
-    refreshAttendanceHistory,
+    loadMoreHistory,
+    refreshHistory,
   } = useAttendance();
 
   // Theme colors - Black for dark mode, White for light mode
@@ -60,20 +60,20 @@ export default function AttendanceScreen() {
   // Load more data (infinite scroll)
   const loadMoreData = useCallback(async () => {
     try {
-      await loadMoreAttendanceHistory();
+      await loadMoreHistory();
     } catch {
       showToast.error('Error', 'Failed to load more data');
     }
-  }, [loadMoreAttendanceHistory]);
+  }, [loadMoreHistory]);
 
   // Refresh data
   const onRefresh = useCallback(async () => {
     try {
-      await refreshAttendanceHistory();
+      await refreshHistory();
     } catch {
       showToast.error('Error', 'Failed to refresh data');
     }
-  }, [refreshAttendanceHistory]);
+  }, [refreshHistory]);
 
   // Format time
   const formatTime = (date: Date | string | null) => {

@@ -12,7 +12,6 @@ export default function AttendanceManagementClient() {
   const {
     attendanceRecords,
     isLoading,
-    isUpdating,
     error,
     updateError,
     pagination,
@@ -131,7 +130,6 @@ export default function AttendanceManagementClient() {
           onOpenChange={handleModalClose}
           attendanceRecord={selectedAttendance}
           onVerificationUpdate={handleVerificationUpdate}
-          isUpdating={isUpdating}
           updateError={updateError || undefined}
         />
       </div>

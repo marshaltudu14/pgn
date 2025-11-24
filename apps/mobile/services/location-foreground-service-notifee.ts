@@ -1,13 +1,14 @@
+import { getCurrentLocation } from '@/utils/location';
+import { LocationData } from '@pgn/shared';
+import { LOCATION_TRACKING_CONFIG, UPDATE_INTERVAL_MS } from '@/constants/location-tracking';
 import notifee, {
-  AndroidImportance,
-  AndroidCategory,
-  AndroidForegroundServiceType,
-  AndroidFlags,
-  EventType,
-  AuthorizationStatus,
-  AndroidLaunchActivityFlag,
+    AndroidForegroundServiceType,
+    AndroidImportance,
+    AndroidLaunchActivityFlag,
+    AuthorizationStatus,
+    EventType
 } from '@notifee/react-native';
-import { useAuth } from '@/store/auth-store';
+import * as Battery from 'expo-battery';
 
 interface LocationTrackingState {
   isTracking: boolean;
@@ -17,12 +18,18 @@ interface LocationTrackingState {
   notificationId?: string;
 }
 
+type LocationUpdateCallback = (location: LocationData, batteryLevel: number) => Promise<void>;
+
 class LocationTrackingServiceNotifee {
   private state: LocationTrackingState = {
     isTracking: false,
   };
 
+  private trackingInterval: ReturnType<typeof setInterval> | null = null;
+  private notificationUpdateInterval: ReturnType<typeof setInterval> | null = null;
+  private locationUpdateCallback?: LocationUpdateCallback;
   private isInitialized = false;
+  private nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
 
   // Setup background event handler to suppress warning
   private setupBackgroundEventHandler(): void {
@@ -45,6 +52,11 @@ class LocationTrackingServiceNotifee {
     } catch (error) {
       console.error('[LocationTrackingServiceNotifee] Failed to setup background event handler:', error);
     }
+  }
+
+  // Set the location update callback
+  setLocationUpdateCallback(callback: LocationUpdateCallback): void {
+    this.locationUpdateCallback = callback;
   }
 
   // Initialize the service
@@ -135,6 +147,8 @@ class LocationTrackingServiceNotifee {
       // Create foreground notification to start tracking
       await this.createForegroundNotification(employeeName);
 
+      // Start the tracking loop
+      this.startTrackingLoop();
 
       return true;
     } catch (error) {
@@ -144,25 +158,111 @@ class LocationTrackingServiceNotifee {
     }
   }
 
+  // Start the tracking loop (30 seconds interval)
+  private startTrackingLoop(): void {
+    // Clear any existing intervals
+    if (this.trackingInterval) {
+      clearInterval(this.trackingInterval);
+    }
+    if (this.notificationUpdateInterval) {
+      clearInterval(this.notificationUpdateInterval);
+    }
+
+    // Reset countdown
+    this.nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
+
+    // Initial location update
+    this.sendLocationUpdate();
+
+    // Set interval for location updates based on config
+    this.trackingInterval = setInterval(() => {
+      this.sendLocationUpdate();
+      this.nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS; // Reset countdown after each sync
+    }, UPDATE_INTERVAL_MS);
+
+    // Set interval for 1 second notification updates (countdown)
+    this.notificationUpdateInterval = setInterval(() => {
+      this.updateNotificationCountdown();
+    }, 1000);
+  }
+
+  // Send location and battery update
+  private async sendLocationUpdate(): Promise<void> {
+    try {
+      if (!this.state.isTracking) return;
+
+      // Get current location
+      const location = await getCurrentLocation();
+
+      // Get battery level
+      const batteryLevel = await Battery.getBatteryLevelAsync();
+      const batteryPercentage = Math.round(batteryLevel * 100);
+
+      // Send update via callback if available
+      if (this.locationUpdateCallback) {
+        await this.locationUpdateCallback(location, batteryPercentage);
+      } else {
+        console.warn('[LocationTrackingServiceNotifee] No location update callback set');
+      }
+
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Failed to send location update:', error);
+    }
+  }
+
+  // Update notification with countdown
+  private async updateNotificationCountdown(): Promise<void> {
+    try {
+      if (!this.state.isTracking || !this.state.notificationId) {
+        return;
+      }
+
+      // Decrement countdown
+      if (this.nextSyncCountdown > 0) {
+        this.nextSyncCountdown--;
+      }
+
+      // Update notification with new countdown
+      await notifee.displayNotification({
+        id: this.state.notificationId,
+        title: `PGN Location Tracking - ${this.state.employeeName}`,
+        body: `Tracking location every ${LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS} seconds. Next sync in ${this.nextSyncCountdown}s`,
+        android: {
+          channelId: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
+          asForegroundService: true,
+          ongoing: true,
+          foregroundServiceTypes: [
+            AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION,
+            AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+          ],
+        },
+      });
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Failed to update notification countdown:', error);
+    }
+  }
+
   // Create and display foreground notification to start tracking
   private async createForegroundNotification(employeeName: string): Promise<void> {
     try {
 
 
       const channelId = await notifee.createChannel({
-        id: 'location-tracking',
-        name: 'Location Tracking',
-        importance: AndroidImportance.LOW,
+        id: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
+        name: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_NAME,
+        importance: AndroidImportance[LOCATION_TRACKING_CONFIG.NOTIFICATION.IMPORTANCE.toUpperCase() as keyof typeof AndroidImportance],
       });
 
 
 
 
 
-      // Display the notification - exactly as shown in the docs
+      // Display the notification with employee-specific information
+      const notificationId = `location-tracking-${employeeName}-${Date.now()}`;
       await notifee.displayNotification({
-        title: 'Foreground service',
-        body: 'This notification will exist for the lifetime of the service runner',
+        id: notificationId,
+        title: `PGN Location Tracking - ${employeeName}`,
+        body: `Tracking location every ${LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS} seconds during work hours`,
         android: {
           channelId,
           asForegroundService: true,
@@ -174,10 +274,8 @@ class LocationTrackingServiceNotifee {
         },
       });
 
-
-
       this.state.channelId = channelId;
-      this.state.notificationId = 'location-tracking';
+      this.state.notificationId = notificationId;
     } catch (error) {
       console.error('[LocationTrackingServiceNotifee] Failed to create foreground notification:', error);
       throw error;
@@ -199,6 +297,16 @@ class LocationTrackingServiceNotifee {
       // Update state
       this.state.isTracking = false;
 
+      // Clear tracking intervals
+      if (this.trackingInterval) {
+        clearInterval(this.trackingInterval);
+        this.trackingInterval = null;
+      }
+      if (this.notificationUpdateInterval) {
+        clearInterval(this.notificationUpdateInterval);
+        this.notificationUpdateInterval = null;
+      }
+
       // Stop the foreground service
       await notifee.stopForegroundService();
 
@@ -218,7 +326,7 @@ class LocationTrackingServiceNotifee {
           title: 'PGN Location Tracking',
           body: 'Location tracking stopped',
           android: {
-            channelId: 'location-tracking',
+            channelId: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
             importance: AndroidImportance.DEFAULT,
             autoCancel: true,
             smallIcon: 'ic_launcher_foreground',

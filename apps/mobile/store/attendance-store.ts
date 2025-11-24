@@ -1,38 +1,33 @@
-import { create } from 'zustand';
-import { devtools, persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FlashMode } from 'expo-camera';
-import { useAuth } from './auth-store';
+import { api } from '@/services/api-client';
+import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
 import {
+  AttendanceListParams,
   AttendanceResponse,
-  LocationData,
   AttendanceStatus,
-  AttendanceStatusResponse,
   CheckInMobileRequest,
   CheckOutMobileRequest,
   DailyAttendanceRecord,
-  AttendanceListParams,
-  AttendanceListResponse
+  LocationData
 } from '@pgn/shared';
-import { api } from '@/services/api-client';
-import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Battery from 'expo-battery';
-import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
+import { create } from 'zustand';
+import { createJSONStorage, devtools, persist } from 'zustand/middleware';
+import { useAuth } from './auth-store';
 // Utility functions
 import {
-  isCameraAvailable,
-  takePhoto,
-  pickPhotoFromLibrary,
-  validatePhoto,
   CameraError,
+  CameraOptions,
   compressPhoto,
-  toggleCameraType,
+  isCameraAvailable,
   PhotoCaptureResult,
-  CameraOptions
+  pickPhotoFromLibrary,
+  takePhoto,
+  validatePhoto
 } from '@/utils/camera';
 import {
-  isLocationAvailable,
-  getCurrentLocation
+  getCurrentLocation,
+  isLocationAvailable
 } from '@/utils/location';
 
 export interface AttendanceQueueItem {
@@ -55,9 +50,23 @@ export interface DeviceInfo {
   };
 }
 
+export interface AttendanceStatusResponse {
+  status: AttendanceStatus;
+  currentAttendanceId?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  workHours?: number;
+  totalDistance?: number;
+  lastLocationUpdate?: string;
+  batteryLevel?: number;
+  verificationStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED';
+  requiresCheckOut?: boolean;
+}
+
 interface AttendanceStoreState {
   // Attendance state
   currentStatus: AttendanceStatus;
+  currentAttendanceId: string | null;
   isLoading: boolean;
   error: string | null;
   lastLocationUpdate: Date | null;
@@ -109,21 +118,22 @@ interface AttendanceStoreState {
   lastPhotoCapture: PhotoCaptureResult | null;
 
   // Actions
-  fetchAttendanceStatus: () => Promise<void>;
+  getAttendanceStatus: (employeeId: string) => Promise<void>;
   checkIn: (request: CheckInMobileRequest) => Promise<AttendanceResponse>;
   checkOut: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
   emergencyCheckOut: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
 
   // Attendance history actions
   fetchAttendanceHistory: (params?: AttendanceListParams) => Promise<void>;
-  loadMoreAttendanceHistory: () => Promise<void>;
-  refreshAttendanceHistory: () => Promise<void>;
+  loadMoreHistory: () => Promise<void>;
+  refreshHistory: () => Promise<void>;
   clearAttendanceHistory: () => void;
 
   // Location tracking (native service)
   startLocationTracking: () => Promise<void>;
   stopLocationTracking: () => Promise<void>;
   updateLocation: (location: LocationData) => void;
+  sendLocationUpdate: (location: LocationData, batteryLevel: number) => Promise<void>;
 
   // Native service methods
   initializeLocationService: () => Promise<void>;
@@ -139,17 +149,16 @@ interface AttendanceStoreState {
   loadOfflineQueue: () => Promise<void>;
   saveOfflineQueue: () => Promise<void>;
   queueForOffline: (type: 'checkin' | 'checkout', data: CheckInMobileRequest | CheckOutMobileRequest) => Promise<void>;
-  processOfflineQueue: () => Promise<{ processed: number; failed: number }>;
+  processOfflineQueue: () => Promise<{ processed: number; failed: number; }>;
   clearOfflineQueue: () => Promise<void>;
 
   // Utility methods
-  getDeviceInfo: () => DeviceInfo;
   shouldQueueForOffline: (error: any) => boolean;
 
   // Camera methods
   capturePhoto: (options?: CameraOptions) => Promise<PhotoCaptureResult>;
-  pickPhoto: (options?: { allowsEditing?: boolean; quality?: number; aspectRatio?: number }) => Promise<PhotoCaptureResult>;
-  validateCapturedPhoto: (photo: PhotoCaptureResult) => { isValid: boolean; errors: string[]; warnings: string[] };
+  pickPhoto: (options?: CameraOptions) => Promise<PhotoCaptureResult>;
+  validateCapturedPhoto: (photo: PhotoCaptureResult) => { isValid: boolean; errors: string[]; warnings: string[]; };
   compressCapturedPhoto: (uri: string, targetSize?: number) => Promise<PhotoCaptureResult>;
 
   // State management
@@ -160,6 +169,9 @@ interface AttendanceStoreState {
 
   // Reset
   reset: () => void;
+
+  // Device info
+  getDeviceInfo: () => Promise<DeviceInfo>;
 }
 
 export const useAttendance = create<AttendanceStoreState>()(
@@ -168,6 +180,7 @@ export const useAttendance = create<AttendanceStoreState>()(
       (set, get) => ({
         // Initial state
         currentStatus: 'CHECKED_OUT',
+        currentAttendanceId: null,
         isLoading: false,
         error: null,
         lastLocationUpdate: null,
@@ -175,6 +188,10 @@ export const useAttendance = create<AttendanceStoreState>()(
         isLocationTracking: false,
         isCheckingIn: false,
         isCheckingOut: false,
+        checkInTime: undefined,
+        checkOutTime: undefined,
+        workHours: undefined,
+        totalDistance: undefined,
         verificationStatus: 'PENDING',
         requiresVerification: false,
         requiresCheckOut: false,
@@ -198,6 +215,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         offlineQueue: [],
         offlineQueueCount: 0,
         isOnline: true,
+        signedImageUrls: {},
         cameraPermission: false,
         locationPermission: false,
         isTakingPhoto: false,
@@ -221,13 +239,19 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Check if service is already running (persisted across restarts)
             const isTracking = locationTrackingServiceNotifee.isTrackingActive();
             if (isTracking) {
+              const authStore = useAuth.getState();
+              const employeeId = authStore.user?.id;
+              if (employeeId) {
+                await get().getAttendanceStatus(employeeId); // Fetch status to sync currentAttendanceId
+              } else {
                 set({
-                currentStatus: 'CHECKED_IN',
-                isLocationTracking: true,
-                lastLocationUpdate: new Date(),
-                checkInTime: new Date(),
-                requiresCheckOut: true,
-              });
+                  currentStatus: 'CHECKED_IN',
+                  isLocationTracking: true,
+                  lastLocationUpdate: new Date(),
+                  checkInTime: new Date(),
+                  requiresCheckOut: true,
+                });
+              }
             }
 
           } catch (error) {
@@ -255,19 +279,16 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         // Fetch current attendance status - only call when explicitly needed
-        fetchAttendanceStatus: async () => {
+        getAttendanceStatus: async (employeeId: string) => {
           set({ isLoading: true, error: null });
 
           try {
-            const authStore = useAuth.getState();
-            const employeeId = authStore.user?.humanReadableId;
-
             if (!employeeId) {
               throw new Error('Employee ID not available');
             }
 
             // Call attendance status API
-            const response = await api.get('/attendance/status');
+            const response = await api.get<AttendanceStatusResponse>(`/attendance/status/${employeeId}`);
 
             if (!response.success) {
               const errorMessage = response.error || 'Failed to fetch attendance status';
@@ -281,24 +302,37 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
 
             const apiData = response.data;
+            if (!apiData) {
+              throw new Error('No data received');
+            }
 
             // Convert API response to store format
             set({
               currentStatus: apiData.status || 'CHECKED_OUT',
+              currentAttendanceId: apiData.currentAttendanceId || null,
               isLoading: false,
               error: null,
               checkInTime: apiData.checkInTime ? new Date(apiData.checkInTime) : undefined,
               checkOutTime: apiData.checkOutTime ? new Date(apiData.checkOutTime) : undefined,
               workHours: apiData.workHours,
               totalDistance: apiData.totalDistance,
-              lastLocationUpdate: apiData.lastLocationUpdate ? new Date(apiData.lastLocationUpdate) : undefined,
+              lastLocationUpdate: apiData.lastLocationUpdate ? new Date(apiData.lastLocationUpdate) : null,
               batteryLevel: apiData.batteryLevel,
               verificationStatus: apiData.verificationStatus || 'PENDING',
               requiresCheckOut: apiData.requiresCheckOut || false,
+              isLocationTracking: apiData.status === 'CHECKED_IN' // Sync tracking state with status
             });
 
-            // Note: Don't automatically start location tracking on status fetch
-            // Let the user explicitly check in to start tracking
+            // If checked in, ensure tracking is started
+            if (apiData.status === 'CHECKED_IN') {
+              const authStore = useAuth.getState();
+              if (authStore.user?.id && authStore.user?.firstName) {
+                locationTrackingServiceNotifee.startTracking(
+                  authStore.user.id,
+                  authStore.user.firstName
+                ).catch(console.warn);
+              }
+            }
 
           } catch (error) {
             console.error('Failed to fetch attendance status:', error);
@@ -378,6 +412,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             if (result.success) {
               set({
                 currentStatus: 'CHECKED_IN',
+                currentAttendanceId: result.attendanceId || null,
                 isCheckingIn: false,
                 checkInTime: result.checkInTime,
                 error: null,
@@ -386,8 +421,8 @@ export const useAttendance = create<AttendanceStoreState>()(
               });
 
               // Start location tracking using Notifee
-                const authStore = useAuth.getState();
-              const employeeId = authStore.user?.humanReadableId;
+              const authStore = useAuth.getState();
+              const employeeId = authStore.user?.id;
               const employeeName = authStore.user?.firstName;
 
               if (employeeId && employeeName) {
@@ -398,7 +433,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                       isLocationTracking: true,
                       lastLocationUpdate: new Date(),
                     });
-                    }
+                  }
                 } catch (trackingError) {
                   console.warn('[AttendanceStore] Failed to start location tracking:', trackingError);
                   // Don't fail check-in if tracking fails
@@ -470,14 +505,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               reason: checkoutRequest.checkoutNotes || checkoutRequest.reason,
             };
 
-            // Call check-out API
-            const authStore = useAuth.getState();
-            const employeeId = authStore.user?.humanReadableId;
-
-            if (!employeeId) {
-              throw new Error('Employee ID not available');
-            }
-
+            // Call check-out API - security middleware will attach the user info
             const response = await api.post('/attendance/checkout', apiRequest);
 
             if (!response.success) {
@@ -511,6 +539,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             if (result.success) {
               set({
                 currentStatus: 'CHECKED_OUT',
+                currentAttendanceId: null, // Clear attendance ID on checkout
                 isCheckingOut: false,
                 checkOutTime: result.checkOutTime,
                 workHours: result.workHours,
@@ -560,7 +589,7 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingOut: true, error: null });
 
           try {
-            
+
             const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
             // Build checkout request with emergency method
@@ -604,6 +633,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             if (result.success) {
               set({
                 currentStatus: 'CHECKED_OUT',
+                currentAttendanceId: null, // Clear attendance ID
                 isCheckingOut: false,
                 checkOutTime: result.checkOutTime,
                 workHours: result.workHours,
@@ -613,7 +643,17 @@ export const useAttendance = create<AttendanceStoreState>()(
               });
 
               // Stop location tracking
-              await get().stopLocationTracking();
+              try {
+                const success = await locationTrackingServiceNotifee.stopTracking();
+                if (success) {
+                  set({
+                    isLocationTracking: false,
+                    lastLocationUpdate: null,
+                  });
+                }
+              } catch (trackingError) {
+                // Ignore tracking errors during emergency checkout
+              }
             }
 
             return result;
@@ -710,7 +750,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         // Load more attendance history (infinite scroll)
-        loadMoreAttendanceHistory: async () => {
+        loadMoreHistory: async () => {
           const { isHistoryLoading, hasMoreHistory, currentPage } = get();
 
           if (isHistoryLoading || !hasMoreHistory) {
@@ -810,7 +850,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         // Refresh attendance history
-        refreshAttendanceHistory: async () => {
+        refreshHistory: async () => {
           set({ isRefreshingHistory: true, historyError: null });
 
           try {
@@ -900,7 +940,13 @@ export const useAttendance = create<AttendanceStoreState>()(
           try {
                 const isAvailable = await locationTrackingServiceNotifee.initialize();
 
-  
+                // Set the location update callback to break the require cycle
+                locationTrackingServiceNotifee.setLocationUpdateCallback(
+                  async (location, batteryLevel) => {
+                    await get().sendLocationUpdate(location, batteryLevel);
+                  }
+                );
+
             set({
               isServiceAvailable: isAvailable,
               error: isAvailable ? null : 'Location service not available',
@@ -998,6 +1044,35 @@ export const useAttendance = create<AttendanceStoreState>()(
             set(state => ({
               locationHistory: state.locationHistory.slice(-maxHistoryLength),
             }));
+          }
+        },
+
+        // Send location update to server
+        sendLocationUpdate: async (location: LocationData, batteryLevel: number) => {
+          try {
+            const { currentAttendanceId } = get();
+
+            if (!currentAttendanceId) {
+              console.warn('[AttendanceStore] Cannot send location update: No current attendance ID');
+              return;
+            }
+
+            // Update local state
+            get().updateLocation(location);
+            get().setBatteryLevel(batteryLevel);
+
+            // Call API with attendance ID
+            await api.post(`/attendance/${currentAttendanceId}/location-update`, {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              accuracy: location.accuracy,
+              batteryLevel,
+              timestamp: location.timestamp.toISOString(),
+            });
+
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to send location update:', error);
+            // We don't set global error here to avoid disrupting the UI for background tasks
           }
         },
 

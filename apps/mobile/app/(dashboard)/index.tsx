@@ -10,10 +10,18 @@ import { useNetworkMonitor } from '@/hooks/use-network-monitor';
 import { COLORS } from '@/constants';
 import { homeStyles } from '@/styles/dashboard/home-styles';
 import { Calendar, Clock, TrendingUp, Activity, Wifi, WifiOff } from 'lucide-react-native';
+import { LocationSyncTimer } from '@/components/ui/location-sync-timer';
+import { LOCATION_TRACKING_CONFIG } from '@/constants/location-tracking';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { fetchAttendanceHistory, attendanceHistory } = useAttendance();
+  const {
+    fetchAttendanceHistory,
+    attendanceHistory,
+    currentStatus,
+    isLocationTracking,
+    getAttendanceStatus
+  } = useAttendance();
   const colorScheme = useColorScheme();
   const { connectionDisplayInfo } = useNetworkMonitor();
   const [weeklyStats, setWeeklyStats] = useState({
@@ -42,7 +50,7 @@ export default function HomeScreen() {
   // Load weekly stats data
   const loadWeeklyStats = useCallback(async () => {
     try {
-      if (!user?.humanReadableId) {
+      if (!user?.id) {
         return;
       }
 
@@ -53,7 +61,7 @@ export default function HomeScreen() {
 
       // Use attendance store to fetch history
       await fetchAttendanceHistory({
-        employeeId: user.humanReadableId,
+        employeeId: user.id,
         dateFrom: oneWeekAgo.toISOString().split('T')[0],
         dateTo: today.toISOString().split('T')[0],
         limit: 100
@@ -82,7 +90,7 @@ export default function HomeScreen() {
       // Silently handle error
       console.error('Error loading weekly stats:', error);
     }
-  }, [user?.humanReadableId, fetchAttendanceHistory, attendanceHistory]);
+  }, [user?.id, fetchAttendanceHistory, attendanceHistory]);
 
   // Format distance
   const formatDistance = (meters: number) => {
@@ -90,9 +98,21 @@ export default function HomeScreen() {
     return `${(meters / 1000).toFixed(1)} km`;
   };
 
+  // Load current attendance status
+  const loadCurrentStatus = useCallback(async () => {
+    try {
+      if (user?.id) {
+        await getAttendanceStatus(user.id);
+      }
+    } catch (error) {
+      console.error('Error loading current status:', error);
+    }
+  }, [user?.id, getAttendanceStatus]);
+
   useEffect(() => {
     loadWeeklyStats();
-  }, [loadWeeklyStats]);
+    loadCurrentStatus();
+  }, [loadWeeklyStats, loadCurrentStatus]);
 
   // Get first name
   const getFirstName = () => {
@@ -167,6 +187,12 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
+
+      {/* Location Sync Timer - Only show when checked in and location tracking is active */}
+      <LocationSyncTimer
+        isVisible={currentStatus === 'CHECKED_IN' && isLocationTracking}
+        interval={LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS}
+      />
 
       {/* Stats Section */}
       <View style={homeStyles.statsSection}>

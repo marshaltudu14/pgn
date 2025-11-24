@@ -11,7 +11,7 @@ import { LoginRequest } from '@pgn/shared';
  * Authenticates an employee and returns a JWT token using Supabase
  */
 const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
-  
+
   try {
     // Parse request body first to get user identifier for rate limiting
       const body = await req.json() as LoginRequest;

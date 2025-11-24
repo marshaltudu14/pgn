@@ -145,7 +145,6 @@ export class AuthService {
         password: password,
       });
 
-      
       if (authError || !authData.user) {
         // Provide more specific error messages based on the error code
         if (authError?.message?.includes('Invalid login credentials')) {
@@ -164,7 +163,7 @@ export class AuthService {
 
       // Check if user is admin by looking at user metadata
       const userMetadata = authData.user.user_metadata || {};
-      
+
       if (userMetadata.role === 'admin') {
                 // Admin users don't get JWT tokens since they only login via Next.js
         const authenticatedUser: AuthenticatedUser = {
@@ -184,6 +183,7 @@ export class AuthService {
           expiresIn: 0, // No expiration for admin users
           employee: authenticatedUser,
         };
+
                 return response;
       } else {
         // Employee login - check if they exist in employees table using auth user ID

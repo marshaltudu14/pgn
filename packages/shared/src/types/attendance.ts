@@ -12,6 +12,14 @@ export interface LocationData {
   address?: string;
 }
 
+export interface PathData {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  batteryLevel: number;
+  timestamp: string;
+}
+
 export interface LocationPath {
   latitude: number;
   longitude: number;
@@ -199,7 +207,7 @@ export interface EmergencyCheckOutRequest {
 }
 
 export interface LocationUpdateRequest {
-  employeeId: string;
+  employeeId?: string;
   location: LocationData;
   timestamp: Date;
   batteryLevel?: number;

@@ -112,7 +112,8 @@
       "Bash(jupyter notebook:*)",
       "Bash(supabase storage list:*)",
       "mcp__next-devtools__browser_eval",
-      "mcp__playwright__browser_network_requests"
+      "mcp__playwright__browser_network_requests",
+      "mcp__next-devtools__nextjs_index"
     ],
     "deny": [],
     "ask": []

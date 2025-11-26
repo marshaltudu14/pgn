@@ -71,7 +71,6 @@ export interface CheckInRequest {
     version?: string;
     model?: string;
   };
-  faceConfidence?: number;
 }
 
 export interface CheckOutRequest {
@@ -87,7 +86,6 @@ export interface CheckOutRequest {
     version?: string;
     model?: string;
   };
-  faceConfidence?: number;
 }
 
 export interface AttendanceResponse {
@@ -150,7 +148,6 @@ export interface CheckInMobileRequest {
     address?: string;
   };
   selfie: string; // Base64 encoded image
-  faceConfidence?: number;
   deviceInfo?: {
     batteryLevel?: number;
     platform?: string;
@@ -175,7 +172,6 @@ export interface CheckOutMobileRequest {
     address?: string;
   };
   selfie?: string; // Optional for emergency check-out
-  faceConfidence?: number;
   deviceInfo?: {
     batteryLevel?: number;
     platform?: string;

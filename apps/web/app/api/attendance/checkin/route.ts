@@ -11,18 +11,11 @@ import { addSecurityHeaders } from '@/lib/security-middleware';
  */
 const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
   try {
-    console.log('🔍 [API DEBUG] Check-in API handler started');
-
     // Get authenticated user from request (attached by security middleware)
     const authenticatedReq = req as AuthenticatedRequest;
     const user = authenticatedReq.user;
-    console.log('🔍 [API DEBUG] Authenticated user:', {
-      employeeId: user?.employeeId,
-      hasUser: !!user
-    });
 
     if (!user || !user.employeeId) {
-      console.log('❌ [API ERROR] Unauthorized - no user or employeeId');
       const response = NextResponse.json(
         { error: 'Unauthorized', message: 'Invalid authentication' },
         { status: 401 }
@@ -31,16 +24,10 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Parse request body
-    console.log('🔍 [API DEBUG] Parsing request body...');
     const body = await req.json();
-    console.log('🔍 [API DEBUG] Request body keys:', Object.keys(body));
 
     // Validate required fields
     if (!body.location || !body.selfieData) {
-      console.log('❌ [API ERROR] Missing required fields:', {
-        hasLocation: !!body.location,
-        hasSelfieData: !!body.selfieData
-      });
       const response = NextResponse.json(
         {
           error: 'Bad Request',
@@ -63,29 +50,13 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       },
       timestamp: new Date(),
       selfie: body.selfieData,
-      faceConfidence: body.faceConfidence || 0,
       deviceInfo: body.deviceInfo
     };
-    console.log('🔍 [API DEBUG] Check-in request built:', {
-      employeeId: checkInRequest.employeeId,
-      location: checkInRequest.location,
-      timestamp: checkInRequest.timestamp,
-      hasSelfie: !!checkInRequest.selfie,
-      faceConfidence: checkInRequest.faceConfidence,
-      deviceInfo: checkInRequest.deviceInfo
-    });
 
     // Process check-in through service
-    console.log('🔍 [API DEBUG] Calling attendance service...');
     const result = await attendanceService.checkIn(user.employeeId, checkInRequest);
-    console.log('🔍 [API DEBUG] Service result:', {
-      success: result.success,
-      message: result.message,
-      attendanceId: result.attendanceId
-    });
 
     if (!result.success) {
-      console.log('❌ [API ERROR] Service returned failure:', result.message);
       const response = NextResponse.json(
         {
           success: false,

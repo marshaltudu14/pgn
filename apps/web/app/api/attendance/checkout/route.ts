@@ -103,7 +103,6 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       },
       timestamp: new Date(),
       selfie: body.selfieData,
-      faceConfidence: body.faceConfidence || 0,
       deviceInfo: body.deviceInfo,
       method: body.method || 'MANUAL',
       reason: body.reason

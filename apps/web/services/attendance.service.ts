@@ -592,14 +592,16 @@ export class AttendanceService {
   ): Promise<string> {
     try {
       const supabase = await createClient();
-      const fileName = `${employeeId}/${date}/${type}_${Date.now()}.jpg`;
+      // Format: attendance/YYYY/MM/DD/employeeId/checkin-timestamp.jpg
+      const [year, month, day] = date.split('-');
+      const fileName = `attendance/${year}/${month}/${day}/${employeeId}/${type}-${Date.now()}.jpg`;
 
       // Convert base64 to blob
       const base64Data = selfieData.replace(/^data:image\/\w+;base64,/, '');
       const binaryData = Buffer.from(base64Data, 'base64');
 
       const { error } = await supabase.storage
-        .from('attendance-photos')
+        .from('attendance')
         .upload(fileName, binaryData, {
           contentType: 'image/jpeg',
           upsert: true
@@ -611,7 +613,7 @@ export class AttendanceService {
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('attendance-photos')
+        .from('attendance')
         .getPublicUrl(fileName);
 
       return publicUrl;

@@ -30,6 +30,7 @@ export const API_ENDPOINTS = {
   REFRESH_TOKEN: "/auth/refresh",
   LOGOUT: "/auth/logout",
   GET_USER: "/employees/me",
+  GET_AUTH_USER: "/auth/user",
 
   // Employee endpoints
   EMPLOYEES: "/employees",
@@ -39,6 +40,8 @@ export const API_ENDPOINTS = {
   ATTENDANCE_CHECKIN: "/attendance/checkin",
   ATTENDANCE_CHECKOUT: "/attendance/checkout",
   ATTENDANCE_STATUS: "/attendance/status",
+  ATTENDANCE_LIST: "/attendance",
+  ATTENDANCE_LOCATION_UPDATE: "/attendance", // Base for /attendance/[id]/location-update
 
   // Note: Face recognition endpoints will be added in Phase 4
   // GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding", // TODO: Add in Phase 4

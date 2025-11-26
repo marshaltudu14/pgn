@@ -6,15 +6,15 @@
  */
 
 import { SessionManager } from '@/utils/auth-utils';
+import { API_ENDPOINTS, buildApiUrl } from '@/constants/api';
 
-// API Configuration
-const API_BASE_URL = __DEV__ ? 'http://192.168.31.23:3000/api' : 'https://pgnwork.com/api';
+// Note: API_BASE_URL is imported from @/constants/api
 
 // Public endpoints that don't require authentication
 const PUBLIC_ENDPOINTS = [
-  '/auth/login',
-  '/auth/refresh',
-  '/auth/logout',
+  API_ENDPOINTS.LOGIN,
+  API_ENDPOINTS.REFRESH_TOKEN,
+  API_ENDPOINTS.LOGOUT,
 ];
 
 // Device info for security tracking
@@ -162,7 +162,7 @@ async function refreshTokenAPI(refreshToken: string): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async (): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.REFRESH_TOKEN), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,7 +177,17 @@ async function refreshTokenAPI(refreshToken: string): Promise<boolean> {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const responseData = await response.json();
+      // Safely parse JSON response
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('JSON Parse Error in refresh:', {
+          status: response.status,
+          error: parseError instanceof Error ? parseError.message : 'Unknown refresh parse error',
+        });
+        return false;
+      }
 
       // Check for successful response with proper structure
       if (responseData.success && responseData.data?.token) {
@@ -210,7 +220,7 @@ export async function apiCall<T = any>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = buildApiUrl(endpoint);
 
     // Prepare base headers
     const baseHeaders: Record<string, string> = {
@@ -236,6 +246,7 @@ export async function apiCall<T = any>(
       ...options.headers,
     };
 
+    
     const response = await fetch(url, {
       ...options,
       headers,
@@ -264,7 +275,21 @@ export async function apiCall<T = any>(
             });
 
             if (retryResponse.ok) {
-              const retryData = await retryResponse.json();
+              let retryData;
+              try {
+                retryData = await retryResponse.json();
+              } catch (retryParseError) {
+                console.error('JSON Parse Error on retry:', {
+                  endpoint,
+                  status: retryResponse.status,
+                  error: retryParseError instanceof Error ? retryParseError.message : 'Unknown retry parse error',
+                });
+                return {
+                  success: false,
+                  error: 'Invalid response format from server',
+                };
+              }
+
               return {
                 success: true,
                 data: retryData,
@@ -284,6 +309,7 @@ export async function apiCall<T = any>(
       };
     }
 
+    
     const responseData = await response.json();
 
     if (!response.ok) {
@@ -391,7 +417,7 @@ export const api = {
 // Utility function for checking connectivity
 export async function checkApiConnectivity(): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(buildApiUrl(API_ENDPOINTS.LOGIN), {
       method: 'HEAD',
     });
     return response.status < 500;
@@ -406,19 +432,19 @@ export { apiCall as default };
 // Legacy exports for compatibility
 export const apiClient = {
   login: async (credentials: { email: string; password: string }) => {
-    return api.post('/auth/login', credentials);
+    return api.post(API_ENDPOINTS.LOGIN, credentials);
   },
 
   refreshToken: async (refreshToken: string) => {
-    return api.post('/auth/refresh', { token: refreshToken });
+    return api.post(API_ENDPOINTS.REFRESH_TOKEN, { token: refreshToken });
   },
 
   logout: async (authToken: string) => {
-    return api.post('/auth/logout', { token: authToken });
+    return api.post(API_ENDPOINTS.LOGOUT, { token: authToken });
   },
 
   getCurrentUser: async () => {
-    return api.get('/auth/user');
+    return api.get(API_ENDPOINTS.GET_AUTH_USER);
   },
 
   checkConnectivity: checkApiConnectivity,

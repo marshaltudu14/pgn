@@ -8,6 +8,7 @@ import {
 } from '@pgn/shared';
 import { api } from '@/services/api-client';
 import { SessionManager, type Session } from '@/utils/auth-utils';
+import { API_ENDPOINTS } from '@/constants/api';
 
 interface AuthStoreState {
   // Authentication state
@@ -121,7 +122,7 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Call API
-            const response = await api.post('/auth/login', credentials);
+            const response = await api.post(API_ENDPOINTS.LOGIN, credentials);
 
             if (!response.success) {
               // Clear loading state and set error before returning
@@ -260,7 +261,7 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Call logout API
-            await api.post('/auth/logout', { token: authToken });
+            await api.post(API_ENDPOINTS.LOGOUT, { token: authToken });
 
             // Clear local tokens
             await get().clearLocalTokens();
@@ -314,7 +315,7 @@ export const useAuth = create<AuthStoreState>()(
         // Refresh authentication token
         refreshToken: async (refreshToken: string): Promise<any> => {
           try {
-            const response = await api.post('/auth/refresh', { token: refreshToken });
+            const response = await api.post(API_ENDPOINTS.REFRESH_TOKEN, { token: refreshToken });
 
             if (!response.success) {
               throw new Error(response.error || 'Token refresh failed');
@@ -355,7 +356,7 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Get updated user data from API
-            const userResponse = await api.get('/auth/user');
+            const userResponse = await api.get(API_ENDPOINTS.GET_AUTH_USER);
 
             if (userResponse.success && userResponse.data) {
               set({ user: userResponse.data });

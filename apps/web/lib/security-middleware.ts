@@ -57,6 +57,7 @@ export function validateRequestSecurity(request: NextRequest): SecurityValidatio
   const referer = request.headers.get('referer');
   const host = request.headers.get('host');
 
+  
   // Check for same-origin requests (allow web app access)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const siteOrigin = new URL(siteUrl).origin;
@@ -245,6 +246,7 @@ export function createSecurityMiddleware() {
         ip: request.headers.get('x-forwarded-for') || 'unknown'
       });
 
+      
       return NextResponse.json({
         success: false,
         error: 'Access denied',

@@ -31,6 +31,18 @@ Object.defineProperty(global, 'window', {
   writable: true
 });
 
+
+// Mock the zustand persist storage
+jest.mock('zustand/middleware', () => ({
+  ...jest.requireActual('zustand/middleware'),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  persist: (createStateFn: any, _options: any) => (set: any, get: any, api: any) => {
+    const initialState = createStateFn(set, get, api);
+    // Mock the persist functionality by returning the state directly
+    return initialState;
+  },
+}));
+
 describe('useAuthStore', () => {
   const mockUser: AuthenticatedUser = {
     id: 'test-id',
@@ -56,6 +68,15 @@ describe('useAuthStore', () => {
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
+
+    // Reset the store state before each test
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      isAdmin: false,
+    });
   });
 
   afterEach(() => {
@@ -89,8 +110,11 @@ describe('useAuthStore', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          employee: mockUser,
-          token: 'mock-jwt-token'
+          success: true,
+          data: {
+            employee: mockUser,
+            token: null // Admin users don't get tokens in web dashboard
+          }
         })
       });
 
@@ -100,8 +124,8 @@ describe('useAuthStore', () => {
       expect(loginResult.success).toBe(true);
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
       expect(useAuthStore.getState().user).toEqual(mockUser);
-      expect(useAuthStore.getState().token).toBe('mock-jwt-token');
-      expect(useAuthStore.getState().isAdmin).toBe(false);
+      expect(useAuthStore.getState().token).toBeNull();
+      expect(useAuthStore.getState().isAdmin).toBe(true); // Web dashboard forces admin to true
       expect(useAuthStore.getState().isLoading).toBe(false);
       expect(mockShowNotification).toHaveBeenCalledWith(
         'Welcome back, Test User!',
@@ -113,8 +137,11 @@ describe('useAuthStore', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          employee: mockAdminUser,
-          token: null // Admin users don't get JWT tokens
+          success: true,
+          data: {
+            employee: mockAdminUser,
+            token: null // Admin users don't get JWT tokens
+          }
         })
       });
 
@@ -304,8 +331,11 @@ describe('useAuthStore', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          employee: adminUser,
-          token: 'mock-token'
+          success: true,
+          data: {
+            employee: adminUser,
+            token: null // Admin users don't get tokens in web dashboard
+          }
         })
       });
 
@@ -319,8 +349,11 @@ describe('useAuthStore', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          employee: mockUser, // Regular user
-          token: null // No token indicates admin
+          success: true,
+          data: {
+            employee: mockUser, // Regular user
+            token: null // No token indicates admin
+          }
         })
       });
 
@@ -372,19 +405,34 @@ describe('useAuthStore', () => {
     });
 
     it('should make correct API call to logout endpoint', async () => {
-      // First login to set token
+      // First login with a token (employee-style) to test logout API call
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          employee: mockUser,
-          token: 'mock-token'
+          success: true,
+          data: {
+            employee: mockUser,
+            token: 'mock-token' // Provide a token to test API call
+          }
         })
       });
 
       const store = useAuthStore.getState();
-      await store.login('test@example.com', 'password');
 
-      // Then logout
+      // Manually set state with token to simulate employee login
+      // (even though web dashboard would normally reject this)
+      useAuthStore.setState({
+        user: mockUser,
+        token: 'mock-token',
+        isAuthenticated: true,
+        isAdmin: false,
+        isLoading: false,
+      });
+
+      // Reset fetch mock to track logout call
+      (fetch as jest.Mock).mockReset();
+
+      // Mock the logout response
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({})
@@ -397,9 +445,7 @@ describe('useAuthStore', () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          token: 'mock-token'
-        }),
+        body: JSON.stringify({ token: 'mock-token' }),
       });
     });
   });

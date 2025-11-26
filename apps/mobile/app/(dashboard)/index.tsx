@@ -66,31 +66,36 @@ export default function HomeScreen() {
         dateTo: today.toISOString().split('T')[0],
         limit: 100
       });
-
-      const attendanceData = attendanceHistory;
-
-      // Filter for records that have meaningful data (checked in)
-      const weekData = attendanceData.filter((record) =>
-        (record.workHours !== undefined || record.checkInTime !== undefined)
-      );
-
-      // Calculate stats
-      const daysPresent = weekData.filter((r) => r.checkInTime).length;
-      const totalHours = weekData.reduce((sum: number, record) => sum + (record.workHours || 0), 0);
-      const avgHours = daysPresent > 0 ? totalHours / daysPresent : 0;
-      const totalDistance = weekData.reduce((sum: number, record) => sum + ((record.locationPath?.length || 0) * 100), 0);
-
-      setWeeklyStats({
-        daysPresent,
-        totalHours,
-        avgHours,
-        totalDistance,
-      });
     } catch (error) {
       // Silently handle error
       console.error('Error loading weekly stats:', error);
     }
-  }, [user?.id, fetchAttendanceHistory, attendanceHistory]);
+  }, [user?.id, fetchAttendanceHistory]);
+
+  // Process attendance history data to calculate stats
+  useEffect(() => {
+    if (!attendanceHistory.length) {
+      return;
+    }
+
+    // Filter for records that have meaningful data (checked in)
+    const weekData = attendanceHistory.filter((record) =>
+      (record.workHours !== undefined || record.checkInTime !== undefined)
+    );
+
+    // Calculate stats
+    const daysPresent = weekData.filter((r) => r.checkInTime).length;
+    const totalHours = weekData.reduce((sum: number, record) => sum + (record.workHours || 0), 0);
+    const avgHours = daysPresent > 0 ? totalHours / daysPresent : 0;
+    const totalDistance = weekData.reduce((sum: number, record) => sum + ((record.locationPath?.length || 0) * 100), 0);
+
+    setWeeklyStats({
+      daysPresent,
+      totalHours,
+      avgHours,
+      totalDistance,
+    });
+  }, [attendanceHistory]);
 
   // Format distance
   const formatDistance = (meters: number) => {

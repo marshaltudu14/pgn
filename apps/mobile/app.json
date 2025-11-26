@@ -103,6 +103,7 @@
         }
       ],
       "expo-secure-store",
+      "@notifee/react-native",
       "./app.plugin.js"
     ],
     "experiments": {

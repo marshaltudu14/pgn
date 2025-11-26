@@ -1,5 +1,6 @@
 import { api } from '@/services/api-client';
 import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
+import { API_ENDPOINTS } from '@/constants/api';
 import {
   AttendanceListParams,
   AttendanceResponse,
@@ -287,8 +288,8 @@ export const useAttendance = create<AttendanceStoreState>()(
               throw new Error('Employee ID not available');
             }
 
-            // Call attendance status API
-            const response = await api.get<AttendanceStatusResponse>(`/attendance/status/${employeeId}`);
+            // Call attendance status API (uses authenticated user from JWT)
+            const response = await api.get<AttendanceStatusResponse>(API_ENDPOINTS.ATTENDANCE_STATUS);
 
             if (!response.success) {
               const errorMessage = response.error || 'Failed to fetch attendance status';
@@ -388,7 +389,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             };
 
             // Make API call
-            const response = await api.post<any>('/attendance/checkin', apiRequest);
+            const response = await api.post<any>(API_ENDPOINTS.ATTENDANCE_CHECKIN, apiRequest);
 
             if (!response.success) {
               throw new Error(response.error || 'Failed to check in');
@@ -410,6 +411,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             };
 
             if (result.success) {
+              console.log('🔍 [MOBILE DEBUG] Check-in successful, updating state...');
               set({
                 currentStatus: 'CHECKED_IN',
                 currentAttendanceId: result.attendanceId || null,
@@ -419,25 +421,39 @@ export const useAttendance = create<AttendanceStoreState>()(
                 verificationStatus: result.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED',
                 requiresVerification: result.verificationStatus === 'PENDING'
               });
+              console.log('🔍 [MOBILE DEBUG] State updated, getting auth user info...');
 
               // Start location tracking using Notifee
               const authStore = useAuth.getState();
               const employeeId = authStore.user?.id;
               const employeeName = authStore.user?.firstName;
 
+              console.log('🔍 [MOBILE DEBUG] Auth info:', {
+                employeeId: employeeId ? 'Available' : 'Missing',
+                employeeName: employeeName || 'Missing'
+              });
+
               if (employeeId && employeeName) {
+                console.log('🔍 [MOBILE DEBUG] Starting location tracking...');
                 try {
                   const success = await locationTrackingServiceNotifee.startTracking(employeeId, employeeName);
+                  console.log('🔍 [MOBILE DEBUG] Location tracking start result:', success);
                   if (success) {
+                    console.log('🔍 [MOBILE DEBUG] Location tracking started successfully, updating state...');
                     set({
                       isLocationTracking: true,
                       lastLocationUpdate: new Date(),
                     });
+                  } else {
+                    console.log('🔍 [MOBILE DEBUG] Location tracking failed to start');
                   }
                 } catch (trackingError) {
+                  console.log('🔍 [MOBILE DEBUG] Failed to start location tracking:', trackingError);
                   console.warn('[AttendanceStore] Failed to start location tracking:', trackingError);
                   // Don't fail check-in if tracking fails
                 }
+              } else {
+                console.log('🔍 [MOBILE DEBUG] Cannot start location tracking - missing employee info');
               }
             }
 
@@ -500,13 +516,12 @@ export const useAttendance = create<AttendanceStoreState>()(
                 address: request.location.address || undefined,
               },
               selfie: checkoutRequest.selfieImage || checkoutRequest.selfie,
-              faceConfidence: checkoutRequest.confidenceScore || checkoutRequest.faceConfidence,
               deviceInfo: deviceInfo,
               reason: checkoutRequest.checkoutNotes || checkoutRequest.reason,
             };
 
             // Call check-out API - security middleware will attach the user info
-            const response = await api.post('/attendance/checkout', apiRequest);
+            const response = await api.post(API_ENDPOINTS.ATTENDANCE_CHECKOUT, apiRequest);
 
             if (!response.success) {
               const errorMessage = response.error || 'Check-out failed';
@@ -602,14 +617,13 @@ export const useAttendance = create<AttendanceStoreState>()(
                 address: request.location?.address
               },
               selfieData: request.selfie,
-              faceConfidence: request.faceConfidence || 0,
               deviceInfo,
               method: request.method || 'APP_CLOSED',
               reason: request.reason || 'Emergency check-out'
             };
 
             // Make API call
-            const response = await api.post<any>('/attendance/checkout', emergencyRequest);
+            const response = await api.post<any>(API_ENDPOINTS.ATTENDANCE_CHECKOUT, emergencyRequest);
 
             if (!response.success) {
               throw new Error(response.error || 'Failed to check out');
@@ -698,7 +712,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               }, {} as Record<string, string>)
             ).toString();
 
-            const url = queryString ? `/attendance?${queryString}` : '/attendance';
+            const url = queryString ? `${API_ENDPOINTS.ATTENDANCE_LIST}?${queryString}` : API_ENDPOINTS.ATTENDANCE_LIST;
             const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
 
             if (!response.success || !response.data) {
@@ -778,7 +792,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               }, {} as Record<string, string>)
             ).toString();
 
-            const url = queryString ? `/attendance?${queryString}` : '/attendance';
+            const url = queryString ? `${API_ENDPOINTS.ATTENDANCE_LIST}?${queryString}` : API_ENDPOINTS.ATTENDANCE_LIST;
             const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
 
             if (!response.success || !response.data) {
@@ -871,7 +885,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               }, {} as Record<string, string>)
             ).toString();
 
-            const url = queryString ? `/attendance?${queryString}` : '/attendance';
+            const url = queryString ? `${API_ENDPOINTS.ATTENDANCE_LIST}?${queryString}` : API_ENDPOINTS.ATTENDANCE_LIST;
             const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
 
             if (!response.success || !response.data) {
@@ -1182,29 +1196,59 @@ export const useAttendance = create<AttendanceStoreState>()(
         // Get current device information
         getDeviceInfo: async (): Promise<DeviceInfo> => {
           try {
-            const batteryLevel = await Battery.getBatteryLevelAsync();
+            // Get battery level
+            let batteryLevel: number | undefined;
+            try {
+              const level = await Battery.getBatteryLevelAsync();
+              batteryLevel = level > 0 ? Math.round(level * 100) : undefined;
+            } catch (batteryError) {
+              const state = get();
+              batteryLevel = state.batteryLevel || undefined;
+            }
 
-            // Get device info
-            const deviceInfo = await import('react-native-device-info');
-            const deviceModel = deviceInfo.default.getModel();
-            const deviceBrand = deviceInfo.default.getBrand();
-            const deviceSystemVersion = deviceInfo.default.getSystemVersion();
+            // Get device info using the same pattern that worked in the hook
+            let deviceModel = 'Unknown';
+            let deviceBrand = 'Unknown';
+            let deviceSystemVersion = 'Unknown';
+            let appVersion = 'Unknown';
+            let buildNumber = 'Unknown';
 
-            return {
-              batteryLevel: batteryLevel > 0 ? Math.round(batteryLevel * 100) : undefined,
+            try {
+              const DeviceInfo = require('react-native-device-info');
+              deviceModel = DeviceInfo.getModel();
+              deviceBrand = DeviceInfo.getBrand();
+              deviceSystemVersion = DeviceInfo.getSystemVersion();
+              appVersion = DeviceInfo.getVersion();
+              buildNumber = DeviceInfo.getBuildNumber();
+            } catch (deviceError) {
+              // Device info methods failed, will use defaults
+            }
+
+            const deviceInfoResult: DeviceInfo = {
+              batteryLevel,
               platform: 'mobile',
-              version: '1.0.0',
-              model: `${deviceBrand} ${deviceModel}` || 'Unknown Device'
+              version: appVersion || '1.0.0',
+              model: `${deviceBrand} ${deviceModel}`,
+              networkInfo: {
+                type: 'unknown',
+                strength: undefined
+              }
             };
+
+            return deviceInfoResult;
           } catch (error) {
             const state = get();
-            console.warn('[ATTENDANCE STORE] Could not get device info:', error);
-            return {
+            const fallbackInfo: DeviceInfo = {
               batteryLevel: state.batteryLevel || undefined,
               platform: 'mobile',
               version: '1.0.0',
-              model: 'Unknown Device'
+              model: 'Unknown Device',
+              networkInfo: {
+                type: 'unknown',
+                strength: undefined
+              }
             };
+            return fallbackInfo;
           }
         },
 

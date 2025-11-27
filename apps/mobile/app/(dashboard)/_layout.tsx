@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { useIsCheckedIn } from '@/store/attendance-store';
+import { useIsCheckedIn, useAttendance } from '@/store/attendance-store';
 
 function DashboardScreenWrapper({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -33,6 +33,7 @@ function DashboardLayoutContent() {
 
   // Attendance hooks
   const isCheckedIn = useIsCheckedIn();
+  const { isLoading: isAttendanceLoading } = useAttendance();
 
   const getActiveTab = (currentPath: string): string => {
     if (currentPath === '/(dashboard)' || currentPath === '/(dashboard)/') {
@@ -84,6 +85,7 @@ function DashboardLayoutContent() {
         onTabChange={handleTabChange}
         isCheckedIn={isCheckedIn}
         onCheckInOut={handleCheckInOut}
+        isLoading={isAttendanceLoading}
       />
 
       <CheckInOutModal

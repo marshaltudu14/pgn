@@ -10,16 +10,12 @@ import { useNetworkMonitor } from '@/hooks/use-network-monitor';
 import { COLORS } from '@/constants';
 import { homeStyles } from '@/styles/dashboard/home-styles';
 import { Calendar, Clock, TrendingUp, Activity, Wifi, WifiOff } from 'lucide-react-native';
-import { LocationSyncTimer } from '@/components/ui/location-sync-timer';
-import { LOCATION_TRACKING_CONFIG } from '@/constants/location-tracking';
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const {
     fetchAttendanceHistory,
     attendanceHistory,
-    currentStatus,
-    isLocationTracking,
     getAttendanceStatus
   } = useAttendance();
   const colorScheme = useColorScheme();
@@ -193,12 +189,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Location Sync Timer - Only show when checked in and location tracking is active */}
-      <LocationSyncTimer
-        isVisible={currentStatus === 'CHECKED_IN' && isLocationTracking}
-        interval={LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS}
-      />
-
+  
       {/* Stats Section */}
       <View style={homeStyles.statsSection}>
         <View style={homeStyles.sectionHeader}>

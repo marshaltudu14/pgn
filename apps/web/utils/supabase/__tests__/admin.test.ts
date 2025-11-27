@@ -18,8 +18,6 @@ jest.mock('@supabase/supabase-js', () => ({
 
 import { createClient } from '@supabase/supabase-js';
 
-// Import the admin module directly to access internal function
-import * as adminModule from '../admin';
 
 // Mock console.error to prevent noise in test output
 const originalConsoleError = console.error;

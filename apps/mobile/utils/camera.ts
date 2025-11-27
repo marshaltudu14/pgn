@@ -55,8 +55,8 @@ export async function requestCameraPermissions(): Promise<boolean> {
 // Check if camera is available and has permissions
 export async function isCameraAvailable(): Promise<boolean> {
   try {
-    // Check permissions directly - CameraView.isAvailableAsync() is deprecated on Android
-    const hasPermission = await permissionService.requestCameraPermission();
+    // Check permissions (don't request - just check, since AuthGuard already ensures permissions)
+    const hasPermission = await permissionService.checkCameraPermission();
     return hasPermission === 'granted';
   } catch (error) {
     console.error('Error checking camera availability:', error);
@@ -80,9 +80,9 @@ export async function takePhoto(
 ): Promise<PhotoCaptureResult> {
   try {
 
-    // Request camera permissions
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
+    // Check camera permissions first (don't request - AuthGuard already ensures permissions)
+    const existingPermission = await permissionService.checkCameraPermission();
+    if (existingPermission !== 'granted') {
       throw new CameraError('CAMERA_PERMISSION_DENIED', 'Camera permission is required');
     }
 

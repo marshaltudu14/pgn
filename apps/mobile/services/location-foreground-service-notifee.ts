@@ -20,6 +20,7 @@ interface LocationTrackingState {
 }
 
 type LocationUpdateCallback = (location: LocationData, batteryLevel: number) => Promise<void>;
+type CountdownUpdateCallback = (countdown: number) => void;
 
 class LocationTrackingServiceNotifee {
   private state: LocationTrackingState = {
@@ -30,6 +31,7 @@ class LocationTrackingServiceNotifee {
   private notificationUpdateInterval: ReturnType<typeof setInterval> | null = null;
   private permissionMonitoringInterval: ReturnType<typeof setInterval> | null = null;
   private locationUpdateCallback?: LocationUpdateCallback;
+  private countdownUpdateCallback?: CountdownUpdateCallback;
   private isInitialized = false;
   private nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
 
@@ -59,6 +61,11 @@ class LocationTrackingServiceNotifee {
   // Set the location update callback
   setLocationUpdateCallback(callback: LocationUpdateCallback): void {
     this.locationUpdateCallback = callback;
+  }
+
+  // Set the countdown update callback for UI synchronization
+  setCountdownUpdateCallback(callback: CountdownUpdateCallback): void {
+    this.countdownUpdateCallback = callback;
   }
 
   // Initialize the service
@@ -95,19 +102,14 @@ class LocationTrackingServiceNotifee {
     try {
       notifee.registerForegroundService((notification) => {
         return new Promise<void>((resolve) => {
-          console.log('[LocationTrackingServiceNotifee] Foreground service started for notification:', notification.id);
-
           // Set up event listener for this service instance
           notifee.onForegroundEvent(async ({ type, detail }) => {
-            console.log('[LocationTrackingServiceNotifee] Foreground event:', type, detail);
-
             if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'stop') {
               // Handle stop action if needed
               await this.stopTracking();
               resolve(); // Resolve to end the service
             } else if (type === EventType.DISMISSED) {
-              // Handle notification dismissal
-              console.log('[LocationTrackingServiceNotifee] Notification dismissed, keeping service active');
+              // Handle notification dismissal - keep service active
             }
           });
 
@@ -178,8 +180,6 @@ class LocationTrackingServiceNotifee {
         permissionService.checkNotificationPermission(),
       ]);
 
-      console.log('[LocationTrackingServiceNotifee] Permission check:', { cameraStatus, locationStatus, notificationStatus });
-
       // Check if all required permissions are granted
       if (cameraStatus !== 'granted') {
         console.error('[LocationTrackingServiceNotifee] Camera permission required for check-in - cannot start tracking');
@@ -195,8 +195,6 @@ class LocationTrackingServiceNotifee {
         console.error('[LocationTrackingServiceNotifee] Notification permission required for foreground service - cannot start tracking');
         return false;
       }
-
-      console.log('[LocationTrackingServiceNotifee] All required permissions granted');
 
       // Update state
       this.state = {
@@ -249,6 +247,10 @@ class LocationTrackingServiceNotifee {
             console.error('[LocationTrackingServiceNotifee] Scheduled location update failed:', error);
           });
           this.nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS; // Reset countdown after each sync
+          // Notify UI components of countdown reset
+          if (this.countdownUpdateCallback) {
+            this.countdownUpdateCallback(this.nextSyncCountdown);
+          }
         } else {
           // Stop intervals if tracking is no longer active
           this.cleanupIntervals();
@@ -303,7 +305,6 @@ class LocationTrackingServiceNotifee {
 
         // If any permission is no longer granted, stop tracking
         if (cameraStatus !== 'granted' || locationStatus !== 'granted' || notificationStatus !== 'granted') {
-          console.log('[LocationTrackingServiceNotifee] Permission revoked, stopping tracking service');
           await this.stopTracking('Permission revoked');
         }
       } catch (error) {
@@ -348,6 +349,11 @@ class LocationTrackingServiceNotifee {
       // Decrement countdown
       if (this.nextSyncCountdown > 0) {
         this.nextSyncCountdown--;
+      }
+
+      // Notify UI components of countdown change
+      if (this.countdownUpdateCallback) {
+        this.countdownUpdateCallback(this.nextSyncCountdown);
       }
 
       // Update notification with new countdown
@@ -577,6 +583,11 @@ class LocationTrackingServiceNotifee {
       console.error('[LocationTrackingServiceNotifee] Failed to get notification settings:', error);
       return null;
     }
+  }
+
+  // Get the current countdown for external sync (e.g., bottom navigation timer)
+  getNextSyncCountdown(): number {
+    return this.nextSyncCountdown;
   }
 }
 

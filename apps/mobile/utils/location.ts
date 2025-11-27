@@ -48,7 +48,7 @@ export async function requestLocationPermissions(): Promise<boolean> {
 // Check if location services are available and have permissions
 export async function isLocationAvailable(): Promise<boolean> {
   try {
-    const hasPermission = await permissionService.requestLocationPermission();
+    const hasPermission = await permissionService.checkLocationPermission();
     if (hasPermission !== 'granted') {
       return false;
     }
@@ -70,7 +70,8 @@ export async function getCurrentLocation(
   accuracy: Location.Accuracy = Location.Accuracy.High
 ): Promise<LocationData> {
   try {
-    const hasPermission = await permissionService.requestLocationPermission();
+    // Check permission first (don't request - just check, since AuthGuard already ensures permissions)
+    const hasPermission = await permissionService.checkLocationPermission();
     if (hasPermission !== 'granted') {
       throw new Error('Location permission is required');
     }
@@ -98,7 +99,7 @@ export async function startLocationTracking(
   onUpdate?: (location: LocationData) => void
 ): Promise<Location.LocationSubscription> {
   try {
-    const hasPermission = await permissionService.requestLocationPermission();
+    const hasPermission = await permissionService.checkLocationPermission();
     if (hasPermission !== 'granted') {
       throw new Error('Location permission is required for tracking');
     }

@@ -162,15 +162,11 @@ export class PermissionService {
 
   // Check all required app permissions
   async checkAllPermissions(): Promise<PermissionCheckResult> {
-    console.log('[PermissionService] Checking all permissions...');
-
     const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
       this.checkCameraPermission(),
       this.checkLocationPermission(),
       this.checkNotificationPermission(),
     ]);
-
-    console.log('[PermissionService] Permission statuses:', { cameraStatus, locationStatus, notificationStatus });
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
@@ -185,8 +181,6 @@ export class PermissionService {
     const undeterminedPermissions = Object.entries(permissions)
       .filter(([_, status]) => status === 'undetermined')
       .map(([permission]) => permission);
-
-    console.log('[PermissionService] Permission analysis:', { allGranted, deniedPermissions, undeterminedPermissions });
 
     return {
       allGranted,
@@ -198,15 +192,11 @@ export class PermissionService {
 
   // Request all required permissions
   async requestAllPermissions(): Promise<PermissionCheckResult> {
-    console.log('[PermissionService] Requesting all permissions...');
-
     const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
       this.requestCameraPermission(),
       this.requestLocationPermission(),
       this.requestNotificationPermission(),
     ]);
-
-    console.log('[PermissionService] After requesting - statuses:', { cameraStatus, locationStatus, notificationStatus });
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
@@ -221,8 +211,6 @@ export class PermissionService {
     const undeterminedPermissions = Object.entries(permissions)
       .filter(([_, status]) => status === 'undetermined')
       .map(([permission]) => permission);
-
-    console.log('[PermissionService] After requesting - analysis:', { allGranted, deniedPermissions, undeterminedPermissions });
 
     return {
       allGranted,

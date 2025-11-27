@@ -72,6 +72,14 @@ jest.mock('react-native', () => ({
     Version: '14.0',
     select: jest.fn((obj) => obj.ios),
   },
+  Linking: {
+    openURL: jest.fn(() => Promise.resolve()),
+    openSettings: jest.fn(() => Promise.resolve()),
+    getInitialURL: jest.fn(() => Promise.resolve(null)),
+    canOpenURL: jest.fn(() => Promise.resolve(true)),
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+    removeEventListener: jest.fn(),
+  },
   Dimensions: {
     get: jest.fn(() => ({ width: 375, height: 667, scale: 2, fontScale: 1 })),
   },
@@ -236,6 +244,62 @@ jest.mock('expo-location', () => ({
     timestamp: Date.now(),
   })),
   watchPositionAsync: jest.fn(() => ({ remove: jest.fn() })),
+  hasServicesEnabledAsync: jest.fn(() => true),
+  Accuracy: {
+    Low: 1,
+    Balanced: 2,
+    High: 3,
+    Best: 4,
+    BestForNavigation: 5,
+  },
+  ActivityType: {
+    Other: 0,
+    AutomotiveNavigation: 1,
+    Fitness: 2,
+    OtherNavigation: 3,
+  },
+}));
+
+// Mock expo-notifications
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(() => ({
+    granted: true,
+    status: 'granted',
+    ios: {
+      status: 1, // UNDETERMINED
+      allowsAlert: true,
+      allowsBadge: true,
+      allowsSound: true,
+    },
+  })),
+  requestPermissionsAsync: jest.fn(() => ({
+    granted: true,
+    status: 'granted',
+    ios: {
+      status: 1, // UNDETERMINED
+      allowsAlert: true,
+      allowsBadge: true,
+      allowsSound: true,
+    },
+  })),
+  setNotificationHandler: jest.fn(),
+  scheduleNotificationAsync: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
+  dismissNotificationAsync: jest.fn(),
+  dismissAllNotificationsAsync: jest.fn(),
+  getBadgeCountAsync: jest.fn(() => 0),
+  setBadgeCountAsync: jest.fn(),
+  getNotificationChannelAsync: jest.fn(),
+  setNotificationChannelAsync: jest.fn(),
+  deleteNotificationChannelAsync: jest.fn(),
+  getNotificationChannelsAsync: jest.fn(() => []),
+  IosAuthorizationStatus: {
+    UNDETERMINED: 0,
+    DENIED: 1,
+    AUTHORIZED: 2,
+    PROVISIONAL: 3,
+    EPHEMERAL: 4,
+  },
 }));
 
 // Mock expo-image-picker
@@ -278,6 +342,17 @@ jest.mock('expo-camera', () => ({
     on: 'on',
     off: 'off',
     auto: 'auto',
+  },
+}));
+
+// Mock expo-modules-core to prevent EventEmitter issues
+jest.mock('expo-modules-core', () => ({
+  EventEmitter: jest.fn(),
+  requireNativeModule: jest.fn(() => ({})),
+  NativeModulesProxy: {},
+  Platform: {
+    OS: 'ios',
+    select: jest.fn((obj) => obj.ios),
   },
 }));
 

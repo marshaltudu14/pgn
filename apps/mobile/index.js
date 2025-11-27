@@ -9,7 +9,6 @@ process.env.EXPO_ROUTER_APP_ROOT = './app';
 notifee.registerForegroundService((notification) => {
   return new Promise(() => {
     // Long running task...
-    // console.log('[ForegroundService] Started');
   });
 });
 

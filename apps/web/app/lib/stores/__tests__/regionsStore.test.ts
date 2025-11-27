@@ -70,7 +70,7 @@ describe('Regions Store', () => {
     // Mock the useAuthStore to have a proper getState method
     mockUseAuthStore.mockImplementation(() => ({
       getState: mockAuthStoreGetState,
-    } as any));
+    } as ReturnType<typeof useAuthStore>));
 
     // Also mock the direct useAuthStore.getState() call
     (useAuthStore.getState as jest.Mock) = mockAuthStoreGetState;

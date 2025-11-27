@@ -4,9 +4,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Employee, EmploymentStatus } from '@pgn/shared';
 import { EmployeeForm } from '../EmployeeForm';
@@ -34,15 +32,20 @@ const setMockFormValues = (values: Partial<typeof mockFormValues>) => {
   mockFormValues = { ...mockFormValues, ...values };
 };
 
+// Type definitions for form mock
+type MockFormRegister = (name: string) => { name: string };
+type MockFormSetValue = (name: string, value: unknown) => void;
+type MockFormGetValues = () => typeof mockFormValues;
+
 // Mock useForm to bypass validation completely
 jest.mock('react-hook-form', () => ({
   useForm: () => ({
     register: jest.fn(),
-    setValue: jest.fn((field, value) => {
-      mockFormValues[field] = value;
+    setValue: jest.fn((field: string, value: unknown) => {
+      (mockFormValues as Record<string, unknown>)[field] = value;
     }),
     getValues: jest.fn(() => mockFormValues),
-    handleSubmit: (fn: (data: any) => void) => (e: React.FormEvent) => {
+    handleSubmit: (fn: (data: typeof mockFormValues) => void) => (e: React.FormEvent) => {
       e.preventDefault();
       fn(mockFormValues);
     },
@@ -54,7 +57,7 @@ jest.mock('react-hook-form', () => ({
 
 // Mock sub-components
 jest.mock('../employee-form/PersonalInfoForm', () => ({
-  PersonalInfoForm: ({ form, isEditing }: { form: any; isEditing: boolean }) => (
+  PersonalInfoForm: ({ form, isEditing }: { form: { register: MockFormRegister }; isEditing: boolean }) => (
     <div data-testid="personal-info-form">
       <div data-testid="is-editing">{isEditing.toString()}</div>
       <input
@@ -94,7 +97,7 @@ jest.mock('../employee-form/PersonalInfoForm', () => ({
 
 jest.mock('../employee-form/EmploymentDetailsForm', () => ({
   EmploymentDetailsForm: ({ form, isEditing, employee }: {
-    form: any;
+    form: { register: MockFormRegister; setValue: MockFormSetValue; getValues: MockFormGetValues };
     isEditing: boolean;
     employee?: Employee | null
   }) => (
@@ -122,7 +125,7 @@ jest.mock('../employee-form/EmploymentDetailsForm', () => ({
 }));
 
 jest.mock('../employee-form/RegionalAssignmentForm', () => ({
-  RegionalAssignmentForm: ({ form }: { form: any }) => (
+  RegionalAssignmentForm: ({ form }: { form: { register: MockFormRegister } }) => (
     <div data-testid="regional-assignment-form">
       <input
         data-testid="assigned-cities"
@@ -206,10 +209,10 @@ describe('EmployeeForm', () => {
     phone: '9876543210',
     employment_status: 'ACTIVE' as EmploymentStatus,
     can_login: true,
-    assigned_cities: [
+    assigned_cities: JSON.stringify([
       { city: 'Mumbai', state: 'Maharashtra' },
       { city: 'Pune', state: 'Maharashtra' },
-    ] as unknown,
+    ]),
     face_embedding: 'mock-embedding-data',
     reference_photo_url: 'https://example.com/photo.jpg',
     created_at: '2023-01-01T00:00:00Z',
@@ -611,7 +614,7 @@ describe('EmployeeForm', () => {
     });
 
     it('should disable submit button while loading', async () => {
-      let resolvePromise: (value: any) => void;
+      let resolvePromise: (value: Employee) => void;
       const mockCreateEmployee = jest.fn(() => new Promise(resolve => {
         resolvePromise = resolve;
       }));

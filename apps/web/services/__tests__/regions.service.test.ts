@@ -28,7 +28,7 @@ const createMockSupabaseClient = () => {
 
   // Setup chainable methods
   const createQueryChain = () => {
-    const queryChain: any = {
+    const queryChain: Record<string, jest.Mock> = {
       select: jest.fn().mockReturnThis(),
       insert: jest.fn().mockReturnThis(),
       update: jest.fn().mockReturnThis(),

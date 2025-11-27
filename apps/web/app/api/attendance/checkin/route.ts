@@ -76,14 +76,12 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       checkInTime: result.checkInTime,
       verificationStatus: result.verificationStatus
     };
-    console.log('🔍 [API DEBUG] Preparing success response:', responseData);
 
     const response = NextResponse.json({
       success: true,
       message: result.message,
       data: responseData
     });
-    console.log('🔍 [API DEBUG] Check-in API completed successfully');
 
     // Add security headers
     return addSecurityHeaders(response);

@@ -126,21 +126,11 @@ class LocationTrackingServiceNotifee {
   // Start location tracking with foreground notification
   async startTracking(employeeId: string, employeeName: string): Promise<boolean> {
     try {
-      console.log('🔍 [LOCATION DEBUG] startTracking called with:', {
-        employeeId,
-        employeeName,
-        isInitialized: this.isInitialized,
-        isCurrentlyTracking: this.state.isTracking
-      });
-
       if (!this.isInitialized) {
-        console.log('🔍 [LOCATION DEBUG] Initializing service...');
         const initialized = await this.initialize();
         if (!initialized) {
-          console.log('🔍 [LOCATION DEBUG] Failed to initialize service');
           throw new Error('Failed to initialize service');
         }
-        console.log('🔍 [LOCATION DEBUG] Service initialized successfully');
       }
 
       if (this.state.isTracking) {
@@ -148,7 +138,6 @@ class LocationTrackingServiceNotifee {
         return true;
       }
 
-      console.log('🔍 [LOCATION DEBUG] Updating state...');
       // Update state
       this.state = {
         isTracking: true,
@@ -156,19 +145,14 @@ class LocationTrackingServiceNotifee {
         employeeName,
       };
 
-      console.log('🔍 [LOCATION DEBUG] Creating foreground notification...');
       // Create foreground notification to start tracking
       await this.createForegroundNotification(employeeName);
-      console.log('🔍 [LOCATION DEBUG] Foreground notification created');
 
-      console.log('🔍 [LOCATION DEBUG] Starting tracking loop...');
       // Start the tracking loop
       this.startTrackingLoop();
 
-      console.log('🔍 [LOCATION DEBUG] Tracking started successfully');
       return true;
     } catch (error) {
-      console.log('🔍 [LOCATION DEBUG] Failed to start tracking:', error);
       console.error('[LocationTrackingServiceNotifee] Failed to start tracking:', error);
       this.state.isTracking = false;
       return false;
@@ -178,45 +162,32 @@ class LocationTrackingServiceNotifee {
   // Start the tracking loop (30 seconds interval)
   private startTrackingLoop(): void {
     try {
-      console.log('🔍 [LOCATION DEBUG] Starting tracking loop...');
-
       // Clear any existing intervals
       if (this.trackingInterval) {
-        console.log('🔍 [LOCATION DEBUG] Clearing existing tracking interval');
         clearInterval(this.trackingInterval);
       }
       if (this.notificationUpdateInterval) {
-        console.log('🔍 [LOCATION DEBUG] Clearing existing notification interval');
         clearInterval(this.notificationUpdateInterval);
       }
 
       // Reset countdown
       this.nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
-      console.log('🔍 [LOCATION DEBUG] Countdown reset to:', this.nextSyncCountdown);
 
-      console.log('🔍 [LOCATION DEBUG] About to call initial location update...');
       // Initial location update
       this.sendLocationUpdate();
-      console.log('🔍 [LOCATION DEBUG] Initial location update completed');
 
-      console.log('🔍 [LOCATION DEBUG] Setting up tracking intervals...');
       // Set interval for location updates based on config
       this.trackingInterval = setInterval(() => {
-        console.log('🔍 [LOCATION DEBUG] Interval triggered - sending location update');
         this.sendLocationUpdate();
         this.nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS; // Reset countdown after each sync
       }, UPDATE_INTERVAL_MS);
-      console.log('🔍 [LOCATION DEBUG] Tracking interval set up:', UPDATE_INTERVAL_MS + 'ms');
 
       // Set interval for 1 second notification updates (countdown)
       this.notificationUpdateInterval = setInterval(() => {
         this.updateNotificationCountdown();
       }, 1000);
-      console.log('🔍 [LOCATION DEBUG] Notification update interval set up');
 
-      console.log('🔍 [LOCATION DEBUG] Tracking loop started successfully');
     } catch (error) {
-      console.log('🔍 [LOCATION DEBUG] CRASH in startTrackingLoop:', error);
       throw error;
     }
   }
@@ -224,37 +195,25 @@ class LocationTrackingServiceNotifee {
   // Send location and battery update
   private async sendLocationUpdate(): Promise<void> {
     try {
-      console.log('🔍 [LOCATION DEBUG] sendLocationUpdate called, isTracking:', this.state.isTracking);
-
       if (!this.state.isTracking) {
-        console.log('🔍 [LOCATION DEBUG] Not tracking, returning early');
         return;
       }
 
-      console.log('🔍 [LOCATION DEBUG] Getting current location...');
       // Get current location
       const location = await getCurrentLocation();
-      console.log('🔍 [LOCATION DEBUG] Location retrieved successfully');
 
-      console.log('🔍 [LOCATION DEBUG] Getting battery level...');
       // Get battery level
       const batteryLevel = await Battery.getBatteryLevelAsync();
       const batteryPercentage = Math.round(batteryLevel * 100);
-      console.log('🔍 [LOCATION DEBUG] Battery level retrieved:', batteryPercentage + '%');
 
       // Send update via callback if available
       if (this.locationUpdateCallback) {
-        console.log('🔍 [LOCATION DEBUG] Calling location update callback...');
         await this.locationUpdateCallback(location, batteryPercentage);
-        console.log('🔍 [LOCATION DEBUG] Location update callback completed successfully');
       } else {
-        console.log('🔍 [LOCATION DEBUG] No location update callback set');
         console.warn('[LocationTrackingServiceNotifee] No location update callback set');
       }
 
-      console.log('🔍 [LOCATION DEBUG] Location update completed successfully');
     } catch (error) {
-      console.log('🔍 [LOCATION DEBUG] CRASH in sendLocationUpdate:', error);
       console.error('[LocationTrackingServiceNotifee] Failed to send location update:', error);
     }
   }
@@ -294,9 +253,6 @@ class LocationTrackingServiceNotifee {
   // Create and display foreground notification to start tracking
   private async createForegroundNotification(employeeName: string): Promise<void> {
     try {
-
-
-      console.log('🔍 [LOCATION DEBUG] Creating notification channel...');
       const channelId = await notifee.createChannel({
         id: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
         name: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_NAME,
@@ -309,7 +265,6 @@ class LocationTrackingServiceNotifee {
 
       // Display the notification with employee-specific information
       const notificationId = `location-tracking-${employeeName}-${Date.now()}`;
-      console.log('🔍 [LOCATION DEBUG] Creating notification with ID:', notificationId);
       await notifee.displayNotification({
         id: notificationId,
         title: `PGN Location Tracking - ${employeeName}`,
@@ -324,12 +279,10 @@ class LocationTrackingServiceNotifee {
           ],
         },
       });
-      console.log('🔍 [LOCATION DEBUG] Foreground notification created successfully');
 
       this.state.channelId = channelId;
       this.state.notificationId = notificationId;
     } catch (error) {
-      console.log('🔍 [LOCATION DEBUG] Failed to create foreground notification:', error);
       console.error('[LocationTrackingServiceNotifee] Failed to create foreground notification:', error);
       throw error;
     }
@@ -341,7 +294,6 @@ class LocationTrackingServiceNotifee {
   async stopTracking(checkOutData?: string): Promise<boolean> {
     try {
       if (!this.state.isTracking) {
-
         return true;
       }
 

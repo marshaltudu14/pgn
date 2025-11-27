@@ -218,18 +218,13 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
   const processAttendance = async (photo: any) => {
     try {
-      console.log('🔍 [MOBILE DEBUG] Process attendance started');
-      console.log('🔍 [MOBILE DEBUG] Mode:', mode);
-      console.log('🔍 [MOBILE DEBUG] Location data:', locationData ? 'Available' : 'Missing');
-      console.log('🔍 [MOBILE DEBUG] Photo data:', photo.base64 ? 'Available' : 'Missing');
-
+      
       if (!locationData || !photo.base64) {
         throw new Error('Missing location or photo data');
       }
 
       setStep('processing');
-      console.log('🔍 [MOBILE DEBUG] Step set to processing');
-
+      
       const attendanceData = {
         location: {
           latitude: locationData.latitude,
@@ -246,32 +241,26 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
         },
       };
 
-      console.log('🔍 [MOBILE DEBUG] Attendance data prepared, calling API...');
-
+      
       let result;
       if (mode === 'checkin') {
-        console.log('🔍 [MOBILE DEBUG] Calling checkIn...');
-        result = await checkIn(attendanceData as CheckInMobileRequest);
+                result = await checkIn(attendanceData as CheckInMobileRequest);
       } else {
-        console.log('🔍 [MOBILE DEBUG] Calling checkOut...');
-        result = await checkOut(attendanceData as CheckOutMobileRequest);
+                result = await checkOut(attendanceData as CheckOutMobileRequest);
       }
 
-      console.log('🔍 [MOBILE DEBUG] API result:', result);
-
+      
       if (result.success) {
         showToast.success(
           mode === 'checkin' ? 'Checked in successfully!' : 'Checked out successfully!',
           result.message
         );
-        console.log('🔍 [MOBILE DEBUG] Success toast shown, closing modal...');
-        onClose();
+                onClose();
       } else {
         throw new Error(result.message || 'Attendance failed');
       }
     } catch (error) {
-      console.log('🔍 [MOBILE DEBUG] Error in processAttendance:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to process attendance. Please try again.';
+            const errorMessage = error instanceof Error ? error.message : 'Failed to process attendance. Please try again.';
 
       // Only show non-authentication errors to the user
       // Authentication errors are handled globally by AuthGuard

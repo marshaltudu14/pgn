@@ -1,19 +1,19 @@
 import { createClient } from '@/utils/supabase/server';
 import {
-  CheckInRequest,
-  CheckOutRequest,
-  AttendanceResponse,
-  AttendanceStatusResponse,
-  AttendanceStatus,
-  CheckOutMethod,
-  VerificationStatus,
-  EmergencyCheckOutRequest,
-  LocationUpdateRequest,
-  DailyAttendanceRecord,
-  AttendanceListParams,
-  AttendanceListResponse,
-  UpdateVerificationRequest,
-  PathData,
+    AttendanceListParams,
+    AttendanceListResponse,
+    AttendanceResponse,
+    AttendanceStatus,
+    AttendanceStatusResponse,
+    CheckInRequest,
+    CheckOutMethod,
+    CheckOutRequest,
+    DailyAttendanceRecord,
+    EmergencyCheckOutRequest,
+    LocationUpdateRequest,
+    PathData,
+    UpdateVerificationRequest,
+    VerificationStatus,
 } from '@pgn/shared';
 
 // Interfaces for database records to avoid using any
@@ -65,28 +65,18 @@ export class AttendanceService {
    */
   async checkIn(employeeId: string, request: CheckInRequest): Promise<AttendanceResponse> {
     try {
-      console.log('🔍 [DEBUG] Check-in started for employee:', employeeId);
-      const supabase = await createClient();
+            const supabase = await createClient();
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-      console.log('🔍 [DEBUG] Today date:', today);
-
+      
       // Check if employee already has attendance for today
-      console.log('🔍 [DEBUG] Checking existing attendance...');
-      const { data: existingAttendance, error: checkError } = await supabase
+            const { data: existingAttendance, error: checkError } = await supabase
         .from('daily_attendance')
         .select('*')
         .eq('employee_id', employeeId)
         .eq('attendance_date', today)
         .maybeSingle();
 
-      console.log('🔍 [DEBUG] Existing attendance query result:', {
-        existingAttendance: existingAttendance ? 'Found' : 'Not found',
-        checkError: checkError?.message || 'No error',
-        existingAttendanceData: existingAttendance
-      });
-
       if (checkError) {
-        console.error('❌ [ERROR] Error checking existing attendance:', checkError);
         return {
           success: false,
           message: 'Failed to check existing attendance records'
@@ -97,7 +87,6 @@ export class AttendanceService {
       // This helps employees resume work after app crashes, network issues, etc.
       // No restriction - employees can always check in to start/resume work
 
-      console.log('🔍 [DEBUG] Uploading selfie to storage...');
       // Upload selfie to storage
       const photoUrl = await this.uploadSelfieToStorage(
         employeeId,
@@ -105,7 +94,6 @@ export class AttendanceService {
         today,
         'checkin'
       );
-      console.log('🔍 [DEBUG] Selfie uploaded, URL:', photoUrl);
 
       // Create or update attendance record
       const attendanceData = {
@@ -121,11 +109,9 @@ export class AttendanceService {
         verification_status: 'PENDING' as VerificationStatus,
         last_location_update: new Date().toISOString()
       };
-      console.log('🔍 [DEBUG] Attendance data prepared:', attendanceData);
 
       let attendanceRecord;
       if (existingAttendance) {
-        console.log('🔍 [DEBUG] Updating existing record with ID:', existingAttendance.id);
         // Update existing record
         const { data, error } = await supabase
           .from('daily_attendance')
@@ -134,22 +120,14 @@ export class AttendanceService {
           .select()
           .single();
 
-        console.log('🔍 [DEBUG] Update result:', {
-          data: data ? 'Success' : 'Failed',
-          error: error?.message || 'No error',
-          updatedData: data
-        });
-
-        if (error) {
-          console.error('❌ [ERROR] Error updating attendance record:', error);
-          return {
+    if (error) {
+      return {
             success: false,
             message: 'Failed to update attendance record'
           };
         }
         attendanceRecord = data;
       } else {
-        console.log('🔍 [DEBUG] Creating new attendance record...');
         // Create new record
         const { data, error } = await supabase
           .from('daily_attendance')
@@ -157,14 +135,7 @@ export class AttendanceService {
           .select()
           .single();
 
-        console.log('🔍 [DEBUG] Insert result:', {
-          data: data ? 'Success' : 'Failed',
-          error: error?.message || 'No error',
-          insertedData: data
-        });
-
         if (error) {
-          console.error('❌ [ERROR] Error creating attendance record:', error);
           return {
             success: false,
             message: 'Failed to create attendance record'
@@ -173,7 +144,6 @@ export class AttendanceService {
         attendanceRecord = data;
       }
 
-      console.log('🔍 [DEBUG] Check-in completed successfully, returning response');
       return {
         success: true,
         message: 'Check-in successful',
@@ -183,9 +153,8 @@ export class AttendanceService {
         checkInTime: new Date(attendanceRecord.check_in_timestamp!),
         verificationStatus: attendanceRecord.verification_status
       };
-    } catch (error) {
-      console.error('❌ [ERROR] Unexpected error during check-in:', error);
-      return {
+    } catch {
+        return {
         success: false,
         message: 'Check-in failed due to unexpected error'
       };
@@ -350,7 +319,12 @@ export class AttendanceService {
    */
   private transformAttendanceRecords(data: DatabaseAttendanceRecord[] | null): DailyAttendanceRecord[] {
     // Transform the data to match the expected interface
-    const transformedRecords: DailyAttendanceRecord[] = (data || []).map((record: DatabaseAttendanceRecord) => ({
+    const transformedRecords: DailyAttendanceRecord[] = (data || []).map((record: DatabaseAttendanceRecord) => {
+      if (!record) {
+        throw new Error('Attendance record is null or undefined');
+      }
+
+      return {
       id: record.id,
       employeeId: record.employee_id,
       humanReadableEmployeeId: record.employee?.human_readable_user_id,
@@ -371,7 +345,7 @@ export class AttendanceService {
             address: undefined, // Would need geocoding service for address
           }
         : undefined,
-      checkOutLocation: record.check_out_latitude && record.check_out_longitude
+      checkOutLocation: record.check_out_latitude != null && record.check_out_longitude != null
         ? {
             latitude: typeof record.check_out_latitude === 'string' ? parseFloat(record.check_out_latitude) : record.check_out_latitude,
             longitude: typeof record.check_out_longitude === 'string' ? parseFloat(record.check_out_longitude) : record.check_out_longitude,
@@ -394,7 +368,8 @@ export class AttendanceService {
       device: record.device || undefined,
       createdAt: new Date(record.created_at),
       updatedAt: new Date(record.updated_at),
-    }));
+      };
+    });
 
     return transformedRecords;
   }
@@ -482,15 +457,12 @@ export class AttendanceService {
     };
 
     // Debug logging
-    console.log('Updating attendance record:', recordId);
-    console.log('Update data:', updateData);
 
     // Get the current user for verification
     const { data } = await supabase.auth.getUser();
     if (data.user) {
       updateData.verified_by = data.user.id;
       updateData.verified_at = new Date().toISOString();
-      console.log('Added verification info - verified_by:', data.user.id);
     }
 
     const { data: recordData, error } = await supabase
@@ -515,8 +487,6 @@ export class AttendanceService {
     }
 
     // Debug: Log the updated record
-    console.log('Successfully updated record. New verification_status:', recordData.verification_status);
-    console.log('Updated verification_notes:', recordData.verification_notes);
 
     // Transform the updated record
     const transformedRecord: DailyAttendanceRecord = {

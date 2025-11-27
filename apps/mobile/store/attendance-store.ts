@@ -15,6 +15,7 @@ import * as Battery from 'expo-battery';
 import { create } from 'zustand';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
 import { useAuth } from './auth-store';
+import * as ReactNativeDeviceInfo from 'react-native-device-info';
 // Utility functions
 import {
   CameraError,
@@ -255,8 +256,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               }
             }
 
-          } catch (error) {
-            console.error('Failed to initialize permissions:', error);
+          } catch (_error) {
             set({
               cameraPermission: false,
               locationPermission: false,
@@ -274,8 +274,8 @@ export const useAttendance = create<AttendanceStoreState>()(
               cameraPermission: cameraAvailable,
               locationPermission: locationAvailable,
             });
-          } catch (error) {
-            console.error('Failed to check permissions:', error);
+          } catch (_error) {
+            // Permission check failed
           }
         },
 
@@ -331,12 +331,11 @@ export const useAttendance = create<AttendanceStoreState>()(
                 locationTrackingServiceNotifee.startTracking(
                   authStore.user.id,
                   authStore.user.firstName
-                ).catch(console.warn);
+                );
               }
             }
 
           } catch (error) {
-            console.error('Failed to fetch attendance status:', error);
             set({
               isLoading: false,
               error: error instanceof Error ? error.message : 'Failed to fetch attendance status',
@@ -360,8 +359,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                   timestamp: location.timestamp.getTime(),
                   address: location.address
                 };
-              } catch (locationError) {
-                console.error('Failed to get location:', locationError);
+              } catch (_locationError) {
                 set({
                   isCheckingIn: false,
                   error: 'Location is required for check-in',
@@ -411,7 +409,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             };
 
             if (result.success) {
-              console.log('🔍 [MOBILE DEBUG] Check-in successful, updating state...');
               set({
                 currentStatus: 'CHECKED_IN',
                 currentAttendanceId: result.attendanceId || null,
@@ -421,46 +418,30 @@ export const useAttendance = create<AttendanceStoreState>()(
                 verificationStatus: result.verificationStatus as 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED',
                 requiresVerification: result.verificationStatus === 'PENDING'
               });
-              console.log('🔍 [MOBILE DEBUG] State updated, getting auth user info...');
 
               // Start location tracking using Notifee
               const authStore = useAuth.getState();
               const employeeId = authStore.user?.id;
               const employeeName = authStore.user?.firstName;
 
-              console.log('🔍 [MOBILE DEBUG] Auth info:', {
-                employeeId: employeeId ? 'Available' : 'Missing',
-                employeeName: employeeName || 'Missing'
-              });
-
               if (employeeId && employeeName) {
-                console.log('🔍 [MOBILE DEBUG] Starting location tracking...');
                 try {
                   const success = await locationTrackingServiceNotifee.startTracking(employeeId, employeeName);
-                  console.log('🔍 [MOBILE DEBUG] Location tracking start result:', success);
                   if (success) {
-                    console.log('🔍 [MOBILE DEBUG] Location tracking started successfully, updating state...');
                     set({
                       isLocationTracking: true,
                       lastLocationUpdate: new Date(),
                     });
-                  } else {
-                    console.log('🔍 [MOBILE DEBUG] Location tracking failed to start');
                   }
-                } catch (trackingError) {
-                  console.log('🔍 [MOBILE DEBUG] Failed to start location tracking:', trackingError);
-                  console.warn('[AttendanceStore] Failed to start location tracking:', trackingError);
+                } catch (_trackingError) {
                   // Don't fail check-in if tracking fails
                 }
-              } else {
-                console.log('🔍 [MOBILE DEBUG] Cannot start location tracking - missing employee info');
               }
             }
 
             return result;
 
           } catch (error) {
-            console.error('Check-in failed:', error);
             const errorMessage = error instanceof Error ? error.message : 'Check-in failed';
 
             set({
@@ -576,7 +557,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                     lastLocationUpdate: null,
                   });
                 }
-              } catch (trackingError) {
+              } catch (_trackingError) {
                 // Don't fail check-out if tracking fails
               }
             }
@@ -584,7 +565,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             return result;
 
           } catch (error) {
-            console.error('Check-out failed:', error);
             const errorMessage = error instanceof Error ? error.message : 'Check-out failed';
 
             set({
@@ -665,7 +645,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                     lastLocationUpdate: null,
                   });
                 }
-              } catch (trackingError) {
+              } catch (_trackingError) {
                 // Ignore tracking errors during emergency checkout
               }
             }
@@ -673,7 +653,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             return result;
 
           } catch (error) {
-            console.error('Emergency check-out failed:', error);
             const errorMessage = error instanceof Error ? error.message : 'Emergency check-out failed';
 
             set({
@@ -753,7 +732,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             });
 
           } catch (error) {
-            console.error('Failed to fetch attendance history:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to fetch attendance history';
 
             set({
@@ -853,7 +831,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             }));
 
           } catch (error) {
-            console.error('Failed to load more attendance history:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to load more attendance history';
 
             set({
@@ -926,7 +903,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             });
 
           } catch (error) {
-            console.error('Failed to refresh attendance history:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to refresh attendance history';
 
             set({
@@ -970,7 +946,6 @@ export const useAttendance = create<AttendanceStoreState>()(
               await get().checkServiceStatus();
             }
           } catch (error) {
-            console.error('[AttendanceStore] Failed to initialize location service:', error);
             set({
               error: error instanceof Error ? error.message : 'Failed to initialize location service',
             });
@@ -993,9 +968,8 @@ export const useAttendance = create<AttendanceStoreState>()(
               isLocationTracking: isTracking,
               lastLocationUpdate: state.isTracking ? new Date() : null,
             });
-
-              } catch (error) {
-            console.error('[AttendanceStore] Failed to check service status:', error);
+          } catch (_error) {
+            // Silently handle service status check errors
           }
         },
 
@@ -1035,16 +1009,14 @@ export const useAttendance = create<AttendanceStoreState>()(
 
             // Update service status
             await get().checkServiceStatus();
-
-              } catch (error) {
-            console.error('[AttendanceStore] Failed to stop location tracking:', error);
+          } catch (_error) {
+            // Silently handle stop tracking errors
           }
         },
 
         // Update location in store (modified for native service - no 50m filter)
         updateLocation: (location: LocationData) => {
           const { locationHistory } = get();
-          const lastLocation = locationHistory[locationHistory.length - 1];
 
           // Add every location (no movement threshold filter)
           set({
@@ -1067,7 +1039,6 @@ export const useAttendance = create<AttendanceStoreState>()(
             const { currentAttendanceId } = get();
 
             if (!currentAttendanceId) {
-              console.warn('[AttendanceStore] Cannot send location update: No current attendance ID');
               return;
             }
 
@@ -1084,8 +1055,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               timestamp: location.timestamp.toISOString(),
             });
 
-          } catch (error) {
-            console.error('[AttendanceStore] Failed to send location update:', error);
+          } catch (_error) {
             // We don't set global error here to avoid disrupting the UI for background tasks
           }
         },
@@ -1111,10 +1081,9 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Update pending data count after sync
             await get().checkServiceStatus();
 
-          } catch (error) {
-            console.error('[AttendanceStore] Failed to sync pending data:', error);
+          } catch (_error) {
             set({
-              error: error instanceof Error ? error.message : 'Failed to sync pending data',
+              error: _error instanceof Error ? _error.message : 'Failed to sync pending data',
             });
           }
         },
@@ -1131,9 +1100,8 @@ export const useAttendance = create<AttendanceStoreState>()(
             set({
               locationHistory: [],
             });
-
-                } catch (error) {
-            console.error('[AttendanceStore] Failed to clear employee data:', error);
+          } catch (_error) {
+            // Silently handle clear employee data errors
           }
         },
 
@@ -1149,8 +1117,7 @@ export const useAttendance = create<AttendanceStoreState>()(
 
             return result;
 
-          } catch (error) {
-            console.error('Failed to process offline queue:', error);
+          } catch (_error) {
             return { processed: 0, failed: 0 };
           }
         },
@@ -1161,8 +1128,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             // TODO: Implement clear offline queue
             set({ offlineQueue: [], offlineQueueCount: 0 });
             set({ offlineQueueCount: 0 });
-          } catch (error) {
-            console.error('Failed to clear offline queue:', error);
+          } catch (_error) {
           }
         },
 
@@ -1201,7 +1167,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             try {
               const level = await Battery.getBatteryLevelAsync();
               batteryLevel = level > 0 ? Math.round(level * 100) : undefined;
-            } catch (batteryError) {
+            } catch (_batteryError) {
               const state = get();
               batteryLevel = state.batteryLevel || undefined;
             }
@@ -1209,18 +1175,13 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Get device info using the same pattern that worked in the hook
             let deviceModel = 'Unknown';
             let deviceBrand = 'Unknown';
-            let deviceSystemVersion = 'Unknown';
             let appVersion = 'Unknown';
-            let buildNumber = 'Unknown';
 
             try {
-              const DeviceInfo = require('react-native-device-info');
-              deviceModel = DeviceInfo.getModel();
-              deviceBrand = DeviceInfo.getBrand();
-              deviceSystemVersion = DeviceInfo.getSystemVersion();
-              appVersion = DeviceInfo.getVersion();
-              buildNumber = DeviceInfo.getBuildNumber();
-            } catch (deviceError) {
+              deviceModel = ReactNativeDeviceInfo.getModel();
+              deviceBrand = ReactNativeDeviceInfo.getBrand();
+              appVersion = ReactNativeDeviceInfo.getVersion();
+            } catch (_deviceError) {
               // Device info methods failed, will use defaults
             }
 
@@ -1274,8 +1235,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                 offlineQueueCount: queue.length
               });
             }
-          } catch (error) {
-            console.error('Failed to load offline queue:', error);
+          } catch (_error) {
           }
         },
 
@@ -1285,8 +1245,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             const { offlineQueue } = get();
             await AsyncStorage.setItem('attendance-offline-queue', JSON.stringify(offlineQueue));
             set({ offlineQueueCount: offlineQueue.length });
-          } catch (error) {
-            console.error('Failed to save offline queue:', error);
+          } catch (_error) {
           }
         },
 

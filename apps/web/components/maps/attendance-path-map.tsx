@@ -230,7 +230,6 @@ const AttendancePathMap = forwardRef<AttendancePathMapRef, AttendancePathMapProp
         // Check if map is already initialized
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((mapRef.current as any)._leaflet_id) {
-          console.log('Map already initialized, skipping...');
           return;
         }
 

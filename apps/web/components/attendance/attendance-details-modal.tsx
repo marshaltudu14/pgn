@@ -370,7 +370,6 @@ export function AttendanceDetailsModal({
                           height={128}
                           className="w-full h-full object-cover"
                           onLoad={() => {
-                            console.log('✅ [SUCCESS] Check-out image loaded successfully:', attendanceRecord.checkOutSelfieUrl);
                           }}
                           onError={(e) => {
                             console.error('❌ [ERROR] Check-out image failed to load:', {

@@ -18,7 +18,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
-import { Calendar, Home, LogOut, Map, Settings, Users } from 'lucide-react';
+import { Calendar, CheckSquare, Home, LogOut, Map, Settings, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -45,6 +45,11 @@ const navigationItems = [
     title: 'Attendance',
     url: '/dashboard/attendance',
     icon: Calendar,
+  },
+  {
+    title: 'Tasks',
+    url: '/dashboard/tasks',
+    icon: CheckSquare,
   },
   {
     title: 'Settings',

@@ -11,6 +11,25 @@ export class PhotoService {
     type: 'checkin' | 'checkout' | 'emergency-checkout' | 'reference'
   ): Promise<{ url: string; path: string; success: boolean; error?: string }> {
     try {
+      // Validate inputs
+      if (!employeeId || employeeId.trim() === '') {
+        return {
+          url: '',
+          path: '',
+          success: false,
+          error: 'Employee ID is required'
+        };
+      }
+
+      if (!photoData || photoData.trim() === '') {
+        return {
+          url: '',
+          path: '',
+          success: false,
+          error: 'Photo data is required'
+        };
+      }
+
       const supabase = await createClient();
 
       // Parse date components for folder structure
@@ -85,6 +104,14 @@ export class PhotoService {
    */
   async deletePhoto(filePath: string): Promise<{ success: boolean; error?: string }> {
     try {
+      // Validate input
+      if (!filePath || filePath.trim() === '') {
+        return {
+          success: false,
+          error: 'File path is required'
+        };
+      }
+
       const supabase = await createClient();
 
       const { error } = await supabase.storage
@@ -114,6 +141,15 @@ export class PhotoService {
    */
   async getPhotoUrl(filePath: string): Promise<{ url: string; success: boolean; error?: string }> {
     try {
+      // Validate input
+      if (!filePath || filePath.trim() === '') {
+        return {
+          url: '',
+          success: false,
+          error: 'File path is required'
+        };
+      }
+
       const supabase = await createClient();
 
       const { data: { publicUrl } } = supabase.storage
@@ -147,7 +183,7 @@ export class PhotoService {
       // such as AWS Rekognition, Azure Face API, or on-device TensorFlow Lite
 
       // For now, return a mock confidence score
-      const mockConfidence = Math.random() * 30 + 70; // Random between 70-100
+      const mockConfidence = Math.random() * 0.3 + 0.7; // Random between 0.7-1.0
 
       return {
         confidence: mockConfidence,
@@ -174,6 +210,9 @@ export class PhotoService {
     type: string,
     timestamp: number
   ): string {
+    if (type === 'reference') {
+      return `employees/reference/${employeeId}-${timestamp}.jpg`;
+    }
     return `attendance/${year}/${month}/${day}/${employeeId}/${type}-${timestamp}.jpg`;
   }
 

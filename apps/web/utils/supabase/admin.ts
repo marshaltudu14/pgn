@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 // IMPORTANT: This should only be used in server-side service files
 // Never expose this to client components or API routes that don't validate access
 
-function getSupabaseAdmin() {
+export function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

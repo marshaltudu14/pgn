@@ -1,5 +1,4 @@
 import { api, checkApiConnectivity } from '../api-client';
-import { ApiError } from '../api-client';
 import { SessionManager } from '@/utils/auth-utils';
 
 // Mock fetch

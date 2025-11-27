@@ -17,15 +17,6 @@ const PUBLIC_ENDPOINTS = [
   API_ENDPOINTS.LOGOUT,
 ];
 
-// Device info for security tracking
-const getDeviceInfo = () => {
-  return {
-    platform: 'mobile',
-    timestamp: Date.now(),
-    version: '1.0.0',
-    client: 'pgn-mobile-client'
-  };
-};
 
 // Error types matching dukancard's pattern
 export interface ApiError {

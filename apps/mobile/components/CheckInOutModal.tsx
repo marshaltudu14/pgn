@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Camera } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { permissionService } from '@/services/permissions';
 import {
   useAttendance,
   useAttendanceLoading,
@@ -45,6 +46,40 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const checkIn = useAttendance((state) => state.checkIn);
   const checkOut = useAttendance((state) => state.checkOut);
   const clearError = useAttendance((state) => state.clearError);
+
+  // Comprehensive permission check before check-in
+  const checkRequiredPermissions = async (): Promise<boolean> => {
+    try {
+      // Check all three required permissions
+      const cameraStatus = await permissionService.checkCameraPermission();
+      const locationStatus = await permissionService.checkLocationPermission();
+      const notificationStatus = await permissionService.checkNotificationPermission();
+
+      console.log('[CheckInOutModal] Permission check:', { cameraStatus, locationStatus, notificationStatus });
+
+      // Check if all permissions are granted
+      if (cameraStatus !== 'granted') {
+        showToast.error('Camera permission is required for check-in. Please grant camera access in settings.');
+        return false;
+      }
+
+      if (locationStatus !== 'granted') {
+        showToast.error('Location permission with "Allow all the time" access is required for check-in. Please enable location access in settings.');
+        return false;
+      }
+
+      if (notificationStatus !== 'granted') {
+        showToast.error('Notification permission is required for check-in. Please enable notifications in settings.');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[CheckInOutModal] Error checking permissions:', error);
+      showToast.error('Failed to check permissions. Please try again.');
+      return false;
+    }
+  };
 
   // Camera methods from attendance store
   const capturePhoto = useAttendance((state) => state.capturePhoto);
@@ -242,6 +277,13 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       };
 
       
+      // Check required permissions before proceeding with check-in/out
+      const hasPermissions = await checkRequiredPermissions();
+      if (!hasPermissions) {
+        onClose(); // Close modal if permissions are missing
+        return;
+      }
+
       let result;
       if (mode === 'checkin') {
                 result = await checkIn(attendanceData as CheckInMobileRequest);

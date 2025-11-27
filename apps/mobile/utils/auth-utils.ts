@@ -160,7 +160,6 @@ export class SessionManager {
         key.includes('pgn') || key.includes('auth') || key.includes('token')
       );
 
-      const values = await AsyncStorage.multiGet(authKeys);
     } catch (error) {
       console.warn('Error debugging stored tokens:', error);
     }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { AppPermissions, permissionService } from '@/services/permissions';
@@ -23,6 +23,56 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
   // Attendance hooks
   const initializePermissions = useAttendance((state) => state.initializePermissions);
+
+  const checkPermissions = useCallback(async () => {
+    try {
+      console.log('[AuthGuard] Starting permission check...');
+
+      // First check current permissions
+      const result = await permissionService.checkAllPermissions();
+      setPermissions(result.permissions);
+
+      if (result.allGranted) {
+        // All permissions already granted - no action needed
+        setShowPermissionsScreen(false);
+        initializePermissions();
+      } else if (result.deniedPermissions.length > 0) {
+        // Some permissions are explicitly denied - show permission screen immediately
+        console.log('[AuthGuard] Permissions denied, showing permission screen:', result.deniedPermissions);
+        setShowPermissionsScreen(true);
+      } else if (result.undeterminedPermissions.length > 0) {
+        // Permissions are undetermined - try to request them
+        console.log('[AuthGuard] Requesting undetermined permissions:', result.undeterminedPermissions);
+        const requestResult = await permissionService.requestAllPermissions();
+        setPermissions(requestResult.permissions);
+
+        // After requesting, check again to see if we have all required permissions
+        const finalCheck = await permissionService.checkAllPermissions();
+        setPermissions(finalCheck.permissions);
+
+        if (finalCheck.allGranted) {
+          // All permissions granted after request
+          console.log('[AuthGuard] All permissions granted after request');
+          setShowPermissionsScreen(false);
+          initializePermissions();
+        } else {
+          // Some permissions still missing - show permission screen for manual intervention
+          console.log('[AuthGuard] Some permissions still missing, showing permission screen');
+          setShowPermissionsScreen(true);
+        }
+      } else {
+        console.log('[AuthGuard] Unexpected permission state, showing permission screen');
+        setShowPermissionsScreen(true);
+      }
+    } catch (error) {
+      console.error('[AuthGuard] Error checking permissions:', error);
+      // Show permission screen on error to be safe
+      setShowPermissionsScreen(true);
+    } finally {
+      console.log('[AuthGuard] Permission check completed, permissionsChecked = true');
+      setPermissionsChecked(true);
+    }
+  }, [permissionService, initializePermissions]);
 
   useEffect(() => {
     const init = async () => {
@@ -56,10 +106,19 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
   // Check permissions when authenticated and permission checking is enabled
   useEffect(() => {
+    console.log('[AuthGuard] Trigger useEffect:', {
+      isInitialized,
+      isLoading,
+      isAuthenticated,
+      shouldCheckPermissions,
+      permissionsChecked
+    });
+
     if (isInitialized && !isLoading && isAuthenticated && shouldCheckPermissions && !permissionsChecked) {
+      console.log('[AuthGuard] All conditions met, calling checkPermissions()');
       checkPermissions();
     }
-  }, [isInitialized, isLoading, isAuthenticated, shouldCheckPermissions, permissionsChecked]);
+  }, [isInitialized, isLoading, isAuthenticated, shouldCheckPermissions, permissionsChecked, checkPermissions]);
 
   // Monitor permission changes and handle navigation
   useEffect(() => {
@@ -68,62 +127,33 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
                         permissions.location === 'granted' &&
                         permissions.notifications === 'granted';
 
+      console.log('[AuthGuard] Permission monitor useEffect:', {
+        isAuthenticated,
+        permissionsChecked,
+        shouldCheckPermissions,
+        permissions,
+        allGranted,
+        showPermissionsScreen
+      });
+
       if (allGranted) {
         // All permissions granted - hide permission screen and initialize
         if (showPermissionsScreen) {
+          console.log('[AuthGuard] Hiding permission screen - all permissions granted');
           setShowPermissionsScreen(false);
         }
         initializePermissions();
       } else {
         // Some permissions missing - show permission screen
         if (!showPermissionsScreen) {
+          console.log('[AuthGuard] Showing permission screen - some permissions missing');
           setShowPermissionsScreen(true);
         }
       }
     }
   }, [isAuthenticated, permissionsChecked, shouldCheckPermissions, permissions, showPermissionsScreen, initializePermissions]);
 
-  const checkPermissions = async () => {
-    try {
-      // First check current permissions
-      const result = await permissionService.checkAllPermissions();
-      setPermissions(result.permissions);
-
-      if (result.allGranted) {
-        // All permissions already granted - no action needed
-        setShowPermissionsScreen(false);
-        initializePermissions();
-      } else {
-        // Try to request missing permissions automatically
-        const requestResult = await permissionService.requestAllPermissions();
-        setPermissions(requestResult.permissions);
-
-        // Check if any permissions are blocked (denied permanently)
-        const hasBlockedPermissions = requestResult.deniedPermissions.some(perm => {
-          return requestResult.permissions[perm as keyof AppPermissions] === 'blocked';
-        });
-
-        if (requestResult.allGranted) {
-          // All permissions granted after request
-          setShowPermissionsScreen(false);
-          initializePermissions();
-        } else if (hasBlockedPermissions) {
-          // Some permissions are blocked - user must go to settings
-          setShowPermissionsScreen(true);
-        } else {
-          // Some permissions are still undetermined or denied - show permission screen
-          setShowPermissionsScreen(true);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking permissions:', error);
-      // Show permission screen on error to be safe
-      setShowPermissionsScreen(true);
-    } finally {
-      setPermissionsChecked(true);
-    }
-  };
-
+  
   const handlePermissionsGranted = () => {
     // Just hide the permission screen - the useEffect will handle the rest
     setShowPermissionsScreen(false);

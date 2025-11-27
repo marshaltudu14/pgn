@@ -1,4 +1,4 @@
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { COLORS } from '@/constants';
 
 export const createLoginScreenStyles = (colorScheme: 'light' | 'dark' | null | undefined) => StyleSheet.create({

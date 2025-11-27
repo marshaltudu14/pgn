@@ -82,7 +82,7 @@ export async function getRegions(
     total: count || 0,
     page,
     limit,
-    hasMore: (offset + data.length) < (count || 0),
+    hasMore: (offset + (data?.length || 0)) < (count || 0),
   };
 }
 
@@ -224,6 +224,6 @@ export async function searchRegions(
     total: count || 0,
     page,
     limit,
-    hasMore: (offset + data.length) < (count || 0),
+    hasMore: (offset + (data?.length || 0)) < (count || 0),
   };
 }

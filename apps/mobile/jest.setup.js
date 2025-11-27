@@ -285,7 +285,7 @@ jest.mock('expo-camera', () => ({
 
 // Mock API constants for tests
 jest.mock('@/constants/api', () => ({
-  buildApiUrl: jest.fn((endpoint: string) => `http://localhost:3000/api${endpoint}`),
+  buildApiUrl: jest.fn((endpoint) => `http://localhost:3000/api${endpoint}`),
   getApiHeaders: jest.fn(() => ({
     'Content-Type': 'application/json',
     'Accept': 'application/json',

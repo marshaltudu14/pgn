@@ -1,7 +1,7 @@
 // Jest setup file for Node.js environment tests
 
 // Polyfill Web APIs for Node.js test environment
-const { TextEncoder, TextDecoder } = require('util');
+import { TextEncoder, TextDecoder } from 'util';
 
 // Make TextEncoder and TextDecoder available globally
 global.TextEncoder = TextEncoder;

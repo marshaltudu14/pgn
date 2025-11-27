@@ -1,7 +1,6 @@
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
-import notifee, { AuthorizationStatus } from '@notifee/react-native';
 import { Platform, Linking } from 'react-native';
 import { showToast } from '@/utils/toast';
 
@@ -54,6 +53,8 @@ export class PermissionService {
       } else if (foregroundStatus === 'denied' || backgroundStatus === 'denied') {
         return 'denied';
       } else {
+        // If foreground is granted but background is not, that means user has "Allow while in app"
+        // but not "Allow all the time" - we need to show permission screen
         return 'undetermined';
       }
     } catch (error) {
@@ -113,6 +114,8 @@ export class PermissionService {
       }
 
       // Then request background permission for "Allow all the time"
+      // On Android 11+, background location permission requires a special explanation
+      // and the user may need to go to settings
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
 
       // Return background status since we need both for full functionality
@@ -126,8 +129,6 @@ export class PermissionService {
   // Request notification permission
   async requestNotificationPermission(): Promise<PermissionStatus> {
     try {
-
-
       // Use expo-notifications for permission requesting (latest best practice)
       const settings = await Notifications.requestPermissionsAsync({
         ios: {
@@ -136,8 +137,6 @@ export class PermissionService {
           allowSound: true,
         },
       });
-
-
 
       // Check if permissions are granted or provisionally granted (iOS)
       if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
@@ -163,11 +162,15 @@ export class PermissionService {
 
   // Check all required app permissions
   async checkAllPermissions(): Promise<PermissionCheckResult> {
+    console.log('[PermissionService] Checking all permissions...');
+
     const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
       this.checkCameraPermission(),
       this.checkLocationPermission(),
       this.checkNotificationPermission(),
     ]);
+
+    console.log('[PermissionService] Permission statuses:', { cameraStatus, locationStatus, notificationStatus });
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
@@ -182,6 +185,8 @@ export class PermissionService {
     const undeterminedPermissions = Object.entries(permissions)
       .filter(([_, status]) => status === 'undetermined')
       .map(([permission]) => permission);
+
+    console.log('[PermissionService] Permission analysis:', { allGranted, deniedPermissions, undeterminedPermissions });
 
     return {
       allGranted,
@@ -193,11 +198,15 @@ export class PermissionService {
 
   // Request all required permissions
   async requestAllPermissions(): Promise<PermissionCheckResult> {
+    console.log('[PermissionService] Requesting all permissions...');
+
     const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
       this.requestCameraPermission(),
       this.requestLocationPermission(),
       this.requestNotificationPermission(),
     ]);
+
+    console.log('[PermissionService] After requesting - statuses:', { cameraStatus, locationStatus, notificationStatus });
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
@@ -212,6 +221,8 @@ export class PermissionService {
     const undeterminedPermissions = Object.entries(permissions)
       .filter(([_, status]) => status === 'undetermined')
       .map(([permission]) => permission);
+
+    console.log('[PermissionService] After requesting - analysis:', { allGranted, deniedPermissions, undeterminedPermissions });
 
     return {
       allGranted,

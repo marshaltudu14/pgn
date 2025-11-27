@@ -9,6 +9,7 @@ import notifee, {
     EventType
 } from '@notifee/react-native';
 import * as Battery from 'expo-battery';
+import { permissionService } from '@/services/permissions';
 
 interface LocationTrackingState {
   isTracking: boolean;
@@ -27,6 +28,7 @@ class LocationTrackingServiceNotifee {
 
   private trackingInterval: ReturnType<typeof setInterval> | null = null;
   private notificationUpdateInterval: ReturnType<typeof setInterval> | null = null;
+  private permissionMonitoringInterval: ReturnType<typeof setInterval> | null = null;
   private locationUpdateCallback?: LocationUpdateCallback;
   private isInitialized = false;
   private nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
@@ -169,11 +171,32 @@ class LocationTrackingServiceNotifee {
         return true;
       }
 
-      // Request notification permissions first
-      const hasPermission = await this.requestNotificationPermissions();
-      if (!hasPermission) {
-        console.warn('[LocationTrackingServiceNotifee] No notification permission, continuing without foreground service');
+      // Check ALL required permissions for tracking
+      const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
+        permissionService.checkCameraPermission(),
+        permissionService.checkLocationPermission(),
+        permissionService.checkNotificationPermission(),
+      ]);
+
+      console.log('[LocationTrackingServiceNotifee] Permission check:', { cameraStatus, locationStatus, notificationStatus });
+
+      // Check if all required permissions are granted
+      if (cameraStatus !== 'granted') {
+        console.error('[LocationTrackingServiceNotifee] Camera permission required for check-in - cannot start tracking');
+        return false;
       }
+
+      if (locationStatus !== 'granted') {
+        console.error('[LocationTrackingServiceNotifee] Location permission with "Allow all the time" access required for tracking - cannot start tracking');
+        return false;
+      }
+
+      if (notificationStatus !== 'granted') {
+        console.error('[LocationTrackingServiceNotifee] Notification permission required for foreground service - cannot start tracking');
+        return false;
+      }
+
+      console.log('[LocationTrackingServiceNotifee] All required permissions granted');
 
       // Update state
       this.state = {
@@ -182,12 +205,16 @@ class LocationTrackingServiceNotifee {
         employeeName,
       };
 
-      // Create foreground notification to start tracking
+      // Start permission monitoring to stop service if permissions are revoked
+      this.startPermissionMonitoring();
+
+      // Create foreground notification to start tracking - this is required for the service to work
       try {
         await this.createForegroundNotification(employeeName);
       } catch (notificationError) {
-        console.error('[LocationTrackingServiceNotifee] Failed to create foreground notification:', notificationError);
-        // Don't fail tracking if notification fails, continue with background tracking
+        console.error('[LocationTrackingServiceNotifee] Failed to create foreground notification, stopping tracking:', notificationError);
+        this.state.isTracking = false;
+        return false; // Cannot proceed without notification
       }
 
       // Start the tracking loop
@@ -253,6 +280,36 @@ class LocationTrackingServiceNotifee {
       clearInterval(this.notificationUpdateInterval);
       this.notificationUpdateInterval = null;
     }
+    if (this.permissionMonitoringInterval) {
+      clearInterval(this.permissionMonitoringInterval);
+      this.permissionMonitoringInterval = null;
+    }
+  }
+
+  // Start monitoring permissions and stop service if any get revoked
+  private startPermissionMonitoring(): void {
+    // Check permissions every 30 seconds while tracking
+    this.permissionMonitoringInterval = setInterval(async () => {
+      if (!this.state.isTracking) {
+        return;
+      }
+
+      try {
+        const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
+          permissionService.checkCameraPermission(),
+          permissionService.checkLocationPermission(),
+          permissionService.checkNotificationPermission(),
+        ]);
+
+        // If any permission is no longer granted, stop tracking
+        if (cameraStatus !== 'granted' || locationStatus !== 'granted' || notificationStatus !== 'granted') {
+          console.log('[LocationTrackingServiceNotifee] Permission revoked, stopping tracking service');
+          await this.stopTracking('Permission revoked');
+        }
+      } catch (error) {
+        console.error('[LocationTrackingServiceNotifee] Error checking permissions during monitoring:', error);
+      }
+    }, 30000); // Check every 30 seconds
   }
 
   // Send location and battery update
@@ -455,7 +512,7 @@ class LocationTrackingServiceNotifee {
 
       // Check if we can get notification settings (basic functionality test)
       try {
-        const settings = await notifee.getNotificationSettings();
+        await notifee.getNotificationSettings();
 
         return true;
       } catch (settingsError) {

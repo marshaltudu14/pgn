@@ -81,8 +81,8 @@ describe('AttendanceService', () => {
       // Mock successful insert
       const mockSingle = jest.fn().mockResolvedValue({
         data: {
-          attendance_id: 'new-attendance-id',
           ...mockExistingAttendance,
+          id: 'new-attendance-id',
         },
         error: null,
       });
@@ -646,6 +646,12 @@ describe('AttendanceService', () => {
         check_in_timestamp: new Date(Date.now() - 8 * 3600000).toISOString(),
         check_out_timestamp: new Date(Date.now() - 3600000).toISOString(),
         verification_status: 'VERIFIED',
+        check_in_latitude: 40.7128,
+        check_in_longitude: -74.006,
+        check_out_latitude: 40.7589,
+        check_out_longitude: -73.9851,
+        created_at: new Date(Date.now() - 8 * 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 3600000).toISOString(),
         employee: {
           id: employeeId,
           human_readable_user_id: 'PGN-2024-0001',
@@ -663,6 +669,12 @@ describe('AttendanceService', () => {
         check_in_timestamp: new Date(Date.now() - 32 * 3600000).toISOString(),
         check_out_timestamp: new Date(Date.now() - 24 * 3600000).toISOString(),
         verification_status: 'PENDING',
+        check_in_latitude: 40.7128,
+        check_in_longitude: -74.006,
+        check_out_latitude: null,
+        check_out_longitude: null,
+        created_at: new Date(Date.now() - 32 * 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 24 * 3600000).toISOString(),
         employee: {
           id: employeeId,
           human_readable_user_id: 'PGN-2024-0001',
@@ -681,30 +693,9 @@ describe('AttendanceService', () => {
         count: 2,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> range
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
             range: mockRange,
           }),
@@ -727,40 +718,23 @@ describe('AttendanceService', () => {
     it('should apply date filter', async () => {
       const paramsWithDate = { ...mockParams, date: today };
 
-      // Mock successful query with date filter
+      // Create mock function that returns the expected data
       const mockRange = jest.fn().mockResolvedValue({
         data: [mockAttendanceData[0]],
         error: null,
         count: 1,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> eq -> range
+      const mockOrderResult = {
+        eq: jest.fn().mockReturnValue({
+          range: mockRange,
+        }),
+      };
+
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          order: jest.fn().mockReturnValue({
-            range: mockRange,
-          }),
+          order: jest.fn().mockReturnValue(mockOrderResult),
         }),
       });
 
@@ -781,32 +755,15 @@ describe('AttendanceService', () => {
         count: 2,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> eq -> range
+      const mockEq = jest.fn().mockReturnValue({
+        range: mockRange,
+      });
+
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
-            range: mockRange,
+            eq: mockEq,
           }),
         }),
       });
@@ -831,32 +788,18 @@ describe('AttendanceService', () => {
         count: 0,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> is -> is -> range
+      const mockFirstIs = jest.fn().mockReturnValue({
+        range: mockRange,
+      });
+      const mockSecondIs = jest.fn().mockReturnValue({
+        is: mockFirstIs,
+      });
+
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
-            range: mockRange,
+            is: mockSecondIs,
           }),
         }),
       });
@@ -881,32 +824,18 @@ describe('AttendanceService', () => {
         count: 2,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> is -> is -> range
+      const mockFirstIs = jest.fn().mockReturnValue({
+        range: mockRange,
+      });
+      const mockSecondIs = jest.fn().mockReturnValue({
+        is: mockFirstIs,
+      });
+
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
-            range: mockRange,
+            is: mockSecondIs,
           }),
         }),
       });
@@ -931,32 +860,13 @@ describe('AttendanceService', () => {
         count: 0,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> is -> range
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
-            range: mockRange,
+            is: jest.fn().mockReturnValue({
+              range: mockRange,
+            }),
           }),
         }),
       });
@@ -978,30 +888,9 @@ describe('AttendanceService', () => {
         count: 12,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> range
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
             range: mockRange,
           }),
@@ -1026,30 +915,9 @@ describe('AttendanceService', () => {
         count: null,
       });
 
-      // Set up the mock chain
+      // Build the proper chain: select -> order -> range
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            eq: jest.fn().mockReturnValue({
-              is: jest.fn().mockReturnValue({
-                is: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    range: mockRange,
-                  }),
-                }),
-              }),
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
-          is: jest.fn().mockReturnValue({
-            is: jest.fn().mockReturnValue({
-              order: jest.fn().mockReturnValue({
-                range: mockRange,
-              }),
-            }),
-          }),
           order: jest.fn().mockReturnValue({
             range: mockRange,
           }),

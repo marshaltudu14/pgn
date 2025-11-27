@@ -61,30 +61,57 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
     }
   }, [isInitialized, isLoading, isAuthenticated, shouldCheckPermissions, permissionsChecked]);
 
-  // Initialize attendance after permissions are granted
+  // Monitor permission changes and handle navigation
   useEffect(() => {
-    if (isAuthenticated && !showPermissionsScreen && permissionsChecked && shouldCheckPermissions) {
-      // Delay slightly to ensure auth state is stable
-      const timer = setTimeout(() => {
+    if (isAuthenticated && permissionsChecked && shouldCheckPermissions && permissions) {
+      const allGranted = permissions.camera === 'granted' &&
+                        permissions.location === 'granted' &&
+                        permissions.notifications === 'granted';
+
+      if (allGranted) {
+        // All permissions granted - hide permission screen and initialize
+        if (showPermissionsScreen) {
+          setShowPermissionsScreen(false);
+        }
         initializePermissions();
-      }, 100);
-      return () => clearTimeout(timer);
+      } else {
+        // Some permissions missing - show permission screen
+        if (!showPermissionsScreen) {
+          setShowPermissionsScreen(true);
+        }
+      }
     }
-  }, [isAuthenticated, showPermissionsScreen, permissionsChecked, shouldCheckPermissions, initializePermissions]);
+  }, [isAuthenticated, permissionsChecked, shouldCheckPermissions, permissions, showPermissionsScreen, initializePermissions]);
 
   const checkPermissions = async () => {
     try {
+      // First check current permissions
       const result = await permissionService.checkAllPermissions();
       setPermissions(result.permissions);
 
-      // Check if ALL required permissions are granted
-      if (!result.allGranted) {
-        // Try to request all permissions
+      if (result.allGranted) {
+        // All permissions already granted - no action needed
+        setShowPermissionsScreen(false);
+        initializePermissions();
+      } else {
+        // Try to request missing permissions automatically
         const requestResult = await permissionService.requestAllPermissions();
         setPermissions(requestResult.permissions);
 
-        // If after requesting, STILL not all permissions are granted, show permission screen
-        if (!requestResult.allGranted) {
+        // Check if any permissions are blocked (denied permanently)
+        const hasBlockedPermissions = requestResult.deniedPermissions.some(perm => {
+          return requestResult.permissions[perm as keyof AppPermissions] === 'blocked';
+        });
+
+        if (requestResult.allGranted) {
+          // All permissions granted after request
+          setShowPermissionsScreen(false);
+          initializePermissions();
+        } else if (hasBlockedPermissions) {
+          // Some permissions are blocked - user must go to settings
+          setShowPermissionsScreen(true);
+        } else {
+          // Some permissions are still undetermined or denied - show permission screen
           setShowPermissionsScreen(true);
         }
       }
@@ -98,11 +125,10 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
   };
 
   const handlePermissionsGranted = () => {
+    // Just hide the permission screen - the useEffect will handle the rest
     setShowPermissionsScreen(false);
-    // Refresh permissions
-    checkPermissions();
-    // Also initialize attendance after permissions are granted
-    initializePermissions();
+    // Re-check permissions after hiding screen
+    setPermissionsChecked(false);
   };
 
   // Redirect silently without blocking UI
@@ -133,18 +159,7 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
     );
   }
 
-  // Final check: if we're here and shouldCheckPermissions is true, ensure all permissions are granted
-  if (shouldCheckPermissions && permissions) {
-    const allGranted = permissions.camera === 'granted' &&
-                      permissions.location === 'granted' &&
-                      permissions.notifications === 'granted';
-
-    if (!allGranted) {
-      setShowPermissionsScreen(true);
-      return null; // Will re-render with permission screen
-    }
-  }
-
+  
   // Render children if all checks pass
 
   return <>{children}</>;

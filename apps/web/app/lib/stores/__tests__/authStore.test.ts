@@ -289,7 +289,7 @@ describe('useAuthStore', () => {
       );
     });
 
-    it('should logout without API call when no token exists', async () => {
+    it('should call admin logout API when no token exists', async () => {
       // Set up state without token (admin user)
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -299,17 +299,35 @@ describe('useAuthStore', () => {
         })
       });
 
+      // Mock admin logout response
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { message: 'Admin logged out successfully' } })
+      });
+
       const store = useAuthStore.getState();
       await store.login('admin@example.com', 'password');
 
       // Reset fetch mock to track logout call
       (fetch as jest.Mock).mockClear();
 
+      // Mock admin logout response again
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, data: { message: 'Admin logged out successfully' } })
+      });
+
       await store.logout();
 
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
       expect(useAuthStore.getState().user).toBeNull();
-      expect(fetch).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledWith('/api/auth/admin-logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: expect.any(AbortSignal),
+      });
       expect(mockShowNotification).toHaveBeenCalledWith(
         'You have been logged out successfully.',
         'info'
@@ -442,8 +460,9 @@ describe('useAuthStore', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer mock-token',
         },
-        body: JSON.stringify({ token: 'mock-token' }),
+        signal: expect.any(AbortSignal),
       });
     });
   });

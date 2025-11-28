@@ -111,6 +111,11 @@ export default function DashboardLayoutClient({
   const { user, logout, isLoading } = useAuthStore();
   const pathname = usePathname();
 
+  // Create logout handler - redirect is handled by authStore
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <SidebarProvider>
       <ErrorBoundary>
@@ -178,7 +183,7 @@ export default function DashboardLayoutClient({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={logout}
+                  onClick={handleLogout}
                   title="Logout"
                   className="cursor-pointer"
                   disabled={isLoading}
@@ -186,9 +191,6 @@ export default function DashboardLayoutClient({
                   <LogOut className="h-4 w-4" />
                   <span className="sr-only">Logout</span>
                 </Button>
-                <span className="text-sm font-medium text-foreground">
-                  {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email}
-                </span>
               </div>
             </header>
 

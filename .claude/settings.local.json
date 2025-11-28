@@ -115,7 +115,8 @@
       "mcp__playwright__browser_network_requests",
       "mcp__next-devtools__nextjs_index",
       "Bash(npm run test)",
-      "Bash(yarn add:*)"
+      "Bash(yarn add:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []

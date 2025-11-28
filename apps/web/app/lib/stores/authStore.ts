@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { AuthenticatedUser, LoginRequest, LogoutRequest } from '@pgn/shared';
+import { AuthenticatedUser, LoginRequest } from '@pgn/shared';
 import { useUIStore } from './uiStore';
 
 interface AuthState {
@@ -196,19 +196,18 @@ export const useAuthStore = create<AuthState>()(
         try {
           const storedState = get();
 
-          // Clear API session if token exists
-          if (storedState.token) {
+          // Handle logout differently for admins vs employees
+          if (storedState.token && storedState.token !== '') {
+            // Employee logout: Call logout API with JWT token
             try {
-              const logoutRequest: LogoutRequest = {
-                token: storedState.token,
+              const headers: HeadersInit = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${storedState.token}`,
               };
 
               const response = await fetch('/api/auth/logout', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(logoutRequest),
+                headers,
                 signal: AbortSignal.timeout(5000), // 5 second timeout
               });
 
@@ -218,6 +217,25 @@ export const useAuthStore = create<AuthState>()(
               }
             } catch (apiError) {
               console.warn('Logout API call failed:', apiError);
+              // Continue with local logout even if API fails
+            }
+          } else {
+            // Admin logout: Clear Supabase session directly
+            try {
+              const response = await fetch('/api/auth/admin-logout', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                signal: AbortSignal.timeout(5000),
+              });
+
+              if (!response.ok) {
+                console.warn('Admin logout API call failed:', response.status);
+                // Continue with local logout even if API fails
+              }
+            } catch (adminLogoutError) {
+              console.warn('Admin logout API call failed:', adminLogoutError);
               // Continue with local logout even if API fails
             }
           }
@@ -261,7 +279,7 @@ export const useAuthStore = create<AuthState>()(
 
           useUIStore.getState().showNotification('You have been logged out successfully.', 'info');
 
-          // Force redirect to home page after successful logout
+          // Redirect to home page after successful logout
           if (typeof window !== 'undefined') {
             setTimeout(() => {
               window.location.href = '/';

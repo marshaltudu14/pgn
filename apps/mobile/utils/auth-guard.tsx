@@ -26,35 +26,17 @@ export function AuthGuard({ children, requireAuth = true, redirectTo = '/(auth)/
 
   const checkPermissions = useCallback(async () => {
     try {
-      // First check current permissions
-      const result = await permissionService.checkAllPermissions();
+      // First check current permissions with detailed location info
+      const result = await permissionService.checkAllPermissionsDetailed();
       setPermissions(result.permissions);
 
       if (result.allGranted) {
         // All permissions already granted - no action needed
         setShowPermissionsScreen(false);
         initializePermissions();
-      } else if (result.deniedPermissions.length > 0) {
-        // Some permissions are explicitly denied - show permission screen immediately
-        setShowPermissionsScreen(true);
-      } else if (result.undeterminedPermissions.length > 0) {
-        // Permissions are undetermined - try to request them
-        const requestResult = await permissionService.requestAllPermissions();
-        setPermissions(requestResult.permissions);
-
-        // After requesting, check again to see if we have all required permissions
-        const finalCheck = await permissionService.checkAllPermissions();
-        setPermissions(finalCheck.permissions);
-
-        if (finalCheck.allGranted) {
-          // All permissions granted after request
-          setShowPermissionsScreen(false);
-          initializePermissions();
-        } else {
-          // Some permissions still missing - show permission screen for manual intervention
-          setShowPermissionsScreen(true);
-        }
       } else {
+        // Any missing permissions (denied, blocked, or undetermined) - show permission screen
+        // The permission screen will handle requesting permissions
         setShowPermissionsScreen(true);
       }
     } catch (error) {

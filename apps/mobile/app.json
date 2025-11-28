@@ -12,8 +12,8 @@
       "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app uses location for attendance tracking and monitoring.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app uses location for attendance tracking and monitoring.",
+        "NSLocationWhenInUseUsageDescription": "This app uses location for attendance tracking and monitoring during work hours.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app requires 'Allow All the Time' location access for attendance tracking throughout work hours using a foreground service. Location is only tracked during work hours.",
         "NSCameraUsageDescription": "This app uses camera for face recognition attendance and profile photos.",
         "NSPhotoLibraryUsageDescription": "This app uses photo library for profile photo selection.",
         "NSMicrophoneUsageDescription": "This app uses microphone for camera functionality.",
@@ -72,8 +72,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "This app uses location for attendance tracking and monitoring.",
-          "locationWhenInUsePermission": "This app uses location for attendance tracking and monitoring."
+          "locationAlwaysAndWhenInUsePermission": "This app requires 'Allow All the Time' location access for attendance tracking throughout work hours using a foreground service. Location is only tracked during work hours.",
+          "locationWhenInUsePermission": "This app uses location for attendance tracking and monitoring during work hours."
         }
       ],
       [

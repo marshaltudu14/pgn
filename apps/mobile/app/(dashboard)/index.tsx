@@ -1,23 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { useAttendance } from '@/store/attendance-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useNetworkMonitor } from '@/hooks/use-network-monitor';
 import { COLORS } from '@/constants';
 import { homeStyles } from '@/styles/dashboard/home-styles';
-import { Calendar, Clock, TrendingUp, Activity, Wifi, WifiOff } from 'lucide-react-native';
+import {
+  Calendar,
+  Clock,
+  TrendingUp,
+  Activity,
+  Wifi,
+  WifiOff,
+  Store,
+  Sprout,
+  Users,
+} from 'lucide-react-native';
+import FloatingActionButton from '@/components/FloatingActionButton';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { user } = useAuth();
-  const {
-    fetchAttendanceHistory,
-    attendanceHistory,
-    getAttendanceStatus
-  } = useAttendance();
+  const { fetchAttendanceHistory, attendanceHistory, getAttendanceStatus } =
+    useAttendance();
   const colorScheme = useColorScheme();
   const { connectionDisplayInfo } = useNetworkMonitor();
   const [weeklyStats, setWeeklyStats] = useState({
@@ -60,7 +67,7 @@ export default function HomeScreen() {
         employeeId: user.id,
         dateFrom: oneWeekAgo.toISOString().split('T')[0],
         dateTo: today.toISOString().split('T')[0],
-        limit: 100
+        limit: 100,
       });
     } catch (error) {
       // Silently handle error
@@ -75,15 +82,22 @@ export default function HomeScreen() {
     }
 
     // Filter for records that have meaningful data (checked in)
-    const weekData = attendanceHistory.filter((record) =>
-      (record.workHours !== undefined || record.checkInTime !== undefined)
+    const weekData = attendanceHistory.filter(
+      record =>
+        record.workHours !== undefined || record.checkInTime !== undefined
     );
 
     // Calculate stats
-    const daysPresent = weekData.filter((r) => r.checkInTime).length;
-    const totalHours = weekData.reduce((sum: number, record) => sum + (record.workHours || 0), 0);
+    const daysPresent = weekData.filter(r => r.checkInTime).length;
+    const totalHours = weekData.reduce(
+      (sum: number, record) => sum + (record.workHours || 0),
+      0
+    );
     const avgHours = daysPresent > 0 ? totalHours / daysPresent : 0;
-    const totalDistance = weekData.reduce((sum: number, record) => sum + ((record.locationPath?.length || 0) * 100), 0);
+    const totalDistance = weekData.reduce(
+      (sum: number, record) => sum + (record.locationPath?.length || 0) * 100,
+      0
+    );
 
     setWeeklyStats({
       daysPresent,
@@ -126,7 +140,7 @@ export default function HomeScreen() {
     const isActive = status === 'active';
     return {
       text: isActive ? 'Active' : status,
-      color: isActive ? colors.success : colors.warning
+      color: isActive ? colors.success : colors.warning,
     };
   };
 
@@ -134,14 +148,87 @@ export default function HomeScreen() {
 
   // Stats items for mobile list design
   const statsItems = [
-    { label: 'Days Present', value: weeklyStats.daysPresent.toString(), icon: Calendar, color: colors.success },
-    { label: 'Hours', value: weeklyStats.totalHours.toFixed(1), icon: Clock, color: colors.primary },
-    { label: 'Daily Avg', value: `${weeklyStats.avgHours.toFixed(1)}h`, icon: Activity, color: colors.warning },
-    { label: 'Distance', value: formatDistance(weeklyStats.totalDistance), icon: TrendingUp, color: colors.textSecondary },
+    {
+      label: 'Days Present',
+      value: weeklyStats.daysPresent.toString(),
+      icon: Calendar,
+      color: colors.success,
+    },
+    {
+      label: 'Hours',
+      value: weeklyStats.totalHours.toFixed(1),
+      icon: Clock,
+      color: colors.primary,
+    },
+    {
+      label: 'Daily Avg',
+      value: `${weeklyStats.avgHours.toFixed(1)}h`,
+      icon: Activity,
+      color: colors.warning,
+    },
+    {
+      label: 'Distance',
+      value: formatDistance(weeklyStats.totalDistance),
+      icon: TrendingUp,
+      color: colors.textSecondary,
+    },
+  ];
+
+  // Entity items for quick access
+  const entityItems = [
+    {
+      id: 'dealers',
+      title: 'Dealers',
+      description: 'Manage dealer relationships',
+      icon: Store,
+      color: '#3B82F6',
+      onPress: () => router.push('/dealers' as any),
+    },
+    {
+      id: 'retailers',
+      title: 'Retailers',
+      description: 'Manage retail partnerships',
+      icon: Users,
+      color: '#10B981',
+      onPress: () => router.push('/retailers' as any),
+    },
+    {
+      id: 'farmers',
+      title: 'Farmers',
+      description: 'Manage farmer connections',
+      icon: Sprout,
+      color: '#F59E0B',
+      onPress: () => router.push('/farmers' as any),
+    },
+  ];
+
+  // FAB options for creating new entities
+  const fabOptions = [
+    {
+      id: 'create-dealer',
+      label: 'Dealer',
+      icon: Store,
+      color: '#3B82F6',
+      onPress: () => router.push('/dealers' as any),
+    },
+    {
+      id: 'create-retailer',
+      label: 'Retailer',
+      icon: Users,
+      color: '#10B981',
+      onPress: () => router.push('/retailers' as any),
+    },
+    {
+      id: 'create-farmer',
+      label: 'Farmer',
+      icon: Sprout,
+      color: '#F59E0B',
+      onPress: () => router.push('/farmers' as any),
+    },
   ];
 
   // Render stat item
-  const renderStatItem = ({ item }: { item: typeof statsItems[0] }) => {
+  const renderStatItem = ({ item }: { item: (typeof statsItems)[0] }) => {
     const Icon = item.icon;
     return (
       <View style={homeStyles.statItem}>
@@ -149,59 +236,161 @@ export default function HomeScreen() {
           <Icon size={16} color={item.color} />
         </View>
         <View style={homeStyles.statContent}>
-          <Text style={[homeStyles.statValue, { color: colors.text }]}>{item.value}</Text>
-          <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>{item.label}</Text>
+          <Text style={[homeStyles.statValue, { color: colors.text }]}>
+            {item.value}
+          </Text>
+          <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>
+            {item.label}
+          </Text>
         </View>
       </View>
     );
   };
 
+  // Render entity item
+  const renderEntityItem = (item: (typeof entityItems)[0]) => {
+    const Icon = item.icon;
+    return (
+      <TouchableOpacity
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 16,
+          paddingHorizontal: 8,
+          marginHorizontal: 8,
+          marginVertical: 4,
+        }}
+        onPress={item.onPress}
+        activeOpacity={0.7}
+      >
+        <View
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: `${item.color}20`,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 8,
+          }}
+        >
+          <Icon size={28} color={item.color} />
+        </View>
+        <Text
+          style={[
+            {
+              fontSize: 14,
+              fontWeight: '600',
+              textAlign: 'center',
+            },
+            { color: colors.text },
+          ]}
+        >
+          {item.title}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View style={[homeStyles.container, { backgroundColor: colors.background }]}>
-      {/* Compact Header */}
-      <View style={[homeStyles.compactHeader, { paddingTop: 50 }]}>
-        <View style={homeStyles.headerRow}>
-          <View style={homeStyles.headerLeft}>
-            <Text style={[homeStyles.userName, { color: colors.text }]}>
-              {getFirstName()}
-            </Text>
-            <Text style={[homeStyles.userSubtitle, { color: colors.textSecondary }]}>
-              {user?.humanReadableId || 'N/A'}
-            </Text>
-          </View>
-          <View style={homeStyles.headerRight}>
-            <View style={[homeStyles.statusBadge, { backgroundColor: `${statusInfo.color}20` }]}>
-              <Text style={[homeStyles.statusText, { color: statusInfo.color }]}>
-                {statusInfo.text}
+    <>
+      <ScrollView
+        style={[homeStyles.container, { backgroundColor: colors.background }]}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
+        {/* Compact Header */}
+        <View style={[homeStyles.compactHeader, { paddingTop: 50 }]}>
+          <View style={homeStyles.headerRow}>
+            <View style={homeStyles.headerLeft}>
+              <Text style={[homeStyles.userName, { color: colors.text }]}>
+                {getFirstName()}
+              </Text>
+              <Text
+                style={[
+                  homeStyles.userSubtitle,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                {user?.humanReadableId || 'N/A'}
               </Text>
             </View>
-            <View style={[homeStyles.networkStatusBadge, { backgroundColor: `${connectionDisplayInfo.color}20` }]}>
-              {connectionDisplayInfo.icon === 'Wifi' ? (
-                <Wifi size={14} color={connectionDisplayInfo.color} />
-              ) : (
-                <WifiOff size={14} color={connectionDisplayInfo.color} />
-              )}
-              <Text style={[homeStyles.networkStatusText, { color: connectionDisplayInfo.color }]}>
-                {connectionDisplayInfo.text}
-              </Text>
+            <View style={homeStyles.headerRight}>
+              <View
+                style={[
+                  homeStyles.statusBadge,
+                  { backgroundColor: `${statusInfo.color}20` },
+                ]}
+              >
+                <Text
+                  style={[homeStyles.statusText, { color: statusInfo.color }]}
+                >
+                  {statusInfo.text}
+                </Text>
+              </View>
+              <View
+                style={[
+                  homeStyles.networkStatusBadge,
+                  { backgroundColor: `${connectionDisplayInfo.color}20` },
+                ]}
+              >
+                {connectionDisplayInfo.icon === 'Wifi' ? (
+                  <Wifi size={14} color={connectionDisplayInfo.color} />
+                ) : (
+                  <WifiOff size={14} color={connectionDisplayInfo.color} />
+                )}
+                <Text
+                  style={[
+                    homeStyles.networkStatusText,
+                    { color: connectionDisplayInfo.color },
+                  ]}
+                >
+                  {connectionDisplayInfo.text}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-  
-      {/* Stats Section */}
-      <View style={homeStyles.statsSection}>
-        <View style={homeStyles.sectionHeader}>
-          <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>This Week</Text>
+        {/* Stats Section */}
+        <View style={homeStyles.statsSection}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>
+              This Week
+            </Text>
+          </View>
+          <View style={homeStyles.statsGrid}>
+            {statsItems.map(item => (
+              <View key={item.label}>{renderStatItem({ item })}</View>
+            ))}
+          </View>
         </View>
-        <View style={homeStyles.statsGrid}>
-          {statsItems.map((item) => (
-            <View key={item.label}>{renderStatItem({ item })}</View>
-          ))}
-        </View>
-      </View>
 
-      </View>
+        {/* Entity Management Section */}
+        <View style={[homeStyles.statsSection, { marginTop: 24 }]}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>
+              Business Management
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'flex-start',
+              marginBottom: 16,
+              marginHorizontal: 16,
+              gap: 8,
+            }}
+          >
+            {entityItems.map(item => renderEntityItem(item))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Floating Action Button */}
+      <FloatingActionButton options={fabOptions} />
+    </>
   );
 }

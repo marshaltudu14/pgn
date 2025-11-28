@@ -32,6 +32,7 @@ const AnimatedCheckInOutButton: React.FC<{
   colorScheme?: 'light' | 'dark' | null;
   isLoading?: boolean;
 }> = ({ isCheckedIn, onCheckInOut, isLocationTracking, colorScheme, isLoading = false }) => {
+  const showTimer = isCheckedIn && isLocationTracking && !isLoading;
   const [timeRemaining, setTimeRemaining] = useState(LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS);
   const fillAnimation = React.useRef(new Animated.Value(0)).current;
 
@@ -47,7 +48,7 @@ const AnimatedCheckInOutButton: React.FC<{
         setTimeRemaining(countdown);
 
         // Update fluid fill animation in sync with countdown
-        const progress = 1 - (countdown / LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS);
+        const progress = countdown / LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
         Animated.timing(fillAnimation, {
           toValue: progress,
           duration: 100, // Quick animation to keep up with countdown
@@ -65,15 +66,13 @@ const AnimatedCheckInOutButton: React.FC<{
     } else {
       // Reset state when not tracking
       setTimeRemaining(LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS);
-      fillAnimation.setValue(0);
+      fillAnimation.setValue(1); // Start full when checked in
     }
   }, [isCheckedIn, isLocationTracking, fillAnimation]);
 
   const formatTime = (seconds: number) => {
     return seconds.toString().padStart(2, '0');
   };
-
-  const showTimer = isCheckedIn && isLocationTracking && !isLoading;
 
   return (
     <TouchableOpacity
@@ -85,25 +84,18 @@ const AnimatedCheckInOutButton: React.FC<{
       ]}
       onPress={onCheckInOut}
     >
-      {/* Background circle for empty area */}
-      <View style={[
-        styles.emptyCircle,
-        {
-          backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
-        }
-      ]} />
-
-      {/* Background fluid fill */}
+      
+      {/* Background fluid fill - only show when checked in with timer */}
       {showTimer && (
         <View style={styles.fluidFillContainer}>
           <Animated.View
             style={[
               styles.fluidFill,
               {
-                backgroundColor: isCheckedIn ? '#dc2626' : '#059669',
+                backgroundColor: '#dc2626',
                 height: fillAnimation.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
+                  outputRange: ['100%', '0%'], // Start full, empty as timer goes to 0
                 }),
               },
             ]}
@@ -114,7 +106,7 @@ const AnimatedCheckInOutButton: React.FC<{
       {/* Icon and Timer Content */}
       <View style={styles.buttonContent}>
         {isLoading ? (
-          <Timer size={28} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />
+          <Timer size={28} color="#ffffff" />
         ) : showTimer ? (
           <View style={styles.timerContent}>
             <Text style={styles.timerText}>
@@ -123,9 +115,9 @@ const AnimatedCheckInOutButton: React.FC<{
           </View>
         ) : (
           isCheckedIn ? (
-            <ArrowDown size={28} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />
+            <ArrowDown size={28} color="#ffffff" />
           ) : (
-            <ArrowUp size={28} color={colorScheme === 'dark' ? '#ffffff' : '#000000'} />
+            <ArrowUp size={28} color="#ffffff" />
           )
         )}
       </View>
@@ -134,7 +126,7 @@ const AnimatedCheckInOutButton: React.FC<{
       {showTimer && timeRemaining <= 3 && (
         <View style={[
           styles.pulseRing,
-          { backgroundColor: isCheckedIn ? '#ef4444' : '#10b981' }
+          { backgroundColor: '#ef4444' }
         ]} />
       )}
     </TouchableOpacity>
@@ -277,15 +269,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     paddingHorizontal: 16,
-    borderTopWidth: 0.5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 8,
+    borderTopWidth: 1,
   },
   tabButton: {
     flex: 1,
@@ -308,14 +292,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: -20, // Make it float above the nav bar
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
     position: 'relative',
     overflow: 'hidden',
   },

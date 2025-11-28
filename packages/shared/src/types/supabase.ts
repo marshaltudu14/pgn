@@ -109,6 +109,75 @@ export type Database = {
           },
         ]
       }
+      dealers: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          shop_name: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          shop_name?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          shop_name?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      employee_edit_tracking: {
+        Row: {
+          created_at: string
+          edit_count: number
+          edit_date: string
+          employee_id: string
+          id: string
+          table_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edit_count?: number
+          edit_date?: string
+          employee_id: string
+          id?: string
+          table_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edit_count?: number
+          edit_date?: string
+          employee_id?: string
+          id?: string
+          table_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employees: {
         Row: {
           assigned_cities: Json | null
@@ -163,6 +232,56 @@ export type Database = {
         }
         Relationships: []
       }
+      farmers: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          farm_name: string | null
+          id: string
+          name: string
+          phone: string | null
+          retailer_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          farm_name?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          retailer_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          farm_name?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          retailer_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farmers_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regions: {
         Row: {
           city: string
@@ -192,6 +311,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      retailers: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          dealer_id: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          shop_name: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          dealer_id: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          shop_name?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          dealer_id?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          shop_name?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retailers_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tasks: {
         Row: {

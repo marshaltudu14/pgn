@@ -6,10 +6,18 @@ import { showToast } from '@/utils/toast';
 
 export type PermissionStatus = 'granted' | 'denied' | 'undetermined' | 'blocked';
 
+// Enhanced permission status to include detailed location permission info
+export interface LocationPermissionDetails {
+  foreground: PermissionStatus;
+  background: PermissionStatus;
+  needsAlwaysAccess: boolean;
+}
+
 export interface AppPermissions {
   camera: PermissionStatus;
   location: PermissionStatus;
   notifications: PermissionStatus;
+  locationDetails?: LocationPermissionDetails;
 }
 
 export interface PermissionCheckResult {
@@ -63,6 +71,27 @@ export class PermissionService {
     }
   }
 
+  // Enhanced location permission check with detailed status
+  async checkLocationPermissionDetailed(): Promise<LocationPermissionDetails> {
+    try {
+      const { status: foregroundStatus } = await Location.getForegroundPermissionsAsync();
+      const { status: backgroundStatus } = await Location.getBackgroundPermissionsAsync();
+
+      return {
+        foreground: foregroundStatus as PermissionStatus,
+        background: backgroundStatus as PermissionStatus,
+        needsAlwaysAccess: foregroundStatus === 'granted' && backgroundStatus !== 'granted'
+      };
+    } catch (error) {
+      console.error('Error checking detailed location permission:', error);
+      return {
+        foreground: 'denied',
+        background: 'denied',
+        needsAlwaysAccess: false
+      };
+    }
+  }
+
   // Check if notification permission is granted
   async checkNotificationPermission(): Promise<PermissionStatus> {
     try {
@@ -103,13 +132,13 @@ export class PermissionService {
     }
   }
 
-  // Request location permission
+  // Request location permission with persistent retry logic
   async requestLocationPermission(): Promise<PermissionStatus> {
     try {
       // First request foreground permission
       const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
 
-      if (foregroundStatus !== 'granted') {
+      if (foregroundStatus !== Location.PermissionStatus.GRANTED) {
         return foregroundStatus as PermissionStatus;
       }
 
@@ -118,12 +147,76 @@ export class PermissionService {
       // and the user may need to go to settings
       const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
 
-      // Return background status since we need both for full functionality
-      return backgroundStatus as PermissionStatus;
+      // Return combined status since we need both for full functionality
+      if (foregroundStatus === Location.PermissionStatus.GRANTED && backgroundStatus === Location.PermissionStatus.GRANTED) {
+        return 'granted';
+      } else if (backgroundStatus === Location.PermissionStatus.DENIED) {
+        return 'denied';
+      } else {
+        return 'undetermined';
+      }
     } catch (error) {
       console.error('Error requesting location permission:', error);
       return 'denied';
     }
+  }
+
+  // Request individual permission with retry logic
+  async requestPermissionWithRetry(
+    permissionType: 'camera' | 'location' | 'notifications',
+    maxRetries: number = 3
+  ): Promise<PermissionStatus> {
+    let attempts = 0;
+
+    while (attempts < maxRetries) {
+      attempts++;
+
+      try {
+        let status: PermissionStatus;
+
+        switch (permissionType) {
+          case 'camera':
+            status = await this.requestCameraPermission();
+            break;
+          case 'location':
+            status = await this.requestLocationPermission();
+            break;
+          case 'notifications':
+            status = await this.requestNotificationPermission();
+            break;
+        }
+
+        // If granted, return immediately
+        if (status === 'granted') {
+          return 'granted';
+        }
+
+        // If denied and we can ask again, continue retrying
+        if (status === 'denied' && attempts < maxRetries) {
+          // Show rationale for why permission is needed
+          this.showPermissionRationale(permissionType);
+
+          // Wait a bit before retrying (to allow user to consider)
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+
+        // Return current status if we can't retry or it's undetermined/blocked
+        return status;
+
+      } catch (error) {
+        console.error(`Error requesting ${permissionType} permission (attempt ${attempts}):`, error);
+
+        if (attempts >= maxRetries) {
+          return 'denied';
+        }
+
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    return 'denied';
   }
 
   // Request notification permission
@@ -190,18 +283,54 @@ export class PermissionService {
     };
   }
 
-  // Request all required permissions
+  // Request all required permissions with persistent retry
   async requestAllPermissions(): Promise<PermissionCheckResult> {
     const [cameraStatus, locationStatus, notificationStatus] = await Promise.all([
-      this.requestCameraPermission(),
-      this.requestLocationPermission(),
-      this.requestNotificationPermission(),
+      this.requestPermissionWithRetry('camera'),
+      this.requestPermissionWithRetry('location'),
+      this.requestPermissionWithRetry('notifications'),
+    ]);
+
+    // Get detailed location info for better UI handling
+    const locationDetails = await this.checkLocationPermissionDetailed();
+
+    const permissions: AppPermissions = {
+      camera: cameraStatus,
+      location: locationStatus,
+      notifications: notificationStatus,
+      locationDetails,
+    };
+
+    const allGranted = cameraStatus === 'granted' && locationStatus === 'granted' && notificationStatus === 'granted';
+    const deniedPermissions = Object.entries(permissions)
+      .filter(([_, status]) => status === 'denied')
+      .map(([permission]) => permission);
+    const undeterminedPermissions = Object.entries(permissions)
+      .filter(([_, status]) => status === 'undetermined')
+      .map(([permission]) => permission);
+
+    return {
+      allGranted,
+      permissions,
+      deniedPermissions,
+      undeterminedPermissions,
+    };
+  }
+
+  // Check all required app permissions with detailed location info
+  async checkAllPermissionsDetailed(): Promise<PermissionCheckResult> {
+    const [cameraStatus, locationStatus, notificationStatus, locationDetails] = await Promise.all([
+      this.checkCameraPermission(),
+      this.checkLocationPermission(),
+      this.checkNotificationPermission(),
+      this.checkLocationPermissionDetailed(),
     ]);
 
     const permissions: AppPermissions = {
       camera: cameraStatus,
       location: locationStatus,
       notifications: notificationStatus,
+      locationDetails,
     };
 
     const allGranted = cameraStatus === 'granted' && locationStatus === 'granted' && notificationStatus === 'granted';
@@ -276,7 +405,7 @@ export class PermissionService {
         permissionName = 'Camera';
         break;
       case 'location':
-        rationale = 'Location permission is required for attendance tracking and ensuring you are at the correct work location.';
+        rationale = 'Location permission with "Allow all the time" access is required for attendance tracking during work hours. This enables the app to track your location in the background using a foreground service, which is necessary for monitoring work attendance throughout the day.';
         permissionName = 'Location';
         break;
       case 'notifications':
@@ -286,6 +415,27 @@ export class PermissionService {
     }
 
     showToast.info(`${permissionName} permission is required. ${rationale}`);
+  }
+
+  // Show detailed rationale for background location permission
+  showLocationAlwaysRationale(): void {
+    const rationale = 'PGN requires "Allow all the time" location access to:\n\n' +
+      '• Track your location throughout the work day for accurate attendance\n' +
+      '• Run a foreground service to monitor location while you\'re checked in\n' +
+      '• Ensure compliance with work location requirements\n\n' +
+      'Location is only tracked during work hours and is used solely for attendance purposes.';
+
+    showToast.info(rationale);
+  }
+
+  // Check if permission can be requested again (not permanently denied)
+  canRequestPermission(status: PermissionStatus): boolean {
+    return status !== 'blocked' && status !== 'denied';
+  }
+
+  // Determine if user needs to be directed to settings for manual permission enable
+  requiresSettingsIntervention(permissions: AppPermissions): boolean {
+    return Object.values(permissions).some(status => status === 'blocked' || status === 'denied');
   }
 }
 

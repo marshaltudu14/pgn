@@ -13,6 +13,8 @@ import {
   Settings,
   CheckCircle,
   Bell,
+  RefreshCw,
+  Info,
 } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { permissionService, AppPermissions } from '@/services/permissions';
@@ -31,7 +33,7 @@ export default function PermissionsScreen({
   const [permissions, setPermissions] = useState<AppPermissions>(
     initialPermissions || { camera: 'denied', location: 'denied', notifications: 'denied' }
   );
-  const [isChecking, setIsChecking] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const styles = StyleSheet.create({
     container: {
@@ -205,10 +207,29 @@ export default function PermissionsScreen({
     },
   });
 
-  const checkPermissions = useCallback(async () => {
-    setIsChecking(true);
+  const requestPermissions = useCallback(async () => {
+    if (isRequesting) return;
+
+    setIsRequesting(true);
     try {
-      const result = await permissionService.checkAllPermissions();
+      // Request all permissions with retry logic
+      const result = await permissionService.requestAllPermissions();
+      setPermissions(result.permissions);
+
+      // If all permissions are granted, call callback
+      if (result.allGranted && onPermissionsGranted) {
+        onPermissionsGranted();
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+    } finally {
+      setIsRequesting(false);
+    }
+  }, [onPermissionsGranted, isRequesting]);
+
+  const checkPermissions = useCallback(async () => {
+    try {
+      const result = await permissionService.checkAllPermissionsDetailed();
       setPermissions(result.permissions);
 
       // If all permissions are now granted, call callback
@@ -217,8 +238,6 @@ export default function PermissionsScreen({
       }
     } catch (error) {
       console.error('Error checking permissions:', error);
-    } finally {
-      setIsChecking(false);
     }
   }, [onPermissionsGranted]);
 
@@ -259,6 +278,9 @@ export default function PermissionsScreen({
 
   const allGranted = permissions.camera === 'granted' && permissions.location === 'granted' && permissions.notifications === 'granted';
   const hasAnyBlocked = Object.values(permissions).some(status => status === 'blocked');
+
+  // Check if we need to show location always rationale
+  const needsAlwaysLocation = permissions.locationDetails?.needsAlwaysAccess || false;
 
   return (
     <View style={styles.container}>
@@ -351,12 +373,23 @@ export default function PermissionsScreen({
                   ]}>
                     Location Access
                   </Text>
-                  <Text style={[
-                    styles.permissionDescription,
-                    colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
-                  ]}>
-                    Required for attendance tracking. Need &quot;Allow all the time&quot; access for background location tracking during work hours.
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <Text style={[
+                      styles.permissionDescription,
+                      colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight,
+                      { flex: 1 }
+                    ]}>
+                      Required for attendance tracking with background location monitoring.
+                    </Text>
+                    {needsAlwaysLocation && (
+                      <TouchableOpacity
+                        onPress={() => permissionService.showLocationAlwaysRationale()}
+                        style={{ padding: 4, marginLeft: 8 }}
+                      >
+                        <Info size={16} color={colorScheme === 'dark' ? COLORS.SAFFRON : '#F59E0B'} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
                 {permissions.location === 'granted' && (
                   <View style={styles.checkIconContainer}>
@@ -406,46 +439,49 @@ export default function PermissionsScreen({
                 styles.actionButton,
                 hasAnyBlocked ? styles.actionButtonBlocked : styles.actionButtonDefault
               ]}
-              onPress={openSettings}
+              onPress={hasAnyBlocked ? openSettings : requestPermissions}
+              disabled={isRequesting}
               activeOpacity={0.9}
             >
-              <Settings size={20} color="#FFFFFF" />
+              {hasAnyBlocked ? (
+                <Settings size={20} color="#FFFFFF" />
+              ) : (
+                <Shield size={20} color="#FFFFFF" />
+              )}
               <Text style={{
                 color: '#FFFFFF',
                 fontWeight: '600',
                 fontSize: 16,
                 marginLeft: 12,
               }}>
-                {hasAnyBlocked ? 'Open Settings' : 'Enable Permissions'}
+                {isRequesting
+                  ? 'Requesting...'
+                  : hasAnyBlocked
+                    ? 'Open Settings'
+                    : 'Request All Permissions'
+                }
               </Text>
             </TouchableOpacity>
 
-            {/* Refresh Button */}
-            {!hasAnyBlocked && (
+            {/* Check Again Button */}
+            {(hasAnyBlocked || isRequesting) && (
               <TouchableOpacity
                 style={[
                   styles.refreshButton,
                   colorScheme === 'dark' ? styles.refreshButtonDark : styles.refreshButtonLight
                 ]}
                 onPress={checkPermissions}
-                disabled={isChecking}
+                disabled={isRequesting}
                 activeOpacity={0.9}
               >
-                {isChecking ? (
-                  <Text style={[
-                    styles.refreshTextDisabled,
-                    colorScheme === 'dark' ? styles.refreshTextDisabledDark : styles.refreshTextDisabledLight
-                  ]}>
-                    Checking...
-                  </Text>
-                ) : (
-                  <Text style={[
-                    styles.refreshTextEnabled,
-                    colorScheme === 'dark' ? styles.refreshTextEnabledDark : styles.refreshTextEnabledLight
-                  ]}>
-                    Check Again
-                  </Text>
-                )}
+                <RefreshCw size={16} color={colorScheme === 'dark' ? COLORS.TEXT_SECONDARY_DARK : COLORS.TEXT_SECONDARY_LIGHT} />
+                <Text style={[
+                  styles.refreshTextEnabled,
+                  colorScheme === 'dark' ? styles.refreshTextEnabledDark : styles.refreshTextEnabledLight,
+                  { marginLeft: 8 }
+                ]}>
+                  Check Again
+                </Text>
               </TouchableOpacity>
             )}
           </>

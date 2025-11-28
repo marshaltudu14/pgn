@@ -8,6 +8,7 @@ export * from './middleware';
 export * from './supabase';
 export * from './regions';
 export * from './tasks';
+export * from './dealer';
 
 // Re-export verification status utilities
 export * from './verification-status';

@@ -43,6 +43,14 @@ export const API_ENDPOINTS = {
   ATTENDANCE_LIST: "/attendance",
   ATTENDANCE_LOCATION_UPDATE: "/attendance", // Base for /attendance/[id]/location-update
 
+  // Dealer/Retailer/Farmer endpoints
+  DEALERS: "/dealers",
+  DEALER_BY_ID: "/dealers", // Base for /dealers/[id]
+  RETAILERS: "/retailers",
+  RETAILER_BY_ID: "/retailers", // Base for /retailers/[id]
+  FARMERS: "/farmers",
+  FARMER_BY_ID: "/farmers", // Base for /farmers/[id]
+
   // Note: Face recognition endpoints will be added in Phase 4
   // GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding", // TODO: Add in Phase 4
 } as const;

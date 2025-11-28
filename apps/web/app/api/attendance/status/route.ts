@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  AttendanceStatusResponseSchema,
+  apiContract,
+} from '@pgn/shared';
 
 /**
  * GET /api/attendance/status
@@ -23,10 +28,23 @@ const statusHandler = async (req: NextRequest): Promise<NextResponse> => {
     // Get attendance status from service
     const status = await attendanceService.getAttendanceStatus(user.employeeId);
 
-    // Return success response
+    // Return success response following the schema format
     const response = NextResponse.json({
       success: true,
-      data: status
+      data: {
+        status: status.status,
+        checkInTime: status.checkInTime?.toISOString(),
+        checkOutTime: status.checkOutTime?.toISOString(),
+        workHours: status.workHours,
+        employeeId: status.employeeId,
+        totalDistance: status.totalDistance,
+        lastLocationUpdate: status.lastLocationUpdate?.toISOString(),
+        batteryLevel: status.batteryLevel,
+        verificationStatus: status.verificationStatus,
+        requiresCheckOut: status.requiresCheckOut,
+        date: status.date,
+        currentAttendanceId: status.currentAttendanceId,
+      }
     });
 
     // Set cache headers for status requests (short cache for real-time data)
@@ -62,5 +80,19 @@ export async function POST(): Promise<NextResponse> {
   return addSecurityHeaders(response);
 }
 
-// Export with security middleware
-export const GET = withSecurity(statusHandler);
+// Apply Zod validation middleware and wrap with security
+export const GET = withSecurity(
+  withApiValidation(statusHandler, {
+    response: AttendanceStatusResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/attendance/status',
+  method: 'GET',
+  inputSchema: undefined, // No input schema for GET status
+  outputSchema: AttendanceStatusResponseSchema,
+  description: 'Get current attendance status for authenticated employee'
+});

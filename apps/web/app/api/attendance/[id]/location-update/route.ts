@@ -1,61 +1,91 @@
-import { withSecurity } from '@/lib/security-middleware';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
 import { LocationUpdateRequest } from '@pgn/shared';
 import { NextRequest, NextResponse } from 'next/server';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  LocationUpdateRequestSchema,
+  LocationUpdateResponseSchema,
+  apiContract,
+  z,
+} from '@pgn/shared';
+
+// Schema for route parameters
+const LocationUpdateRouteParamsSchema = z.object({
+  id: z.string().min(1, 'Attendance record ID is required'),
+});
+
+// Custom schema that matches the current API format
+const LocationUpdateCompatSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().min(0).optional(),
+  batteryLevel: z.number().min(0).max(1).optional(),
+  timestamp: z.number(), // Unix timestamp from mobile
+});
 
 const locationUpdateHandler = async (
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params?: any }
 ): Promise<NextResponse> => {
   try {
-    const { id: attendanceId } = await params;
-
-    if (!attendanceId) {
-      return NextResponse.json(
-        { success: false, error: 'Attendance ID is required' },
-        { status: 400 }
-      );
-    }
-
-    const body = await req.json();
-    const { latitude, longitude, accuracy, batteryLevel, timestamp } = body;
-
-    // Validate required fields
-    if (latitude === undefined || longitude === undefined || !timestamp) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required location data' },
-        { status: 400 }
-      );
-    }
+    // Use validated data from middleware
+    const { id: attendanceId } = (req as any).validatedParams;
+    const body = (req as any).validatedBody;
 
     const updateRequest: LocationUpdateRequest = {
       location: {
-        latitude,
-        longitude,
-        accuracy,
-        timestamp: new Date(timestamp),
+        latitude: body.latitude,
+        longitude: body.longitude,
+        accuracy: body.accuracy,
+        timestamp: new Date(body.timestamp),
       },
-      batteryLevel,
-      timestamp: new Date(timestamp),
+      batteryLevel: body.batteryLevel,
+      timestamp: new Date(body.timestamp),
     };
 
     const success = await attendanceService.updateLocationTracking(attendanceId, updateRequest);
 
     if (!success) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: 'Failed to update location' },
         { status: 500 }
       );
+      return addSecurityHeaders(response);
     }
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        message: 'Location updated successfully',
+      },
+    });
+    return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error processing location update:', error);
-    return NextResponse.json(
+    const response = NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
     );
+    return addSecurityHeaders(response);
   }
 };
 
-export const POST = withSecurity(locationUpdateHandler);
+// Apply Zod validation middleware and wrap with security
+export const POST = withSecurity(
+  withApiValidation(locationUpdateHandler, {
+    body: LocationUpdateCompatSchema,
+    params: LocationUpdateRouteParamsSchema,
+    response: LocationUpdateResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/attendance/[id]/location-update',
+  method: 'POST',
+  inputSchema: LocationUpdateCompatSchema,
+  outputSchema: LocationUpdateResponseSchema,
+  description: 'Update location tracking for attendance record'
+});

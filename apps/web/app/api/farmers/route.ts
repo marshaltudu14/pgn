@@ -3,85 +3,103 @@ import {
   listFarmers,
   createFarmer
 } from '@/services/farmer.service';
-import { FarmerInsert } from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  FarmerListParamsSchema,
+  FarmerFormDataSchema,
+  FarmerListResponseSchema,
+  FarmerCreatedResponseSchema,
+  apiContract,
+} from '@pgn/shared';
 
-const getFarmersHandler = async (request: NextRequest): Promise<NextResponse> => {
-  try {
-    const { searchParams } = new URL(request.url);
+const getFarmersHandler = withApiValidation(
+  async (request: NextRequest): Promise<NextResponse> => {
+    try {
+      // Use validated query parameters from middleware
+      const params = (request as any).validatedQuery;
 
-    // Parse query parameters
-    const params = {
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('itemsPerPage') || searchParams.get('limit') || '20'),
-      search: searchParams.get('search') || undefined,
-      farm_name: searchParams.get('farm_name') || undefined,
-      email: searchParams.get('email') || undefined,
-      phone: searchParams.get('phone') || undefined,
-      retailer_id: searchParams.get('retailer_id') || undefined,
-      dealer_id: searchParams.get('dealer_id') || undefined,
-      sort_by: searchParams.get('sort_by') || 'created_at',
-      sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || 'desc'
-    };
+      const result = await listFarmers(params);
 
-    const result = await listFarmers(params);
-
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        farmers: result.farmers,
-        pagination: result.pagination
-      },
-      message: 'Farmers retrieved successfully'
-    });
-    return addSecurityHeaders(response);
-  } catch (error) {
-    console.error('Error fetching farmers:', error);
-    const response = NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch farmers',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-    return addSecurityHeaders(response);
+      const response = NextResponse.json({
+        success: true,
+        data: {
+          farmers: result.farmers,
+          pagination: result.pagination
+        },
+        message: 'Farmers retrieved successfully'
+      });
+      return addSecurityHeaders(response);
+    } catch (error) {
+      console.error('Error fetching farmers:', error);
+      const response = NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to fetch farmers',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+      return addSecurityHeaders(response);
+    }
+  },
+  {
+    query: FarmerListParamsSchema,
+    response: FarmerListResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development',
   }
-};
+);
 
-const createFarmerHandler = async (request: NextRequest): Promise<NextResponse> => {
-  try {
-    const body = await request.json();
-    const farmerData: FarmerInsert = {
-      name: body.name,
-      phone: body.phone || null,
-      address: body.address || null,
-      farm_name: body.farm_name || null,
-      email: body.email || null,
-      retailer_id: body.retailer_id,
-    };
+const createFarmerHandler = withApiValidation(
+  async (request: NextRequest): Promise<NextResponse> => {
+    try {
+      // Use validated body from middleware
+      const farmerData = (request as any).validatedBody;
 
-    const result = await createFarmer(farmerData);
+      const result = await createFarmer(farmerData);
 
-    const response = NextResponse.json({
-      success: true,
-      data: result,
-      message: 'Farmer created successfully'
-    });
-    return addSecurityHeaders(response);
-  } catch (error) {
-    console.error('Error creating farmer:', error);
-    const response = NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create farmer',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-    return addSecurityHeaders(response);
+      const response = NextResponse.json({
+        success: true,
+        data: result,
+        message: 'Farmer created successfully'
+      });
+      return addSecurityHeaders(response);
+    } catch (error) {
+      console.error('Error creating farmer:', error);
+      const response = NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to create farmer',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        },
+        { status: 500 }
+      );
+      return addSecurityHeaders(response);
+    }
+  },
+  {
+    body: FarmerFormDataSchema,
+    response: FarmerCreatedResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development',
   }
-};
+);
 
 export const GET = withSecurity(getFarmersHandler);
 export const POST = withSecurity(createFarmerHandler);
+
+// Add route definitions to API contract
+apiContract.addRoute({
+  path: '/api/farmers',
+  method: 'GET',
+  inputSchema: FarmerListParamsSchema,
+  outputSchema: FarmerListResponseSchema,
+  description: 'Get a paginated list of farmers with optional filtering and sorting'
+});
+
+apiContract.addRoute({
+  path: '/api/farmers',
+  method: 'POST',
+  inputSchema: FarmerFormDataSchema,
+  outputSchema: FarmerCreatedResponseSchema,
+  description: 'Create a new farmer'
+});

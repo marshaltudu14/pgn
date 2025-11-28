@@ -3,21 +3,36 @@ import {
   getTaskById,
   updateTask
 } from '@/services/task.service';
-import { UpdateTaskRequest } from '@pgn/shared';
+import {
+  UpdateTaskRequest,
+  UpdateTaskRequestSchema,
+  TaskResponseSchema
+} from '@pgn/shared';
 import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import { z } from 'zod';
+import { apiContract } from '@pgn/shared';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// Schema for route parameters
+const TaskIdParamsSchema = z.object({
+  id: z.string().min(1, 'Task ID is required')
+});
+
 const getTaskHandler = async (
   request: NextRequest,
-  { params }: RouteParams
+  context: { params?: any }
 ): Promise<NextResponse> => {
+  const params = await context.params || { id: '' };
   try {
     const authenticatedRequest = request as AuthenticatedRequest;
     const user = authenticatedRequest.user;
-    const { id } = await params;
+
+    // Use validated parameters from middleware
+    const { id } = (request as NextRequest & { validatedParams: { id: string } }).validatedParams || await params;
 
     const result = await getTaskById(id);
 
@@ -55,11 +70,13 @@ const getTaskHandler = async (
 
 const updateTaskHandler = async (
   request: NextRequest,
-  { params }: RouteParams
+  context: { params?: any }
 ): Promise<NextResponse> => {
+  const params = await context.params || { id: '' };
   try {
-    const { id } = await params;
-    const body = await request.json();
+    // Use validated parameters and body from middleware
+    const { id } = (request as NextRequest & { validatedParams: { id: string } }).validatedParams || await params;
+    const body = (request as NextRequest & { validatedBody: UpdateTaskRequest }).validatedBody;
 
     // RLS policies will handle authorization at database level
     // Try admin update first (allows all fields)
@@ -70,7 +87,7 @@ const updateTaskHandler = async (
       priority: body.priority,
       progress: body.progress,
       due_date: body.due_date ? new Date(body.due_date) : undefined,
-      completion_notes: body.completionNotes?.trim(),
+      completion_notes: body.completion_notes?.trim(),
     };
 
     const result = await updateTask(id, updateData);
@@ -121,5 +138,34 @@ const updateTaskHandler = async (
   }
 };
 
-export const GET = withSecurity(getTaskHandler);
-export const PUT = withSecurity(updateTaskHandler);
+// Add route definitions to API contract
+apiContract.addRoute({
+  path: '/api/tasks/[id]',
+  method: 'GET',
+  inputSchema: TaskIdParamsSchema,
+  outputSchema: TaskResponseSchema,
+  description: 'Get a specific task by ID',
+  requiresAuth: true
+});
+
+apiContract.addRoute({
+  path: '/api/tasks/[id]',
+  method: 'PUT',
+  inputSchema: UpdateTaskRequestSchema,
+  outputSchema: TaskResponseSchema,
+  description: 'Update a specific task',
+  requiresAuth: true
+});
+
+export const GET = withSecurity(withApiValidation(getTaskHandler, {
+  params: TaskIdParamsSchema,
+  response: TaskResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));
+
+export const PUT = withSecurity(withApiValidation(updateTaskHandler, {
+  params: TaskIdParamsSchema,
+  body: UpdateTaskRequestSchema,
+  response: TaskResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));

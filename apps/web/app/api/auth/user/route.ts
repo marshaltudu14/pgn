@@ -3,6 +3,12 @@ import { withRateLimit, apiRateLimit } from '@/lib/rate-limit';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';
 import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  UserResponseSchema,
+  AuthErrorResponseSchema,
+  apiContract
+} from '@pgn/shared';
 
 /**
  * GET /api/auth/user
@@ -76,7 +82,21 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
   }
 };
 
-export const GET = withRateLimit(withSecurity(userHandler), apiRateLimit);
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/auth/user',
+  method: 'GET',
+  outputSchema: UserResponseSchema,
+  description: 'Get current user profile information'
+});
+
+// Apply validation middleware for response only, then security and rate limiting
+const userWithValidation = withApiValidation(userHandler, {
+  response: UserResponseSchema as any,
+  validateResponse: process.env.NODE_ENV === 'development',
+});
+
+export const GET = withRateLimit(withSecurity(userWithValidation), apiRateLimit);
 
 /**
  * Handle unsupported methods

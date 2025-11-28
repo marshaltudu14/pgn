@@ -1,5 +1,7 @@
 // Types for dealer, retailer, and farmer management
 import { Database } from './supabase';
+import { z } from 'zod';
+import { BaseApiResponseSchema, RouteParamsSchema } from '../schemas/base';
 
 // Base types from Supabase
 export type Dealer = Database['public']['Tables']['dealers']['Row'];
@@ -150,3 +152,151 @@ export interface FarmerFilters {
   retailer_id?: string;
   dealer_id?: string;
 }
+
+// Zod schemas for API validation
+export const DealerFormDataSchema = z.object({
+  name: z.string().min(1, 'Dealer name is required'),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  shop_name: z.string().optional(),
+  email: z.string().email('Invalid email format').optional(),
+});
+
+export const RetailerFormDataSchema = z.object({
+  name: z.string().min(1, 'Retailer name is required'),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  shop_name: z.string().optional(),
+  email: z.string().email('Invalid email format').optional(),
+  dealer_id: z.string().min(1, 'Dealer ID is required'),
+});
+
+export const FarmerFormDataSchema = z.object({
+  name: z.string().min(1, 'Farmer name is required'),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  farm_name: z.string().optional(),
+  email: z.string().email('Invalid email format').optional(),
+  retailer_id: z.string().min(1, 'Retailer ID is required'),
+});
+
+export const DealerListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  search: z.string().optional(),
+  shop_name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  sort_by: z.string().optional().default('created_at'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
+});
+
+export const RetailerListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  search: z.string().optional(),
+  shop_name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  dealer_id: z.string().optional(),
+  sort_by: z.string().optional().default('created_at'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
+});
+
+export const FarmerListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  search: z.string().optional(),
+  farm_name: z.string().optional(),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  retailer_id: z.string().optional(),
+  dealer_id: z.string().optional(),
+  sort_by: z.string().optional().default('created_at'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
+});
+
+
+export const DealerListResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    dealers: z.array(z.any()), // Will be typed as DealerWithRetailers[] at runtime
+    pagination: z.object({
+      currentPage: z.number(),
+      totalPages: z.number(),
+      totalItems: z.number(),
+      itemsPerPage: z.number(),
+    }),
+  }),
+});
+
+export const RetailerListResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    retailers: z.array(z.any()), // Will be typed as RetailerWithFarmers[] at runtime
+    pagination: z.object({
+      currentPage: z.number(),
+      totalPages: z.number(),
+      totalItems: z.number(),
+      itemsPerPage: z.number(),
+    }),
+  }),
+});
+
+export const FarmerListResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    farmers: z.array(z.any()), // Will be typed as FarmerWithRetailer[] at runtime
+    pagination: z.object({
+      currentPage: z.number(),
+      totalPages: z.number(),
+      totalItems: z.number(),
+      itemsPerPage: z.number(),
+    }),
+  }),
+});
+
+// Individual retailer response schemas
+export const RetailerResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.any(), // Will be typed as RetailerWithFarmers at runtime
+});
+
+export const RetailerCreatedResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.any(), // Will be typed as RetailerWithFarmers at runtime
+});
+
+export const RetailerUpdatedResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.any(), // Will be typed as RetailerWithFarmers at runtime
+});
+
+export const RetailerDeletedResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.literal(null),
+});
+
+// Individual farmer response schemas
+export const FarmerResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.any(), // Will be typed as FarmerWithRetailer at runtime
+});
+
+export const FarmerCreatedResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.any(), // Will be typed as FarmerWithRetailer at runtime
+});
+
+export const FarmerUpdatedResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.any(), // Will be typed as FarmerWithRetailer at runtime
+});
+
+export const FarmerDeletedResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.literal(null),
+});
+
+// Re-export RouteParamsSchema for convenience
+export { RouteParamsSchema };

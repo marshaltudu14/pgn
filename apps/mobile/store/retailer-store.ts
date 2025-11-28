@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Retailer, RetailerFilters, RetailerInsert, RetailerUpdate, RetailerListResponse } from '@pgn/shared';
 import { api, ApiResponse } from '@/services/api-client';
 import { API_ENDPOINTS } from '@/constants/api';
+import { handleMobileApiResponse, transformApiErrorMessage } from './utils/errorHandling';
 
 interface RetailerStoreState {
   // Data state
@@ -103,26 +104,30 @@ export const useRetailerStore = create<RetailerStoreState>()(
               `${API_ENDPOINTS.RETAILERS}?${queryParams}`
             );
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to fetch retailers');
+
+            const retailerData = handledResponse.data as any;
+            if (handledResponse.success && retailerData) {
               set({
-                retailers: response.data.retailers,
+                retailers: retailerData.retailers,
                 pagination: {
-                  currentPage: response.data.pagination.currentPage,
-                  totalPages: response.data.pagination.totalPages,
-                  totalItems: response.data.pagination.totalItems,
-                  itemsPerPage: response.data.pagination.itemsPerPage,
-                  hasNextPage: currentPage < response.data.pagination.totalPages,
+                  currentPage: retailerData.pagination.currentPage,
+                  totalPages: retailerData.pagination.totalPages,
+                  totalItems: retailerData.pagination.totalItems,
+                  itemsPerPage: retailerData.pagination.itemsPerPage,
+                  hasNextPage: currentPage < retailerData.pagination.totalPages,
                   hasPreviousPage: currentPage > 1,
                 },
                 loading: false,
               });
             } else {
               set({
-                error: response.error || 'Failed to fetch retailers',
+                error: handledResponse.error || 'Failed to fetch retailers',
                 loading: false,
               });
             }
-            return response.data || {
+            return (handledResponse.data as RetailerListResponse) || {
               retailers: [],
               pagination: {
                 currentPage: 1,
@@ -149,17 +154,24 @@ export const useRetailerStore = create<RetailerStoreState>()(
           try {
             const response = await api.post<Retailer>(API_ENDPOINTS.RETAILERS, retailerData);
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to create retailer');
+
+            if (handledResponse.success && handledResponse.data) {
               // Refresh the list to get the updated data
               await get().fetchRetailers({ refresh: true });
               set({ isCreating: false });
-              return response;
+              return handledResponse as ApiResponse<Retailer>;
             } else {
-              set({ error: response.error || 'Failed to create retailer', isCreating: false });
-              return response;
+              set({ error: handledResponse.error || 'Failed to create retailer', isCreating: false });
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to create retailer'
+              };
             }
           } catch (error) {
-            set({ error: 'Network error occurred while creating retailer', isCreating: false });
+            const errorMessage = transformApiErrorMessage(error);
+            set({ error: errorMessage, isCreating: false });
             throw error;
           }
         },

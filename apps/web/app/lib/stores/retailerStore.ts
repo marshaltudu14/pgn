@@ -1,12 +1,11 @@
 import { create } from 'zustand';
-import { Retailer, RetailerFilters, RetailerListResponse, RetailerInsert, RetailerUpdate, Dealer } from '@pgn/shared';
+import { Retailer, RetailerFilters, RetailerListResponse, RetailerInsert, RetailerUpdate, RetailerFormData } from '@pgn/shared';
 import { useAuthStore } from './authStore';
+import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface RetailerState {
   retailers: Retailer[];
-  dealers: Dealer[];
   loading: boolean;
-  loadingDealers: boolean;
   error: string | null;
   pagination: {
     currentPage: number;
@@ -19,9 +18,8 @@ interface RetailerState {
   filters: RetailerFilters;
 
   fetchRetailers: (params?: Partial<{ page: number; itemsPerPage: number; filters: RetailerFilters }>) => Promise<void>;
-  fetchDealers: () => Promise<void>;
-  createRetailer: (retailerData: RetailerInsert) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
-  updateRetailer: (id: string, retailerData: RetailerUpdate) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
+  createRetailer: (retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
+  updateRetailer: (id: string, retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   deleteRetailer: (id: string) => Promise<{ success: boolean; error?: string }>;
   setFilters: (filters: Partial<RetailerFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -30,53 +28,9 @@ interface RetailerState {
   refetch: () => Promise<void>;
 }
 
-// Helper function to get authentication headers
-const getAuthHeaders = () => {
-  const token = useAuthStore.getState().token;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-client-info': 'pgn-web-client',
-    'User-Agent': 'pgn-admin-dashboard/1.0.0',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-/**
- * Transform technical error messages into user-friendly ones
- */
-function getUserFriendlyErrorMessage(error: string): string {
-  const cleanError = error.replace(/AuthApiError:\s*/, '').replace(/DatabaseError:\s*/, '').trim();
-
-  if (cleanError.includes('new row violates row-level security policy')) {
-    return 'You do not have permission to perform this action. Please contact your administrator.';
-  }
-
-  if (cleanError.includes('duplicate key')) {
-    return 'A retailer with these details already exists.';
-  }
-
-  if (cleanError.includes('Network connection failed')) {
-    return 'Network connection failed. Please check your internet connection and try again.';
-  }
-
-  if (cleanError.includes('Daily edit limit exceeded')) {
-    return 'You have reached your daily edit limit. Please try again tomorrow.';
-  }
-
-  return cleanError || 'An unexpected error occurred. Please try again.';
-}
-
 export const useRetailerStore = create<RetailerState>((set, get) => ({
   retailers: [],
-  dealers: [],
   loading: false,
-  loadingDealers: false,
   error: null,
   pagination: {
     currentPage: 1,
@@ -106,19 +60,24 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
         ...(filters.shop_name && { shop_name: filters.shop_name }),
         ...(filters.email && { email: filters.email }),
         ...(filters.phone && { phone: filters.phone }),
-        ...(filters.dealer_id && { dealer_id: filters.dealer_id }),
       });
 
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/retailers?${searchParams}`, {
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to fetch retailers');
+      const result = await handleApiResponse(response, 'Failed to fetch retailers');
+
+      if (!result.success) {
+        set({
+          error: result.error || 'Failed to fetch retailers',
+          loading: false,
+        });
+        return;
       }
 
-      const data: RetailerListResponse = await response.json();
+      const data: RetailerListResponse = result.data as RetailerListResponse;
 
       set({
         retailers: data.retailers,
@@ -134,87 +93,73 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch retailers';
+      const errorMessage = transformApiErrorMessage(error);
       set({
-        error: getUserFriendlyErrorMessage(errorMessage),
+        error: errorMessage,
         loading: false,
       });
     }
   },
 
-  fetchDealers: async () => {
-    set({ loadingDealers: true });
-
-    try {
-      const response = await fetch('/api/dealers?limit=1000', {
-        headers: getAuthHeaders(),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch dealers');
-      }
-
-      const data = await response.json();
-      set({ dealers: data.dealers || [], loadingDealers: false });
-    } catch (error) {
-      console.error('Error fetching dealers:', error);
-      set({ loadingDealers: false });
-    }
-  },
-
-  createRetailer: async (retailerData) => {
+  createRetailer: async (retailerData: RetailerFormData) => {
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch('/api/retailers', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(retailerData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to create retailer');
+      const result = await handleApiResponse(response, 'Failed to create retailer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to create retailer', loading: false });
+        return { success: false, error: result.error };
       }
 
-      const data = await response.json();
+      const data: Retailer = result.data as Retailer;
 
       // Refetch the list to get updated data
       await get().fetchRetailers();
 
       return { success: true, data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create retailer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
-  updateRetailer: async (id, retailerData) => {
+  updateRetailer: async (id: string, retailerData: RetailerFormData) => {
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/retailers/${id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(retailerData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update retailer');
+      const result = await handleApiResponse(response, 'Failed to update retailer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to update retailer', loading: false });
+        return { success: false, error: result.error };
       }
 
-      const data = await response.json();
+      const data: Retailer = result.data as Retailer;
 
       // Refetch the list to get updated data
       await get().fetchRetailers();
 
       return { success: true, data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update retailer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
@@ -222,14 +167,17 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/retailers/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to delete retailer');
+      const result = await handleApiResponse(response, 'Failed to delete retailer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to delete retailer', loading: false });
+        return { success: false, error: result.error };
       }
 
       // Refetch the list to get updated data
@@ -237,9 +185,9 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete retailer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 

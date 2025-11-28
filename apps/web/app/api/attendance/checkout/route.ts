@@ -2,6 +2,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
 import { CheckOutRequest, CheckOutMethod, EmergencyCheckOutRequest } from '@pgn/shared';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  CheckOutMobileRequestSchema,
+  CheckOutResponseSchema,
+  DeviceInfoSchema,
+  apiContract,
+  z,
+} from '@pgn/shared';
+
+// Custom schema that accepts both 'selfie' and 'selfieData' field names for backward compatibility
+const CheckOutMobileRequestCompatSchema = z.object({
+  location: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    accuracy: z.number().min(0).optional(),
+    timestamp: z.number().optional(),
+    address: z.string().optional(),
+  }).optional(),
+  lastLocationData: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    accuracy: z.number().min(0).optional(),
+    timestamp: z.number().optional(),
+    address: z.string().optional(),
+  }).optional(),
+  selfie: z.string().optional(),
+  selfieData: z.string().optional(),
+  deviceInfo: DeviceInfoSchema.optional(),
+  method: z.enum(['MANUAL', 'AUTOMATIC', 'APP_CLOSED', 'BATTERY_DRAIN', 'FORCE_CLOSE']).default('MANUAL'),
+  reason: z.string().optional(),
+}).transform(
+  (data: any) => ({
+    ...data,
+    selfie: data.selfie || data.selfieData // Normalize to 'selfie' field
+  })
+);
 
 /**
  * POST /api/attendance/checkout
@@ -22,8 +58,8 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-    // Parse request body
-    const body = await req.json();
+    // Use validated body from middleware
+    const body = (req as any).validatedBody;
 
     // Check if this is an emergency check-out (only reason and method are required)
     if (body.method && body.method !== 'MANUAL' && body.reason) {
@@ -40,7 +76,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
           timestamp: new Date(body.lastLocationData.timestamp || Date.now()),
           address: body.lastLocationData.address
         } : undefined,
-        selfieData: body.selfieData, // Optional for emergency
+        selfieData: body.selfie, // Optional for emergency, normalized field
         deviceInfo: body.deviceInfo
       };
 
@@ -79,8 +115,8 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Handle regular check-out
-    // Validate required fields for regular check-out
-    if (!body.location || !body.selfieData) {
+    // Validate required fields for regular check-out (schema already validated this)
+    if (!body.location || !body.selfie) {
       const response = NextResponse.json(
         {
           error: 'Bad Request',
@@ -102,7 +138,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
         address: body.location.address
       },
       timestamp: new Date(),
-      selfie: body.selfieData,
+      selfie: body.selfie, // Using normalized field
       deviceInfo: body.deviceInfo,
       method: body.method || 'MANUAL',
       reason: body.reason
@@ -123,19 +159,16 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-    // Return success response
+    // Return success response following the schema format
     const response = NextResponse.json({
       success: true,
       message: result.message,
       data: {
-        attendanceId: result.attendanceId,
-        timestamp: result.timestamp,
-        status: result.status,
-        checkInTime: result.checkInTime,
-        checkOutTime: result.checkOutTime,
-        workHours: result.workHours,
-        verificationStatus: result.verificationStatus,
-        emergencyCheckout: false
+        attendanceId: result.attendanceId!,
+        checkOutTime: result.checkOutTime!.toISOString(),
+        status: result.status!,
+        workHours: result.workHours!,
+        verificationStatus: result.verificationStatus!,
       }
     });
 
@@ -182,5 +215,20 @@ export async function GET(): Promise<NextResponse> {
   return addSecurityHeaders(response);
 }
 
-// Export with security middleware
-export const POST = withSecurity(checkoutHandler);
+// Apply Zod validation middleware and wrap with security
+export const POST = withSecurity(
+  withApiValidation(checkoutHandler, {
+    body: CheckOutMobileRequestCompatSchema,
+    response: CheckOutResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/attendance/checkout',
+  method: 'POST',
+  inputSchema: CheckOutMobileRequestCompatSchema,
+  outputSchema: CheckOutResponseSchema,
+  description: 'Check out user for attendance with location and selfie'
+});

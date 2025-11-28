@@ -6,54 +6,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateAttendanceVerification } from '@/services/attendance.service';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
-import { UpdateVerificationRequest, VerificationStatus } from '@pgn/shared';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  UpdateVerificationRequestSchema,
+  UpdateVerificationResponseSchema,
+  VerificationStatus,
+  apiContract,
+  z,
+} from '@pgn/shared';
+
+// Schema for route parameters
+const VerifyRouteParamsSchema = z.object({
+  id: z.string().min(1, 'Attendance record ID is required'),
+});
 
 const updateVerificationHandler = async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; }> }
+  context: { params?: any }
 ): Promise<NextResponse> => {
   try {
-    const { id: recordId } = await params;
+    // Use validated data from middleware
+    const { id: recordId } = (request as any).validatedParams;
+    const body = (request as any).validatedBody;
 
-    if (!recordId) {
-      const response = NextResponse.json(
-        {
-          success: false,
-          error: 'Attendance record ID is required'
-        },
-        { status: 400 }
-      );
-      return addSecurityHeaders(response);
-    }
-
-    const body = await request.json();
-
-    // Validate required fields
-    if (!body.verificationStatus) {
-      const response = NextResponse.json(
-        {
-          success: false,
-          error: 'Verification status is required'
-        },
-        { status: 400 }
-      );
-      return addSecurityHeaders(response);
-    }
-
-    // Validate verification status
-    const validStatuses: VerificationStatus[] = ['PENDING', 'VERIFIED', 'REJECTED', 'FLAGGED'];
-    if (!validStatuses.includes(body.verificationStatus)) {
-      const response = NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid verification status. Must be one of: PENDING, VERIFIED, REJECTED, FLAGGED'
-        },
-        { status: 400 }
-      );
-      return addSecurityHeaders(response);
-    }
-
-    const updateRequest: UpdateVerificationRequest = {
+    const updateRequest = {
       verificationStatus: body.verificationStatus,
       verificationNotes: body.verificationNotes || undefined,
     };
@@ -62,7 +38,10 @@ const updateVerificationHandler = async (
 
     const response = NextResponse.json({
       success: true,
-      data: updatedRecord,
+      data: {
+        message: 'Verification status updated successfully',
+        record: updatedRecord,
+      },
       message: 'Verification status updated successfully'
     });
     return addSecurityHeaders(response);
@@ -117,4 +96,21 @@ const updateVerificationHandler = async (
   }
 };
 
-export const PUT = withSecurity(updateVerificationHandler);
+// Apply Zod validation middleware and wrap with security
+export const PUT = withSecurity(
+  withApiValidation(updateVerificationHandler, {
+    body: UpdateVerificationRequestSchema,
+    params: VerifyRouteParamsSchema,
+    response: UpdateVerificationResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/attendance/[id]/verify',
+  method: 'PUT',
+  inputSchema: UpdateVerificationRequestSchema,
+  outputSchema: UpdateVerificationResponseSchema,
+  description: 'Update verification status of an attendance record'
+});

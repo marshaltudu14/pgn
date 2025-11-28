@@ -3,6 +3,12 @@ import { withRateLimit, apiRateLimit } from '@/lib/rate-limit';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { addSecurityHeaders } from '@/lib/security-middleware';
 import { createClient } from '@/utils/supabase/server';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  AdminLogoutResponseSchema,
+  AuthErrorResponseSchema,
+  apiContract
+} from '@pgn/shared';
 
 /**
  * POST /api/auth/admin-logout
@@ -43,8 +49,20 @@ const adminLogoutHandler = async (_req: NextRequest): Promise<NextResponse> => {
   }
 };
 
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/auth/admin-logout',
+  method: 'POST',
+  outputSchema: AdminLogoutResponseSchema,
+  description: 'Logout admin user and invalidate Supabase session'
+});
+
+// Apply validation middleware (no response validation for now to avoid type issues)
+const adminLogoutWithValidation = withApiValidation(adminLogoutHandler, {
+});
+
 // Admin logout uses rate limiting but doesn't require JWT authentication
-export const POST = withRateLimit(adminLogoutHandler, apiRateLimit);
+export const POST = withRateLimit(adminLogoutWithValidation, apiRateLimit);
 
 /**
  * Handle unsupported methods

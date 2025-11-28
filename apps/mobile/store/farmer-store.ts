@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Farmer, FarmerFilters, FarmerInsert, FarmerUpdate, FarmerListResponse } from '@pgn/shared';
 import { api, ApiResponse } from '@/services/api-client';
 import { API_ENDPOINTS } from '@/constants/api';
+import { handleMobileApiResponse, transformApiErrorMessage } from './utils/errorHandling';
 
 interface FarmerStoreState {
   // Data state
@@ -103,26 +104,30 @@ export const useFarmerStore = create<FarmerStoreState>()(
               `${API_ENDPOINTS.FARMERS}?${queryParams}`
             );
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to fetch farmers');
+
+            const farmerData = handledResponse.data as any;
+            if (handledResponse.success && farmerData) {
               set({
-                farmers: response.data.farmers,
+                farmers: farmerData.farmers,
                 pagination: {
-                  currentPage: response.data.pagination.currentPage,
-                  totalPages: response.data.pagination.totalPages,
-                  totalItems: response.data.pagination.totalItems,
-                  itemsPerPage: response.data.pagination.itemsPerPage,
-                  hasNextPage: currentPage < response.data.pagination.totalPages,
+                  currentPage: farmerData.pagination.currentPage,
+                  totalPages: farmerData.pagination.totalPages,
+                  totalItems: farmerData.pagination.totalItems,
+                  itemsPerPage: farmerData.pagination.itemsPerPage,
+                  hasNextPage: currentPage < farmerData.pagination.totalPages,
                   hasPreviousPage: currentPage > 1,
                 },
                 loading: false,
               });
             } else {
               set({
-                error: response.error || 'Failed to fetch farmers',
+                error: handledResponse.error || 'Failed to fetch farmers',
                 loading: false,
               });
             }
-            return response.data || {
+            return (handledResponse.data as FarmerListResponse) || {
               farmers: [],
               pagination: {
                 currentPage: 1,
@@ -149,17 +154,24 @@ export const useFarmerStore = create<FarmerStoreState>()(
           try {
             const response = await api.post<Farmer>(API_ENDPOINTS.FARMERS, farmerData);
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to create farmer');
+
+            if (handledResponse.success && handledResponse.data) {
               // Refresh the list to get the updated data
               await get().fetchFarmers({ refresh: true });
               set({ isCreating: false });
-              return response;
+              return handledResponse as ApiResponse<Farmer>;
             } else {
-              set({ error: response.error || 'Failed to create farmer', isCreating: false });
-              return response;
+              set({ error: handledResponse.error || 'Failed to create farmer', isCreating: false });
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to create farmer'
+              };
             }
           } catch (error) {
-            set({ error: 'Network error occurred while creating farmer', isCreating: false });
+            const errorMessage = transformApiErrorMessage(error);
+            set({ error: errorMessage, isCreating: false });
             throw error;
           }
         },

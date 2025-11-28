@@ -28,12 +28,18 @@ export interface ApiError {
   context?: string;
 }
 
+export interface ValidationErrorDetail {
+  path: string[];
+  message: string;
+}
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
   message?: string;
   code?: string;
+  details?: ValidationErrorDetail[];
 }
 
 export interface AppError {
@@ -344,13 +350,16 @@ export async function apiCall<T = any>(
         success: false,
         error: errorMessage,
         code: responseData.code || 'SERVER_ERROR',
+        // Preserve validation details if present
+        details: responseData.details,
       };
     }
 
     // Check if response is already wrapped in our API structure
-    if (responseData && typeof responseData === 'object' && 'success' in responseData && 'data' in responseData) {
+    if (responseData && typeof responseData === 'object' && 'success' in responseData) {
       // Response is already wrapped, return as-is
-      return responseData;
+      // Preserve validation error details if present
+      return responseData as ApiResponse<T>;
     }
 
     // Otherwise, wrap the response

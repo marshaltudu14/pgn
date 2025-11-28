@@ -9,20 +9,24 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist node_modules",
     "test": "jest",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "validate-api": "node ../scripts/validate-api-contract.ts"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
     "@types/jest": "^29.5.0",
-    "jest": "^29.5.0",
-    "eslint": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
-    "@typescript-eslint/parser": "^5.0.0"
+    "@typescript-eslint/parser": "^5.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "typescript": "^5.9.2"
   },
   "files": [
     "dist"
   ],
   "publishConfig": {
     "access": "restricted"
+  },
+  "dependencies": {
+    "zod": "^4.1.13"
   }
 }

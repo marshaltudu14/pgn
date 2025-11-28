@@ -1,4 +1,6 @@
 // Region-related types for PGN system
+import { z } from 'zod';
+import { BaseApiResponseSchema } from '../schemas/base';
 
 export interface State {
   name: string;
@@ -104,3 +106,40 @@ export function getCitiesByDistrict(regionsData: RegionsData, districtName: stri
 
   return cities;
 }
+
+// Zod schemas for API validation
+export const StateSchema = z.object({
+  name: z.string(),
+  type: z.literal('state'),
+  districts: z.array(z.object({
+    name: z.string(),
+    type: z.literal('district'),
+    cities: z.array(z.object({
+      name: z.string(),
+      type: z.literal('city'),
+    })),
+  })),
+});
+
+export const RegionsDataSchema = z.object({
+  summary: z.object({
+    total_states: z.number(),
+    total_districts: z.number(),
+    total_cities: z.number(),
+  }),
+  regions: z.array(StateSchema),
+});
+
+export const RegionSelectionSchema = z.object({
+  states: z.array(z.string()),
+  districts: z.array(z.string()),
+  cities: z.array(z.string()),
+});
+
+export const RegionFilterOptionsSchema = z.object({
+  selectedStates: z.array(z.string()),
+  selectedDistricts: z.array(z.string()),
+  selectedCities: z.array(z.string()),
+});
+
+

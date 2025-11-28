@@ -4,12 +4,25 @@ import {
   updateDealer,
   deleteDealer
 } from '@/services/dealer.service';
-import { DealerUpdate } from '@pgn/shared';
+import {
+  DealerUpdate,
+  DealerFormDataSchema,
+  BaseApiResponseSchema
+} from '@pgn/shared';
+import { z } from 'zod';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import { apiContract } from '@pgn/shared/src/validation/build-time-checker';
 
-const getDealerHandler = async (request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+// Route parameters schema for dealer ID
+const DealerRouteParamsSchema = z.object({
+  id: z.string().min(1, 'Dealer ID is required'),
+});
+
+const getDealerHandler = async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
   try {
-    const { id } = await params;
+    // Get validated parameters from middleware
+    const { id } = (request as any).validatedParams || context.params || {};
     const dealer = await getDealerById(id);
 
     const response = NextResponse.json({
@@ -32,17 +45,11 @@ const getDealerHandler = async (request: NextRequest, { params }: { params: Prom
   }
 };
 
-const updateDealerHandler = async (request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+const updateDealerHandler = async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
   try {
-    const { id } = await params;
-    const body = await request.json();
-    const dealerData: DealerUpdate = {
-      name: body.name,
-      phone: body.phone || null,
-      address: body.address || null,
-      shop_name: body.shop_name || null,
-      email: body.email || null,
-    };
+    // Get validated parameters and body from middleware
+    const { id } = (request as any).validatedParams || context.params || {};
+    const dealerData = (request as any).validatedBody as DealerUpdate;
 
     const result = await updateDealer(id, dealerData);
 
@@ -66,9 +73,10 @@ const updateDealerHandler = async (request: NextRequest, { params }: { params: P
   }
 };
 
-const deleteDealerHandler = async (request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+const deleteDealerHandler = async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
   try {
-    const { id } = await params;
+    // Get validated parameters from middleware
+    const { id } = (request as any).validatedParams || context.params || {};
     await deleteDealer(id);
 
     const response = NextResponse.json({
@@ -91,6 +99,47 @@ const deleteDealerHandler = async (request: NextRequest, { params }: { params: P
   }
 };
 
-export const GET = withSecurity(getDealerHandler);
-export const PUT = withSecurity(updateDealerHandler);
-export const DELETE = withSecurity(deleteDealerHandler);
+// Add route definitions to API contract
+apiContract.addRoute({
+  path: '/api/dealers/[id]',
+  method: 'GET',
+  inputSchema: DealerRouteParamsSchema,
+  outputSchema: BaseApiResponseSchema,
+  description: 'Get a single dealer by ID'
+});
+
+apiContract.addRoute({
+  path: '/api/dealers/[id]',
+  method: 'PUT',
+  inputSchema: DealerFormDataSchema,
+  outputSchema: BaseApiResponseSchema,
+  description: 'Update a dealer by ID'
+});
+
+apiContract.addRoute({
+  path: '/api/dealers/[id]',
+  method: 'DELETE',
+  inputSchema: DealerRouteParamsSchema,
+  outputSchema: BaseApiResponseSchema,
+  description: 'Delete a dealer by ID'
+});
+
+// Apply validation middleware, then security middleware
+export const GET = withSecurity(withApiValidation(getDealerHandler, {
+  params: DealerRouteParamsSchema,
+  response: BaseApiResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));
+
+export const PUT = withSecurity(withApiValidation(updateDealerHandler, {
+  params: DealerRouteParamsSchema,
+  body: DealerFormDataSchema,
+  response: BaseApiResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));
+
+export const DELETE = withSecurity(withApiValidation(deleteDealerHandler, {
+  params: DealerRouteParamsSchema,
+  response: BaseApiResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));

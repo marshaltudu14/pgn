@@ -1270,7 +1270,7 @@ describe('Attendance Store', () => {
 
       // Ensure no attendance ID is set (clean state)
       act(() => {
-        result.current.currentAttendanceId = undefined;
+        result.current.currentAttendanceId = null;
       });
 
       await act(async () => {

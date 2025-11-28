@@ -76,3 +76,59 @@ export const searchRegionsSchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
+
+// Response schemas
+export const RegionSchema = z.object({
+  id: z.string().uuid(),
+  state: z.string(),
+  city: z.string(),
+  state_slug: z.string(),
+  city_slug: z.string(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export const RegionsListResponseSchema = z.object({
+  data: z.array(RegionSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  hasMore: z.boolean(),
+});
+
+export const RegionResponseSchema = z.object({
+  id: z.string().uuid(),
+  state: z.string(),
+  city: z.string(),
+  state_slug: z.string(),
+  city_slug: z.string(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export const StateOptionSchema = z.object({
+  state: z.string(),
+  state_slug: z.string(),
+});
+
+export const StatesListResponseSchema = z.object({
+  data: z.array(StateOptionSchema),
+});
+
+export const RegionSearchResponseSchema = z.object({
+  data: z.array(RegionSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  hasMore: z.boolean(),
+});
+
+export const RegionDeleteResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+// Route parameter schemas
+export const RegionIdParamSchema = z.object({
+  id: z.string().uuid('Invalid region ID format'),
+});

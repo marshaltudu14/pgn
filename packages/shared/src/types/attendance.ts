@@ -1,4 +1,6 @@
 // Attendance and location tracking types for mobile app
+import { z } from 'zod';
+import { BaseApiResponseSchema } from '../schemas/base';
 
 export interface LocationData {
   latitude: number;
@@ -236,3 +238,155 @@ export interface UpdateVerificationRequest {
   verificationStatus: VerificationStatus;
   verificationNotes?: string;
 }
+
+// Zod schemas for API validation
+export const VerificationStatusSchema = z.enum(['PENDING', 'VERIFIED', 'REJECTED', 'FLAGGED']);
+
+export const AttendanceStatusSchema = z.enum(['CHECKED_IN', 'CHECKED_OUT', 'ABSENT']);
+
+export const CheckOutMethodSchema = z.enum(['MANUAL', 'AUTOMATIC', 'APP_CLOSED', 'BATTERY_DRAIN', 'FORCE_CLOSE']);
+
+export const LocationDataSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  accuracy: z.number().min(0).optional(),
+  timestamp: z.union([z.date(), z.string().datetime(), z.number()]),
+  altitude: z.number().optional(),
+  altitudeAccuracy: z.number().optional(),
+  heading: z.number().min(0).max(360).optional(),
+  speed: z.number().min(0).optional(),
+  address: z.string().optional(),
+});
+
+export const DeviceInfoSchema = z.object({
+  batteryLevel: z.number().min(0).max(1).optional(),
+  platform: z.string().optional(),
+  version: z.string().optional(),
+  model: z.string().optional(),
+});
+
+export const CheckInMobileRequestSchema = z.object({
+  location: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    accuracy: z.number().min(0).optional(),
+    timestamp: z.number().optional(),
+    address: z.string().optional(),
+  }),
+  selfie: z.string().min(1, 'Selfie is required'),
+  deviceInfo: DeviceInfoSchema.optional(),
+});
+
+export const CheckOutMobileRequestSchema = z.object({
+  location: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    accuracy: z.number().min(0).optional(),
+    timestamp: z.number().optional(),
+    address: z.string().optional(),
+  }).optional(),
+  lastLocationData: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+    accuracy: z.number().min(0).optional(),
+    timestamp: z.number().optional(),
+    address: z.string().optional(),
+  }).optional(),
+  selfie: z.string().optional(),
+  deviceInfo: DeviceInfoSchema.optional(),
+  method: CheckOutMethodSchema.default('MANUAL'),
+  reason: z.string().optional(),
+});
+
+export const LocationUpdateRequestSchema = z.object({
+  location: LocationDataSchema,
+  batteryLevel: z.number().min(0).max(1).optional(),
+});
+
+export const AttendanceListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  date: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  status: AttendanceStatusSchema.optional(),
+  verificationStatus: VerificationStatusSchema.optional(),
+  employeeId: z.string().optional(),
+  sortBy: z.string().default('created_at'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export const UpdateVerificationRequestSchema = z.object({
+  verificationStatus: VerificationStatusSchema,
+  verificationNotes: z.string().optional(),
+});
+
+
+export const CheckInResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+    attendanceId: z.string(),
+    checkInTime: z.string(),
+    status: AttendanceStatusSchema,
+    verificationStatus: VerificationStatusSchema,
+    workHours: z.number().optional(),
+  }),
+});
+
+export const CheckOutResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+    attendanceId: z.string(),
+    checkOutTime: z.string(),
+    status: AttendanceStatusSchema,
+    workHours: z.number(),
+    verificationStatus: VerificationStatusSchema,
+  }),
+});
+
+export const AttendanceStatusResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    status: AttendanceStatusSchema,
+    checkInTime: z.string().optional(),
+    checkOutTime: z.string().optional(),
+    workHours: z.number().optional(),
+    employeeId: z.string().optional(),
+    totalDistance: z.number().optional(),
+    lastLocationUpdate: z.string().optional(),
+    batteryLevel: z.number().min(0).max(1).optional(),
+    verificationStatus: VerificationStatusSchema.optional(),
+    requiresCheckOut: z.boolean(),
+    date: z.string().optional(),
+    currentAttendanceId: z.string().optional(),
+  }),
+});
+
+export const LocationUpdateResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+  }),
+});
+
+export const AttendanceListResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    records: z.array(z.any()), // Will be typed as DailyAttendanceRecord[] at runtime
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+    hasMore: z.boolean(),
+  }),
+});
+
+export const UpdateVerificationResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+    record: z.any(), // Will be typed as DailyAttendanceRecord at runtime
+  }),
+});

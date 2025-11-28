@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Dealer, DealerFilters, DealerListResponse, DealerInsert, DealerUpdate } from '@pgn/shared';
 import { useAuthStore } from './authStore';
+import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface DealerState {
   dealers: Dealer[];
@@ -17,8 +18,8 @@ interface DealerState {
   filters: DealerFilters;
 
   fetchDealers: (params?: Partial<{ page: number; itemsPerPage: number; filters: DealerFilters }>) => Promise<void>;
-  createDealer: (dealerData: DealerInsert) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
-  updateDealer: (id: string, dealerData: DealerUpdate) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
+  createDealer: (dealerData: any) => Promise<{ success: boolean; error?: string; data?: any }>;
+  updateDealer: (id: string, dealerData: any) => Promise<{ success: boolean; error?: string; data?: any }>;
   deleteDealer: (id: string) => Promise<{ success: boolean; error?: string }>;
   setFilters: (filters: Partial<DealerFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -27,47 +28,6 @@ interface DealerState {
   refetch: () => Promise<void>;
 }
 
-// Helper function to get authentication headers
-const getAuthHeaders = () => {
-  const token = useAuthStore.getState().token;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-client-info': 'pgn-web-client',
-    'User-Agent': 'pgn-admin-dashboard/1.0.0',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-/**
- * Transform technical error messages into user-friendly ones
- */
-function getUserFriendlyErrorMessage(error: string): string {
-  const cleanError = error.replace(/AuthApiError:\s*/, '').replace(/DatabaseError:\s*/, '').trim();
-
-  if (cleanError.includes('new row violates row-level security policy')) {
-    return 'You do not have permission to perform this action. Please contact your administrator.';
-  }
-
-  if (cleanError.includes('duplicate key')) {
-    return 'A dealer with these details already exists.';
-  }
-
-  if (cleanError.includes('Network connection failed')) {
-    return 'Network connection failed. Please check your internet connection and try again.';
-  }
-
-  if (cleanError.includes('Daily edit limit exceeded')) {
-    return 'You have reached your daily edit limit. Please try again tomorrow.';
-  }
-
-  return cleanError || 'An unexpected error occurred. Please try again.';
-}
 
 export const useDealerStore = create<DealerState>((set, get) => ({
   dealers: [],
@@ -103,16 +63,22 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         ...(filters.phone && { phone: filters.phone }),
       });
 
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/dealers?${searchParams}`, {
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to fetch dealers');
+      const result = await handleApiResponse(response, 'Failed to fetch dealers');
+
+      if (!result.success) {
+        set({
+          error: result.error || 'Failed to fetch dealers',
+          loading: false,
+        });
+        return;
       }
 
-      const data: DealerListResponse = await response.json();
+      const data: DealerListResponse = result.data as any;
 
       set({
         dealers: data.dealers,
@@ -128,39 +94,42 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch dealers';
+      const errorMessage = transformApiErrorMessage(error);
       set({
-        error: getUserFriendlyErrorMessage(errorMessage),
+        error: errorMessage,
         loading: false,
       });
     }
   },
 
-  createDealer: async (dealerData) => {
+  createDealer: async (dealerData: any) => {
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch('/api/dealers', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(dealerData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to create dealer');
+      const result = await handleApiResponse(response, 'Failed to create dealer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to create dealer', loading: false });
+        return { success: false, error: result.error };
       }
 
-      const data = await response.json();
+      const data = result.data;
 
       // Refetch the list to get updated data
       await get().fetchDealers();
 
       return { success: true, data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create dealer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
@@ -168,27 +137,30 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/dealers/${id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(dealerData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update dealer');
+      const result = await handleApiResponse(response, 'Failed to update dealer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to update dealer', loading: false });
+        return { success: false, error: result.error };
       }
 
-      const data = await response.json();
+      const data = result.data;
 
       // Refetch the list to get updated data
       await get().fetchDealers();
 
       return { success: true, data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update dealer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
@@ -196,14 +168,17 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/dealers/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to delete dealer');
+      const result = await handleApiResponse(response, 'Failed to delete dealer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to delete dealer', loading: false });
+        return { success: false, error: result.error };
       }
 
       // Refetch the list to get updated data
@@ -211,9 +186,9 @@ export const useDealerStore = create<DealerState>((set, get) => ({
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete dealer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 

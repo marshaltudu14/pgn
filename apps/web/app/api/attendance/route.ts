@@ -8,25 +8,17 @@ import {
   listAttendanceRecords,
 } from '@/services/attendance.service';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
-import { AttendanceListParams, VerificationStatus } from '@pgn/shared';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  AttendanceListParamsSchema,
+  AttendanceListResponseSchema,
+  apiContract,
+} from '@pgn/shared';
 
 const getAttendanceHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const { searchParams } = new URL(request.url);
-
-    // Parse query parameters
-    const params: AttendanceListParams = {
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('limit') || '20'),
-      date: searchParams.get('date') || undefined,
-      dateFrom: searchParams.get('dateFrom') || undefined,
-      dateTo: searchParams.get('dateTo') || undefined,
-      status: searchParams.get('status') || undefined,
-      verificationStatus: searchParams.get('verificationStatus') as VerificationStatus || undefined,
-      employeeId: searchParams.get('employeeId') || undefined,
-      sortBy: searchParams.get('sortBy') || 'attendance_date',
-      sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc'
-    };
+    // Use validated query parameters from the middleware
+    const params = (request as any).validatedQuery;
 
     const result = await listAttendanceRecords(params);
 
@@ -50,4 +42,20 @@ const getAttendanceHandler = async (request: NextRequest): Promise<NextResponse>
   }
 };
 
-export const GET = withSecurity(getAttendanceHandler);
+// Apply Zod validation middleware and wrap with security
+export const GET = withSecurity(
+  withApiValidation(getAttendanceHandler, {
+    query: AttendanceListParamsSchema,
+    response: AttendanceListResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/attendance',
+  method: 'GET',
+  inputSchema: AttendanceListParamsSchema,
+  outputSchema: AttendanceListResponseSchema,
+  description: 'Retrieve paginated list of attendance records with filtering'
+});

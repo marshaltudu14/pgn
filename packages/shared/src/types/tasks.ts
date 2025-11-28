@@ -1,6 +1,8 @@
 // Task management types for PGN system
 
 import { Database } from './supabase';
+import { z } from 'zod';
+import { BaseApiResponseSchema } from '../schemas/base';
 
 // Extract the tasks table type from the database
 export type TaskRow = Database['public']['Tables']['tasks']['Row'];
@@ -132,3 +134,82 @@ export interface TaskActivityLog {
   newValues?: Record<string, any>;
   createdAt: Date;
 }
+
+// Zod schemas for API validation
+export const TaskStatusSchema = z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'ON_HOLD']);
+
+export const TaskPrioritySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']);
+
+export const CreateTaskRequestSchema = z.object({
+  title: z.string().min(1, 'Task title is required'),
+  description: z.string().optional(),
+  assigned_employee_id: z.string().min(1, 'Assigned employee ID is required'),
+  priority: TaskPrioritySchema.optional().default('MEDIUM'),
+  due_date: z.string().datetime().optional(),
+});
+
+export const UpdateTaskRequestSchema = z.object({
+  title: z.string().min(1, 'Task title is required').optional(),
+  description: z.string().optional(),
+  status: TaskStatusSchema.optional(),
+  priority: TaskPrioritySchema.optional(),
+  progress: z.number().min(0).max(100).optional(),
+  due_date: z.string().datetime().optional(),
+  completion_notes: z.string().optional(),
+});
+
+export const EmployeeTaskUpdateRequestSchema = z.object({
+  status: TaskStatusSchema.optional(),
+  progress: z.number().min(0).max(100).optional(),
+  completion_notes: z.string().optional(),
+});
+
+export const TaskListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  status: TaskStatusSchema.optional(),
+  priority: TaskPrioritySchema.optional(),
+  assigned_employee_id: z.string().optional(),
+  dateFrom: z.string().datetime().optional(),
+  dateTo: z.string().datetime().optional(),
+  due_date_from: z.string().datetime().optional(),
+  due_date_to: z.string().datetime().optional(),
+  sortBy: z.enum(['created_at', 'updated_at', 'due_date', 'priority', 'progress']).optional().default('created_at'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  search: z.string().optional(),
+});
+
+
+export const TaskListResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    tasks: z.array(z.any()), // Will be typed as Task[] at runtime
+    page: z.number(),
+    limit: z.number(),
+    total: z.number(),
+    totalPages: z.number(),
+    hasMore: z.boolean(),
+  }),
+});
+
+export const TaskResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    task: z.any(), // Will be typed as Task at runtime
+  }),
+});
+
+export const TaskFormDataSchema = z.object({
+  title: z.string().min(1, 'Task title is required'),
+  description: z.string().optional(),
+  assignedEmployeeId: z.string().min(1, 'Assigned employee ID is required'),
+  priority: TaskPrioritySchema.default('MEDIUM'),
+  dueDate: z.string().optional(), // YYYY-MM-DD format for form inputs
+});
+
+export const TaskUpdateRequestSchema = z.object({
+  taskId: z.string().min(1, 'Task ID is required'),
+  status: TaskStatusSchema.optional(),
+  progress: z.number().min(0).max(100).optional(),
+  completionNotes: z.string().optional(),
+});

@@ -12,3 +12,6 @@ export * from './dealer';
 
 // Re-export verification status utilities
 export * from './verification-status';
+
+// Re-export API contract utilities
+export * from '../api-contract';

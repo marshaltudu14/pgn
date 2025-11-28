@@ -10,6 +10,10 @@ import {
   DailyAttendanceRecord,
   LocationData
 } from '@pgn/shared';
+import {
+  handleMobileApiResponse,
+  transformApiErrorMessage
+} from './utils/errorHandling';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Battery from 'expo-battery';
 import { create } from 'zustand';
@@ -291,8 +295,11 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Call attendance status API (uses authenticated user from JWT)
             const response = await api.get<AttendanceStatusResponse>(API_ENDPOINTS.ATTENDANCE_STATUS);
 
-            if (!response.success) {
-              const errorMessage = response.error || 'Failed to fetch attendance status';
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to fetch attendance status');
+
+            if (!handledResponse.success) {
+              const errorMessage = handledResponse.error || 'Failed to fetch attendance status';
 
               set({
                 isLoading: false,
@@ -302,7 +309,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               return;
             }
 
-            const apiData = response.data;
+            const apiData = handledResponse.data as AttendanceStatusResponse;
             if (!apiData) {
               throw new Error('No data received');
             }
@@ -389,19 +396,22 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Make API call
             const response = await api.post<any>(API_ENDPOINTS.ATTENDANCE_CHECKIN, apiRequest);
 
-            if (!response.success) {
-              throw new Error(response.error || 'Failed to check in');
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to check in');
+
+            if (!handledResponse.success) {
+              throw new Error(handledResponse.error || 'Failed to check in');
             }
 
-            const responseData = response.data;
+            const responseData = handledResponse.data as any;
 
             if (!responseData) {
               throw new Error('Invalid check-in response');
             }
 
             const result: AttendanceResponse = {
-              success: response.success,
-              message: response.message || 'Check-in successful',
+              success: true,
+              message: 'Check-in successful',
               timestamp: new Date(responseData.timestamp),
               checkInTime: new Date(responseData.checkInTime),
               verificationStatus: responseData.verificationStatus,
@@ -504,8 +514,11 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Call check-out API - security middleware will attach the user info
             const response = await api.post(API_ENDPOINTS.ATTENDANCE_CHECKOUT, apiRequest);
 
-            if (!response.success) {
-              const errorMessage = response.error || 'Check-out failed';
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Check-out failed');
+
+            if (!handledResponse.success) {
+              const errorMessage = handledResponse.error || 'Check-out failed';
 
               set({
                 isCheckingOut: false,
@@ -518,13 +531,13 @@ export const useAttendance = create<AttendanceStoreState>()(
               };
             }
 
-            const apiResponse: AttendanceResponse = response.data;
+            const apiResponse = handledResponse.data as any;
             const checkOutTime = apiResponse.timestamp ? new Date(apiResponse.timestamp) : new Date();
 
             // Convert API response to store format
             const result: AttendanceResponse = {
-              success: apiResponse.success,
-              message: apiResponse.message,
+              success: true,
+              message: 'Check-out successful',
               timestamp: checkOutTime,
               checkOutTime: checkOutTime,
               workHours: apiResponse.workHours,
@@ -605,23 +618,26 @@ export const useAttendance = create<AttendanceStoreState>()(
             // Make API call
             const response = await api.post<any>(API_ENDPOINTS.ATTENDANCE_CHECKOUT, emergencyRequest);
 
-            if (!response.success) {
-              throw new Error(response.error || 'Failed to check out');
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to check out');
+
+            if (!handledResponse.success) {
+              throw new Error(handledResponse.error || 'Failed to check out');
             }
 
-            const responseData = response.data;
+            const responseData = handledResponse.data;
             if (!responseData) {
               throw new Error('Invalid check-out response');
             }
 
             const result: AttendanceResponse = {
-              success: response.success,
-              message: response.message || 'Check-out successful',
-              timestamp: new Date(responseData.timestamp),
-              checkOutTime: new Date(responseData.checkOutTime),
-              workHours: responseData.workHours,
-              verificationStatus: responseData.verificationStatus,
-              attendanceId: responseData.attendanceId
+              success: true,
+              message: 'Emergency check-out successful',
+              timestamp: new Date((responseData as any).timestamp),
+              checkOutTime: new Date((responseData as any).checkOutTime),
+              workHours: (responseData as any).workHours,
+              verificationStatus: (responseData as any).verificationStatus,
+              attendanceId: (responseData as any).attendanceId
             };
 
             if (result.success) {
@@ -694,12 +710,15 @@ export const useAttendance = create<AttendanceStoreState>()(
             const url = queryString ? `${API_ENDPOINTS.ATTENDANCE_LIST}?${queryString}` : API_ENDPOINTS.ATTENDANCE_LIST;
             const response = await api.get<{ records: DailyAttendanceRecord[], page: number, limit: number, total: number, totalPages: number, hasMore: boolean }>(url);
 
-            if (!response.success || !response.data) {
-              throw new Error(response.error || 'Failed to fetch attendance history');
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to fetch attendance history');
+
+            if (!handledResponse.success || !handledResponse.data) {
+              throw new Error(handledResponse.error || 'Failed to fetch attendance history');
             }
 
-            // The actual data is in response.data (no more double wrapping)
-            const data = response.data;
+            // The actual data is in handledResponse.data
+            const data = handledResponse.data as any;
             if (!data || !data.records) {
               throw new Error('Invalid attendance history response structure');
             }

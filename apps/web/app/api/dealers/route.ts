@@ -3,24 +3,21 @@ import {
   listDealers,
   createDealer
 } from '@/services/dealer.service';
-import { DealerInsert } from '@pgn/shared';
+import {
+  DealerInsert,
+  DealerListParamsSchema,
+  DealerFormDataSchema,
+  DealerListResponseSchema,
+  BaseApiResponseSchema
+} from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import { apiContract } from '@pgn/shared/src/validation/build-time-checker';
 
 const getDealersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const { searchParams } = new URL(request.url);
-
-    // Parse query parameters
-    const params = {
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('itemsPerPage') || searchParams.get('limit') || '20'),
-      search: searchParams.get('search') || undefined,
-      shop_name: searchParams.get('shop_name') || undefined,
-      email: searchParams.get('email') || undefined,
-      phone: searchParams.get('phone') || undefined,
-      sort_by: searchParams.get('sort_by') || 'created_at',
-      sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || 'desc'
-    };
+    // Get validated query parameters from the middleware
+    const params = (request as any).validatedQuery;
 
     const result = await listDealers(params);
 
@@ -49,14 +46,8 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
 
 const createDealerHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const body = await request.json();
-    const dealerData: DealerInsert = {
-      name: body.name,
-      phone: body.phone || null,
-      address: body.address || null,
-      shop_name: body.shop_name || null,
-      email: body.email || null,
-    };
+    // Get validated body from the middleware
+    const dealerData = (request as any).validatedBody as DealerInsert;
 
     const result = await createDealer(dealerData);
 
@@ -80,5 +71,32 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
   }
 };
 
-export const GET = withSecurity(getDealersHandler);
-export const POST = withSecurity(createDealerHandler);
+// Add route definitions to API contract
+apiContract.addRoute({
+  path: '/api/dealers',
+  method: 'GET',
+  inputSchema: DealerListParamsSchema,
+  outputSchema: DealerListResponseSchema,
+  description: 'List dealers with pagination and filtering'
+});
+
+apiContract.addRoute({
+  path: '/api/dealers',
+  method: 'POST',
+  inputSchema: DealerFormDataSchema,
+  outputSchema: BaseApiResponseSchema,
+  description: 'Create a new dealer'
+});
+
+// Apply validation middleware, then security middleware
+export const GET = withSecurity(withApiValidation(getDealersHandler, {
+  query: DealerListParamsSchema,
+  response: DealerListResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));
+
+export const POST = withSecurity(withApiValidation(createDealerHandler, {
+  body: DealerFormDataSchema,
+  response: BaseApiResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));

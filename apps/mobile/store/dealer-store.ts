@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Dealer, DealerFilters, DealerInsert, DealerUpdate, DealerListResponse } from '@pgn/shared';
 import { api, ApiResponse } from '@/services/api-client';
 import { API_ENDPOINTS } from '@/constants/api';
+import { handleMobileApiResponse, transformApiErrorMessage } from './utils/errorHandling';
 
 interface DealerStoreState {
   // Data state
@@ -103,26 +104,30 @@ export const useDealerStore = create<DealerStoreState>()(
               `${API_ENDPOINTS.DEALERS}?${queryParams}`
             );
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to fetch dealers');
+
+            const dealerData = handledResponse.data as any;
+            if (handledResponse.success && dealerData) {
               set({
-                dealers: response.data.dealers,
+                dealers: dealerData.dealers,
                 pagination: {
-                  currentPage: response.data.pagination.currentPage,
-                  totalPages: response.data.pagination.totalPages,
-                  totalItems: response.data.pagination.totalItems,
-                  itemsPerPage: response.data.pagination.itemsPerPage,
-                  hasNextPage: currentPage < response.data.pagination.totalPages,
+                  currentPage: dealerData.pagination.currentPage,
+                  totalPages: dealerData.pagination.totalPages,
+                  totalItems: dealerData.pagination.totalItems,
+                  itemsPerPage: dealerData.pagination.itemsPerPage,
+                  hasNextPage: currentPage < dealerData.pagination.totalPages,
                   hasPreviousPage: currentPage > 1,
                 },
                 loading: false,
               });
             } else {
               set({
-                error: response.error || 'Failed to fetch dealers',
+                error: handledResponse.error || 'Failed to fetch dealers',
                 loading: false,
               });
             }
-            return response.data || {
+            return (handledResponse.data as DealerListResponse) || {
               dealers: [],
               pagination: {
                 currentPage: 1,
@@ -149,17 +154,24 @@ export const useDealerStore = create<DealerStoreState>()(
           try {
             const response = await api.post<Dealer>(API_ENDPOINTS.DEALERS, dealerData);
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to create dealer');
+
+            if (handledResponse.success && handledResponse.data) {
               // Refresh the list to get the updated data
               await get().fetchDealers({ refresh: true });
               set({ isCreating: false });
-              return response;
+              return handledResponse as ApiResponse<Dealer>;
             } else {
-              set({ error: response.error || 'Failed to create dealer', isCreating: false });
-              return response;
+              set({ error: handledResponse.error || 'Failed to create dealer', isCreating: false });
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to create dealer'
+              };
             }
           } catch (error) {
-            set({ error: 'Network error occurred while creating dealer', isCreating: false });
+            const errorMessage = transformApiErrorMessage(error);
+            set({ error: errorMessage, isCreating: false });
             throw error;
           }
         },
@@ -171,17 +183,24 @@ export const useDealerStore = create<DealerStoreState>()(
           try {
             const response = await api.put<Dealer>(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`, dealerData);
 
-            if (response.success && response.data) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to update dealer');
+
+            if (handledResponse.success && handledResponse.data) {
               // Refresh the list to get the updated data
               await get().fetchDealers({ refresh: true });
               set({ isUpdating: false });
-              return response;
+              return handledResponse as ApiResponse<Dealer>;
             } else {
-              set({ error: response.error || 'Failed to update dealer', isUpdating: false });
-              return response;
+              set({ error: handledResponse.error || 'Failed to update dealer', isUpdating: false });
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to update dealer'
+              };
             }
           } catch (error) {
-            set({ error: 'Network error occurred while updating dealer', isUpdating: false });
+            const errorMessage = transformApiErrorMessage(error);
+            set({ error: errorMessage, isUpdating: false });
             throw error;
           }
         },
@@ -193,17 +212,24 @@ export const useDealerStore = create<DealerStoreState>()(
           try {
             const response = await api.delete<void>(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`);
 
-            if (response.success) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to delete dealer');
+
+            if (handledResponse.success) {
               // Refresh the list to get the updated data
               await get().fetchDealers({ refresh: true });
               set({ isDeleting: false });
-              return response;
+              return handledResponse as ApiResponse<void>;
             } else {
-              set({ error: response.error || 'Failed to delete dealer', isDeleting: false });
-              return response;
+              set({ error: handledResponse.error || 'Failed to delete dealer', isDeleting: false });
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to delete dealer'
+              };
             }
           } catch (error) {
-            set({ error: 'Network error occurred while deleting dealer', isDeleting: false });
+            const errorMessage = transformApiErrorMessage(error);
+            set({ error: errorMessage, isDeleting: false });
             throw error;
           }
         },

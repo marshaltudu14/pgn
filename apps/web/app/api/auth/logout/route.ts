@@ -4,6 +4,14 @@ import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';
 import { jwtService } from '@/lib/jwt';
 import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  LogoutRequestSchema,
+  LogoutResponseSchema,
+  AuthErrorResponseSchema,
+  apiContract,
+  RATE_LIMITS
+} from '@pgn/shared';
 
 /**
  * POST /api/auth/logout
@@ -20,9 +28,15 @@ const logoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       return AuthErrorService.authError('User not found in token');
     }
 
-    // Extract token from Authorization header (security middleware already validated it)
-    const authHeader = req.headers.get('authorization');
-    const token = jwtService.extractTokenFromHeader(authHeader || '');
+    // Try to get token from validated request body first, then fallback to Authorization header
+    const body = (req as any).validatedBody;
+    let token = body?.token;
+
+    // If no token in body, try Authorization header
+    if (!token) {
+      const authHeader = req.headers.get('authorization');
+      token = jwtService.extractTokenFromHeader(authHeader || '');
+    }
 
     if (!token) {
       return AuthErrorService.authError('Token not found in request');
@@ -53,8 +67,24 @@ const logoutHandler = async (req: NextRequest): Promise<NextResponse> => {
   }
 };
 
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/auth/logout',
+  method: 'POST',
+  inputSchema: LogoutRequestSchema,
+  outputSchema: LogoutResponseSchema,
+  description: 'Logout user and invalidate token'
+});
+
+// Apply validation middleware FIRST, then security and rate limiting
+const logoutWithValidation = withApiValidation(logoutHandler, {
+  body: LogoutRequestSchema as any,
+  response: LogoutResponseSchema as any,
+  validateResponse: process.env.NODE_ENV === 'development',
+});
+
 // Logout requires authentication (default behavior)
-export const POST = withRateLimit(withSecurity(logoutHandler), apiRateLimit);
+export const POST = withRateLimit(withSecurity(logoutWithValidation), apiRateLimit);
 
 /**
  * Handle unsupported methods

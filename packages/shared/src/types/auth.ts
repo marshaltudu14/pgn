@@ -1,5 +1,7 @@
 // JWT and Authentication Types
 import { Database } from './supabase';
+import { z } from 'zod';
+import { BaseApiResponseSchema } from '../schemas/base';
 
 export type EmploymentStatus = 'ACTIVE' | 'SUSPENDED' | 'RESIGNED' | 'TERMINATED' | 'ON_LEAVE';
 
@@ -168,4 +170,147 @@ export interface GeneratedUserId {
   sequence: number;
   year: number;
 }
+
+// Zod schemas for API validation
+export const EmploymentStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']);
+
+export const LoginRequestSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const RefreshRequestSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+});
+
+export const LogoutRequestSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+});
+
+export const CreateEmployeeRequestSchema = z.object({
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email format'),
+  phone: z.string().optional(),
+  employment_status: EmploymentStatusSchema.default('ACTIVE'),
+  can_login: z.boolean().default(true),
+  assigned_cities: z.array(z.object({
+    city: z.string(),
+    state: z.string(),
+  })).default([]),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+});
+
+export const UpdateEmployeeRequestSchema = z.object({
+  first_name: z.string().min(1, 'First name is required').optional(),
+  last_name: z.string().min(1, 'Last name is required').optional(),
+  email: z.string().email('Invalid email format').optional(),
+  phone: z.string().optional(),
+  employment_status: EmploymentStatusSchema.optional(),
+  can_login: z.boolean().optional(),
+  assigned_cities: z.array(z.object({
+    city: z.string(),
+    state: z.string(),
+  })).optional(),
+});
+
+export const ChangeEmploymentStatusRequestSchema = z.object({
+  employment_status: EmploymentStatusSchema,
+  reason: z.string().optional(),
+  changed_by: z.string(),
+});
+
+export const EmployeeListParamsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  search: z.string().optional(),
+  employment_status: z.array(EmploymentStatusSchema).optional(),
+  primary_region: z.string().optional(),
+  assigned_regions: z.array(z.string()).optional(),
+  sort_by: z.string().default('created_at'),
+  sort_order: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export const LoginResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    token: z.string(),
+    refreshToken: z.string(),
+    expiresIn: z.number(),
+    employee: z.object({
+      id: z.string(),
+      humanReadableId: z.string(),
+      firstName: z.string(),
+      lastName: z.string(),
+      email: z.string(),
+      employmentStatus: EmploymentStatusSchema,
+      canLogin: z.boolean(),
+      department: z.string().optional(),
+      region: z.string().optional(),
+      startDate: z.string().optional(),
+      profilePhotoUrl: z.string().optional(),
+      phone: z.string().optional(),
+      primaryRegion: z.string().optional(),
+      regionCode: z.string().optional(),
+      assignedRegions: z.array(z.string()).optional(),
+    }),
+  }),
+});
+
+export const RefreshResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    token: z.string(),
+    refreshToken: z.string(),
+    expiresIn: z.number(),
+  }),
+});
+
+export const LogoutResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+  }),
+});
+
+export const UserResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    id: z.string(),
+    humanReadableId: z.string(),
+    employmentStatus: EmploymentStatusSchema,
+    canLogin: z.boolean(),
+  }),
+});
+
+export const AdminLogoutResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(true),
+  data: z.object({
+    message: z.string(),
+  }),
+});
+
+export const AuthErrorResponseSchema = BaseApiResponseSchema.extend({
+  success: z.literal(false),
+  error: z.string(),
+  code: z.enum([
+    'INVALID_CREDENTIALS',
+    'ACCOUNT_NOT_FOUND',
+    'ACCOUNT_SUSPENDED',
+    'EMPLOYMENT_ENDED',
+    'EMPLOYMENT_TERMINATED',
+    'EMPLOYMENT_ON_LEAVE',
+    'ACCOUNT_ACCESS_DENIED',
+    'EMAIL_NOT_CONFIRMED',
+    'RATE_LIMITED',
+    'VALIDATION_ERROR',
+    'SERVER_ERROR',
+    'NETWORK_ERROR',
+    'SESSION_EXPIRED',
+    'TOKEN_EXPIRED',
+    'ACCESS_DENIED',
+  ]).optional(),
+  employmentStatus: EmploymentStatusSchema.optional(),
+  retryAfter: z.number().optional(),
+});
 

@@ -3,25 +3,20 @@ import {
   listRetailers,
   createRetailer
 } from '@/services/retailer.service';
-import { RetailerInsert } from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  RetailerListParamsSchema,
+  RetailerFormDataSchema,
+  RetailerListResponseSchema,
+  RetailerCreatedResponseSchema
+} from '@pgn/shared';
+import { apiContract } from '@pgn/shared';
 
 const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const { searchParams } = new URL(request.url);
-
-    // Parse query parameters
-    const params = {
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('itemsPerPage') || searchParams.get('limit') || '20'),
-      search: searchParams.get('search') || undefined,
-      shop_name: searchParams.get('shop_name') || undefined,
-      email: searchParams.get('email') || undefined,
-      phone: searchParams.get('phone') || undefined,
-      dealer_id: searchParams.get('dealer_id') || undefined,
-      sort_by: searchParams.get('sort_by') || 'created_at',
-      sort_order: (searchParams.get('sort_order') as 'asc' | 'desc') || 'desc'
-    };
+    // Use validated query parameters from the middleware
+    const params = (request as NextRequest & { validatedQuery?: Record<string, unknown> }).validatedQuery;
 
     const result = await listRetailers(params);
 
@@ -50,17 +45,10 @@ const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> 
 
 const createRetailerHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const body = await request.json();
-    const retailerData: RetailerInsert = {
-      name: body.name,
-      phone: body.phone || null,
-      address: body.address || null,
-      shop_name: body.shop_name || null,
-      email: body.email || null,
-      dealer_id: body.dealer_id,
-    };
+    // Use validated body from the middleware
+    const retailerData = (request as NextRequest & { validatedBody?: Record<string, unknown> }).validatedBody || {};
 
-    const result = await createRetailer(retailerData);
+    const result = await createRetailer(retailerData as any);
 
     const response = NextResponse.json({
       success: true,
@@ -82,5 +70,36 @@ const createRetailerHandler = async (request: NextRequest): Promise<NextResponse
   }
 };
 
-export const GET = withSecurity(getRetailersHandler);
-export const POST = withSecurity(createRetailerHandler);
+// Add routes to API contract
+apiContract.addRoute({
+  path: '/api/retailers',
+  method: 'GET',
+  inputSchema: RetailerListParamsSchema,
+  outputSchema: RetailerListResponseSchema,
+  description: 'List retailers with pagination and filtering'
+});
+
+apiContract.addRoute({
+  path: '/api/retailers',
+  method: 'POST',
+  inputSchema: RetailerFormDataSchema,
+  outputSchema: RetailerCreatedResponseSchema,
+  description: 'Create a new retailer'
+});
+
+// Apply validation middleware before security middleware
+export const GET = withSecurity(
+  withApiValidation(getRetailersHandler, {
+    query: RetailerListParamsSchema,
+    response: RetailerListResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+export const POST = withSecurity(
+  withApiValidation(createRetailerHandler, {
+    body: RetailerFormDataSchema,
+    response: RetailerCreatedResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);

@@ -3,7 +3,13 @@ import { withRateLimit, apiRateLimit } from '@/lib/rate-limit';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { AuthErrorService } from '@/lib/auth-errors';
 import { authService } from '@/services/auth.service';
-import { RefreshRequest } from '@pgn/shared';
+import {
+  RefreshRequestSchema,
+  RefreshResponseSchema,
+  AuthErrorResponseSchema,
+  apiContract
+} from '@pgn/shared';
+import { withApiValidation } from '@/lib/api-validation';
 
 /**
  * POST /api/auth/refresh
@@ -11,42 +17,48 @@ import { RefreshRequest } from '@pgn/shared';
  * Validates an existing token and generates a new token with updated expiration
  */
 const refreshHandler = async (req: NextRequest): Promise<NextResponse> => {
+  // Get validated body from the validation middleware
+  const body = (req as any).validatedBody;
+
   try {
-    // Parse request body
-    const body = await req.json() as RefreshRequest;
+    // Attempt token refresh using auth service
+    const refreshResponse = await authService.refreshToken(body);
 
-    // Validate required fields
-    if (!body.token) {
-      return AuthErrorService.validationError('Token is required');
-    }
+    // Return success response wrapped in API response structure
+    const apiResponse = {
+      success: true,
+      data: refreshResponse,
+    };
 
-    try {
-      // Attempt token refresh using auth service
-      const refreshResponse = await authService.refreshToken(body);
+    const response = NextResponse.json(apiResponse);
 
-      // Return success response wrapped in API response structure
-      const apiResponse = {
-        success: true,
-        data: refreshResponse,
-      };
+    return addSecurityHeaders(response);
 
-      const response = NextResponse.json(apiResponse);
-
-      return addSecurityHeaders(response);
-
-    } catch (refreshError) {
-      const errorMessage = refreshError instanceof Error ? refreshError.message : 'Token refresh failed';
-      return AuthErrorService.authError(errorMessage);
-    }
-
-  } catch (error) {
-    console.error('Token refresh API error:', error);
-    return AuthErrorService.serverError('An unexpected error occurred during token refresh');
+  } catch (refreshError) {
+    const errorMessage = refreshError instanceof Error ? refreshError.message : 'Token refresh failed';
+    return AuthErrorService.authError(errorMessage);
   }
-};
+}
+
+// Add route to API contract
+apiContract.addRoute({
+  path: '/api/auth/refresh',
+  method: 'POST',
+  inputSchema: RefreshRequestSchema,
+  outputSchema: RefreshResponseSchema,
+  description: 'Refresh JWT token and get new expiration',
+  requiresAuth: true,
+  });
+
+// Apply validation middleware FIRST, then security and rate limiting
+const refreshWithValidation = withApiValidation(refreshHandler, {
+  body: RefreshRequestSchema as any,
+  response: RefreshResponseSchema as any,
+  validateResponse: process.env.NODE_ENV === 'development',
+});
 
 // Export with security middleware (no auth required) and rate limiting
-export const POST = withRateLimit(withSecurity(refreshHandler, { requireAuth: false }), apiRateLimit);
+export const POST = withRateLimit(withSecurity(refreshWithValidation, { requireAuth: false }), apiRateLimit);
 
 /**
  * Handle unsupported methods

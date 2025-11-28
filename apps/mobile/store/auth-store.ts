@@ -9,6 +9,12 @@ import {
 import { api } from '@/services/api-client';
 import { SessionManager, type Session } from '@/utils/auth-utils';
 import { API_ENDPOINTS } from '@/constants/api';
+import {
+  isValidationError,
+  transformApiErrorMessage,
+  handleMobileApiResponse,
+  parseAuthErrorCode
+} from './utils/errorHandling';
 
 interface AuthStoreState {
   // Authentication state
@@ -124,27 +130,35 @@ export const useAuth = create<AuthStoreState>()(
             // Call API
             const response = await api.post(API_ENDPOINTS.LOGIN, credentials);
 
-            if (!response.success) {
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Login failed');
+
+            if (!handledResponse.success) {
+              const errorMessage = handledResponse.error || 'Login failed';
+
               // Clear loading state and set error before returning
               set({
                 isAuthenticated: false,
                 isLoggingIn: false,
                 user: null,
-                error: response.error || 'Login failed',
+                error: errorMessage,
                 lastActivity: Date.now(),
               });
 
               return {
                 success: false,
-                error: response.error || 'Login failed',
+                error: errorMessage,
               };
             }
 
             // Handle response structure properly
-            // The API client may return wrapped or unwrapped responses
+            // Use the handled response data for consistency
             let responseData;
-            if (response.success && response.data && typeof response.data === 'object') {
+            if (handledResponse.data && typeof handledResponse.data === 'object') {
               // Response is in format: { success: true, data: { token, employee, ... } }
+              responseData = handledResponse.data;
+            } else if (response.success && response.data && typeof response.data === 'object') {
+              // Fallback to original response structure
               responseData = response.data;
             } else {
               // Response is in direct format
@@ -458,81 +472,19 @@ export const useAuth = create<AuthStoreState>()(
 
         // Parse authentication errors using error codes
         parseAuthError: (error: any): string => {
+          // Check for validation errors first
+          if (isValidationError(error)) {
+            return transformApiErrorMessage(error);
+          }
+
           // If error is an object with error code, use code-based mapping
           if (error && typeof error === 'object' && 'code' in error) {
             const errorCode = error.code;
-
-            switch (errorCode) {
-              case 'INVALID_CREDENTIALS':
-                return 'Invalid email or password.';
-              case 'ACCOUNT_NOT_FOUND':
-                return 'Employee account not found - contact administrator';
-              case 'ACCOUNT_SUSPENDED':
-                return 'Account suspended - contact administrator';
-              case 'EMPLOYMENT_ENDED':
-                return 'Employment ended - thank you for your service';
-              case 'EMPLOYMENT_TERMINATED':
-                return 'Employment terminated - contact HR';
-              case 'EMPLOYMENT_ON_LEAVE':
-                return 'Currently on leave - contact administrator if access needed';
-              case 'ACCOUNT_ACCESS_DENIED':
-                return 'Account access denied';
-              case 'EMAIL_NOT_CONFIRMED':
-                return 'Please confirm your email address';
-              case 'RATE_LIMITED':
-                return 'Too many login attempts. Please try again later';
-              case 'ACCESS_DENIED':
-                return 'Access denied. You may not have permission to login.';
-              case 'SESSION_EXPIRED':
-              case 'TOKEN_EXPIRED':
-                return 'Your session has expired. Please sign in again.';
-              case 'VALIDATION_ERROR':
-                return 'Invalid input. Please check your information and try again.';
-              case 'SERVER_ERROR':
-                return 'Server error. Please try again later.';
-              case 'NETWORK_ERROR':
-                return 'Network error. Please check your internet connection.';
-              default:
-                // Fall back to message if available
-                return error.message || 'An unexpected error occurred. Please try again.';
-            }
+            return parseAuthErrorCode(errorCode, error.message || error.error);
           }
 
-          // Fallback to text-based parsing for backwards compatibility
-          if (error instanceof Error) {
-            // Handle specific error cases
-            if (error.message.includes('NETWORK_ERROR')) {
-              return 'Network error. Please check your internet connection.';
-            }
-
-            if (error.message.includes('TIMEOUT')) {
-              return 'Request timed out. Please try again.';
-            }
-
-            if (error.message.includes('Authentication failed') ||
-                error.message.includes('UNAUTHORIZED') ||
-                error.message.includes('Invalid email or password') ||
-                error.message.includes('Invalid login credentials')) {
-              return 'Invalid email or password.';
-            }
-
-            if (error.message.includes('FORBIDDEN') ||
-                error.message.includes('Access denied')) {
-              return 'Access denied. You may not have permission to login.';
-            }
-
-            return error.message;
-          }
-
-          if (error && typeof error === 'object' && 'message' in error) {
-            return error.message;
-          }
-
-          if (typeof error === 'string') {
-            return error;
-          }
-
-          return 'An unexpected error occurred. Please try again.';
+          // Fallback to general error message transformation
+          return transformApiErrorMessage(error);
         },
 
         // Validate token with proper JWT validation

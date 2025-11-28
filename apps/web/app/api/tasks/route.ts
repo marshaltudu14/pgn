@@ -3,28 +3,22 @@ import {
   createTask,
   listTasks
 } from '@/services/task.service';
-import { CreateTaskRequest, TaskListParams, TaskStatus, TaskPriority } from '@pgn/shared';
+import {
+  CreateTaskRequest,
+  TaskListParams,
+  TaskListParamsSchema,
+  CreateTaskRequestSchema,
+  TaskListResponseSchema,
+  TaskResponseSchema
+} from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import { apiContract } from '@pgn/shared';
 
 const getTasksHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const { searchParams } = new URL(request.url);
-
-    // Parse query parameters
-    const params: TaskListParams = {
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('limit') || '50'),
-      status: searchParams.get('status') as TaskStatus || undefined,
-      priority: searchParams.get('priority') as TaskPriority || undefined,
-      assigned_employee_id: searchParams.get('assigned_employee_id') || undefined,
-            dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')!) : undefined,
-      dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')!) : undefined,
-      due_date_from: searchParams.get('due_date_from') ? new Date(searchParams.get('due_date_from')!) : undefined,
-      due_date_to: searchParams.get('due_date_to') ? new Date(searchParams.get('due_date_to')!) : undefined,
-      sortBy: searchParams.get('sortBy') as TaskListParams['sortBy'] || 'created_at',
-      sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
-      search: searchParams.get('search') || undefined,
-    };
+    // Use validated query parameters from middleware
+    const params = (request as NextRequest & { validatedQuery: TaskListParams }).validatedQuery;
 
     // The RLS policies will automatically handle role-based filtering at the database level
     const result = await listTasks(params);
@@ -51,19 +45,8 @@ const getTasksHandler = async (request: NextRequest): Promise<NextResponse> => {
 
 const createTaskHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
-    const body = await request.json();
-
-    // Validate required fields
-    if (!body.title || !body.assigned_employee_id) {
-      const response = NextResponse.json(
-        {
-          success: false,
-          error: 'Title and assigned employee ID are required'
-        },
-        { status: 400 }
-      );
-      return addSecurityHeaders(response);
-    }
+    // Use validated body from middleware
+    const body = (request as NextRequest & { validatedBody: CreateTaskRequest }).validatedBody;
 
     // Create task request - the RLS policies will handle permission checking
     const createData: CreateTaskRequest = {
@@ -111,5 +94,33 @@ const createTaskHandler = async (request: NextRequest): Promise<NextResponse> =>
   }
 };
 
-export const GET = withSecurity(getTasksHandler);
-export const POST = withSecurity(createTaskHandler);
+// Add route definitions to API contract
+apiContract.addRoute({
+  path: '/api/tasks',
+  method: 'GET',
+  inputSchema: TaskListParamsSchema,
+  outputSchema: TaskListResponseSchema,
+  description: 'List tasks with pagination and filtering',
+  requiresAuth: true
+});
+
+apiContract.addRoute({
+  path: '/api/tasks',
+  method: 'POST',
+  inputSchema: CreateTaskRequestSchema,
+  outputSchema: TaskResponseSchema,
+  description: 'Create a new task',
+  requiresAuth: true
+});
+
+export const GET = withSecurity(withApiValidation(getTasksHandler, {
+  query: TaskListParamsSchema,
+  response: TaskListResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));
+
+export const POST = withSecurity(withApiValidation(createTaskHandler, {
+  body: CreateTaskRequestSchema,
+  response: TaskResponseSchema,
+  validateResponse: process.env.NODE_ENV === 'development'
+}));

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthenticatedUser, LoginRequest } from '@pgn/shared';
 import { useUIStore } from './uiStore';
+import { handleApiResponse, getAuthHeaders } from './utils/errorHandling';
 
 interface AuthState {
   user: AuthenticatedUser | null;
@@ -84,69 +85,30 @@ export const useAuthStore = create<AuthState>()(
 
           const response = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify(loginRequest),
           });
 
-          let data;
-          try {
-            data = await response.json();
-          } catch (parseError) {
-            console.error('Failed to parse response:', parseError);
+          const result = await handleApiResponse(response, 'Login failed');
+
+          if (!result.success) {
             set({ isLoading: false });
             return {
               success: false,
-              error: 'Server error: Invalid response format. Please try again.'
+              error: result.error
             };
           }
 
-          if (!response.ok) {
-            set({ isLoading: false });
-            const errorMessage = 'error' in data ? data.error : 'Login failed';
-
-            // Show user-friendly error messages
-            if (response.status === 500) {
-              return {
-                success: false,
-                error: 'Server is experiencing issues. Please try again in a moment.'
-              };
-            } else if (response.status === 429) {
-              return {
-                success: false,
-                error: 'Too many login attempts. Please wait a few minutes before trying again.'
-              };
-            } else if (response.status === 401 || response.status === 403) {
-              return {
-                success: false,
-                error: errorMessage || 'Invalid credentials. Please check your email and password.'
-              };
-            } else {
-              return { success: false, error: errorMessage };
-            }
-          }
-
-          // API returns { success: true, data: { token, employee, ... } }
-          if (!data.success || !data.data) {
-            set({ isLoading: false });
-            return {
-              success: false,
-              error: data.error || 'Invalid response from server'
-            };
-          }
-
-          const responseData = data.data;
-          const { token, employee } = responseData;
-
-          // Check if employee data exists
-          if (!employee) {
+          const responseData = result.data as any;
+          if (!responseData || !responseData.employee) {
             set({ isLoading: false });
             return {
               success: false,
               error: 'Invalid user data received from server'
             };
           }
+
+          const { token, employee } = responseData;
 
           // Admin detection: Only admins can login to web dashboard
           // Admins don't get JWT tokens (empty token), employees do
@@ -176,14 +138,6 @@ export const useAuthStore = create<AuthState>()(
           console.error('Login error:', error);
           set({ isLoading: false });
 
-          // Network or other errors
-          if (error instanceof TypeError && error.message.includes('fetch')) {
-            return {
-              success: false,
-              error: 'Network error. Please check your internet connection and try again.'
-            };
-          }
-
           return {
             success: false,
             error: 'An unexpected error occurred. Please try again.'
@@ -200,19 +154,14 @@ export const useAuthStore = create<AuthState>()(
           if (storedState.token && storedState.token !== '') {
             // Employee logout: Call logout API with JWT token
             try {
-              const headers: HeadersInit = {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${storedState.token}`,
-              };
-
               const response = await fetch('/api/auth/logout', {
                 method: 'POST',
-                headers,
+                headers: getAuthHeaders(storedState.token),
                 signal: AbortSignal.timeout(5000), // 5 second timeout
               });
 
               if (!response.ok) {
-                console.error('Logout API error:', response.status, await response.text());
+                console.error('Logout API error:', response.status);
                 // Continue with local logout even if API fails
               }
             } catch (apiError) {
@@ -224,9 +173,7 @@ export const useAuthStore = create<AuthState>()(
             try {
               const response = await fetch('/api/auth/admin-logout', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
+                headers: getAuthHeaders(),
                 signal: AbortSignal.timeout(5000),
               });
 

@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Retailer } from '@pgn/shared';
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
+import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { Search, Plus, Edit, Eye, Store, Mail, Phone, Building2 } from 'lucide-react';
 
 interface RetailerListProps {
@@ -43,18 +44,17 @@ export function RetailerList({
 }: RetailerListProps) {
   const {
     retailers,
-    dealers,
     loading,
-    loadingDealers,
     error,
     pagination,
     filters,
     fetchRetailers,
-    fetchDealers,
     setFilters,
     setPagination,
     clearError,
   } = useRetailerStore();
+
+  const { dealers, fetchDealers } = useDealerStore();
 
   useEffect(() => {
     fetchDealers();
@@ -178,7 +178,7 @@ export function RetailerList({
           <Select
             value={filters.dealer_id || 'all'}
             onValueChange={(value) => handleDealerFilterChange(value)}
-            disabled={loadingDealers}
+            disabled={false}
           >
             <SelectTrigger className="w-full sm:w-48">
               <Building2 className="h-4 w-4 mr-2" />
@@ -188,7 +188,7 @@ export function RetailerList({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Dealers</SelectItem>
-              {dealers.map((dealer) => (
+              {dealers?.map((dealer: any) => (
                 <SelectItem key={dealer.id} value={dealer.id}>
                   {dealer.name}
                   {dealer.shop_name && ` - ${dealer.shop_name}`}

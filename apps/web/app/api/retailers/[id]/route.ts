@@ -4,12 +4,22 @@ import {
   updateRetailer,
   deleteRetailer
 } from '@/services/retailer.service';
-import { RetailerUpdate } from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { withApiValidation } from '@/lib/api-validation';
+import {
+  RetailerFormDataSchema,
+  RetailerResponseSchema,
+  RetailerUpdatedResponseSchema,
+  RetailerDeletedResponseSchema
+} from '@pgn/shared';
+import { RouteParamsSchema } from '@pgn/shared/src/schemas/base';
+import { apiContract } from '@pgn/shared';
 
-const getRetailerHandler = async (request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+const getRetailerHandler = async (request: NextRequest, context: { params?: Promise<{ id: string }> }): Promise<NextResponse> => {
   try {
-    const { id } = await params;
+    // Use validated parameters from the middleware, or fall back to context params
+    const validatedParams = (request as NextRequest & { validatedParams?: { id: string } }).validatedParams;
+    const { id } = validatedParams || (context.params ? await context.params : { id: '' });
     const retailer = await getRetailerById(id);
 
     const response = NextResponse.json({
@@ -32,20 +42,14 @@ const getRetailerHandler = async (request: NextRequest, { params }: { params: Pr
   }
 };
 
-const updateRetailerHandler = async (request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+const updateRetailerHandler = async (request: NextRequest, context: { params?: Promise<{ id: string }> }): Promise<NextResponse> => {
   try {
-    const { id } = await params;
-    const body = await request.json();
-    const retailerData: RetailerUpdate = {
-      name: body.name,
-      phone: body.phone || null,
-      address: body.address || null,
-      shop_name: body.shop_name || null,
-      email: body.email || null,
-      dealer_id: body.dealer_id,
-    };
+    // Use validated parameters and body from the middleware
+    const validatedParams = (request as NextRequest & { validatedParams?: { id: string } }).validatedParams;
+    const { id } = validatedParams || (context.params ? await context.params : { id: '' });
+    const retailerData = (request as NextRequest & { validatedBody?: Record<string, unknown> }).validatedBody || {};
 
-    const result = await updateRetailer(id, retailerData);
+    const result = await updateRetailer(id, retailerData as any);
 
     const response = NextResponse.json({
       success: true,
@@ -67,9 +71,11 @@ const updateRetailerHandler = async (request: NextRequest, { params }: { params:
   }
 };
 
-const deleteRetailerHandler = async (request: NextRequest, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+const deleteRetailerHandler = async (request: NextRequest, context: { params?: Promise<{ id: string }> }): Promise<NextResponse> => {
   try {
-    const { id } = await params;
+    // Use validated parameters from the middleware
+    const validatedParams = (request as NextRequest & { validatedParams?: { id: string } }).validatedParams;
+    const { id } = validatedParams || (context.params ? await context.params : { id: '' });
     await deleteRetailer(id);
 
     const response = NextResponse.json({
@@ -92,6 +98,53 @@ const deleteRetailerHandler = async (request: NextRequest, { params }: { params:
   }
 };
 
-export const GET = withSecurity(getRetailerHandler);
-export const PUT = withSecurity(updateRetailerHandler);
-export const DELETE = withSecurity(deleteRetailerHandler);
+// Add routes to API contract
+apiContract.addRoute({
+  path: '/api/retailers/[id]',
+  method: 'GET',
+  inputSchema: RouteParamsSchema,
+  outputSchema: RetailerResponseSchema,
+  description: 'Get a single retailer by ID'
+});
+
+apiContract.addRoute({
+  path: '/api/retailers/[id]',
+  method: 'PUT',
+  inputSchema: RetailerFormDataSchema, // Body schema is the primary input for documentation
+  outputSchema: RetailerUpdatedResponseSchema,
+  description: 'Update a retailer by ID'
+});
+
+apiContract.addRoute({
+  path: '/api/retailers/[id]',
+  method: 'DELETE',
+  inputSchema: RouteParamsSchema,
+  outputSchema: RetailerDeletedResponseSchema,
+  description: 'Delete a retailer by ID'
+});
+
+// Apply validation middleware before security middleware
+export const GET = withSecurity(
+  withApiValidation(getRetailerHandler, {
+    params: RouteParamsSchema,
+    response: RetailerResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+export const PUT = withSecurity(
+  withApiValidation(updateRetailerHandler, {
+    params: RouteParamsSchema,
+    body: RetailerFormDataSchema,
+    response: RetailerUpdatedResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);
+
+export const DELETE = withSecurity(
+  withApiValidation(deleteRetailerHandler, {
+    params: RouteParamsSchema,
+    response: RetailerDeletedResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development'
+  })
+);

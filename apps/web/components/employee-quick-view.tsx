@@ -189,17 +189,39 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
             Assigned Cities
           </h3>
           <div className="space-y-2">
-            {employee.assigned_cities && employee.assigned_cities.length > 0 ? (
-              employee.assigned_cities.map((city: any, index: number) => (
-                <div key={index} className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
-                  {typeof city === 'string' ? city : city.city || JSON.stringify(city)}
+            {(() => {
+              if (!employee.assigned_cities) {
+                return (
+                  <div className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
+                    -
+                  </div>
+                );
+              }
+
+              let cities: any[] = [];
+              try {
+                cities = typeof employee.assigned_cities === 'string'
+                  ? JSON.parse(employee.assigned_cities)
+                  : Array.isArray(employee.assigned_cities)
+                    ? employee.assigned_cities
+                    : [];
+              } catch {
+                // If parsing fails, treat as single string
+                cities = [employee.assigned_cities];
+              }
+
+              return cities.length > 0 ? (
+                cities.map((city: any, index: number) => (
+                  <div key={index} className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
+                    {typeof city === 'string' ? city : city.city || JSON.stringify(city)}
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
+                  -
                 </div>
-              ))
-            ) : (
-              <div className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
-                -
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
 

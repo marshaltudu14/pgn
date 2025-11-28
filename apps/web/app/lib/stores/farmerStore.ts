@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { Farmer, FarmerFilters, FarmerListResponse, Retailer, FarmerInsert, FarmerUpdate } from '@pgn/shared';
+import { Farmer, FarmerFilters, FarmerListResponse, Retailer, FarmerInsert, FarmerUpdate, FarmerFormData } from '@pgn/shared';
 import { useAuthStore } from './authStore';
+import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface FarmerState {
   farmers: Farmer[];
@@ -20,8 +21,8 @@ interface FarmerState {
 
   fetchFarmers: (params?: Partial<{ page: number; itemsPerPage: number; filters: FarmerFilters }>) => Promise<void>;
   fetchRetailers: () => Promise<void>;
-  createFarmer: (farmerData: FarmerInsert) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
-  updateFarmer: (id: string, farmerData: FarmerUpdate) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
+  createFarmer: (farmerData: FarmerFormData) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
+  updateFarmer: (id: string, farmerData: FarmerFormData) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
   deleteFarmer: (id: string) => Promise<{ success: boolean; error?: string }>;
   setFilters: (filters: Partial<FarmerFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -30,47 +31,6 @@ interface FarmerState {
   refetch: () => Promise<void>;
 }
 
-// Helper function to get authentication headers
-const getAuthHeaders = () => {
-  const token = useAuthStore.getState().token;
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-client-info': 'pgn-web-client',
-    'User-Agent': 'pgn-admin-dashboard/1.0.0',
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  return headers;
-};
-
-/**
- * Transform technical error messages into user-friendly ones
- */
-function getUserFriendlyErrorMessage(error: string): string {
-  const cleanError = error.replace(/AuthApiError:\s*/, '').replace(/DatabaseError:\s*/, '').trim();
-
-  if (cleanError.includes('new row violates row-level security policy')) {
-    return 'You do not have permission to perform this action. Please contact your administrator.';
-  }
-
-  if (cleanError.includes('duplicate key')) {
-    return 'A farmer with these details already exists.';
-  }
-
-  if (cleanError.includes('Network connection failed')) {
-    return 'Network connection failed. Please check your internet connection and try again.';
-  }
-
-  if (cleanError.includes('Daily edit limit exceeded')) {
-    return 'You have reached your daily edit limit. Please try again tomorrow.';
-  }
-
-  return cleanError || 'An unexpected error occurred. Please try again.';
-}
 
 export const useFarmerStore = create<FarmerState>((set, get) => ({
   farmers: [],
@@ -110,16 +70,22 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
         ...(filters.dealer_id && { dealer_id: filters.dealer_id }),
       });
 
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/farmers?${searchParams}`, {
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to fetch farmers');
+      const result = await handleApiResponse(response, 'Failed to fetch farmers');
+
+      if (!result.success) {
+        set({
+          error: result.error || 'Failed to fetch farmers',
+          loading: false,
+        });
+        return;
       }
 
-      const data: FarmerListResponse = await response.json();
+      const data: FarmerListResponse = result.data as FarmerListResponse;
 
       set({
         farmers: data.farmers,
@@ -135,9 +101,9 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
         loading: false,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch farmers';
+      const errorMessage = transformApiErrorMessage(error);
       set({
-        error: getUserFriendlyErrorMessage(errorMessage),
+        error: errorMessage,
         loading: false,
       });
     }
@@ -147,8 +113,9 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
     set({ loadingRetailers: true });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch('/api/retailers?limit=1000', {
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
       if (!response.ok) {
@@ -163,74 +130,83 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
     }
   },
 
-  createFarmer: async (farmerData) => {
+  createFarmer: async (farmerData: FarmerFormData) => {
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch('/api/farmers', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(farmerData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to create farmer');
+      const result = await handleApiResponse(response, 'Failed to create farmer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to create farmer', loading: false });
+        return { success: false, error: result.error };
       }
 
-      const data = await response.json();
+      const data: Farmer = result.data as Farmer;
 
       // Refetch the list to get updated data
       await get().fetchFarmers();
 
       return { success: true, data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create farmer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
-  updateFarmer: async (id, farmerData) => {
+  updateFarmer: async (id: string, farmerData: FarmerFormData) => {
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/farmers/${id}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
         body: JSON.stringify(farmerData),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update farmer');
+      const result = await handleApiResponse(response, 'Failed to update farmer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to update farmer', loading: false });
+        return { success: false, error: result.error };
       }
 
-      const data = await response.json();
+      const data: Farmer = result.data as Farmer;
 
       // Refetch the list to get updated data
       await get().fetchFarmers();
 
       return { success: true, data };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update farmer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 
-  deleteFarmer: async (id) => {
+  deleteFarmer: async (id: string) => {
     set({ loading: true, error: null });
 
     try {
+      const token = useAuthStore.getState().token;
       const response = await fetch(`/api/farmers/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders(token),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to delete farmer');
+      const result = await handleApiResponse(response, 'Failed to delete farmer');
+
+      if (!result.success) {
+        set({ error: result.error || 'Failed to delete farmer', loading: false });
+        return { success: false, error: result.error };
       }
 
       // Refetch the list to get updated data
@@ -238,9 +214,9 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
 
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete farmer';
-      set({ error: getUserFriendlyErrorMessage(errorMessage), loading: false });
-      return { success: false, error: getUserFriendlyErrorMessage(errorMessage) };
+      const errorMessage = transformApiErrorMessage(error);
+      set({ error: errorMessage, loading: false });
+      return { success: false, error: errorMessage };
     }
   },
 

@@ -1,41 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchRegions } from '@/services/regions.service';
-import { searchRegionsSchema } from '@pgn/shared';
+import {
+  searchRegionsSchema,
+  RegionSearchResponseSchema,
+} from '@pgn/shared';
 import { z } from 'zod';
+import { withApiValidation } from '@/lib/api-validation';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
+import { apiContract } from '@pgn/shared';
+
+// Type extension for validated request
+interface ValidatedNextRequest extends NextRequest {
+  validatedQuery?: z.infer<typeof searchRegionsSchema>;
+}
 
 // GET /api/regions/search - Search regions
-const searchRegionsHandler = async (request: NextRequest): Promise<NextResponse> => {
-  try {
-    const { searchParams } = new URL(request.url);
+const searchRegionsHandler = withApiValidation(
+  async (req: NextRequest): Promise<NextResponse> => {
+    try {
+      // Extract search parameters from validated query
+      const query = (req as ValidatedNextRequest).validatedQuery!;
 
-    // Parse and validate query parameters
-    const query = searchRegionsSchema.parse(Object.fromEntries(searchParams));
+      const result = await searchRegions(query.q, {
+        page: query.page,
+        limit: query.limit,
+      });
 
-    const result = await searchRegions(query.q, {
-      page: query.page,
-      limit: query.limit,
-    });
+      const response = NextResponse.json(result);
+      return addSecurityHeaders(response);
+    } catch (error) {
+      console.error('Error searching regions:', error);
 
-    const response = NextResponse.json(result);
-    return addSecurityHeaders(response);
-  } catch (error) {
-    console.error('Error searching regions:', error);
-
-    if (error instanceof z.ZodError) {
       const response = NextResponse.json(
-        { error: 'Invalid query parameters', details: error.errors },
-        { status: 400 }
+        { error: 'Internal server error' },
+        { status: 500 }
       );
       return addSecurityHeaders(response);
     }
-
-    const response = NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-    return addSecurityHeaders(response);
+  },
+  {
+    query: searchRegionsSchema,
+    response: RegionSearchResponseSchema,
+    validateResponse: process.env.NODE_ENV === 'development',
   }
-};
+);
+
+// Add route definition to API contract
+apiContract.addRoute({
+  path: '/api/regions/search',
+  method: 'GET',
+  inputSchema: searchRegionsSchema,
+  outputSchema: RegionSearchResponseSchema,
+  description: 'Search regions by text across state and city fields'
+});
 
 export const GET = withSecurity(searchRegionsHandler);

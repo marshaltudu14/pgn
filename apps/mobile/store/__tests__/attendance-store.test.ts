@@ -1357,6 +1357,14 @@ describe('Attendance Store', () => {
   });
 
   describe('Offline Queue Management', () => {
+    beforeEach(() => {
+      // Clear the attendance store state before each test in this section
+      const { result } = renderHook(() => useAttendance());
+      act(() => {
+        result.current.clearOfflineQueue();
+      });
+    });
+
     it('should load offline queue from storage', async () => {
       const mockQueue = [
         {

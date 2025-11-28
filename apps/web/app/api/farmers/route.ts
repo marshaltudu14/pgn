@@ -27,14 +27,19 @@ const getFarmersHandler = async (request: NextRequest): Promise<NextResponse> =>
     const result = await listFarmers(params);
 
     const response = NextResponse.json({
-      farmers: result.farmers,
-      pagination: result.pagination
+      success: true,
+      data: {
+        farmers: result.farmers,
+        pagination: result.pagination
+      },
+      message: 'Farmers retrieved successfully'
     });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching farmers:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch farmers',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -58,12 +63,17 @@ const createFarmerHandler = async (request: NextRequest): Promise<NextResponse> 
 
     const result = await createFarmer(farmerData);
 
-    const response = NextResponse.json(result);
+    const response = NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Farmer created successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error creating farmer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to create farmer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

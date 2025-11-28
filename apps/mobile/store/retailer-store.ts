@@ -3,7 +3,7 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Retailer, RetailerFilters, RetailerInsert, RetailerUpdate, RetailerListResponse } from '@pgn/shared';
 import { api, ApiResponse } from '@/services/api-client';
-import { API_ENDPOINTS, buildApiUrl } from '@/constants/api';
+import { API_ENDPOINTS } from '@/constants/api';
 
 interface RetailerStoreState {
   // Data state
@@ -100,7 +100,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
             });
 
             const response = await api.get<RetailerListResponse>(
-              `${buildApiUrl(API_ENDPOINTS.RETAILERS)}?${queryParams}`
+              `${API_ENDPOINTS.RETAILERS}?${queryParams}`
             );
 
             if (response.success && response.data) {
@@ -147,7 +147,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
           set({ isCreating: true, error: null });
 
           try {
-            const response = await api.post<Retailer>(buildApiUrl(API_ENDPOINTS.RETAILERS), retailerData);
+            const response = await api.post<Retailer>(API_ENDPOINTS.RETAILERS, retailerData);
 
             if (response.success && response.data) {
               // Refresh the list to get the updated data
@@ -169,7 +169,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
           set({ isUpdating: true, error: null });
 
           try {
-            const response = await api.put<Retailer>(buildApiUrl(`${API_ENDPOINTS.RETAILER_BY_ID}/${id}`), retailerData);
+            const response = await api.put<Retailer>(`${API_ENDPOINTS.RETAILER_BY_ID}/${id}`, retailerData);
 
             if (response.success && response.data) {
               // Refresh the list to get the updated data
@@ -191,7 +191,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
           set({ isDeleting: true, error: null });
 
           try {
-            const response = await api.delete<void>(buildApiUrl(`${API_ENDPOINTS.RETAILER_BY_ID}/${id}`));
+            const response = await api.delete<void>(`${API_ENDPOINTS.RETAILER_BY_ID}/${id}`);
 
             if (response.success) {
               // Refresh the list to get the updated data
@@ -213,7 +213,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
           set({ loading: true, error: null });
 
           try {
-            const response = await api.get<Retailer>(buildApiUrl(`${API_ENDPOINTS.RETAILER_BY_ID}/${id}`));
+            const response = await api.get<Retailer>(`${API_ENDPOINTS.RETAILER_BY_ID}/${id}`);
 
             if (response.success && response.data) {
               set({ loading: false });
@@ -236,7 +236,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
               limit: limit.toString(),
             });
 
-            const response = await api.get<Retailer[]>(`${buildApiUrl(API_ENDPOINTS.RETAILERS)}?${queryParams}`);
+            const response = await api.get<Retailer[]>(`${API_ENDPOINTS.RETAILERS}?${queryParams}`);
 
             if (response.success && response.data) {
               return response;

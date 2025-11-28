@@ -5,7 +5,6 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -17,6 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
 import { Calendar, CheckSquare, Home, LogOut, Map, Settings, Users, Building2, Store, Tractor } from 'lucide-react';
 import Image from 'next/image';
@@ -25,53 +25,75 @@ import { usePathname } from 'next/navigation';
 import React from 'react';
 import ErrorBoundary from './dashboard/components/ui/error-boundary';
 
-const navigationItems = [
+const navigationSections = [
   {
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: Home,
+    title: 'Main',
+    items: [
+      {
+        title: 'Dashboard',
+        url: '/dashboard',
+        icon: Home,
+      },
+      {
+        title: 'Tasks',
+        url: '/dashboard/tasks',
+        icon: CheckSquare,
+      },
+    ],
   },
   {
-    title: 'Employees',
-    url: '/dashboard/employees',
-    icon: Users,
+    title: 'People Management',
+    items: [
+      {
+        title: 'Employees',
+        url: '/dashboard/employees',
+        icon: Users,
+      },
+      {
+        title: 'Dealers',
+        url: '/dashboard/dealers',
+        icon: Building2,
+      },
+      {
+        title: 'Retailers',
+        url: '/dashboard/retailers',
+        icon: Store,
+      },
+      {
+        title: 'Farmers',
+        url: '/dashboard/farmers',
+        icon: Tractor,
+      },
+    ],
   },
   {
-    title: 'Dealers',
-    url: '/dashboard/dealers',
-    icon: Building2,
+    title: 'Operations',
+    items: [
+      {
+        title: 'Regions',
+        url: '/dashboard/regions',
+        icon: Map,
+      },
+      {
+        title: 'Attendance',
+        url: '/dashboard/attendance',
+        icon: Calendar,
+      },
+    ],
   },
   {
-    title: 'Retailers',
-    url: '/dashboard/retailers',
-    icon: Store,
-  },
-  {
-    title: 'Farmers',
-    url: '/dashboard/farmers',
-    icon: Tractor,
-  },
-  {
-    title: 'Regions',
-    url: '/dashboard/regions',
-    icon: Map,
-  },
-  {
-    title: 'Attendance',
-    url: '/dashboard/attendance',
-    icon: Calendar,
-  },
-  {
-    title: 'Tasks',
-    url: '/dashboard/tasks',
-    icon: CheckSquare,
-  },
-  {
-    title: 'Settings',
-    url: '/dashboard/settings',
-    icon: Settings,
+    title: 'System',
+    items: [
+      {
+        title: 'Settings',
+        url: '/dashboard/settings',
+        icon: Settings,
+      },
+    ],
   },
 ];
+
+const navigationItems = navigationSections.flatMap(section => section.items);
 
 // Wrapper component to enable swipe gestures inside SidebarProvider
 function SidebarSwipeWrapper({ children }: { children: React.ReactNode }) {
@@ -86,7 +108,7 @@ export default function DashboardLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isLoading } = useAuthStore();
   const pathname = usePathname();
 
   return (
@@ -116,39 +138,31 @@ export default function DashboardLayoutClient({
             </SidebarHeader>
 
             <SidebarContent>
-              <SidebarGroup>
-                <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {navigationItems.map(item => (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={pathname === item.url}
-                        >
-                          <Link href={item.url}>
-                            <item.icon />
-                            <span>{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
+              {navigationSections.map((section) => (
+                <SidebarGroup key={section.title}>
+                  <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {section.items.map(item => (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={pathname === item.url}
+                          >
+                            <Link href={item.url}>
+                              <item.icon />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              ))}
             </SidebarContent>
 
-            <SidebarFooter>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={logout}>
-                    <LogOut />
-                    <span>Logout</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarFooter>
-          </Sidebar>
+            </Sidebar>
 
           <SidebarInset className="md:rounded-xl md:shadow-sm md:ml-2 md:border md:border-sidebar-border">
             <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
@@ -161,6 +175,17 @@ export default function DashboardLayoutClient({
               </div>
               <div className="flex items-center gap-4">
                 <ThemeToggle />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={logout}
+                  title="Logout"
+                  className="cursor-pointer"
+                  disabled={isLoading}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="sr-only">Logout</span>
+                </Button>
                 <span className="text-sm font-medium text-foreground">
                   {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email}
                 </span>

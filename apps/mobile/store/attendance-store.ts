@@ -1019,18 +1019,18 @@ export const useAttendance = create<AttendanceStoreState>()(
           const { locationHistory } = get();
 
           // Add every location (no movement threshold filter)
-          set({
-            locationHistory: [...locationHistory, location],
-            lastLocationUpdate: new Date(),
-          });
+          const newLocationHistory = [...locationHistory, location];
 
           // Keep only recent location history (last 100 points)
           const maxHistoryLength = 100;
-          if (locationHistory.length > maxHistoryLength) {
-            set(state => ({
-              locationHistory: state.locationHistory.slice(-maxHistoryLength),
-            }));
-          }
+          const trimmedHistory = newLocationHistory.length > maxHistoryLength
+            ? newLocationHistory.slice(-maxHistoryLength)
+            : newLocationHistory;
+
+          set({
+            locationHistory: trimmedHistory,
+            lastLocationUpdate: new Date(),
+          });
         },
 
         // Send location update to server
@@ -1038,13 +1038,13 @@ export const useAttendance = create<AttendanceStoreState>()(
           try {
             const { currentAttendanceId } = get();
 
+            // Always update local state first
+            get().updateLocation(location);
+            get().setBatteryLevel(batteryLevel);
+
             if (!currentAttendanceId) {
               return;
             }
-
-            // Update local state
-            get().updateLocation(location);
-            get().setBatteryLevel(batteryLevel);
 
             // Call API with attendance ID
             await api.post(`/attendance/${currentAttendanceId}/location-update`, {

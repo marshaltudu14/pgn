@@ -3,7 +3,7 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Farmer, FarmerFilters, FarmerInsert, FarmerUpdate, FarmerListResponse } from '@pgn/shared';
 import { api, ApiResponse } from '@/services/api-client';
-import { API_ENDPOINTS, buildApiUrl } from '@/constants/api';
+import { API_ENDPOINTS } from '@/constants/api';
 
 interface FarmerStoreState {
   // Data state
@@ -100,7 +100,7 @@ export const useFarmerStore = create<FarmerStoreState>()(
             });
 
             const response = await api.get<FarmerListResponse>(
-              `${buildApiUrl(API_ENDPOINTS.FARMERS)}?${queryParams}`
+              `${API_ENDPOINTS.FARMERS}?${queryParams}`
             );
 
             if (response.success && response.data) {
@@ -147,7 +147,7 @@ export const useFarmerStore = create<FarmerStoreState>()(
           set({ isCreating: true, error: null });
 
           try {
-            const response = await api.post<Farmer>(buildApiUrl(API_ENDPOINTS.FARMERS), farmerData);
+            const response = await api.post<Farmer>(API_ENDPOINTS.FARMERS, farmerData);
 
             if (response.success && response.data) {
               // Refresh the list to get the updated data
@@ -169,7 +169,7 @@ export const useFarmerStore = create<FarmerStoreState>()(
           set({ isUpdating: true, error: null });
 
           try {
-            const response = await api.put<Farmer>(buildApiUrl(`${API_ENDPOINTS.FARMER_BY_ID}/${id}`), farmerData);
+            const response = await api.put<Farmer>(`${API_ENDPOINTS.FARMER_BY_ID}/${id}`, farmerData);
 
             if (response.success && response.data) {
               // Refresh the list to get the updated data
@@ -191,7 +191,7 @@ export const useFarmerStore = create<FarmerStoreState>()(
           set({ isDeleting: true, error: null });
 
           try {
-            const response = await api.delete<void>(buildApiUrl(`${API_ENDPOINTS.FARMER_BY_ID}/${id}`));
+            const response = await api.delete<void>(`${API_ENDPOINTS.FARMER_BY_ID}/${id}`);
 
             if (response.success) {
               // Refresh the list to get the updated data
@@ -213,7 +213,7 @@ export const useFarmerStore = create<FarmerStoreState>()(
           set({ loading: true, error: null });
 
           try {
-            const response = await api.get<Farmer>(buildApiUrl(`${API_ENDPOINTS.FARMER_BY_ID}/${id}`));
+            const response = await api.get<Farmer>(`${API_ENDPOINTS.FARMER_BY_ID}/${id}`);
 
             if (response.success && response.data) {
               set({ loading: false });
@@ -236,7 +236,7 @@ export const useFarmerStore = create<FarmerStoreState>()(
               limit: limit.toString(),
             });
 
-            const response = await api.get<Farmer[]>(`${buildApiUrl(API_ENDPOINTS.FARMERS)}?${queryParams}`);
+            const response = await api.get<Farmer[]>(`${API_ENDPOINTS.FARMERS}?${queryParams}`);
 
             if (response.success && response.data) {
               return response;

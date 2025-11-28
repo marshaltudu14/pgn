@@ -3,7 +3,7 @@ import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Dealer, DealerFilters, DealerInsert, DealerUpdate, DealerListResponse } from '@pgn/shared';
 import { api, ApiResponse } from '@/services/api-client';
-import { API_ENDPOINTS, buildApiUrl } from '@/constants/api';
+import { API_ENDPOINTS } from '@/constants/api';
 
 interface DealerStoreState {
   // Data state
@@ -100,7 +100,7 @@ export const useDealerStore = create<DealerStoreState>()(
             });
 
             const response = await api.get<DealerListResponse>(
-              `${buildApiUrl(API_ENDPOINTS.DEALERS)}?${queryParams}`
+              `${API_ENDPOINTS.DEALERS}?${queryParams}`
             );
 
             if (response.success && response.data) {
@@ -147,7 +147,7 @@ export const useDealerStore = create<DealerStoreState>()(
           set({ isCreating: true, error: null });
 
           try {
-            const response = await api.post<Dealer>(buildApiUrl(API_ENDPOINTS.DEALERS), dealerData);
+            const response = await api.post<Dealer>(API_ENDPOINTS.DEALERS, dealerData);
 
             if (response.success && response.data) {
               // Refresh the list to get the updated data
@@ -169,7 +169,7 @@ export const useDealerStore = create<DealerStoreState>()(
           set({ isUpdating: true, error: null });
 
           try {
-            const response = await api.put<Dealer>(buildApiUrl(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`), dealerData);
+            const response = await api.put<Dealer>(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`, dealerData);
 
             if (response.success && response.data) {
               // Refresh the list to get the updated data
@@ -191,7 +191,7 @@ export const useDealerStore = create<DealerStoreState>()(
           set({ isDeleting: true, error: null });
 
           try {
-            const response = await api.delete<void>(buildApiUrl(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`));
+            const response = await api.delete<void>(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`);
 
             if (response.success) {
               // Refresh the list to get the updated data
@@ -213,7 +213,7 @@ export const useDealerStore = create<DealerStoreState>()(
           set({ loading: true, error: null });
 
           try {
-            const response = await api.get<Dealer>(buildApiUrl(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`));
+            const response = await api.get<Dealer>(`${API_ENDPOINTS.DEALER_BY_ID}/${id}`);
 
             if (response.success && response.data) {
               set({ loading: false });
@@ -236,7 +236,7 @@ export const useDealerStore = create<DealerStoreState>()(
               limit: limit.toString(),
             });
 
-            const response = await api.get<Dealer[]>(`${buildApiUrl(API_ENDPOINTS.DEALERS)}?${queryParams}`);
+            const response = await api.get<Dealer[]>(`${API_ENDPOINTS.DEALERS}?${queryParams}`);
 
             if (response.success && response.data) {
               return response;

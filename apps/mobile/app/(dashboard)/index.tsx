@@ -1,24 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '@/store/auth-store';
-import { useAttendance } from '@/store/attendance-store';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useNetworkMonitor } from '@/hooks/use-network-monitor';
-import { COLORS } from '@/constants';
-import { homeStyles } from '@/styles/dashboard/home-styles';
-import {
-  Calendar,
-  Clock,
-  TrendingUp,
-  Activity,
-  Wifi,
-  WifiOff,
-  Store,
-  Sprout,
-  Users,
-} from 'lucide-react-native';
 import FloatingActionButton from '@/components/FloatingActionButton';
+import { COLORS } from '@/constants';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAttendance } from '@/store/attendance-store';
+import { useAuth } from '@/store/auth-store';
+import { homeStyles } from '@/styles/dashboard/home-styles';
+import { useRouter } from 'expo-router';
+import {
+  Clock,
+  Sprout,
+  Store,
+  TrendingUp,
+  Users,
+  UserCheck,
+  User,
+} from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { EmploymentStatus } from '@pgn/shared';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -26,8 +24,7 @@ export default function HomeScreen() {
   const { fetchAttendanceHistory, attendanceHistory, getAttendanceStatus } =
     useAttendance();
   const colorScheme = useColorScheme();
-  const { connectionDisplayInfo } = useNetworkMonitor();
-  const [weeklyStats, setWeeklyStats] = useState({
+  const [todayStats, setTodayStats] = useState({
     daysPresent: 0,
     totalHours: 0,
     avgHours: 0,
@@ -50,28 +47,27 @@ export default function HomeScreen() {
     statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
   };
 
-  // Load weekly stats data
-  const loadWeeklyStats = useCallback(async () => {
+  // Load today's stats data
+  const loadTodayStats = useCallback(async () => {
     try {
       if (!user?.id) {
         return;
       }
 
-      // Calculate date range for last 7 days
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      // Get today's date
       const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
 
-      // Use attendance store to fetch history
+      // Use attendance store to fetch history for today only
       await fetchAttendanceHistory({
         employeeId: user.id,
-        dateFrom: oneWeekAgo.toISOString().split('T')[0],
-        dateTo: today.toISOString().split('T')[0],
-        limit: 100,
+        dateFrom: todayString,
+        dateTo: todayString,
+        limit: 10,
       });
     } catch (error) {
       // Silently handle error
-      console.error('Error loading weekly stats:', error);
+      console.error('Error loading today stats:', error);
     }
   }, [user?.id, fetchAttendanceHistory]);
 
@@ -82,24 +78,24 @@ export default function HomeScreen() {
     }
 
     // Filter for records that have meaningful data (checked in)
-    const weekData = attendanceHistory.filter(
+    const todayData = attendanceHistory.filter(
       record =>
         record.workHours !== undefined || record.checkInTime !== undefined
     );
 
-    // Calculate stats
-    const daysPresent = weekData.filter(r => r.checkInTime).length;
-    const totalHours = weekData.reduce(
+    // Calculate stats for today
+    const daysPresent = todayData.filter(r => r.checkInTime).length;
+    const totalHours = todayData.reduce(
       (sum: number, record) => sum + (record.workHours || 0),
       0
     );
     const avgHours = daysPresent > 0 ? totalHours / daysPresent : 0;
-    const totalDistance = weekData.reduce(
+    const totalDistance = todayData.reduce(
       (sum: number, record) => sum + (record.locationPath?.length || 0) * 100,
       0
     );
 
-    setWeeklyStats({
+    setTodayStats({
       daysPresent,
       totalHours,
       avgHours,
@@ -125,50 +121,59 @@ export default function HomeScreen() {
   }, [user?.id, getAttendanceStatus]);
 
   useEffect(() => {
-    loadWeeklyStats();
+    loadTodayStats();
     loadCurrentStatus();
-  }, [loadWeeklyStats, loadCurrentStatus]);
+  }, [loadTodayStats, loadCurrentStatus]);
 
-  // Get first name
-  const getFirstName = () => {
-    return user?.firstName || 'User';
-  };
+  // Get employee status info
+  const getEmployeeStatusInfo = () => {
+    const status = user?.employmentStatus || 'ACTIVE';
+    const statusColors = {
+      ACTIVE: colors.success,
+      SUSPENDED: colors.warning,
+      RESIGNED: colors.error,
+      TERMINATED: colors.error,
+      ON_LEAVE: colors.textSecondary,
+    };
+    const statusLabels = {
+      ACTIVE: 'Active',
+      SUSPENDED: 'Suspended',
+      RESIGNED: 'Resigned',
+      TERMINATED: 'Terminated',
+      ON_LEAVE: 'On Leave',
+    };
 
-  // Get status info
-  const getStatusInfo = () => {
-    const status = user?.employmentStatus?.toLowerCase() || 'active';
-    const isActive = status === 'active';
     return {
-      text: isActive ? 'Active' : status,
-      color: isActive ? colors.success : colors.warning,
+      text: statusLabels[status as EmploymentStatus],
+      color: statusColors[status as EmploymentStatus] || colors.textSecondary,
     };
   };
 
-  const statusInfo = getStatusInfo();
+  const employeeStatusInfo = getEmployeeStatusInfo();
 
   // Stats items for mobile list design
   const statsItems = [
     {
-      label: 'Days Present',
-      value: weeklyStats.daysPresent.toString(),
-      icon: Calendar,
-      color: colors.success,
+      label: user?.firstName || 'User',
+      value: user?.lastName || '',
+      icon: User,
+      color: colors.text,
+    },
+    {
+      label: 'Status',
+      value: employeeStatusInfo.text,
+      icon: UserCheck,
+      color: employeeStatusInfo.color,
     },
     {
       label: 'Hours',
-      value: weeklyStats.totalHours.toFixed(1),
+      value: todayStats.totalHours.toFixed(1),
       icon: Clock,
       color: colors.primary,
     },
     {
-      label: 'Daily Avg',
-      value: `${weeklyStats.avgHours.toFixed(1)}h`,
-      icon: Activity,
-      color: colors.warning,
-    },
-    {
       label: 'Distance',
-      value: formatDistance(weeklyStats.totalDistance),
+      value: formatDistance(todayStats.totalDistance),
       icon: TrendingUp,
       color: colors.textSecondary,
     },
@@ -230,6 +235,8 @@ export default function HomeScreen() {
   // Render stat item
   const renderStatItem = ({ item }: { item: (typeof statsItems)[0] }) => {
     const Icon = item.icon;
+    const isEmployeeName = item.icon === User;
+
     return (
       <View style={homeStyles.statItem}>
         <View style={homeStyles.statIconContainer}>
@@ -237,11 +244,19 @@ export default function HomeScreen() {
         </View>
         <View style={homeStyles.statContent}>
           <Text style={[homeStyles.statValue, { color: colors.text }]}>
-            {item.value}
-          </Text>
-          <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>
             {item.label}
           </Text>
+          {!isEmployeeName ? (
+            <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>
+              {item.value}
+            </Text>
+          ) : (
+            item.value && (
+              <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>
+                {item.value}
+              </Text>
+            )
+          )}
         </View>
       </View>
     );
@@ -294,72 +309,14 @@ export default function HomeScreen() {
   };
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
-        style={[homeStyles.container, { backgroundColor: colors.background }]}
+        style={[homeStyles.container, { backgroundColor: 'transparent' }]}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Compact Header */}
-        <View style={[homeStyles.compactHeader, { paddingTop: 50 }]}>
-          <View style={homeStyles.headerRow}>
-            <View style={homeStyles.headerLeft}>
-              <Text style={[homeStyles.userName, { color: colors.text }]}>
-                {getFirstName()}
-              </Text>
-              <Text
-                style={[
-                  homeStyles.userSubtitle,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {user?.humanReadableId || 'N/A'}
-              </Text>
-            </View>
-            <View style={homeStyles.headerRight}>
-              <View
-                style={[
-                  homeStyles.statusBadge,
-                  { backgroundColor: `${statusInfo.color}20` },
-                ]}
-              >
-                <Text
-                  style={[homeStyles.statusText, { color: statusInfo.color }]}
-                >
-                  {statusInfo.text}
-                </Text>
-              </View>
-              <View
-                style={[
-                  homeStyles.networkStatusBadge,
-                  { backgroundColor: `${connectionDisplayInfo.color}20` },
-                ]}
-              >
-                {connectionDisplayInfo.icon === 'Wifi' ? (
-                  <Wifi size={14} color={connectionDisplayInfo.color} />
-                ) : (
-                  <WifiOff size={14} color={connectionDisplayInfo.color} />
-                )}
-                <Text
-                  style={[
-                    homeStyles.networkStatusText,
-                    { color: connectionDisplayInfo.color },
-                  ]}
-                >
-                  {connectionDisplayInfo.text}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Stats Section */}
-        <View style={homeStyles.statsSection}>
-          <View style={homeStyles.sectionHeader}>
-            <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>
-              This Week
-            </Text>
-          </View>
+        {/* Stats Section - Direct Icons */}
+        <View style={[homeStyles.statsSection, { marginTop: 40 }]}>
           <View style={homeStyles.statsGrid}>
             {statsItems.map(item => (
               <View key={item.label}>{renderStatItem({ item })}</View>
@@ -368,29 +325,26 @@ export default function HomeScreen() {
         </View>
 
         {/* Entity Management Section */}
-        <View style={[homeStyles.statsSection, { marginTop: 24 }]}>
-          <View style={homeStyles.sectionHeader}>
-            <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>
-              Business Management
-            </Text>
-          </View>
+        <View style={[homeStyles.statsSection, { marginTop: 12 }]}>
           <View
             style={{
               flexDirection: 'row',
               justifyContent: 'center',
               alignItems: 'flex-start',
-              marginBottom: 16,
+              marginBottom: 8,
               marginHorizontal: 16,
               gap: 8,
             }}
           >
-            {entityItems.map(item => renderEntityItem(item))}
+            {entityItems.map(item => (
+              <View key={item.id}>{renderEntityItem(item)}</View>
+            ))}
           </View>
         </View>
       </ScrollView>
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button - positioned absolutely on top */}
       <FloatingActionButton options={fabOptions} />
-    </>
+    </View>
   );
 }

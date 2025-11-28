@@ -71,20 +71,20 @@ export const homeStyles = StyleSheet.create({
 
   // Stats section
   statsSection: {
-    marginBottom: 16,
+    marginBottom: 8,
   },
   statsGrid: {
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   statItem: {
     alignItems: 'center' as const,
     flex: 1,
   },
   statIconContainer: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statContent: {
     alignItems: 'center' as const,

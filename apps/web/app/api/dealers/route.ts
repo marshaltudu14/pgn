@@ -25,14 +25,19 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
     const result = await listDealers(params);
 
     const response = NextResponse.json({
-      dealers: result.dealers,
-      pagination: result.pagination
+      success: true,
+      data: {
+        dealers: result.dealers,
+        pagination: result.pagination
+      },
+      message: 'Dealers retrieved successfully'
     });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching dealers:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch dealers',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -55,12 +60,17 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
 
     const result = await createDealer(dealerData);
 
-    const response = NextResponse.json(result);
+    const response = NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Dealer created successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error creating dealer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to create dealer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

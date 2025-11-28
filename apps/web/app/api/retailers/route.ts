@@ -26,14 +26,19 @@ const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> 
     const result = await listRetailers(params);
 
     const response = NextResponse.json({
-      retailers: result.retailers,
-      pagination: result.pagination
+      success: true,
+      data: {
+        retailers: result.retailers,
+        pagination: result.pagination
+      },
+      message: 'Retailers retrieved successfully'
     });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching retailers:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch retailers',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -57,12 +62,17 @@ const createRetailerHandler = async (request: NextRequest): Promise<NextResponse
 
     const result = await createRetailer(retailerData);
 
-    const response = NextResponse.json(result);
+    const response = NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Retailer created successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error creating retailer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to create retailer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

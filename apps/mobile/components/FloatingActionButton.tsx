@@ -29,7 +29,7 @@ interface FloatingActionButtonProps {
 
 export default function FloatingActionButton({
   options,
-  bottomOffset = 40,
+  bottomOffset = 20,
 }: FloatingActionButtonProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDealerModal, setShowDealerModal] = useState(false);
@@ -292,14 +292,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    // No shadows for floating components
   },
   mainButtonInner: {
     width: '100%',
@@ -328,28 +321,14 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    // No shadows for floating components
   },
   optionLabel: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     marginTop: 8,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    // No shadows for floating components
   },
   optionLabelText: {
     fontSize: 12,

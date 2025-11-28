@@ -8,14 +8,14 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Store, Phone, Mail, MapPin, User } from 'lucide-react-native';
+import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Store } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useDealerStore } from '@/store/dealer-store';
 import { DealerFormData } from '@pgn/shared';
 import { COLORS } from '@/constants';
+import Spinner from '@/components/Spinner';
 
 interface CreateDealerModalProps {
   visible: boolean;
@@ -45,14 +45,19 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
   const [errors, setErrors] = useState<FormErrors>({});
 
   const colors = {
-    background: colorScheme === 'dark' ? '#1c1c1e' : '#ffffff',
-    text: colorScheme === 'dark' ? '#ffffff' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#8e8e93' : '#3c3c43',
-    border: colorScheme === 'dark' ? '#38383a' : '#e5e7eb',
-    input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
-    error: '#ef4444',
-    success: '#10b981',
+    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+    textSecondary: colorScheme === 'dark' ? '#8E8E93' : '#3C3C43',
+    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
+    border: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
     primary: COLORS.SAFFRON,
+    success: COLORS.SUCCESS,
+    warning: COLORS.WARNING,
+    error: COLORS.ERROR,
+    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
+    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+    input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
   };
 
   const validateForm = useCallback((): boolean => {
@@ -201,24 +206,49 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
+        {/* Modern Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.headerContent}>
-            <Store size={24} color={colors.primary} />
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Create New Dealer</Text>
-          </View>
           <TouchableOpacity
-            style={[styles.closeButton, { opacity: isCreating ? 0.5 : 1 }]}
+            style={styles.backButton}
             onPress={handleClose}
             disabled={isCreating}
           >
-            <X size={24} color={colors.text} />
+            <ChevronLeft
+              size={24}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <View style={styles.titleContainer}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Create New Dealer
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.plusButton, { opacity: isCreating ? 0.5 : 1 }]}
+            onPress={handleSubmit}
+            disabled={isCreating}
+          >
+            <Plus size={24} color={isCreating ? colors.textSecondary : colors.primary} />
           </TouchableOpacity>
         </View>
+
+        {/* Loading Overlay */}
+        {isCreating && (
+          <View style={styles.loadingOverlay}>
+            <View style={styles.loadingContainer}>
+              <Spinner size={32} color={COLORS.SAFFRON} />
+              <Text style={[styles.loadingText, { color: colors.text }]}>
+                Creating Dealer...
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Form Content */}
         <ScrollView
@@ -245,27 +275,8 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           {/* Address Field */}
           {renderInput('address', 'Address', 'Enter complete address', MapPin, 'default', true)}
 
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              {
-                backgroundColor: colors.primary,
-                opacity: isCreating ? 0.7 : 1,
-              }
-            ]}
-            onPress={handleSubmit}
-            disabled={isCreating}
-          >
-            {isCreating ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.submitButtonText}>Create Dealer</Text>
-            )}
-          </TouchableOpacity>
-
           {/* Info Box */}
-          <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#f3f4f6' }]}>
+          <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9FAFB' }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
               Note: You can create unlimited dealers. This will be tracked in your activity log.
             </Text>
@@ -284,21 +295,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderBottomWidth: 1,
   },
-  headerContent: {
-    flexDirection: 'row',
+  backButton: {
+    padding: 8,
+  },
+  titleContainer: {
     alignItems: 'center',
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
   },
-  closeButton: {
-    padding: 4,
+  plusButton: {
+    padding: 8,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 24,
+    borderRadius: 12,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -343,18 +380,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
     marginLeft: 4,
-  },
-  submitButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   infoBox: {
     padding: 16,

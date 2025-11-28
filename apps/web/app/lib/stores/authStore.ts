@@ -195,24 +195,51 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const storedState = get();
+
+          // Clear API session if token exists
           if (storedState.token) {
-            const logoutRequest: LogoutRequest = {
-              token: storedState.token,
-            };
+            try {
+              const logoutRequest: LogoutRequest = {
+                token: storedState.token,
+              };
 
-            const response = await fetch('/api/auth/logout', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(logoutRequest),
-            });
+              const response = await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(logoutRequest),
+                signal: AbortSignal.timeout(5000), // 5 second timeout
+              });
 
-            if (!response.ok) {
-              console.error('Logout API error:', await response.text());
+              if (!response.ok) {
+                console.error('Logout API error:', response.status, await response.text());
+                // Continue with local logout even if API fails
+              }
+            } catch (apiError) {
+              console.warn('Logout API call failed:', apiError);
+              // Continue with local logout even if API fails
             }
           }
 
+          // Clear all local storage and session storage
+          try {
+            // Clear any auth-related data from localStorage
+            localStorage.removeItem('auth-storage');
+
+            // Clear session storage if any
+            sessionStorage.clear();
+
+            // Clear Zustand persisted state
+            const persistStorage = localStorage.getItem('auth-storage');
+            if (persistStorage) {
+              localStorage.removeItem('auth-storage');
+            }
+          } catch (storageError) {
+            console.warn('Failed to clear storage during logout:', storageError);
+          }
+
+          // Reset auth state
           set({
             user: null,
             token: null,
@@ -221,10 +248,44 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
+          // Clear any global state if needed
+          if (typeof window !== 'undefined') {
+            // Clear any other app-specific storage
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+              if (key.startsWith('pgn-') || key.startsWith('supabase.auth.')) {
+                localStorage.removeItem(key);
+              }
+            });
+          }
+
           useUIStore.getState().showNotification('You have been logged out successfully.', 'info');
+
+          // Force redirect to home page after successful logout
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1000);
+          }
         } catch (error) {
           console.error('Logout error:', error);
-          set({ isLoading: false });
+          // Still clear local state even on error
+          set({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            isAdmin: false,
+            isLoading: false,
+          });
+
+          useUIStore.getState().showNotification('You have been logged out.', 'info');
+
+          // Still redirect even on error
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 1000);
+          }
         }
       },
     }),

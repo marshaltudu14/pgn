@@ -644,7 +644,7 @@ describe('EmployeeForm', () => {
       });
 
       // Resolve the promise to clean up
-      resolvePromise!({ success: true, data: mockEmployee });
+      resolvePromise!(mockEmployee);
     });
 
     it('should display error message when error state is set', () => {

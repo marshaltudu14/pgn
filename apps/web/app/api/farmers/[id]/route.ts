@@ -12,12 +12,17 @@ const getFarmerHandler = async (request: NextRequest, { params }: { params: Prom
     const { id } = await params;
     const farmer = await getFarmerById(id);
 
-    const response = NextResponse.json(farmer);
+    const response = NextResponse.json({
+      success: true,
+      data: farmer,
+      message: 'Farmer retrieved successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching farmer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch farmer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -42,12 +47,17 @@ const updateFarmerHandler = async (request: NextRequest, { params }: { params: P
 
     const result = await updateFarmer(id, farmerData);
 
-    const response = NextResponse.json(result);
+    const response = NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Farmer updated successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error updating farmer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to update farmer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -62,12 +72,17 @@ const deleteFarmerHandler = async (request: NextRequest, { params }: { params: P
     const { id } = await params;
     await deleteFarmer(id);
 
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({
+      success: true,
+      data: null,
+      message: 'Farmer deleted successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error deleting farmer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to delete farmer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

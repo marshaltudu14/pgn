@@ -12,12 +12,17 @@ const getRetailerHandler = async (request: NextRequest, { params }: { params: Pr
     const { id } = await params;
     const retailer = await getRetailerById(id);
 
-    const response = NextResponse.json(retailer);
+    const response = NextResponse.json({
+      success: true,
+      data: retailer,
+      message: 'Retailer retrieved successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error fetching retailer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to fetch retailer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -42,12 +47,17 @@ const updateRetailerHandler = async (request: NextRequest, { params }: { params:
 
     const result = await updateRetailer(id, retailerData);
 
-    const response = NextResponse.json(result);
+    const response = NextResponse.json({
+      success: true,
+      data: result,
+      message: 'Retailer updated successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error updating retailer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to update retailer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -62,12 +72,17 @@ const deleteRetailerHandler = async (request: NextRequest, { params }: { params:
     const { id } = await params;
     await deleteRetailer(id);
 
-    const response = NextResponse.json({ success: true });
+    const response = NextResponse.json({
+      success: true,
+      data: null,
+      message: 'Retailer deleted successfully'
+    });
     return addSecurityHeaders(response);
   } catch (error) {
     console.error('Error deleting retailer:', error);
     const response = NextResponse.json(
       {
+        success: false,
         error: 'Failed to delete retailer',
         message: error instanceof Error ? error.message : 'Unknown error'
       },

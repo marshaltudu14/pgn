@@ -128,8 +128,8 @@ export function RegionsTable({
 
   if (isLoading) {
     return (
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6">
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           <div className="w-full overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
@@ -146,8 +146,8 @@ export function RegionsTable({
                     <TableCell><Skeleton className="h-8 w-28" /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Skeleton className="h-8 w-8 rounded" />
-                        <Skeleton className="h-8 w-8 rounded" />
+                        <Skeleton className="h-8 w-8 rounded cursor-pointer" />
+                        <Skeleton className="h-8 w-8 rounded cursor-pointer" />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -163,7 +163,7 @@ export function RegionsTable({
   if (!isLoading && regions.data.length === 0 && regions.total === 0) {
     return (
       <div className="bg-white dark:bg-black">
-        <div className="p-6">
+        <div className="px-2 py-3 lg:p-6">
           <div className="flex flex-col items-center justify-center py-8">
             <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No regions found</h3>
@@ -177,14 +177,15 @@ export function RegionsTable({
   }
 
   return (
-    <div className="hidden lg:block bg-white dark:bg-black">
-      <div className="p-6">
+    <div className="bg-white dark:bg-black">
+      <div className="px-2 py-3 lg:p-6">
         <div className="w-full overflow-x-auto border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>State</TableHead>
-                <TableHead>City</TableHead>
+                <TableHead className="hidden sm:table-cell">City</TableHead>
+                <TableHead className="sm:hidden">Location</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -194,7 +195,13 @@ export function RegionsTable({
                   <TableCell className="font-medium">
                     {region.state}
                   </TableCell>
-                  <TableCell>{region.city}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{region.city}</TableCell>
+                  <TableCell className="sm:hidden">
+                    <div>
+                      <div className="font-medium">{region.city}</div>
+                      <div className="text-sm text-muted-foreground">{region.state}</div>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
@@ -206,6 +213,7 @@ export function RegionsTable({
                       >
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
+                        <span className="hidden sm:inline ml-2">Edit</span>
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -217,6 +225,7 @@ export function RegionsTable({
                           >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
+                            <span className="hidden sm:inline ml-2">Delete</span>
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -248,7 +257,7 @@ export function RegionsTable({
 
         {/* Pagination */}
         {(regions.total > regions.limit || regions.page > 1) && (
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
             <div className="text-sm text-muted-foreground">
               {regions.total > 0 && (
                 <>

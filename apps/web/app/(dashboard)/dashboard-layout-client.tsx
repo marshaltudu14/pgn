@@ -169,8 +169,8 @@ export default function DashboardLayoutClient({
 
             </Sidebar>
 
-          <SidebarInset className="md:rounded-xl md:shadow-sm md:ml-2 md:border md:border-sidebar-border">
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+          <SidebarInset className="md:rounded-xl md:shadow-sm ml-0 md:ml-2 border border-transparent md:border md:border-sidebar-border">
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-2 lg:px-4">
               <SidebarTrigger className="-ml-1" />
               <div className="flex-1">
                 <h1 className="text-lg font-semibold text-foreground">
@@ -195,7 +195,7 @@ export default function DashboardLayoutClient({
             </header>
 
             <main
-              className="flex-1 bg-white dark:bg-black p-6"
+              className="flex-1 bg-white dark:bg-black px-2 py-3 lg:p-6"
               suppressHydrationWarning
             >
               <ErrorBoundary>{children}</ErrorBoundary>

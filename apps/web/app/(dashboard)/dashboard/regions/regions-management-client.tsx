@@ -6,7 +6,6 @@ import { CreateRegionRequest, UpdateRegionRequest, Region } from '@pgn/shared';
 import { RegionsTable, RegionFormModal } from '@/components/regions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -153,20 +152,7 @@ export default function RegionsManagementClient() {
   
   return (
     <div className="min-h-screen bg-background dark:bg-black text-foreground">
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard" className="hover:text-primary transition-colors">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Regions</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
+      <div className="space-y-4 lg:space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -186,16 +172,16 @@ export default function RegionsManagementClient() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-4 flex justify-between items-center">
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 lg:p-4 flex justify-between items-center">
           <p className="text-red-800 dark:text-red-200">{error}</p>
-          <Button variant="outline" size="sm" onClick={clearError}>
+          <Button variant="outline" size="sm" onClick={clearError} className="cursor-pointer">
             Dismiss
           </Button>
         </div>
       )}
 
       {/* Search */}
-      <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+      <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input

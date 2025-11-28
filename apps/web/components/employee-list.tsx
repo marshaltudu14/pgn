@@ -90,29 +90,29 @@ export function EmployeeList({
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-bold">Employees</h2>
-          <Button onClick={onEmployeeCreate}>
+          <Button onClick={onEmployeeCreate} className="cursor-pointer">
             <Plus className="h-4 w-4 mr-2" />
             Add Employee
           </Button>
         </div>
-        <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
-          <div className="flex gap-4">
+        <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
+          <div className="flex flex-col sm:flex-row gap-4">
             <Skeleton className="h-10 w-64" />
             <Skeleton className="h-10 w-40" />
           </div>
         </div>
-        <div className="hidden lg:block bg-white dark:bg-black">
-          <div className="p-6">
+        <div className="bg-white dark:bg-black">
+          <div className="px-2 py-3 lg:p-6">
             <div className="w-full overflow-x-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>User ID</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead className="hidden lg:table-cell">Phone</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Cities</TableHead>
+                    <TableHead className="hidden xl:table-cell">Primary Region</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -121,14 +121,14 @@ export function EmployeeList({
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-24 rounded" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-40" /></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Skeleton className="h-8 w-8 rounded" />
-                          <Skeleton className="h-8 w-8 rounded" />
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-8 w-8 rounded cursor-pointer" />
+                          <Skeleton className="h-8 w-8 rounded cursor-pointer" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -136,23 +136,6 @@ export function EmployeeList({
                 </TableBody>
               </Table>
             </div>
-          </div>
-        </div>
-        <div className="lg:hidden">
-          <div className="divide-y divide-border">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="p-4 bg-white dark:bg-black">
-                <div className="flex gap-4 mb-3">
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-6 w-24" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -168,7 +151,7 @@ export function EmployeeList({
             {pagination.totalItems} employee{pagination.totalItems !== 1 ? 's' : ''} found
           </p>
         </div>
-        <Button onClick={onEmployeeCreate}>
+        <Button onClick={onEmployeeCreate} className="cursor-pointer">
           <Plus className="h-4 w-4 mr-2" />
           Add Employee
         </Button>
@@ -177,14 +160,14 @@ export function EmployeeList({
       {error && (
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-4 flex justify-between items-center">
           <p className="text-red-800 dark:text-red-200">{error}</p>
-          <Button variant="outline" size="sm" onClick={clearError}>
+          <Button variant="outline" size="sm" onClick={clearError} className="cursor-pointer">
             Dismiss
           </Button>
         </div>
       )}
 
       {/* Search and Filter Section */}
-      <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+      <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -196,7 +179,7 @@ export function EmployeeList({
             />
           </div>
           <Select value={filters.status} onValueChange={(value) => handleStatusChange(value as EmploymentStatus | 'all')}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-48 cursor-pointer">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -212,19 +195,19 @@ export function EmployeeList({
         </div>
       </div>
 
-      {/* Desktop/Tablet View - Table */}
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6">
+      {/* Table View - Desktop and Mobile */}
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           <div className="w-full overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User ID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">Phone</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Primary Region</TableHead>
+                  <TableHead className="hidden xl:table-cell">Primary Region</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -239,12 +222,22 @@ export function EmployeeList({
                         <div className="font-medium">
                           {employee.first_name} {employee.last_name}
                         </div>
+                        {employee.email && (
+                          <div className="text-sm text-muted-foreground md:hidden">
+                            {employee.email.length > 20 ? `${employee.email.slice(0, 20)}...` : employee.email}
+                          </div>
+                        )}
+                        {employee.phone && (
+                          <div className="text-sm text-muted-foreground lg:hidden">
+                            {employee.phone}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="text-sm">{employee.email}</div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="text-sm">{employee.phone || '-'}</div>
                     </TableCell>
                     <TableCell>
@@ -252,7 +245,7 @@ export function EmployeeList({
                         {employee.employment_status.replace('_', ' ')}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell">
                       <div className="text-sm">
                         {(employee.assigned_cities as unknown as CityAssignment[])?.map((city: CityAssignment) => city.city).join(', ') || '-'}
                       </div>
@@ -285,72 +278,9 @@ export function EmployeeList({
         </div>
       </div>
 
-      {/* Mobile View - App-style List (No container, no padding, no borders) */}
-      <div className="lg:hidden">
-        <div className="divide-y divide-border">
-          {employees.map((employee) => (
-            <div key={employee.id} className="p-4 bg-white dark:bg-black">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    {employee.first_name} {employee.last_name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {employee.human_readable_user_id}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEmployeeSelect?.(employee)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEmployeeEdit?.(employee)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Status:</span>
-                  <Badge className={EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]}>
-                    {employee.employment_status.replace('_', ' ')}
-                  </Badge>
-                </div>
-
-                <div className="text-sm">
-                  <span className="font-medium">Email:</span> {employee.email}
-                </div>
-
-                {employee.phone && (
-                  <div className="text-sm">
-                    <span className="font-medium">Phone:</span> {employee.phone}
-                  </div>
-                )}
-
-                {employee.assigned_cities && (employee.assigned_cities as unknown as CityAssignment[]).length > 0 && (
-                  <div className="text-sm">
-                    <span className="font-medium">Cities:</span> {(employee.assigned_cities as unknown as CityAssignment[]).map((city: CityAssignment) => `${city.city}, ${city.state}`).join('; ')}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Pagination - visible on all screen sizes */}
       {pagination.totalPages > 1 && (
-        <div className="p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6 border-t border-border bg-white dark:bg-black">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -360,7 +290,7 @@ export function EmployeeList({
                 value={pagination.itemsPerPage.toString()}
                 onValueChange={(value) => handlePageSizeChange(parseInt(value))}
               >
-                <SelectTrigger className="w-20">
+                <SelectTrigger className="w-20 cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -377,6 +307,7 @@ export function EmployeeList({
                 size="sm"
                 onClick={() => handlePageChange(pagination.currentPage - 1)}
                 disabled={pagination.currentPage === 1}
+                className="cursor-pointer hover:bg-accent transition-colors"
               >
                 Previous
               </Button>
@@ -388,6 +319,7 @@ export function EmployeeList({
                 size="sm"
                 onClick={() => handlePageChange(pagination.currentPage + 1)}
                 disabled={pagination.currentPage === pagination.totalPages}
+                className="cursor-pointer hover:bg-accent transition-colors"
               >
                 Next
               </Button>

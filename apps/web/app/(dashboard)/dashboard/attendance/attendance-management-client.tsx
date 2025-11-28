@@ -5,7 +5,6 @@ import { useAttendanceStore } from '@/app/lib/stores/attendanceStore';
 import { DailyAttendanceRecord, VerificationStatus } from '@pgn/shared';
 import { AttendanceTable, AttendanceDetailsModal } from '@/components/attendance';
 import { Button } from '@/components/ui/button';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { toast } from 'sonner';
 
 export default function AttendanceManagementClient() {
@@ -81,22 +80,7 @@ export default function AttendanceManagementClient() {
   
   return (
     <div className="min-h-screen bg-background dark:bg-black text-foreground">
-      <div className="space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard" className="hover:text-primary transition-colors">
-                Dashboard
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Attendance</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
+      <div className="space-y-4 lg:space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Attendance Management</h1>
@@ -107,9 +91,9 @@ export default function AttendanceManagementClient() {
 
         {/* Error Display */}
         {error && (
-          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md p-4 flex justify-between items-center">
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 lg:p-4 flex justify-between items-center">
             <p className="text-red-800 dark:text-red-200">{error}</p>
-            <Button variant="outline" size="sm" onClick={clearError}>
+            <Button variant="outline" size="sm" onClick={clearError} className="cursor-pointer">
               Dismiss
             </Button>
           </div>

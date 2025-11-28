@@ -92,23 +92,24 @@ export function FarmerList({
             Add Farmer
           </Button>
         </div>
-        <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
           <div className="flex gap-4">
             <Skeleton className="h-10 w-64" />
             <Skeleton className="h-10 w-40" />
           </div>
         </div>
-        <div className="hidden lg:block bg-white dark:bg-black">
-          <div className="p-6">
+        <div className="bg-white dark:bg-black">
+          <div className="px-2 py-3 lg:p-6">
             <div className="w-full overflow-x-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Farm Name</TableHead>
-                    <TableHead>Retailer</TableHead>
+                    <TableHead className="hidden md:table-cell">Farm Name</TableHead>
+                    <TableHead className="hidden lg:table-cell">Retailer</TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead>Address</TableHead>
+                    <TableHead className="hidden xl:table-cell">Address</TableHead>
+                    <TableHead className="hidden sm:table-cell">Created</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -116,12 +117,13 @@ export function FarmerList({
                   {[...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded" />
                           <Skeleton className="h-8 w-8 rounded" />
                         </div>
@@ -131,23 +133,6 @@ export function FarmerList({
                 </TableBody>
               </Table>
             </div>
-          </div>
-        </div>
-        <div className="lg:hidden">
-          <div className="divide-y divide-border">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="p-4 bg-white dark:bg-black">
-                <div className="flex gap-4 mb-3">
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-6 w-24" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -179,7 +164,7 @@ export function FarmerList({
       )}
 
       {/* Search and Filter Section */}
-      <div className="p-4 lg:p-6 border-b border-border bg-white dark:bg-black">
+      <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -214,19 +199,19 @@ export function FarmerList({
         </div>
       </div>
 
-      {/* Desktop/Tablet View - Table */}
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6">
+      {/* Table View - Desktop and Mobile */}
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           <div className="w-full overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Farm Name</TableHead>
-                  <TableHead>Retailer</TableHead>
+                  <TableHead className="hidden md:table-cell">Farm Name</TableHead>
+                  <TableHead className="hidden lg:table-cell">Retailer</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Created</TableHead>
+                  <TableHead className="hidden xl:table-cell">Address</TableHead>
+                  <TableHead className="hidden sm:table-cell">Created</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -237,19 +222,24 @@ export function FarmerList({
                       <div>
                         <div className="font-medium">{farmer.name}</div>
                         {farmer.email && (
-                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <div className="text-sm text-muted-foreground flex items-center gap-1 md:hidden">
                             <Mail className="h-3 w-3" />
                             {farmer.email}
                           </div>
                         )}
+                        {farmer.farm_name && (
+                          <div className="text-sm text-muted-foreground md:hidden">
+                            Farm: {farmer.farm_name}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="text-sm">
                         {farmer.farm_name || '-'}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="text-sm max-w-xs">
                         {farmer.retailer_id ? (
                           <Badge variant="secondary" className="text-xs">
@@ -266,15 +256,21 @@ export function FarmerList({
                             {farmer.phone}
                           </div>
                         )}
+                        {farmer.email && !farmer.phone && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1 md:hidden">
+                            <Mail className="h-3 w-3" />
+                            {farmer.email.length > 15 ? `${farmer.email.slice(0, 15)}...` : farmer.email}
+                          </div>
+                        )}
                         {!farmer.phone && !farmer.email && '-'}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell">
                       <div className="text-sm max-w-xs truncate">
                         {farmer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="text-sm text-muted-foreground">
                         {new Date(farmer.created_at).toLocaleDateString()}
                       </div>
@@ -304,80 +300,6 @@ export function FarmerList({
               </TableBody>
             </Table>
           </div>
-        </div>
-      </div>
-
-      {/* Mobile View - App-style List */}
-      <div className="lg:hidden">
-        <div className="divide-y divide-border">
-          {farmers.map((farmer) => (
-            <div key={farmer.id} className="p-4 bg-white dark:bg-black">
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{farmer.name}</h3>
-                  {farmer.farm_name && (
-                    <p className="text-sm text-muted-foreground">
-                      Farm: {farmer.farm_name}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onFarmerSelect?.(farmer)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onFarmerEdit?.(farmer)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {farmer.retailer_id && (
-                  <div className="text-sm flex items-center gap-1">
-                    <Store className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">Retailer:</span>
-                    <Badge variant="secondary" className="text-xs">
-                      ID: {farmer.retailer_id.slice(0, 8)}...
-                    </Badge>
-                  </div>
-                )}
-
-                {farmer.email && (
-                  <div className="text-sm flex items-center gap-1">
-                    <Mail className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">Email:</span> {farmer.email}
-                  </div>
-                )}
-
-                {farmer.phone && (
-                  <div className="text-sm flex items-center gap-1">
-                    <Phone className="h-3 w-3 text-muted-foreground" />
-                    <span className="font-medium">Phone:</span> {farmer.phone}
-                  </div>
-                )}
-
-                {farmer.address && (
-                  <div className="text-sm">
-                    <span className="font-medium">Address:</span> {farmer.address}
-                  </div>
-                )}
-
-                <div className="text-xs text-muted-foreground">
-                  Created: {new Date(farmer.created_at).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 

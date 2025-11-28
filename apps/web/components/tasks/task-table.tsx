@@ -143,18 +143,18 @@ export function TaskTable({
 
   if (isLoading && tasks.length === 0) {
     return (
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6">
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           <div className="w-full overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden md:table-cell">Employee</TableHead>
+                  <TableHead className="hidden lg:table-cell">Status</TableHead>
                   <TableHead>Priority</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead className="hidden sm:table-cell">Progress</TableHead>
+                  <TableHead className="hidden xl:table-cell">Due Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -162,13 +162,13 @@ export function TaskTable({
                 {[...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-20 rounded" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-16 rounded" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
+                    <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
                     <TableCell className="text-right">
-                      <Skeleton className="h-8 w-16 rounded ml-auto" />
+                      <Skeleton className="h-8 w-16 rounded ml-auto cursor-pointer" />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -183,10 +183,10 @@ export function TaskTable({
   return (
     <>
       {/* Filters */}
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6 border-b">
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6 border-b">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-row gap-4 items-center">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
               {/* Search */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -202,10 +202,10 @@ export function TaskTable({
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className="gap-2"
+                className="gap-2 cursor-pointer"
               >
                 <Filter className="h-4 w-4" />
-                Filters
+                <span className="hidden sm:inline">Filters</span>
                 {(statusFilter || priorityFilter) && (
                   <span className="bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
                     {[statusFilter, priorityFilter].filter(Boolean).length}
@@ -218,20 +218,20 @@ export function TaskTable({
                 <Button
                   variant="ghost"
                   onClick={onClearFilters}
-                  className="gap-2"
+                  className="gap-2 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
-                  Clear
+                  <span className="hidden sm:inline">Clear</span>
                 </Button>
               )}
             </div>
 
             {/* Expanded Filters */}
             {showFilters && (
-              <div className="flex flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <Select value={statusFilter} onValueChange={(value: TaskStatus | 'all') => setStatusFilter(value)}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full cursor-pointer">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -250,7 +250,7 @@ export function TaskTable({
 
                 <div className="flex-1">
                   <Select value={priorityFilter} onValueChange={(value: TaskPriority | 'all') => setPriorityFilter(value)}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full cursor-pointer">
                       <SelectValue placeholder="Filter by priority" />
                     </SelectTrigger>
                     <SelectContent>
@@ -270,8 +270,8 @@ export function TaskTable({
       </div>
 
       {/* Table */}
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6">
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           {tasks.length === 0 ? (
             <div className="text-center py-12">
               <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
@@ -286,17 +286,17 @@ export function TaskTable({
             </div>
           ) : (
             <>
-              {/* Desktop Table */}
+              {/* Responsive Table */}
               <div className="w-full overflow-x-auto border rounded-lg">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Title</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden md:table-cell">Employee</TableHead>
+                      <TableHead className="hidden lg:table-cell">Status</TableHead>
                       <TableHead>Priority</TableHead>
-                      <TableHead>Progress</TableHead>
-                      <TableHead>Due Date</TableHead>
+                      <TableHead className="hidden sm:table-cell">Progress</TableHead>
+                      <TableHead className="hidden xl:table-cell">Due Date</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -307,13 +307,23 @@ export function TaskTable({
                           <div>
                             <div className="font-medium">{task.title}</div>
                             {task.description && (
-                              <div className="text-sm text-muted-foreground line-clamp-2">
+                              <div className="text-sm text-muted-foreground line-clamp-2 lg:hidden">
                                 {task.description}
+                              </div>
+                            )}
+                            {task.assigned_employee_name && (
+                              <div className="text-sm text-muted-foreground md:hidden">
+                                {task.assigned_employee_human_readable_id}
+                              </div>
+                            )}
+                            {task.status && (
+                              <div className="md:hidden mt-1">
+                                <StatusBadge status={task.status} />
                               </div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <div>
                             <div className="font-medium">
                               {task.assigned_employee_name || 'Unknown'}
@@ -323,13 +333,13 @@ export function TaskTable({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           <StatusBadge status={task.status} />
                         </TableCell>
                         <TableCell>
                           <PriorityBadge priority={task.priority} />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 bg-secondary rounded-full h-2">
                               <div
@@ -342,7 +352,7 @@ export function TaskTable({
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden xl:table-cell">
                           {task.due_date ? (
                             <div>
                               <div className="font-medium">
@@ -368,6 +378,9 @@ export function TaskTable({
                             className="cursor-pointer"
                           >
                             <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline ml-2">
+                              {isAdmin ? 'Edit' : 'View'}
+                            </span>
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -378,8 +391,8 @@ export function TaskTable({
 
               {/* Pagination */}
               {pagination.totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
+                  <div className="text-sm text-muted-foreground text-center sm:text-left">
                     {pagination.totalItems > 0 && (
                       <>
                         Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to{' '}
@@ -415,61 +428,6 @@ export function TaskTable({
             </>
           )}
         </div>
-      </div>
-
-      {/* Mobile View */}
-      <div className="lg:hidden divide-y divide-border">
-        {tasks.map((task) => (
-          <div key={task.id} className="bg-white dark:bg-black">
-            <div className="p-4 space-y-3">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{task.title}</h3>
-                  {task.assigned_employee_name && (
-                    <p className="text-sm text-muted-foreground">
-                      {task.assigned_employee_human_readable_id}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <StatusBadge status={task.status} />
-                  <PriorityBadge priority={task.priority} />
-                </div>
-              </div>
-
-              {task.description && (
-                <p className="text-sm text-muted-foreground line-clamp-2">
-                  {task.description}
-                </p>
-              )}
-
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">{task.progress}%</span>
-                {task.due_date && (
-                  <div className={`text-sm ${
-                    new Date(task.due_date) < new Date() && task.status !== 'COMPLETED'
-                      ? 'text-red-600 font-medium'
-                      : 'text-muted-foreground'
-                  }`}>
-                    Due: {format(new Date(task.due_date), 'MMM dd, yyyy HH:mm')}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onTaskSelect(task)}
-                  className="cursor-pointer"
-                >
-                  <Eye className="h-4 w-4" />
-                  {isAdmin ? 'Edit' : 'View'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </>
   );

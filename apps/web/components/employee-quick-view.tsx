@@ -64,13 +64,10 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header Section */}
-        <DialogHeader className="pb-4 border-b border-border">
+        <DialogHeader className="pb-4">
           <DialogTitle className="sr-only">
             {employee.first_name} {employee.last_name} - Employee Details
           </DialogTitle>
-          <DialogDescription>
-            Complete employee profile information including contact details, employment status, and timeline
-          </DialogDescription>
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
               <StatusIcon className="h-6 w-6 text-primary" />
@@ -86,120 +83,123 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
           </div>
         </DialogHeader>
 
-        {/* Main Content */}
-        <div className="py-4 space-y-6">
-          {/* Contact Information */}
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Contact Information
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Email</span>
+        {/* Main Content - Two Column Layout (Mobile Responsive) */}
+        <div className="py-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            {/* Left Column */}
+            <div className="space-y-6">
+
+              {/* Contact Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Contact Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Email</span>
+                    </div>
+                    <span className="text-sm text-foreground break-all">{employee.email}</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Phone</span>
+                    </div>
+                    <span className="text-sm text-foreground">{employee.phone || '-'}</span>
+                  </div>
                 </div>
-                <span className="text-sm text-foreground">{employee.email}</span>
               </div>
 
-              {employee.phone && (
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Phone</span>
+              </div>
+
+            {/* Right Column */}
+            <div className="space-y-6">
+              {/* Employment Details */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Employment Details
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Status</span>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`${EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]} border-current text-xs`}
+                    >
+                      {employee.employment_status.replace('_', ' ')}
+                    </Badge>
                   </div>
-                  <span className="text-sm text-foreground">{employee.phone}</span>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Login Access</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {employee.can_login ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <span className="text-sm text-foreground">
+                        {employee.can_login ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* Timeline Information */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  Timeline
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Created</span>
+                    </div>
+                    <span className="text-sm text-foreground">{formatDate(employee.created_at!)}</span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Last Updated</span>
+                    </div>
+                    <span className="text-sm text-foreground">{formatDate(employee.updated_at!)}</span>
+                  </div>
+
+                  </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          <Separator />
-
-          {/* Employment Details */}
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Employment Details
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Status</span>
+        {/* Assigned Cities - Full Width Section */}
+        <div className="pt-4 border-t border-border">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Assigned Cities
+          </h3>
+          <div className="space-y-2">
+            {employee.assigned_cities && employee.assigned_cities.length > 0 ? (
+              employee.assigned_cities.map((city: any, index: number) => (
+                <div key={index} className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
+                  {typeof city === 'string' ? city : city.city || JSON.stringify(city)}
                 </div>
-                <Badge
-                  variant="outline"
-                  className={`${EMPLOYMENT_STATUS_COLORS[employee.employment_status as EmploymentStatus]} border-current text-xs`}
-                >
-                  {employee.employment_status.replace('_', ' ')}
-                </Badge>
+              ))
+            ) : (
+              <div className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
+                -
               </div>
-
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Login Access</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {employee.can_login ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-600" />
-                  )}
-                  <span className="text-sm text-foreground">
-                    {employee.can_login ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Timeline Information */}
-          <div>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-              Timeline
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Created</span>
-                </div>
-                <span className="text-sm text-foreground">{formatDate(employee.created_at!)}</span>
-              </div>
-
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Last Updated</span>
-                </div>
-                <span className="text-sm text-foreground">{formatDate(employee.updated_at!)}</span>
-              </div>
-
-              {employee.employment_status_changed_at && (
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Status Changed</span>
-                  </div>
-                  <span className="text-sm text-foreground">
-                    {formatDate(employee.employment_status_changed_at)}
-                  </span>
-                </div>
-              )}
-
-              {employee.employment_status_changed_by && (
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Changed By</span>
-                  </div>
-                  <span className="text-sm text-foreground">{employee.employment_status_changed_by}</span>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         </div>
 

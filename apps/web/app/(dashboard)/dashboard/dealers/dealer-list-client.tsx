@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { Dealer } from '@pgn/shared';
 import { DealerList } from '@/components/dealer-list';
 import { DealerQuickView } from '@/components/dealer-quick-view';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useRouter } from 'next/navigation';
 
 export default function DealerListClient() {
@@ -39,18 +38,6 @@ export default function DealerListClient() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Dealers</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <DealerList
         onDealerSelect={handleDealerSelect}
         onDealerEdit={handleDealerEdit}

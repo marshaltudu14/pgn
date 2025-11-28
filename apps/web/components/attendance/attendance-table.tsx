@@ -56,19 +56,19 @@ export function AttendanceTable({
   if (isLoading && attendanceRecords.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="hidden lg:block bg-white dark:bg-black">
-          <div className="p-6">
+        <div className="bg-white dark:bg-black">
+          <div className="px-2 py-3 lg:p-6">
             <div className="w-full overflow-x-auto border rounded-lg">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
-                    <TableHead>Employee</TableHead>
+                    <TableHead className="hidden md:table-cell">Employee</TableHead>
                     <TableHead>Check In</TableHead>
-                    <TableHead>Check Out</TableHead>
-                    <TableHead>Work Hours</TableHead>
-                    <TableHead>Distance</TableHead>
-                    <TableHead>Device</TableHead>
+                    <TableHead className="hidden sm:table-cell">Check Out</TableHead>
+                    <TableHead className="hidden lg:table-cell">Work Hours</TableHead>
+                    <TableHead className="hidden xl:table-cell">Distance</TableHead>
+                    <TableHead className="hidden lg:table-cell">Device</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -77,38 +77,21 @@ export function AttendanceTable({
                   {[...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
                       <TableCell className="text-right">
-                        <Skeleton className="h-8 w-8 rounded ml-auto" />
+                        <Skeleton className="h-8 w-8 rounded ml-auto cursor-pointer" />
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-          </div>
-        </div>
-        <div className="lg:hidden">
-          <div className="divide-y divide-border">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="p-4 bg-white dark:bg-black">
-                <div className="flex gap-4 mb-3">
-                  <Skeleton className="h-6 w-32" />
-                  <Skeleton className="h-6 w-24" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -131,20 +114,20 @@ export function AttendanceTable({
 
   return (
     <div className="space-y-4">
-      {/* Desktop/Tablet View - Table */}
-      <div className="hidden lg:block bg-white dark:bg-black">
-        <div className="p-6">
+      {/* Table View - Desktop and Mobile */}
+      <div className="bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           <div className="w-full overflow-x-auto border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead>Employee</TableHead>
+                  <TableHead className="hidden md:table-cell">Employee</TableHead>
                   <TableHead>Check In</TableHead>
-                  <TableHead>Check Out</TableHead>
-                  <TableHead>Work Hours</TableHead>
-                  <TableHead>Distance</TableHead>
-                  <TableHead>Device</TableHead>
+                  <TableHead className="hidden sm:table-cell">Check Out</TableHead>
+                  <TableHead className="hidden lg:table-cell">Work Hours</TableHead>
+                  <TableHead className="hidden xl:table-cell">Distance</TableHead>
+                  <TableHead className="hidden lg:table-cell">Device</TableHead>
                   <TableHead>Verification</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -153,9 +136,23 @@ export function AttendanceTable({
                 {attendanceRecords.map((record) => (
                   <TableRow key={record.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
-                      {format(new Date(record.date), 'MMM dd, yyyy')}
+                      <div>
+                        <div className="font-medium">
+                          {format(new Date(record.date), 'MMM dd, yyyy')}
+                        </div>
+                        {record.employeeName && (
+                          <div className="text-sm text-muted-foreground md:hidden">
+                            {record.employeeName}
+                          </div>
+                        )}
+                        {record.humanReadableEmployeeId && (
+                          <div className="text-xs text-muted-foreground md:hidden">
+                            {record.humanReadableEmployeeId}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div>
                         {record.employeeName && (
                           <div className="font-medium">{record.employeeName}</div>
@@ -174,7 +171,7 @@ export function AttendanceTable({
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       {record.checkOutTime ? (
                         <div className="text-sm font-medium">
                           {format(new Date(record.checkOutTime), 'hh:mm a')}
@@ -183,12 +180,12 @@ export function AttendanceTable({
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="text-sm">
                         {record.workHours ? `${record.workHours.toFixed(1)}h` : '-'}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden xl:table-cell">
                       <div className="text-sm">
                         {record.locationPath && record.locationPath.length > 0 ? (
                           <span>Path data</span>
@@ -197,7 +194,7 @@ export function AttendanceTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden lg:table-cell">
                       <div className="text-sm text-muted-foreground">
                         {record.device || '-'}
                       </div>
@@ -223,64 +220,6 @@ export function AttendanceTable({
         </div>
       </div>
 
-      {/* Mobile View - App-style List */}
-      <div className="lg:hidden">
-        <div className="divide-y divide-border">
-          {attendanceRecords.map((record) => (
-            <div key={record.id} className="p-4 bg-white dark:bg-black">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    {format(new Date(record.date), 'MMM dd, yyyy')}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {record.humanReadableEmployeeId || 'N/A'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <StatusBadge status={record.verificationStatus} />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRecordSelect(record)}
-                    className="cursor-pointer hover:bg-muted/50"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-sm">
-                    <span className="font-medium">Check In:</span>{' '}
-                    {record.checkInTime ? format(new Date(record.checkInTime), 'hh:mm a') : '-'}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Check Out:</span>{' '}
-                    {record.checkOutTime ? format(new Date(record.checkOutTime), 'hh:mm a') : '-'}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-sm">
-                    <span className="font-medium">Work Hours:</span>{' '}
-                    {record.workHours ? `${record.workHours.toFixed(1)}h` : '-'}
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-medium">Distance:</span>{' '}
-                    {record.locationPath && record.locationPath.length > 0 ? (
-                      'Path data available'
-                    ) : '-'}
-                  </div>
-                </div>
-
-                              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Pagination */}
       {pagination.totalPages > 1 && (
         <div className="p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
@@ -298,6 +237,7 @@ export function AttendanceTable({
                 size="sm"
                 onClick={() => onPageChange(pagination.currentPage - 1)}
                 disabled={pagination.currentPage === 1}
+                className="cursor-pointer hover:bg-accent transition-colors"
               >
                 Previous
               </Button>
@@ -309,6 +249,7 @@ export function AttendanceTable({
                 size="sm"
                 onClick={() => onPageChange(pagination.currentPage + 1)}
                 disabled={pagination.currentPage === pagination.totalPages}
+                className="cursor-pointer hover:bg-accent transition-colors"
               >
                 Next
               </Button>
@@ -319,4 +260,3 @@ export function AttendanceTable({
     </div>
   );
 }
-

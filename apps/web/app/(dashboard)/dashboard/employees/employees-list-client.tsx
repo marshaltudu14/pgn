@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { Employee } from '@pgn/shared';
 import { EmployeeList } from '@/components/employee-list';
 import { EmployeeQuickView } from '@/components/employee-quick-view';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useRouter } from 'next/navigation';
 
 export default function EmployeeListClient() {
@@ -40,19 +39,6 @@ export default function EmployeeListClient() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Employees</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-  
       <EmployeeList
         onEmployeeSelect={handleEmployeeSelect}
         onEmployeeEdit={handleEmployeeEdit}

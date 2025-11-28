@@ -874,24 +874,38 @@ export const useAttendance = create<AttendanceStoreState>()(
             if (!data || !data.records) {
               throw new Error('Invalid attendance history response structure');
             }
-            const attendanceRecords: DailyAttendanceRecord[] = data.records.map((record: any) => ({
-              id: record.id,
-              employeeId: record.employeeId,
-              humanReadableEmployeeId: record.humanReadableEmployeeId,
-              employeeName: record.employeeName,
-              date: record.date,
-              checkInTime: record.checkInTime,
-              checkOutTime: record.checkOutTime,
-              checkInLocation: record.checkInLocation,
-              checkOutLocation: record.checkOutLocation,
-              locationPath: record.locationPath || [],
-              status: record.status,
-              verificationStatus: record.verificationStatus,
-              workHours: record.workHours,
-              notes: record.notes,
-              createdAt: record.createdAt,
-              updatedAt: record.updatedAt,
-            }));
+            const attendanceRecords: DailyAttendanceRecord[] = data.records.map((record: any) => {
+              const mappedRecord: DailyAttendanceRecord = {
+                id: record.id,
+                employeeId: record.employeeId,
+                humanReadableEmployeeId: record.humanReadableEmployeeId,
+                employeeName: record.employeeName,
+                date: record.date,
+                checkInTime: record.checkInTime,
+                checkOutTime: record.checkOutTime,
+                status: record.status,
+                verificationStatus: record.verificationStatus,
+                workHours: record.workHours,
+                createdAt: record.createdAt,
+                updatedAt: record.updatedAt,
+              };
+
+              // Only include optional fields if they exist in the source data
+              if (record.checkInLocation !== undefined) {
+                mappedRecord.checkInLocation = record.checkInLocation;
+              }
+              if (record.checkOutLocation !== undefined) {
+                mappedRecord.checkOutLocation = record.checkOutLocation;
+              }
+              if (record.locationPath !== undefined) {
+                mappedRecord.locationPath = record.locationPath;
+              }
+              if (record.notes !== undefined) {
+                mappedRecord.notes = record.notes;
+              }
+
+              return mappedRecord;
+            });
 
             set({
               attendanceHistory: attendanceRecords,
@@ -947,6 +961,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             }
           } catch (error) {
             set({
+              isServiceAvailable: false,
               error: error instanceof Error ? error.message : 'Failed to initialize location service',
             });
           }
@@ -993,7 +1008,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               return;
             }
 
-    
+
             const checkOutData = JSON.stringify({
               checkOutTime: new Date().toISOString(),
               deviceInfo: await get().getDeviceInfo(),
@@ -1001,16 +1016,18 @@ export const useAttendance = create<AttendanceStoreState>()(
 
             const success = await locationTrackingServiceNotifee.stopTracking(checkOutData);
 
+            // Set the final state after stopping tracking
             set({
               isLocationTracking: false,
               lastLocationUpdate: null,
               error: success ? null : 'Failed to stop location tracking cleanly',
             });
-
-            // Update service status
-            await get().checkServiceStatus();
           } catch (_error) {
-            // Silently handle stop tracking errors
+            // Ensure we set the correct state even if there's an error
+            set({
+              isLocationTracking: false,
+              lastLocationUpdate: null,
+            });
           }
         },
 

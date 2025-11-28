@@ -70,7 +70,7 @@ export function FarmerList({
   };
 
   const handleRetailerFilterChange = (value: string) => {
-    setFilters({ retailer_id: value || undefined });
+    setFilters({ retailer_id: value === 'all' ? undefined : value });
     setPagination(1); // Reset to first page
   };
 
@@ -191,7 +191,7 @@ export function FarmerList({
             />
           </div>
           <Select
-            value={filters.retailer_id || ''}
+            value={filters.retailer_id || 'all'}
             onValueChange={(value) => handleRetailerFilterChange(value)}
             disabled={loadingRetailers}
           >
@@ -202,7 +202,7 @@ export function FarmerList({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Retailers</SelectItem>
+              <SelectItem value="all">All Retailers</SelectItem>
               {retailers.map((retailer) => (
                 <SelectItem key={retailer.id} value={retailer.id}>
                   {retailer.name}

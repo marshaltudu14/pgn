@@ -1268,6 +1268,11 @@ describe('Attendance Store', () => {
 
       const { result } = renderHook(() => useAttendance());
 
+      // Ensure no attendance ID is set (clean state)
+      act(() => {
+        result.current.currentAttendanceId = undefined;
+      });
+
       await act(async () => {
         await result.current.sendLocationUpdate(mockLocation, batteryLevel);
       });

@@ -70,7 +70,7 @@ export function RetailerList({
   };
 
   const handleDealerFilterChange = (value: string) => {
-    setFilters({ dealer_id: value || undefined });
+    setFilters({ dealer_id: value === 'all' ? undefined : value });
     setPagination(1); // Reset to first page
   };
 
@@ -191,7 +191,7 @@ export function RetailerList({
             />
           </div>
           <Select
-            value={filters.dealer_id || ''}
+            value={filters.dealer_id || 'all'}
             onValueChange={(value) => handleDealerFilterChange(value)}
             disabled={loadingDealers}
           >
@@ -202,7 +202,7 @@ export function RetailerList({
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Dealers</SelectItem>
+              <SelectItem value="all">All Dealers</SelectItem>
               {dealers.map((dealer) => (
                 <SelectItem key={dealer.id} value={dealer.id}>
                   {dealer.name}

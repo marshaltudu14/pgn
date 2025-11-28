@@ -108,7 +108,7 @@ export default function DashboardLayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout, isLoading } = useAuthStore();
+  const { logout, isLoading } = useAuthStore();
   const pathname = usePathname();
 
   // Create logout handler - redirect is handled by authStore

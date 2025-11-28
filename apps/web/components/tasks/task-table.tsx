@@ -123,16 +123,16 @@ export function TaskTable({
   isAdmin,
 }: TaskTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('');
-  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | ''>('');
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
   // Apply filters when they change
   const applyFilters = useCallback(() => {
     const filters: Partial<TaskListParams> = {};
     if (searchTerm) filters.search = searchTerm;
-    if (statusFilter) filters.status = statusFilter;
-    if (priorityFilter) filters.priority = priorityFilter;
+    if (statusFilter !== 'all') filters.status = statusFilter;
+    if (priorityFilter !== 'all') filters.priority = priorityFilter;
 
     onFilterChange(filters);
   }, [searchTerm, statusFilter, priorityFilter, onFilterChange]);
@@ -230,12 +230,12 @@ export function TaskTable({
             {showFilters && (
               <div className="flex flex-row gap-4">
                 <div className="flex-1">
-                  <Select value={statusFilter} onValueChange={(value: TaskStatus) => setStatusFilter(value)}>
+                  <Select value={statusFilter} onValueChange={(value: TaskStatus | 'all') => setStatusFilter(value)}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Statuses</SelectItem>
+                      <SelectItem value="all">All Statuses</SelectItem>
                       {Object.entries(TASK_STATUS_CONFIG).map(([key, config]) => (
                         <SelectItem key={key} value={key}>
                           <div className="flex items-center gap-2">
@@ -249,12 +249,12 @@ export function TaskTable({
                 </div>
 
                 <div className="flex-1">
-                  <Select value={priorityFilter} onValueChange={(value: TaskPriority) => setPriorityFilter(value)}>
+                  <Select value={priorityFilter} onValueChange={(value: TaskPriority | 'all') => setPriorityFilter(value)}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Filter by priority" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Priorities</SelectItem>
+                      <SelectItem value="all">All Priorities</SelectItem>
                       {Object.entries(TASK_PRIORITY_CONFIG).map(([key, config]) => (
                         <SelectItem key={key} value={key}>
                           {config.label}

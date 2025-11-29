@@ -197,9 +197,35 @@ export const CreateEmployeeRequestSchema = z.object({
   assigned_cities: z.array(z.object({
     city: z.string(),
     state: z.string(),
-  })).default([]),
+  })).min(1, 'At least one city must be assigned'),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
+
+export const EmployeeFormSchema = z.object({
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email format'),
+  phone: z.string().optional(),
+  employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']),
+  can_login: z.boolean(),
+  assigned_cities: z.array(z.object({
+    city: z.string(),
+    state: z.string(),
+  })).min(1, 'At least one city must be assigned'),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  confirm_password: z.string().optional(),
+}).refine((data) => {
+  // Custom validation for password confirmation
+  if (data.password && data.password !== data.confirm_password) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Passwords do not match',
+  path: ['confirm_password']
+});
+
+export type EmployeeFormData = z.infer<typeof EmployeeFormSchema>;
 
 export const UpdateEmployeeRequestSchema = z.object({
   first_name: z.string().min(1, 'First name is required').optional(),

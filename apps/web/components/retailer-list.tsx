@@ -27,6 +27,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Retailer } from '@pgn/shared';
+
+// Define dealer type based on usage
+interface Dealer {
+  id: string;
+  name: string;
+  shop_name?: string | null;
+}
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { Search, Plus, Edit, Eye, Store, Mail, Phone, Building2 } from 'lucide-react';
@@ -188,7 +195,7 @@ export function RetailerList({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Dealers</SelectItem>
-              {dealers?.map((dealer: any) => (
+              {dealers?.map((dealer: Dealer) => (
                 <SelectItem key={dealer.id} value={dealer.id}>
                   {dealer.name}
                   {dealer.shop_name && ` - ${dealer.shop_name}`}

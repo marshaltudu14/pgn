@@ -99,7 +99,7 @@ export const useAuthStore = create<AuthState>()(
             };
           }
 
-          const responseData = result.data as any;
+          const responseData = result.data as { token?: string; employee?: AuthenticatedUser };
           if (!responseData || !responseData.employee) {
             set({ isLoading: false });
             return {

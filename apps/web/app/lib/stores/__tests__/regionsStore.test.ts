@@ -14,9 +14,13 @@ import {
 import { act, renderHook } from '@testing-library/react';
 import { useAuthStore } from '../authStore';
 import { useRegionsStore } from '../regionsStore';
+import { getAuthHeaders } from '../utils/errorHandling';
 
 // Mock authStore
 jest.mock('../authStore');
+
+// Mock errorHandling utils
+jest.mock('../utils/errorHandling');
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -60,6 +64,9 @@ const mockUseAuthStore = useAuthStore as jest.MockedFunction<
 // Mock the authStore getState method and attach it to the mock
 const mockAuthStoreGetState = jest.fn().mockReturnValue({ token: 'mock-token' });
 
+// Mock getAuthHeaders function
+const mockGetAuthHeaders = getAuthHeaders as jest.MockedFunction<typeof getAuthHeaders>;
+
 describe('Regions Store', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -74,6 +81,14 @@ describe('Regions Store', () => {
 
     // Also mock the direct useAuthStore.getState() call
     (useAuthStore.getState as jest.Mock) = mockAuthStoreGetState;
+
+    // Mock getAuthHeaders to return proper headers
+    mockGetAuthHeaders.mockReturnValue({
+      'Content-Type': 'application/json',
+      'x-client-info': 'pgn-web-client',
+      'User-Agent': 'pgn-admin-dashboard/1.0.0',
+      Authorization: 'Bearer mock-token',
+    });
 
     // Force complete store reset by recreating the store
     useRegionsStore.setState({
@@ -138,37 +153,7 @@ describe('Regions Store', () => {
     });
   });
 
-  describe('getAuthHeaders', () => {
-    it('should return correct headers with token', () => {
-      const { result } = renderHook(() => useRegionsStore());
-
-      const headers = result.current.getAuthHeaders();
-
-      expect(headers).toEqual({
-        'Content-Type': 'application/json',
-        'x-client-info': 'pgn-web-client',
-        'User-Agent': 'pgn-admin-dashboard/1.0.0',
-        Authorization: 'Bearer mock-token',
-      });
-    });
-
-    it('should return correct headers without token', () => {
-      // Override the mock to return null token for this test
-      mockAuthStoreGetState.mockReturnValue({ token: null });
-
-      const { result } = renderHook(() => useRegionsStore());
-
-      const headers = result.current.getAuthHeaders();
-
-      expect(headers).toEqual({
-        'Content-Type': 'application/json',
-        'x-client-info': 'pgn-web-client',
-        'User-Agent': 'pgn-admin-dashboard/1.0.0',
-      });
-      expect(headers).not.toHaveProperty('Authorization');
-    });
-  });
-
+  
   describe('fetchRegions', () => {
     it('should fetch regions successfully with default parameters', async () => {
       const mockResponse = createMockRegionsResponse();
@@ -194,7 +179,7 @@ describe('Regions Store', () => {
 
       expect(fetch).toHaveBeenCalledWith('/api/regions?', {
         method: 'GET',
-        headers: result.current.getAuthHeaders(),
+        headers: mockGetAuthHeaders(),
       });
     });
 
@@ -221,7 +206,7 @@ describe('Regions Store', () => {
         '/api/regions?state=California&city=Los+Angeles&page=2&limit=10',
         {
           method: 'GET',
-          headers: result.current.getAuthHeaders(),
+          headers: mockGetAuthHeaders(),
         }
       );
     });
@@ -294,7 +279,7 @@ describe('Regions Store', () => {
 
       expect(fetch).toHaveBeenCalledWith('/api/regions', {
         method: 'POST',
-        headers: result.current.getAuthHeaders(),
+        headers: mockGetAuthHeaders(),
         body: JSON.stringify(mockCreateRequest),
       });
     });
@@ -382,7 +367,7 @@ describe('Regions Store', () => {
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/region-123', {
         method: 'PUT',
-        headers: result.current.getAuthHeaders(),
+        headers: mockGetAuthHeaders(),
         body: JSON.stringify(mockUpdateRequest),
       });
     });
@@ -454,7 +439,7 @@ describe('Regions Store', () => {
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/region-123', {
         method: 'DELETE',
-        headers: result.current.getAuthHeaders(),
+        headers: mockGetAuthHeaders(),
       });
     });
 
@@ -515,7 +500,7 @@ describe('Regions Store', () => {
       expect(result.current.states).toEqual(mockStates);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/states', {
-        headers: result.current.getAuthHeaders(),
+        headers: mockGetAuthHeaders(),
       });
     });
 
@@ -572,7 +557,7 @@ describe('Regions Store', () => {
       expect(result.current.error).toBe(null);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California', {
-        headers: result.current.getAuthHeaders(),
+        headers: mockGetAuthHeaders(),
       });
     });
 
@@ -594,7 +579,7 @@ describe('Regions Store', () => {
       expect(fetch).toHaveBeenCalledWith(
         '/api/regions/search?q=California&page=2&limit=10',
         {
-          headers: result.current.getAuthHeaders(),
+          headers: mockGetAuthHeaders(),
         }
       );
     });

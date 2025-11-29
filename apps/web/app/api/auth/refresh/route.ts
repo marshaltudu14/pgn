@@ -6,8 +6,8 @@ import { authService } from '@/services/auth.service';
 import {
   RefreshRequestSchema,
   RefreshResponseSchema,
-  AuthErrorResponseSchema,
-  apiContract
+  apiContract,
+  type RefreshRequest,
 } from '@pgn/shared';
 import { withApiValidation } from '@/lib/api-validation';
 
@@ -18,11 +18,11 @@ import { withApiValidation } from '@/lib/api-validation';
  */
 const refreshHandler = async (req: NextRequest): Promise<NextResponse> => {
   // Get validated body from the validation middleware
-  const body = (req as any).validatedBody;
+  const body = (req as NextRequest & { validatedBody: unknown }).validatedBody;
 
   try {
     // Attempt token refresh using auth service
-    const refreshResponse = await authService.refreshToken(body);
+    const refreshResponse = await authService.refreshToken(body as RefreshRequest);
 
     // Return success response wrapped in API response structure
     const apiResponse = {
@@ -52,8 +52,8 @@ apiContract.addRoute({
 
 // Apply validation middleware FIRST, then security and rate limiting
 const refreshWithValidation = withApiValidation(refreshHandler, {
-  body: RefreshRequestSchema as any,
-  response: RefreshResponseSchema as any,
+  body: RefreshRequestSchema,
+  response: RefreshResponseSchema,
   validateResponse: process.env.NODE_ENV === 'development',
 });
 

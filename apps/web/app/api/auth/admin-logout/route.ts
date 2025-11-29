@@ -6,7 +6,6 @@ import { createClient } from '@/utils/supabase/server';
 import { withApiValidation } from '@/lib/api-validation';
 import {
   AdminLogoutResponseSchema,
-  AuthErrorResponseSchema,
   apiContract
 } from '@pgn/shared';
 

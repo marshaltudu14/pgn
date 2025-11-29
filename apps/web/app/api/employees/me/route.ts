@@ -56,7 +56,7 @@ const getCurrentEmployeeHandler = withApiValidation(
     }
   },
   {
-    response: BaseApiResponseSchema as any,
+    response: BaseApiResponseSchema,
     validateResponse: false
   }
 );
@@ -67,6 +67,6 @@ export const GET = withSecurity(getCurrentEmployeeHandler);
 apiContract.addRoute({
   path: '/api/employees/me',
   method: 'GET',
-  outputSchema: BaseApiResponseSchema as any,
+  outputSchema: BaseApiResponseSchema,
   description: 'Get current authenticated employee profile'
 });

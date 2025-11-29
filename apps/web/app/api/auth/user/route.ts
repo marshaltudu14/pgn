@@ -6,7 +6,6 @@ import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/se
 import { withApiValidation } from '@/lib/api-validation';
 import {
   UserResponseSchema,
-  AuthErrorResponseSchema,
   apiContract
 } from '@pgn/shared';
 
@@ -92,7 +91,7 @@ apiContract.addRoute({
 
 // Apply validation middleware for response only, then security and rate limiting
 const userWithValidation = withApiValidation(userHandler, {
-  response: UserResponseSchema as any,
+  response: UserResponseSchema,
   validateResponse: process.env.NODE_ENV === 'development',
 });
 

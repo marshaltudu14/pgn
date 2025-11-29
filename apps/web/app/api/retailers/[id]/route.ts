@@ -49,7 +49,7 @@ const updateRetailerHandler = async (request: NextRequest, context: { params?: u
     const { id } = validatedParams || (context.params ? await (context.params as Promise<{ id: string }>) : { id: '' });
     const retailerData = (request as NextRequest & { validatedBody?: Record<string, unknown> }).validatedBody || {};
 
-    const result = await updateRetailer(id, retailerData as any);
+    const result = await updateRetailer(id, retailerData as Record<string, unknown>);
 
     const response = NextResponse.json({
       success: true,

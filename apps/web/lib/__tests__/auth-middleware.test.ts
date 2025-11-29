@@ -65,7 +65,7 @@ describe('Authentication Middleware', () => {
     });
 
     it('should return 401 when no token is provided and auth is required', async () => {
-      mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+      mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const middleware = createAuthMiddleware({ requireAuth: true });
       const result = await middleware(mockRequest);
@@ -75,7 +75,7 @@ describe('Authentication Middleware', () => {
     });
 
     it('should proceed without token when auth is not required', async () => {
-      mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+      mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const middleware = createAuthMiddleware({ requireAuth: false });
       const result = await middleware(mockRequest);
@@ -223,7 +223,7 @@ describe('Authentication Middleware', () => {
         NextResponse.json({ message: 'Success' })
       );
 
-            mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+            mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const wrappedHandler = withAuth(mockHandler);
       const result = await wrappedHandler(mockRequest);
@@ -310,7 +310,7 @@ describe('Authentication Middleware', () => {
     });
 
     it('should return null for missing token', () => {
-            mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+            mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const result = getUserFromRequest(mockRequest);
 
@@ -383,7 +383,7 @@ describe('Authentication Middleware', () => {
   describe('Edge Cases', () => {
     it('should handle malformed Authorization header', async () => {
       mockRequest.headers.set('Authorization', 'InvalidFormat token');
-      mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+      mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const middleware = createAuthMiddleware({ requireAuth: true });
       const result = await middleware(mockRequest);
@@ -393,7 +393,7 @@ describe('Authentication Middleware', () => {
 
     it('should handle empty Authorization header', async () => {
       mockRequest.headers.set('Authorization', '');
-      mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+      mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const middleware = createAuthMiddleware({ requireAuth: true });
       const result = await middleware(mockRequest);
@@ -402,7 +402,7 @@ describe('Authentication Middleware', () => {
     });
 
     it('should handle undefined Authorization header', async () => {
-            mockJwtService.extractTokenFromHeader.mockReturnValue(null);
+            mockJwtService.extractTokenFromHeader.mockReturnValue(undefined);
 
       const middleware = createAuthMiddleware({ requireAuth: true });
       const result = await middleware(mockRequest);

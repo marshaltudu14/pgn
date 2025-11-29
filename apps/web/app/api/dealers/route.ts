@@ -8,7 +8,8 @@ import {
   DealerListParamsSchema,
   DealerFormDataSchema,
   DealerListResponseSchema,
-  BaseApiResponseSchema
+  BaseApiResponseSchema,
+  type DealerListParams,
 } from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
@@ -17,9 +18,9 @@ import { apiContract } from '@pgn/shared/src/validation/build-time-checker';
 const getDealersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Get validated query parameters from the middleware
-    const params = (request as any).validatedQuery;
+    const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery;
 
-    const result = await listDealers(params);
+    const result = await listDealers(params as DealerListParams);
 
     const response = NextResponse.json({
       success: true,
@@ -47,7 +48,7 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
 const createDealerHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Get validated body from the middleware
-    const dealerData = (request as any).validatedBody as DealerInsert;
+    const dealerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as DealerInsert;
 
     const result = await createDealer(dealerData);
 

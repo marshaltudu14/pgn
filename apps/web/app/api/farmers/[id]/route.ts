@@ -13,14 +13,30 @@ import {
   FarmerDeletedResponseSchema,
   apiContract,
   RouteParamsSchema,
+  type FarmerUpdate,
 } from '@pgn/shared';
 
+// Interface for route context with params
+interface RouteContext {
+  params?: unknown;
+}
+
+// Interface for validated parameters request
+interface ValidatedParamsRequest extends NextRequest {
+  validatedParams: Record<string, string>;
+}
+
+// Interface for validated body request
+interface ValidatedBodyRequest extends NextRequest {
+  validatedBody: unknown;
+}
+
 const getFarmerHandler = withApiValidation(
-  async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
+  async (request: NextRequest, context: RouteContext): Promise<NextResponse> => {
     try {
-      // Get the route params from context or await params promise
-      const routeParams = context.params;
-      const { id } = (request as any).validatedParams || (typeof routeParams?.then === 'function' ? await routeParams : routeParams);
+      // Get the route params from context
+      const routeParams = context.params as Record<string, string>;
+      const { id } = (request as ValidatedParamsRequest).validatedParams || routeParams || {};
 
       const farmer = await getFarmerById(id);
 
@@ -51,14 +67,14 @@ const getFarmerHandler = withApiValidation(
 );
 
 const updateFarmerHandler = withApiValidation(
-  async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
+  async (request: NextRequest, context: RouteContext): Promise<NextResponse> => {
     try {
-      // Get the route params from context or await params promise
-      const routeParams = context.params;
-      const { id } = (request as any).validatedParams || (typeof routeParams?.then === 'function' ? await routeParams : routeParams);
+      // Get the route params from context
+      const routeParams = context.params as Record<string, string>;
+      const { id } = (request as ValidatedParamsRequest).validatedParams || routeParams || {};
 
       // Use validated body from middleware
-      const farmerData = (request as any).validatedBody;
+      const farmerData = (request as ValidatedBodyRequest).validatedBody as FarmerUpdate;
 
       const result = await updateFarmer(id, farmerData);
 
@@ -90,11 +106,11 @@ const updateFarmerHandler = withApiValidation(
 );
 
 const deleteFarmerHandler = withApiValidation(
-  async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
+  async (request: NextRequest, context: RouteContext): Promise<NextResponse> => {
     try {
-      // Get the route params from context or await params promise
-      const routeParams = context.params;
-      const { id } = (request as any).validatedParams || (typeof routeParams?.then === 'function' ? await routeParams : routeParams);
+      // Get the route params from context
+      const routeParams = context.params as Record<string, string>;
+      const { id } = (request as ValidatedParamsRequest).validatedParams || routeParams || {};
 
       await deleteFarmer(id);
 

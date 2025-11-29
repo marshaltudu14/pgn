@@ -11,13 +11,24 @@ import {
   FarmerListResponseSchema,
   FarmerCreatedResponseSchema,
   apiContract,
+  type FarmerInsert,
 } from '@pgn/shared';
+
+// Interface for validated query parameters
+interface ValidatedQueryRequest extends NextRequest {
+  validatedQuery: Record<string, string | string[]>;
+}
+
+// Interface for validated body
+interface ValidatedBodyRequest extends NextRequest {
+  validatedBody: unknown;
+}
 
 const getFarmersHandler = withApiValidation(
   async (request: NextRequest): Promise<NextResponse> => {
     try {
       // Use validated query parameters from middleware
-      const params = (request as any).validatedQuery;
+      const params = (request as ValidatedQueryRequest).validatedQuery;
 
       const result = await listFarmers(params);
 
@@ -54,7 +65,7 @@ const createFarmerHandler = withApiValidation(
   async (request: NextRequest): Promise<NextResponse> => {
     try {
       // Use validated body from middleware
-      const farmerData = (request as any).validatedBody;
+      const farmerData = (request as ValidatedBodyRequest).validatedBody as FarmerInsert;
 
       const result = await createFarmer(farmerData);
 

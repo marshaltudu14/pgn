@@ -9,7 +9,8 @@ import {
   RetailerListParamsSchema,
   RetailerFormDataSchema,
   RetailerListResponseSchema,
-  RetailerCreatedResponseSchema
+  RetailerCreatedResponseSchema,
+  type RetailerInsert,
 } from '@pgn/shared';
 import { apiContract } from '@pgn/shared';
 
@@ -48,7 +49,7 @@ const createRetailerHandler = async (request: NextRequest): Promise<NextResponse
     // Use validated body from the middleware
     const retailerData = (request as NextRequest & { validatedBody?: Record<string, unknown> }).validatedBody || {};
 
-    const result = await createRetailer(retailerData as any);
+    const result = await createRetailer(retailerData as RetailerInsert);
 
     const response = NextResponse.json({
       success: true,

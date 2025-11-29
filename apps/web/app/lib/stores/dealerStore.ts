@@ -18,8 +18,8 @@ interface DealerState {
   filters: DealerFilters;
 
   fetchDealers: (params?: Partial<{ page: number; itemsPerPage: number; filters: DealerFilters }>) => Promise<void>;
-  createDealer: (dealerData: any) => Promise<{ success: boolean; error?: string; data?: any }>;
-  updateDealer: (id: string, dealerData: any) => Promise<{ success: boolean; error?: string; data?: any }>;
+  createDealer: (dealerData: DealerInsert) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
+  updateDealer: (id: string, dealerData: DealerUpdate) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
   deleteDealer: (id: string) => Promise<{ success: boolean; error?: string }>;
   setFilters: (filters: Partial<DealerFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
@@ -78,7 +78,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         return;
       }
 
-      const data: DealerListResponse = result.data as any;
+      const data: DealerListResponse = result.data as DealerListResponse;
 
       set({
         dealers: data.dealers,
@@ -102,7 +102,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     }
   },
 
-  createDealer: async (dealerData: any) => {
+  createDealer: async (dealerData: DealerInsert) => {
     set({ loading: true, error: null });
 
     try {
@@ -120,7 +120,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         return { success: false, error: result.error };
       }
 
-      const data = result.data;
+      const data = result.data as Dealer;
 
       // Refetch the list to get updated data
       await get().fetchDealers();
@@ -133,7 +133,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     }
   },
 
-  updateDealer: async (id, dealerData) => {
+  updateDealer: async (id: string, dealerData: DealerUpdate) => {
     set({ loading: true, error: null });
 
     try {
@@ -151,7 +151,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         return { success: false, error: result.error };
       }
 
-      const data = result.data;
+      const data = result.data as Dealer;
 
       // Refetch the list to get updated data
       await get().fetchDealers();
@@ -164,7 +164,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     }
   },
 
-  deleteDealer: async (id) => {
+  deleteDealer: async (id: string) => {
     set({ loading: true, error: null });
 
     try {
@@ -192,11 +192,11 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     }
   },
 
-  setFilters: (filters) => {
+  setFilters: (filters: Partial<DealerFilters>) => {
     set((state) => ({ filters: { ...state.filters, ...filters } }));
   },
 
-  setPagination: (page, itemsPerPage) => {
+  setPagination: (page: number, itemsPerPage?: number) => {
     set((state) => ({
       pagination: {
         ...state.pagination,

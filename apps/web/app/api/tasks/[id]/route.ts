@@ -13,10 +13,6 @@ import { withApiValidation } from '@/lib/api-validation';
 import { z } from 'zod';
 import { apiContract } from '@pgn/shared';
 
-interface RouteParams {
-  params: Promise<{ id: string }>;
-}
-
 // Schema for route parameters
 const TaskIdParamsSchema = z.object({
   id: z.string().min(1, 'Task ID is required')
@@ -24,15 +20,15 @@ const TaskIdParamsSchema = z.object({
 
 const getTaskHandler = async (
   request: NextRequest,
-  context: { params?: any }
+  context: { params?: unknown }
 ): Promise<NextResponse> => {
-  const params = await context.params || { id: '' };
+  const params = (context.params as Record<string, string>) || { id: '' };
   try {
     const authenticatedRequest = request as AuthenticatedRequest;
     const user = authenticatedRequest.user;
 
     // Use validated parameters from middleware
-    const { id } = (request as NextRequest & { validatedParams: { id: string } }).validatedParams || await params;
+    const { id } = (request as NextRequest & { validatedParams: { id: string } }).validatedParams || params;
 
     const result = await getTaskById(id);
 
@@ -70,12 +66,12 @@ const getTaskHandler = async (
 
 const updateTaskHandler = async (
   request: NextRequest,
-  context: { params?: any }
+  context: { params?: unknown }
 ): Promise<NextResponse> => {
-  const params = await context.params || { id: '' };
+  const params = (context.params as Record<string, string>) || { id: '' };
   try {
     // Use validated parameters and body from middleware
-    const { id } = (request as NextRequest & { validatedParams: { id: string } }).validatedParams || await params;
+    const { id } = (request as NextRequest & { validatedParams: { id: string } }).validatedParams || params;
     const body = (request as NextRequest & { validatedBody: UpdateTaskRequest }).validatedBody;
 
     // RLS policies will handle authorization at database level

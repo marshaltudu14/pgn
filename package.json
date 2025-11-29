@@ -32,8 +32,8 @@
     "lint:shared": "cd packages/shared && npm run lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint:fix": "npm run lint -- --fix",
-      },
+    "lint:fix": "npm run lint -- --fix"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "prettier": "^3.0.0",

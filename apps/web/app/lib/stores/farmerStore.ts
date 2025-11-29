@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Farmer, FarmerFilters, FarmerListResponse, Retailer, FarmerInsert, FarmerUpdate, FarmerFormData } from '@pgn/shared';
+import { Farmer, FarmerFilters, FarmerListResponse, Retailer, FarmerFormData } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 

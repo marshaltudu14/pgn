@@ -6,7 +6,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
 import {
   FormField,
   FormItem,
@@ -29,12 +28,12 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { MapPin, X, ChevronDown, Check } from 'lucide-react';
-import { EmployeeFormData } from './types';
+import { type EmployeeFormData } from '@pgn/shared';
 import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { cn } from '@/lib/utils';
 
 interface RegionalAssignmentFormProps {
-  form: ReturnType<typeof useForm<EmployeeFormData>>;
+  form: import('react-hook-form').UseFormReturn<EmployeeFormData>;
 }
 
 export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
@@ -101,8 +100,8 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
 
   // Filter out already selected cities from the dropdown
   const availableCities = useMemo(() => {
-    return allCityPairs.filter(pair => {
-      return !selectedCities.some(selected =>
+    return allCityPairs.filter((pair: { city: string; state: string }) => {
+      return !selectedCities.some((selected: { city: string; state: string }) =>
         selected.city === pair.city && selected.state === pair.state
       );
     });
@@ -217,7 +216,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                         <CommandGroup>
                           {availableCities.map((pair) => {
                             const isSelected = selectedCities.some(
-                              c => c.city === pair.city && c.state === pair.state
+                              (c: { city: string; state: string }) => c.city === pair.city && c.state === pair.state
                             );
 
                             return (
@@ -258,7 +257,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                   </div>
                   <div className="border rounded-md p-3 bg-muted/20 max-h-40 overflow-y-auto">
                     <div className="space-y-2">
-                      {selectedCities.map((cityAssignment, index) => (
+                      {selectedCities.map((cityAssignment: { city: string; state: string }, index: number) => (
                         <div
                           key={`${cityAssignment.city}-${cityAssignment.state}-${index}`}
                           className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-muted/50 transition-colors"

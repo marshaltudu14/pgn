@@ -4,8 +4,6 @@
  */
 
 'use client';
-
-import { useForm } from 'react-hook-form';
 import {
   FormField,
   FormItem,
@@ -22,13 +20,12 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Building } from 'lucide-react';
-import { EmploymentStatus, Employee } from '@pgn/shared';
-import { EmployeeFormData } from './types';
+import { EmploymentStatus, Employee, type EmployeeFormData } from '@pgn/shared';
 
 const EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'];
 
 interface EmploymentDetailsFormProps {
-  form: ReturnType<typeof useForm<EmployeeFormData>>;
+  form: import('react-hook-form').UseFormReturn<EmployeeFormData>;
   isEditing: boolean;
   employee?: Employee | null;
 }

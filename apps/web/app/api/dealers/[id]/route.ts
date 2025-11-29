@@ -19,10 +19,10 @@ const DealerRouteParamsSchema = z.object({
   id: z.string().min(1, 'Dealer ID is required'),
 });
 
-const getDealerHandler = async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
+const getDealerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
     // Get validated parameters from middleware
-    const { id } = (request as any).validatedParams || context.params || {};
+    const { id } = (request as NextRequest & { validatedParams?: Record<string, string> }).validatedParams || (context.params as Record<string, string>) || {};
     const dealer = await getDealerById(id);
 
     const response = NextResponse.json({
@@ -45,11 +45,11 @@ const getDealerHandler = async (request: NextRequest, context: { params?: any })
   }
 };
 
-const updateDealerHandler = async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
+const updateDealerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
     // Get validated parameters and body from middleware
-    const { id } = (request as any).validatedParams || context.params || {};
-    const dealerData = (request as any).validatedBody as DealerUpdate;
+    const { id } = (request as NextRequest & { validatedParams?: Record<string, string> }).validatedParams || (context.params as Record<string, string>) || {};
+    const dealerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as DealerUpdate;
 
     const result = await updateDealer(id, dealerData);
 
@@ -73,10 +73,10 @@ const updateDealerHandler = async (request: NextRequest, context: { params?: any
   }
 };
 
-const deleteDealerHandler = async (request: NextRequest, context: { params?: any }): Promise<NextResponse> => {
+const deleteDealerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
     // Get validated parameters from middleware
-    const { id } = (request as any).validatedParams || context.params || {};
+    const { id } = (request as NextRequest & { validatedParams?: Record<string, string> }).validatedParams || (context.params as Record<string, string>) || {};
     await deleteDealer(id);
 
     const response = NextResponse.json({

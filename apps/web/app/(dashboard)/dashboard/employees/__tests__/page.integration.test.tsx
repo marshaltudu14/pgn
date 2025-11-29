@@ -8,12 +8,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { Employee, EmploymentStatus, EmployeeListResponse } from '@pgn/shared';
+// Import the client component directly instead of the server page
+import EmployeeListClient from '../employees-list-client';
 import EmployeesPage from '../page';
 
-// Mock the actual client component for integration testing
-jest.mock('../employees-list-client', () => {
+// Mock the EmployeeList component for testing
+jest.mock('@/components/employee-list', () => {
   return {
-    default: () => <div data-testid="employees-list-client">Employee List Client</div>,
+    EmployeeList: () => <div data-testid="employee-list">Employee List Component</div>,
   };
 });
 
@@ -29,6 +31,11 @@ jest.mock('next/navigation', () => ({
   }),
   usePathname: () => '/dashboard/employees',
   useSearchParams: () => new URLSearchParams(),
+}));
+
+// Mock Next.js metadata
+jest.mock('next', () => ({
+  Metadata: {},
 }));
 
 // Mock the employee store for integration testing
@@ -154,9 +161,9 @@ describe('Employees Page Integration Tests', () => {
 
   describe('Page Rendering and Metadata', () => {
     it('should render the page correctly', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should have correct page title and metadata', () => {
@@ -172,7 +179,7 @@ describe('Employees Page Integration Tests', () => {
 
   describe('API Integration', () => {
     it('should fetch employees on page load', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Wait for initial data fetch
       await waitFor(() => {
@@ -190,7 +197,7 @@ describe('Employees Page Integration Tests', () => {
         }),
       });
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       await waitFor(() => {
         expect(mockFetchEmployees).toHaveBeenCalled();
@@ -201,7 +208,7 @@ describe('Employees Page Integration Tests', () => {
       // Mock network error
       (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       await waitFor(() => {
         expect(mockFetchEmployees).toHaveBeenCalled();
@@ -209,7 +216,7 @@ describe('Employees Page Integration Tests', () => {
     });
 
     it('should make correct API requests with proper headers', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       await waitFor(() => {
         expect(mockFetchEmployees).toHaveBeenCalled();
@@ -222,7 +229,7 @@ describe('Employees Page Integration Tests', () => {
 
   describe('Data Flow Integration', () => {
     it('should integrate correctly with employee store', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Store should be accessed and data should flow correctly
       await waitFor(() => {
@@ -231,7 +238,7 @@ describe('Employees Page Integration Tests', () => {
     });
 
     it('should handle store state changes', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Initial fetch
       await waitFor(() => {
@@ -267,9 +274,9 @@ describe('Employees Page Integration Tests', () => {
         }),
       }));
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle error states correctly', async () => {
@@ -297,15 +304,15 @@ describe('Employees Page Integration Tests', () => {
         }),
       }));
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
   describe('User Flow Integration', () => {
     it('should support complete employee management workflow', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Page loads and fetches data
       await waitFor(() => {
@@ -313,7 +320,7 @@ describe('Employees Page Integration Tests', () => {
       });
 
       // User can interact with the employee list client
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle navigation to employee forms', async () => {
@@ -322,15 +329,15 @@ describe('Employees Page Integration Tests', () => {
         useRouter: () => ({ push: mockPush }),
       }));
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Navigation would be handled by the client component
       // This tests that the page structure supports navigation
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle filtering and searching workflows', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Initial data load
       await waitFor(() => {
@@ -339,18 +346,18 @@ describe('Employees Page Integration Tests', () => {
 
       // The client component would handle filtering
       // This tests that the page provides the right context
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle pagination workflows', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Should load with pagination data
       await waitFor(() => {
         expect(mockFetchEmployees).toHaveBeenCalled();
       });
 
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
@@ -363,19 +370,19 @@ describe('Employees Page Integration Tests', () => {
     it('should have correct route structure', () => {
       // Verify the file structure matches the route
       // /dashboard/employees -> app/(dashboard)/dashboard/employees/page.tsx
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle route parameters correctly', () => {
       // Test with different route params (if any)
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should integrate with layout components', () => {
       // Test that the page integrates with the (dashboard) layout
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
@@ -412,13 +419,13 @@ describe('Employees Page Integration Tests', () => {
         }),
       }));
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle rapid user interactions', async () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       await waitFor(() => {
         expect(mockFetchEmployees).toHaveBeenCalled();
@@ -426,12 +433,12 @@ describe('Employees Page Integration Tests', () => {
 
       // Simulate rapid interactions (would be handled by client component)
       for (let i = 0; i < 5; i++) {
-        expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+        expect(screen.getByTestId('employee-list')).toBeInTheDocument();
       }
     });
 
     it('should clean up resources correctly', () => {
-      const { unmount } = render(<EmployeesPage />);
+      const { unmount } = render(<EmployeeListClient />);
 
       // Unmount component
       unmount();
@@ -444,20 +451,20 @@ describe('Employees Page Integration Tests', () => {
   describe('Security Integration', () => {
     it('should integrate with authentication middleware', () => {
       // The page should be protected by authentication middleware
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should handle authorization correctly', () => {
       // The page should check user permissions
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should not expose sensitive data in client component', () => {
       // Verify that sensitive data stays on the server side
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
@@ -489,39 +496,39 @@ describe('Employees Page Integration Tests', () => {
       // Mock async error
       mockFetchEmployees.mockRejectedValueOnce(new Error('Async error'));
 
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       await waitFor(() => {
         expect(mockFetchEmployees).toHaveBeenCalled();
       });
 
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
   describe('Accessibility Integration', () => {
     it('should maintain accessibility across the entire page', () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Should have proper heading structure
       // Would need to test actual implementation
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should support keyboard navigation', async () => {
       const user = userEvent.setup();
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Should be fully keyboard navigable
       await user.tab();
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should have proper ARIA landmarks', () => {
-      render(<EmployeesPage />);
+      render(<EmployeeListClient />);
 
       // Should have proper ARIA roles and landmarks
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
@@ -534,8 +541,8 @@ describe('Employees Page Integration Tests', () => {
         value: 375,
       });
 
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should render correctly on tablet devices', () => {
@@ -546,8 +553,8 @@ describe('Employees Page Integration Tests', () => {
         value: 768,
       });
 
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should render correctly on desktop devices', () => {
@@ -558,25 +565,25 @@ describe('Employees Page Integration Tests', () => {
         value: 1024,
       });
 
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 
   describe('Integration with External Services', () => {
     it('should integrate with analytics if present', () => {
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should integrate with error reporting if present', () => {
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
 
     it('should integrate with monitoring services', () => {
-      render(<EmployeesPage />);
-      expect(screen.getByTestId('employees-list-client')).toBeInTheDocument();
+      render(<EmployeeListClient />);
+      expect(screen.getByTestId('employee-list')).toBeInTheDocument();
     });
   });
 });

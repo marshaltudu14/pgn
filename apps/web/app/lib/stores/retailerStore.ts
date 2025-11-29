@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Retailer, RetailerFilters, RetailerListResponse, RetailerInsert, RetailerUpdate, RetailerFormData } from '@pgn/shared';
+import { Retailer, RetailerFilters, RetailerListResponse, RetailerFormData } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
@@ -163,7 +163,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
     }
   },
 
-  deleteRetailer: async (id) => {
+  deleteRetailer: async (id: string) => {
     set({ loading: true, error: null });
 
     try {
@@ -191,11 +191,11 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
     }
   },
 
-  setFilters: (filters) => {
+  setFilters: (filters: Partial<RetailerFilters>) => {
     set((state) => ({ filters: { ...state.filters, ...filters } }));
   },
 
-  setPagination: (page, itemsPerPage) => {
+  setPagination: (page: number, itemsPerPage?: number) => {
     set((state) => ({
       pagination: {
         ...state.pagination,

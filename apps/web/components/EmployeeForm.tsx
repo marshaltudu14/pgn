@@ -7,8 +7,6 @@
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,52 +32,10 @@ import { EmploymentDetailsForm } from './employee-form/EmploymentDetailsForm';
 import { RegionalAssignmentForm } from './employee-form/RegionalAssignmentForm';
 import { AuditInfoForm } from './employee-form/AuditInfoForm';
 
-// Enhanced form validation schema with comprehensive error messages
-const employeeFormSchema = z.object({
-  first_name: z.string()
-    .min(2, 'First name must be at least 2 characters')
-    .max(50, 'First name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s'-]+$/, 'First name can only contain letters, spaces, hyphens, and apostrophes')
-    .transform(val => val.trim()),
-  last_name: z.string()
-    .min(2, 'Last name must be at least 2 characters')
-    .max(50, 'Last name must be less than 50 characters')
-    .regex(/^[a-zA-Z\s'-]+$/, 'Last name can only contain letters, spaces, hyphens, and apostrophes')
-    .transform(val => val.trim()),
-  email: z.string()
-    .email('Please enter a valid email address')
-    .max(100, 'Email must be less than 100 characters')
-    .transform(val => val.toLowerCase().trim()),
-  phone: z.string().optional()
-    .refine((val) => !val || /^[\d\s-()]+$/.test(val), 'Phone number can only contain digits, spaces, hyphens, and parentheses')
-    .transform(val => val ? val.replace(/\s+/g, ' ').trim() : val),
-  employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'], {
-    message: 'Please select a valid employment status'
-  }),
-  can_login: z.boolean(),
-  assigned_cities: z.array(z.object({
-    city: z.string().min(1, 'City name is required'),
-    state: z.string().min(1, 'State name is required')
-  })).min(1, 'At least one city must be assigned'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters long')
-    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number')
-    .optional(), // Optional for editing, but we'll validate it manually for creation
-  confirm_password: z.string().optional(),
-}).refine((data) => {
-  // Custom validation for password confirmation
-  if (data.password && data.password !== data.confirm_password) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'Passwords do not match',
-  path: ['confirm_password']
-});
-
-type EmployeeFormData = z.infer<typeof employeeFormSchema>;
+import {
+  EmployeeFormSchema,
+  type EmployeeFormData,
+} from '@pgn/shared';
 
 interface EmployeeFormProps {
   open: boolean;
@@ -99,8 +55,8 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
   // This helps prevent hydration mismatches by ensuring clean state
   const formKey = isEditing ? employee?.id || 'edit' : 'create';
 
-  const form = useForm<any>({
-    // resolver: zodResolver(employeeFormSchema) as any,
+  const form = useForm<EmployeeFormData>({
+    // resolver: zodResolver(EmployeeFormSchema),
     defaultValues: {
       first_name: '',
       last_name: '',
@@ -147,6 +103,14 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
     try {
       setLoading(true);
       setError(null);
+
+      // Manual validation with Zod
+      const validationResult = EmployeeFormSchema.safeParse(data);
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.issues.map(err => err.message).join(', ');
+        toast.error('Validation failed: ' + errorMessages);
+        return;
+      }
 
       // For new employees, password is required
       if (!isEditing && !data.password) {
@@ -224,17 +188,17 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
           {/* Desktop/Tablet View */}
           <div className="hidden lg:block space-y-8">
-            <PersonalInfoForm form={form as any} isEditing={isEditing} />
-            <EmploymentDetailsForm form={form as any} isEditing={isEditing} employee={employee} />
-            <RegionalAssignmentForm form={form as any} />
+            <PersonalInfoForm form={form} isEditing={isEditing} />
+            <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
+            <RegionalAssignmentForm form={form} />
             {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 
           {/* Mobile View - Simplified */}
           <div className="lg:hidden space-y-4">
-            <PersonalInfoForm form={form as any} isEditing={isEditing} />
-            <EmploymentDetailsForm form={form as any} isEditing={isEditing} employee={employee} />
-            <RegionalAssignmentForm form={form as any} />
+            <PersonalInfoForm form={form} isEditing={isEditing} />
+            <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
+            <RegionalAssignmentForm form={form} />
             {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 

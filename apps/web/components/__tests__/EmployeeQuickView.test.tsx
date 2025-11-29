@@ -3,10 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { Employee, EmploymentStatus, CityAssignment } from '@pgn/shared';
+import { Employee, EmploymentStatus } from '@pgn/shared';
 import { EmployeeQuickView } from '../employee-quick-view';
 
 // Mock UI components to simplify testing

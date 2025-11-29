@@ -8,7 +8,6 @@ import {
 } from '@/services/employee.service';
 import {
   UpdateEmployeeRequestSchema,
-  ChangeEmploymentStatusRequestSchema,
   BaseApiResponseSchema
 } from '@pgn/shared';
 
@@ -30,10 +29,10 @@ const PasswordResetRequestSchema = z.object({
 const getEmployeeByIdHandler = withApiValidation(
   async (
     request: NextRequest,
-    context: { params?: any }
+    _context: { params?: unknown }
   ): Promise<NextResponse> => {
     try {
-      const { id } = (request as any).validatedParams;
+      const { id } = (request as NextRequest & { validatedParams: Record<string, string> }).validatedParams;
 
       const employee = await getEmployeeById(id);
 
@@ -68,8 +67,8 @@ const getEmployeeByIdHandler = withApiValidation(
     }
   },
   {
-    params: EmployeeIdParamsSchema as any,
-    response: BaseApiResponseSchema as any,
+    params: EmployeeIdParamsSchema,
+    response: BaseApiResponseSchema,
     validateResponse: false
   }
 );
@@ -77,16 +76,17 @@ const getEmployeeByIdHandler = withApiValidation(
 const updateEmployeeHandler = withApiValidation(
   async (
     request: NextRequest,
-    context: { params?: any }
+    _context: { params?: unknown }
   ): Promise<NextResponse> => {
     try {
-      const { id } = (request as any).validatedParams;
-      const body = (request as any).validatedBody;
+      const { id } = (request as NextRequest & { validatedParams: Record<string, string> }).validatedParams;
+      const body = (request as NextRequest & { validatedBody: unknown }).validatedBody;
 
       // Check if email is already taken by another employee
-      if (body.email) {
+      const typedBody = body as { email?: string; [key: string]: unknown };
+      if (typedBody.email) {
         const { getEmployeeByEmail } = await import('@/services/employee.service');
-        const existingEmployee = await getEmployeeByEmail(body.email);
+        const existingEmployee = await getEmployeeByEmail(typedBody.email);
         if (existingEmployee && existingEmployee.id !== id) {
           const response = NextResponse.json(
             {
@@ -100,7 +100,7 @@ const updateEmployeeHandler = withApiValidation(
       }
 
       // Update employee
-      const updatedEmployee = await updateEmployee(id, body);
+      const updatedEmployee = await updateEmployee(id, body as Record<string, unknown>);
 
       const response = NextResponse.json({
         success: true,
@@ -137,14 +137,14 @@ const updateEmployeeHandler = withApiValidation(
     }
   },
   {
-    params: EmployeeIdParamsSchema as any,
-    body: UpdateEmployeeRequestSchema as any,
-    response: BaseApiResponseSchema as any,
+    params: EmployeeIdParamsSchema,
+    body: UpdateEmployeeRequestSchema,
+    response: BaseApiResponseSchema,
     validateResponse: false
   }
 );
 
-const VALID_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'];
+// const VALID_EMPLOYMENT_STATUSES: EmploymentStatus[] = ['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE'];
 
 // Schema for employment status change
 const EmploymentStatusChangeSchema = z.object({
@@ -156,14 +156,15 @@ const EmploymentStatusChangeSchema = z.object({
 const patchEmployeeHandler = withApiValidation(
   async (
     request: NextRequest,
-    context: { params?: any }
+    _context: { params?: unknown }
   ) => {
     try {
-      const { id } = (request as any).validatedParams;
-      const body = (request as any).validatedBody;
+      const { id } = (request as NextRequest & { validatedParams: Record<string, string> }).validatedParams;
+      const body = (request as NextRequest & { validatedBody: unknown }).validatedBody;
 
       // Check if this is a status change request
-      if (body.employment_status) {
+      const typedBody = body as { employment_status?: string; reason?: string; changed_by?: string; email?: string; [key: string]: unknown };
+      if (typedBody.employment_status) {
         // Check if employee exists
         const employee = await getEmployeeById(id);
         if (!employee) {
@@ -177,7 +178,7 @@ const patchEmployeeHandler = withApiValidation(
           return addSecurityHeaders(response);
         }
 
-        const { employment_status, reason, changed_by } = body;
+        const { employment_status, reason, changed_by } = typedBody;
 
         // Prepare status change data
         const statusChange = {
@@ -219,9 +220,9 @@ const patchEmployeeHandler = withApiValidation(
       }
 
       // Check if email is already taken by another employee
-      if (body.email) {
+      if (typedBody.email) {
         const { getEmployeeByEmail } = await import('@/services/employee.service');
-        const existingEmployee = await getEmployeeByEmail(body.email);
+        const existingEmployee = await getEmployeeByEmail(typedBody.email);
         if (existingEmployee && existingEmployee.id !== id) {
           const response = NextResponse.json(
             {
@@ -235,7 +236,7 @@ const patchEmployeeHandler = withApiValidation(
       }
 
       // Update employee
-      const updatedEmployee = await updateEmployee(id, body);
+      const updatedEmployee = await updateEmployee(id, body as Record<string, unknown>);
 
       const response = NextResponse.json({
         success: true,
@@ -272,9 +273,9 @@ const patchEmployeeHandler = withApiValidation(
     }
   },
   {
-    params: EmployeeIdParamsSchema as any,
-    body: z.union([EmploymentStatusChangeSchema, UpdateEmployeeRequestSchema]) as any,
-    response: BaseApiResponseSchema as any,
+    params: EmployeeIdParamsSchema,
+    body: z.union([EmploymentStatusChangeSchema, UpdateEmployeeRequestSchema]),
+    response: BaseApiResponseSchema,
     validateResponse: false
   }
 );
@@ -282,11 +283,11 @@ const patchEmployeeHandler = withApiValidation(
 const postEmployeeHandler = withApiValidation(
   async (
     request: NextRequest,
-    context: { params?: any }
+    _context: { params?: unknown }
   ) => {
     try {
-      const { id } = (request as any).validatedParams;
-      const { newPassword } = (request as any).validatedBody;
+      const { id } = (request as NextRequest & { validatedParams: Record<string, string> }).validatedParams;
+      const { newPassword } = (request as NextRequest & { validatedBody: { newPassword: string } }).validatedBody;
 
       // Check if employee exists
       const employee = await getEmployeeById(id);
@@ -334,9 +335,9 @@ const postEmployeeHandler = withApiValidation(
     }
   },
   {
-    params: EmployeeIdParamsSchema as any,
-    body: PasswordResetRequestSchema as any,
-    response: BaseApiResponseSchema as any,
+    params: EmployeeIdParamsSchema,
+    body: PasswordResetRequestSchema,
+    response: BaseApiResponseSchema,
     validateResponse: false
   }
 );
@@ -351,31 +352,31 @@ export const POST = withSecurity(postEmployeeHandler);
 apiContract.addRoute({
   path: '/api/employees/[id]',
   method: 'GET',
-  inputSchema: EmployeeIdParamsSchema as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: EmployeeIdParamsSchema,
+  outputSchema: BaseApiResponseSchema,
   description: 'Get employee by ID'
 });
 
 apiContract.addRoute({
   path: '/api/employees/[id]',
   method: 'PUT',
-  inputSchema: UpdateEmployeeRequestSchema as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: UpdateEmployeeRequestSchema,
+  outputSchema: BaseApiResponseSchema,
   description: 'Update employee by ID'
 });
 
 apiContract.addRoute({
   path: '/api/employees/[id]',
   method: 'PATCH',
-  inputSchema: z.union([EmploymentStatusChangeSchema, UpdateEmployeeRequestSchema]) as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: z.union([EmploymentStatusChangeSchema, UpdateEmployeeRequestSchema]),
+  outputSchema: BaseApiResponseSchema,
   description: 'Partially update employee (status change or other fields)'
 });
 
 apiContract.addRoute({
   path: '/api/employees/[id]',
   method: 'POST',
-  inputSchema: PasswordResetRequestSchema as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: PasswordResetRequestSchema,
+  outputSchema: BaseApiResponseSchema,
   description: 'Reset employee password'
 });

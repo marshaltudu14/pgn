@@ -9,8 +9,7 @@ import {
   RegionsResponse,
   StateOption,
 } from '@pgn/shared';
-import { useAuthStore } from './authStore';
-import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
+import { getAuthHeaders } from './utils/errorHandling';
 
 interface RegionsStore {
   // State
@@ -37,7 +36,6 @@ interface RegionsStore {
   clearError: () => void;
   clearCreateError: () => void;
   reset: () => void;
-  getAuthHeaders: () => Record<string, string>;
 }
 
 const initialState: RegionsResponse = {
@@ -66,26 +64,6 @@ export const useRegionsStore = create<RegionsStore>()(
         limit: 20,
       },
 
-      // Helper function to get authentication headers
-      getAuthHeaders: () => {
-        const token = useAuthStore.getState().token;
-
-        // For web requests, identify the client for security middleware
-        // Web users are authenticated via Supabase sessions handled by middleware
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          'x-client-info': 'pgn-web-client',
-          'User-Agent': 'pgn-admin-dashboard/1.0.0',
-        };
-
-        // Add Authorization header only if we have a token (for mobile users)
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        return headers;
-      },
-
       // Fetch regions with filtering and pagination
       fetchRegions: async (filters: RegionFilter = {}, pagination: PaginationParams = {}) => {
         try {
@@ -99,7 +77,7 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const response = await fetch(`/api/regions?${queryParams.toString()}`, {
             method: 'GET',
-            headers: get().getAuthHeaders(),
+            headers: getAuthHeaders(),
           });
 
           if (!response.ok) {
@@ -132,7 +110,7 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const response = await fetch('/api/regions', {
             method: 'POST',
-            headers: get().getAuthHeaders(),
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
           });
 
@@ -166,7 +144,7 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const response = await fetch(`/api/regions/${id}`, {
             method: 'PUT',
-            headers: get().getAuthHeaders(),
+            headers: getAuthHeaders(),
             body: JSON.stringify(data),
           });
 
@@ -199,7 +177,7 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const response = await fetch(`/api/regions/${id}`, {
             method: 'DELETE',
-            headers: get().getAuthHeaders(),
+            headers: getAuthHeaders(),
           });
 
           if (!response.ok) {
@@ -225,7 +203,7 @@ export const useRegionsStore = create<RegionsStore>()(
       fetchStates: async () => {
         try {
           const response = await fetch('/api/regions/states', {
-            headers: get().getAuthHeaders(),
+            headers: getAuthHeaders(),
           });
           if (!response.ok) {
             throw new Error('Failed to fetch states');
@@ -249,7 +227,7 @@ export const useRegionsStore = create<RegionsStore>()(
           if (pagination.limit) queryParams.append('limit', pagination.limit.toString());
 
           const response = await fetch(`/api/regions/search?${queryParams.toString()}`, {
-            headers: get().getAuthHeaders(),
+            headers: getAuthHeaders(),
           });
           if (!response.ok) {
             throw new Error('Failed to search regions');

@@ -5,10 +5,9 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Employee, EmploymentStatus } from '@pgn/shared';
 import {
   Mail,
@@ -20,7 +19,6 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  User,
   Users,
 } from 'lucide-react';
 
@@ -198,7 +196,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                 );
               }
 
-              let cities: any[] = [];
+              let cities: (string | { city: string; [key: string]: unknown })[] = [];
               try {
                 cities = typeof employee.assigned_cities === 'string'
                   ? JSON.parse(employee.assigned_cities)
@@ -207,11 +205,11 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                     : [];
               } catch {
                 // If parsing fails, treat as single string
-                cities = [employee.assigned_cities];
+                cities = [employee.assigned_cities as string];
               }
 
               return cities.length > 0 ? (
-                cities.map((city: any, index: number) => (
+                cities.map((city: string | { city: string; [key: string]: unknown }, index: number) => (
                   <div key={index} className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
                     {typeof city === 'string' ? city : city.city || JSON.stringify(city)}
                   </div>

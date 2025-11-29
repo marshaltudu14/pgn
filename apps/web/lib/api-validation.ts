@@ -36,7 +36,7 @@ export function withApiValidation<T extends NextResponse>(
 
         try {
           body = await clonedReq.json();
-        } catch (parseError) {
+        } catch {
           const errorResponse = NextResponse.json(
             {
               success: false,
@@ -70,13 +70,13 @@ export function withApiValidation<T extends NextResponse>(
         }
 
         // Store validated data on the request for later use
-        (req as any).validatedBody = validationResult.data;
+        (req as NextRequest & { validatedBody: unknown }).validatedBody = validationResult.data;
       }
 
       // Validate query parameters if schema is provided
       if (options.query) {
         const { searchParams } = new URL(req.url);
-        const queryParams: Record<string, any> = {};
+        const queryParams: Record<string, string | string[]> = {};
 
         searchParams.forEach((value, key) => {
           // Handle array parameters (e.g., id[]=1&id[]=2)
@@ -85,7 +85,7 @@ export function withApiValidation<T extends NextResponse>(
             if (!queryParams[arrayKey]) {
               queryParams[arrayKey] = [];
             }
-            queryParams[arrayKey].push(value);
+            (queryParams[arrayKey] as string[]).push(value);
           } else {
             queryParams[key] = value;
           }
@@ -112,7 +112,7 @@ export function withApiValidation<T extends NextResponse>(
         }
 
         // Store validated query data on the request
-        (req as any).validatedQuery = validationResult.data;
+        (req as NextRequest & { validatedQuery: unknown }).validatedQuery = validationResult.data;
       }
 
       // Validate route parameters if schema is provided
@@ -138,7 +138,7 @@ export function withApiValidation<T extends NextResponse>(
         }
 
         // Store validated parameters on the request
-        (req as any).validatedParams = validationResult.data;
+        (req as NextRequest & { validatedParams: unknown }).validatedParams = validationResult.data;
       }
 
       // Call the original handler
@@ -202,22 +202,22 @@ export function withApiValidation<T extends NextResponse>(
 /**
  * Helper function to create typed API route handler
  */
-export function createApiHandler<TInput = any, TOutput extends NextResponse = NextResponse>(
+export function createApiHandler<TInput = unknown, TOutput extends NextResponse = NextResponse>(
   options: ApiValidationOptions & {
     handler: (req: NextRequest, context: {
-      params?: any;
+      params?: unknown;
       body?: TInput;
-      query?: any;
+      query?: unknown;
     }) => Promise<TOutput>;
   }
 ) {
   return withApiValidation(
-    async (req: NextRequest, context: { params?: any }) => {
+    async (req: NextRequest, context: { params?: unknown }) => {
       return await options.handler(req, {
         ...context,
-        body: (req as any).validatedBody,
-        query: (req as any).validatedQuery,
-        params: (req as any).validatedParams,
+        body: (req as NextRequest & { validatedBody?: TInput }).validatedBody,
+        query: (req as NextRequest & { validatedQuery?: unknown }).validatedQuery,
+        params: (req as NextRequest & { validatedParams?: unknown }).validatedParams,
       });
     },
     options
@@ -228,7 +228,7 @@ export function createApiHandler<TInput = any, TOutput extends NextResponse = Ne
  * Development-time validation helper
  * This can be used in tests to ensure all routes have proper validation
  */
-export function validateApiRoute(routeHandler: Function): {
+export function validateApiRoute(_routeHandler: (...args: unknown[]) => unknown): {
   hasValidation: boolean;
   schemas: string[];
 } {

@@ -6,17 +6,28 @@ import {
 import {
   CreateEmployeeRequestSchema,
   EmployeeListParamsSchema,
-  BaseApiResponseSchema
+  BaseApiResponseSchema,
+  type CreateEmployeeRequest,
 } from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
 import { apiContract } from '@pgn/shared';
 
+// Interface for validated query parameters
+interface ValidatedQueryRequest extends NextRequest {
+  validatedQuery: Record<string, string | string[]>;
+}
+
+// Interface for validated body
+interface ValidatedBodyRequest extends NextRequest {
+  validatedBody: unknown;
+}
+
 const getEmployeesHandler = withApiValidation(
   async (request: NextRequest): Promise<NextResponse> => {
     try {
       // Use validated query parameters
-      const params = (request as any).validatedQuery;
+      const params = (request as ValidatedQueryRequest).validatedQuery;
 
       const { listEmployees } = await import('@/services/employee.service');
       const result = await listEmployees(params);
@@ -41,8 +52,8 @@ const getEmployeesHandler = withApiValidation(
     }
   },
   {
-    query: EmployeeListParamsSchema as any,
-    response: BaseApiResponseSchema as any,
+    query: EmployeeListParamsSchema,
+    response: BaseApiResponseSchema,
     validateResponse: false // Skip response validation in development to avoid strict schema matching
   }
 );
@@ -51,10 +62,11 @@ const createEmployeeHandler = withApiValidation(
   async (request: NextRequest): Promise<NextResponse> => {
     try {
       // Use validated request body
-      const body = (request as any).validatedBody;
+      const body = (request as ValidatedBodyRequest).validatedBody;
 
       // Check if email is already taken by an existing employee
-      const existingEmployee = await getEmployeeByEmail(body.email);
+      const typedBody = body as { email: string; [key: string]: unknown };
+      const existingEmployee = await getEmployeeByEmail(typedBody.email);
       if (existingEmployee) {
         const response = NextResponse.json(
           {
@@ -67,7 +79,7 @@ const createEmployeeHandler = withApiValidation(
       }
 
       // Create employee
-      const newEmployee = await createEmployee(body);
+      const newEmployee = await createEmployee(body as CreateEmployeeRequest);
 
       const response = NextResponse.json({
         success: true,
@@ -141,8 +153,8 @@ const createEmployeeHandler = withApiValidation(
     }
   },
   {
-    body: CreateEmployeeRequestSchema as any,
-    response: BaseApiResponseSchema as any,
+    body: CreateEmployeeRequestSchema,
+    response: BaseApiResponseSchema,
     validateResponse: false // Skip response validation in development to avoid strict schema matching
   }
 );
@@ -154,15 +166,15 @@ export const POST = withSecurity(createEmployeeHandler);
 apiContract.addRoute({
   path: '/api/employees',
   method: 'GET',
-  inputSchema: EmployeeListParamsSchema as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: EmployeeListParamsSchema,
+  outputSchema: BaseApiResponseSchema,
   description: 'Get list of employees with filtering and pagination'
 });
 
 apiContract.addRoute({
   path: '/api/employees',
   method: 'POST',
-  inputSchema: CreateEmployeeRequestSchema as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: CreateEmployeeRequestSchema,
+  outputSchema: BaseApiResponseSchema,
   description: 'Create a new employee'
 });

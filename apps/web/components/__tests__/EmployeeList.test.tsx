@@ -3,10 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { Employee, EmploymentStatus, CityAssignment } from '@pgn/shared';
+import { Employee, EmploymentStatus } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import { EmployeeList } from '../employee-list';
 
@@ -130,10 +130,10 @@ const createMockEmployee = (id: string, overrides: Partial<Employee> = {}): Empl
   phone: `987654321${id}`,
   employment_status: 'ACTIVE' as EmploymentStatus,
   can_login: true,
-  assigned_cities: JSON.stringify([
+  assigned_cities: [
     { city: 'Mumbai', state: 'Maharashtra' },
     { city: 'Pune', state: 'Maharashtra' },
-  ]),
+  ],
   face_embedding: 'mock-embedding-data',
   reference_photo_url: 'https://example.com/photo.jpg',
   created_at: '2024-01-01T00:00:00Z',
@@ -178,7 +178,7 @@ describe('EmployeeList Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseEmployeeStore.mockReturnValue(defaultMockStore as any);
+    mockUseEmployeeStore.mockReturnValue(defaultMockStore as unknown);
   });
 
   describe('Component Rendering', () => {
@@ -213,7 +213,7 @@ describe('EmployeeList Component', () => {
         ...defaultMockStore,
         loading: true,
         employees: [],
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -224,7 +224,8 @@ describe('EmployeeList Component', () => {
       );
 
       // Should show skeleton elements
-      expect(screen.getByTestId('skeleton')).toBeInTheDocument();
+      const skeletons = screen.getAllByTestId('skeleton');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
 
     it('should display error message when error exists', () => {
@@ -234,7 +235,7 @@ describe('EmployeeList Component', () => {
         error: errorMessage,
         loading: false,
         employees: [],
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -257,7 +258,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -279,7 +280,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 2,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -298,7 +299,7 @@ describe('EmployeeList Component', () => {
       const mockEmployees = [
         createMockEmployee('1', {
           employment_status: 'ACTIVE',
-          assigned_cities: JSON.stringify([{ city: 'Mumbai', state: 'Maharashtra' }]),
+          assigned_cities: [{ city: 'Mumbai', state: 'Maharashtra' }],
         }),
       ];
 
@@ -309,7 +310,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -322,9 +323,9 @@ describe('EmployeeList Component', () => {
       const employee = mockEmployees[0];
       expect(screen.getByText(employee.human_readable_user_id!)).toBeInTheDocument();
       expect(screen.getByText(`${employee.first_name} ${employee.last_name}`)).toBeInTheDocument();
-      expect(screen.getByText(employee.email)).toBeInTheDocument();
-      expect(screen.getByText(employee.phone!)).toBeInTheDocument();
-      expect(screen.getByText('ACTIVE')).toBeInTheDocument();
+      expect(screen.getAllByText(employee.email)).toHaveLength(2); // Mobile and desktop views
+      expect(screen.getAllByText(employee.phone!)).toHaveLength(2); // Mobile and desktop views
+      expect(screen.getAllByText('ACTIVE')).toHaveLength(2); // One in dropdown, one in badge
       expect(screen.getByText('Mumbai')).toBeInTheDocument();
     });
 
@@ -344,7 +345,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 5,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -378,7 +379,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -405,7 +406,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -432,7 +433,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -442,8 +443,6 @@ describe('EmployeeList Component', () => {
         />
       );
 
-      // Should show truncated email in mobile view (visible in the name cell)
-      const mobileEmail = screen.queryByText(/very\.long\.email\.address@e.*\.\.\./);
       // Should show full email in desktop view
       const desktopEmail = screen.getByText('very.long.email.address@example.com');
 
@@ -480,7 +479,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -513,7 +512,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -543,7 +542,7 @@ describe('EmployeeList Component', () => {
         ...defaultMockStore,
         error: errorMessage,
         clearError: jest.fn(),
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -608,7 +607,7 @@ describe('EmployeeList Component', () => {
           hasNextPage: true,
           hasPreviousPage: false,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -637,7 +636,7 @@ describe('EmployeeList Component', () => {
           hasNextPage: true,
           hasPreviousPage: true,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -669,7 +668,7 @@ describe('EmployeeList Component', () => {
           hasNextPage: true,
           hasPreviousPage: false,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -694,7 +693,7 @@ describe('EmployeeList Component', () => {
           hasNextPage: false,
           hasPreviousPage: true,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -721,7 +720,7 @@ describe('EmployeeList Component', () => {
           hasNextPage: true,
           hasPreviousPage: false,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -749,7 +748,7 @@ describe('EmployeeList Component', () => {
           hasNextPage: false,
           hasPreviousPage: false,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -813,7 +812,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -841,7 +840,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 0,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -869,7 +868,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -897,7 +896,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -930,7 +929,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList
@@ -963,7 +962,7 @@ describe('EmployeeList Component', () => {
           ...defaultMockStore.pagination,
           totalItems: 1,
         },
-      } as any);
+      } as unknown);
 
       render(
         <EmployeeList

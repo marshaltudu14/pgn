@@ -12,6 +12,11 @@ const EmployeeSearchParamsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(10)
 });
 
+// Interface for validated query parameters
+interface ValidatedQueryRequest extends NextRequest {
+  validatedQuery: Record<string, string | string[]>;
+}
+
 interface EmployeeSearchResult {
   id: string;
   human_readable_user_id: string;
@@ -23,14 +28,17 @@ const searchEmployeesHandler = withApiValidation(
   async (request: NextRequest): Promise<NextResponse> => {
     try {
       // Use validated query parameters
-      const { search, page, limit } = (request as any).validatedQuery;
+      const { search, page, limit } = (request as ValidatedQueryRequest).validatedQuery;
+      const searchStr = typeof search === 'string' ? search : (search as string[])[0] || undefined;
+      const pageNum = typeof page === 'number' ? page : (typeof page === 'string' ? parseInt(page, 10) : undefined);
+      const limitNum = typeof limit === 'number' ? limit : (typeof limit === 'string' ? parseInt(limit, 10) : undefined);
 
       // Only search ACTIVE employees who can login
       const { listEmployees } = await import('@/services/employee.service');
       const result = await listEmployees({
-        search,
-        page,
-        limit,
+        search: searchStr,
+        page: pageNum,
+        limit: limitNum,
         employment_status: ['ACTIVE'],
         sort_by: 'human_readable_user_id',
         sort_order: 'asc'
@@ -72,8 +80,8 @@ const searchEmployeesHandler = withApiValidation(
     }
   },
   {
-    query: EmployeeSearchParamsSchema as any,
-    response: BaseApiResponseSchema as any,
+    query: EmployeeSearchParamsSchema,
+    response: BaseApiResponseSchema,
     validateResponse: false
   }
 );
@@ -84,7 +92,7 @@ export const GET = withSecurity(searchEmployeesHandler);
 apiContract.addRoute({
   path: '/api/employees/search',
   method: 'GET',
-  inputSchema: EmployeeSearchParamsSchema as any,
-  outputSchema: BaseApiResponseSchema as any,
+  inputSchema: EmployeeSearchParamsSchema,
+  outputSchema: BaseApiResponseSchema,
   description: 'Search for active employees who can login'
 });

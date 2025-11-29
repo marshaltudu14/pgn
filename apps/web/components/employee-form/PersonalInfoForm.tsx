@@ -6,7 +6,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import {
   FormField,
@@ -16,10 +15,10 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Eye, EyeOff, User } from 'lucide-react';
-import { EmployeeFormData } from './types';
+import { type EmployeeFormData } from '@pgn/shared';
 
 interface PersonalInfoFormProps {
-  form: ReturnType<typeof useForm<EmployeeFormData>>;
+  form: import('react-hook-form').UseFormReturn<EmployeeFormData>;
   isEditing: boolean;
 }
 

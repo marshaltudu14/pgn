@@ -6,8 +6,8 @@ import { authService } from '@/services/auth.service';
 import {
   LoginRequestSchema,
   LoginResponseSchema,
-  AuthErrorResponseSchema,
-  apiContract
+  apiContract,
+  type LoginRequest,
 } from '@pgn/shared';
 import { withApiValidation } from '@/lib/api-validation';
 
@@ -18,10 +18,10 @@ import { withApiValidation } from '@/lib/api-validation';
  */
 const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
   // Get validated body from the validation middleware
-  const body = (req as any).validatedBody;
+  const body = (req as NextRequest & { validatedBody: unknown }).validatedBody;
 
   // No rate limiting for admin users, rate limiting for employees
-  const email = body.email.toLowerCase().trim();
+  const email = (body as { email: string }).email.toLowerCase().trim();
   let userRateLimit = null;
 
   // Only apply rate limiting to non-admin users
@@ -45,7 +45,7 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
 
   try {
     // Attempt login using auth service
-    const loginResponse = await authService.login(body);
+    const loginResponse = await authService.login(body as LoginRequest);
 
     // Return success response wrapped in API response structure
     const apiResponse = {
@@ -149,8 +149,8 @@ apiContract.addRoute({
 
 // Apply validation middleware FIRST, then security and rate limiting
 const loginWithValidation = withApiValidation(loginHandler, {
-  body: LoginRequestSchema as any,
-  response: LoginResponseSchema as any,
+  body: LoginRequestSchema,
+  response: LoginResponseSchema,
   validateResponse: process.env.NODE_ENV === 'development',
 });
 

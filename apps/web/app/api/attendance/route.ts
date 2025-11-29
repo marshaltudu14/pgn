@@ -13,12 +13,13 @@ import {
   AttendanceListParamsSchema,
   AttendanceListResponseSchema,
   apiContract,
+  type AttendanceListParams,
 } from '@pgn/shared';
 
 const getAttendanceHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Use validated query parameters from the middleware
-    const params = (request as any).validatedQuery;
+    const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery as AttendanceListParams;
 
     const result = await listAttendanceRecords(params);
 

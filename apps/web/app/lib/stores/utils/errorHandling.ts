@@ -19,12 +19,15 @@ export interface ValidationErrorResponse {
 /**
  * Check if an error response is a validation error
  */
-export function isValidationError(error: any): error is ValidationErrorResponse {
+export function isValidationError(error: unknown): error is ValidationErrorResponse {
   return (
-    error &&
+    !!error &&
     typeof error === 'object' &&
+    'success' in error &&
     error.success === false &&
+    'code' in error &&
     error.code === 'VALIDATION_ERROR' &&
+    'message' in error &&
     typeof error.message === 'string'
   );
 }
@@ -70,7 +73,7 @@ export function transformApiErrorMessage(error: unknown): string {
 
   // Handle object with error property
   if (error && typeof error === 'object' && 'error' in error) {
-    const errorValue = (error as any).error;
+    const errorValue = (error as { error: unknown }).error;
     if (typeof errorValue === 'string') {
       return cleanTechnicalErrorMessage(errorValue);
     }
@@ -189,7 +192,7 @@ export async function handleApiResponse<T>(
   errorMessage: string = 'Request failed'
 ): Promise<{ success: boolean; data?: T; error?: string; validationDetails?: ValidationErrorDetail[] }> {
   try {
-    let data: any;
+    let data: unknown;
 
     try {
       data = await response.json();
@@ -212,8 +215,9 @@ export async function handleApiResponse<T>(
       }
 
       // Handle other HTTP errors
-      const errorKey = 'error' in data ? 'error' : 'message' in data ? 'message' : 'error';
-      const serverMessage = data[errorKey] || errorMessage;
+      const dataRecord = data as Record<string, unknown>;
+      const errorKey = 'error' in dataRecord ? 'error' : 'message' in dataRecord ? 'message' : 'error';
+      const serverMessage = (dataRecord[errorKey] as string) || errorMessage;
 
       const userFriendlyMessage = transformApiErrorMessage(serverMessage);
 
@@ -247,17 +251,18 @@ export async function handleApiResponse<T>(
     }
 
     // Successful response
-    if (data.success && data.data !== undefined) {
+    const dataRecord = data as Record<string, unknown>;
+    if (dataRecord.success && dataRecord.data !== undefined) {
       return {
         success: true,
-        data: data.data
+        data: dataRecord.data as T
       };
     }
 
     // Handle unexpected successful response format
     return {
       success: true,
-      data: data
+      data: data as T
     };
   } catch (error) {
     console.error('API response handling error:', error);

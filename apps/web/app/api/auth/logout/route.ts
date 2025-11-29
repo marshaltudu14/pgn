@@ -8,9 +8,7 @@ import { withApiValidation } from '@/lib/api-validation';
 import {
   LogoutRequestSchema,
   LogoutResponseSchema,
-  AuthErrorResponseSchema,
-  apiContract,
-  RATE_LIMITS
+  apiContract
 } from '@pgn/shared';
 
 /**
@@ -29,13 +27,14 @@ const logoutHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Try to get token from validated request body first, then fallback to Authorization header
-    const body = (req as any).validatedBody;
-    let token = body?.token;
+    const body = (req as NextRequest & { validatedBody: unknown }).validatedBody;
+    let token = (body as { token?: string })?.token;
 
     // If no token in body, try Authorization header
     if (!token) {
       const authHeader = req.headers.get('authorization');
-      token = jwtService.extractTokenFromHeader(authHeader || '');
+      const headerToken = jwtService.extractTokenFromHeader(authHeader || undefined);
+      token = headerToken;
     }
 
     if (!token) {
@@ -78,8 +77,8 @@ apiContract.addRoute({
 
 // Apply validation middleware FIRST, then security and rate limiting
 const logoutWithValidation = withApiValidation(logoutHandler, {
-  body: LogoutRequestSchema as any,
-  response: LogoutResponseSchema as any,
+  body: LogoutRequestSchema,
+  response: LogoutResponseSchema,
   validateResponse: process.env.NODE_ENV === 'development',
 });
 

@@ -4,7 +4,6 @@ import { LocationUpdateRequest } from '@pgn/shared';
 import { NextRequest, NextResponse } from 'next/server';
 import { withApiValidation } from '@/lib/api-validation';
 import {
-  LocationUpdateRequestSchema,
   LocationUpdateResponseSchema,
   apiContract,
   z,
@@ -26,22 +25,22 @@ const LocationUpdateCompatSchema = z.object({
 
 const locationUpdateHandler = async (
   req: NextRequest,
-  context: { params?: any }
+  _context: { params?: unknown }
 ): Promise<NextResponse> => {
   try {
     // Use validated data from middleware
-    const { id: attendanceId } = (req as any).validatedParams;
-    const body = (req as any).validatedBody;
+    const { id: attendanceId } = (req as unknown as { validatedParams: { id: string } }).validatedParams;
+    const body = (req as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
     const updateRequest: LocationUpdateRequest = {
       location: {
-        latitude: body.latitude,
-        longitude: body.longitude,
-        accuracy: body.accuracy,
-        timestamp: new Date(body.timestamp),
+        latitude: body.latitude as number,
+        longitude: body.longitude as number,
+        accuracy: (body.accuracy as number | undefined) || 0,
+        timestamp: new Date(body.timestamp as number),
       },
-      batteryLevel: body.batteryLevel,
-      timestamp: new Date(body.timestamp),
+      batteryLevel: body.batteryLevel as number | undefined,
+      timestamp: new Date(body.timestamp as number),
     };
 
     const success = await attendanceService.updateLocationTracking(attendanceId, updateRequest);

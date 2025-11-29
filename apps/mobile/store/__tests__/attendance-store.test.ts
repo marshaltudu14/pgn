@@ -690,7 +690,6 @@ describe('Attendance Store', () => {
       const mockResponse = {
         success: true,
         data: {
-          success: true,
           attendanceId: 'attendance-123',
           timestamp: new Date().toISOString(),
           checkOutTime: new Date().toISOString(),

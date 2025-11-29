@@ -15,11 +15,11 @@ import {
 import { RouteParamsSchema } from '@pgn/shared/src/schemas/base';
 import { apiContract } from '@pgn/shared';
 
-const getRetailerHandler = async (request: NextRequest, context: { params?: Promise<{ id: string }> }): Promise<NextResponse> => {
+const getRetailerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
     // Use validated parameters from the middleware, or fall back to context params
     const validatedParams = (request as NextRequest & { validatedParams?: { id: string } }).validatedParams;
-    const { id } = validatedParams || (context.params ? await context.params : { id: '' });
+    const { id } = validatedParams || (context.params ? await (context.params as Promise<{ id: string }>) : { id: '' });
     const retailer = await getRetailerById(id);
 
     const response = NextResponse.json({
@@ -42,11 +42,11 @@ const getRetailerHandler = async (request: NextRequest, context: { params?: Prom
   }
 };
 
-const updateRetailerHandler = async (request: NextRequest, context: { params?: Promise<{ id: string }> }): Promise<NextResponse> => {
+const updateRetailerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
     // Use validated parameters and body from the middleware
     const validatedParams = (request as NextRequest & { validatedParams?: { id: string } }).validatedParams;
-    const { id } = validatedParams || (context.params ? await context.params : { id: '' });
+    const { id } = validatedParams || (context.params ? await (context.params as Promise<{ id: string }>) : { id: '' });
     const retailerData = (request as NextRequest & { validatedBody?: Record<string, unknown> }).validatedBody || {};
 
     const result = await updateRetailer(id, retailerData as any);
@@ -71,11 +71,11 @@ const updateRetailerHandler = async (request: NextRequest, context: { params?: P
   }
 };
 
-const deleteRetailerHandler = async (request: NextRequest, context: { params?: Promise<{ id: string }> }): Promise<NextResponse> => {
+const deleteRetailerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
     // Use validated parameters from the middleware
     const validatedParams = (request as NextRequest & { validatedParams?: { id: string } }).validatedParams;
-    const { id } = validatedParams || (context.params ? await context.params : { id: '' });
+    const { id } = validatedParams || (context.params ? await (context.params as Promise<{ id: string }>) : { id: '' });
     await deleteRetailer(id);
 
     const response = NextResponse.json({

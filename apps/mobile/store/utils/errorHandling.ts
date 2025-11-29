@@ -182,16 +182,16 @@ function cleanTechnicalErrorMessage(error: string): string {
   }
 
   // Handle common authentication errors
-  if (cleanError.includes('Invalid login credentials') || cleanError.includes('Invalid email or password')) {
-    return 'The email or password you entered is incorrect.';
+  if (cleanError.includes('Invalid login credentials') || cleanError.includes('Invalid email or password') || cleanError.includes('UNAUTHORIZED: Invalid credentials')) {
+    return 'Invalid email or password.';
   }
 
   if (cleanError.includes('User not found') || cleanError.includes('Employee not found')) {
     return 'Your account was not found. Please contact your administrator.';
   }
 
-  if (cleanError.includes('You do not have permission') || cleanError.includes('ACCESS_DENIED')) {
-    return 'You do not have permission to perform this action. Please contact your administrator.';
+  if (cleanError.includes('You do not have permission') || cleanError.includes('ACCESS_DENIED') || cleanError.includes('FORBIDDEN: Permission denied')) {
+    return 'Access denied. You may not have permission to login.';
   }
 
   if (cleanError.includes('Account suspended') || cleanError.includes('ACCOUNT_SUSPENDED')) {
@@ -231,7 +231,7 @@ function cleanTechnicalErrorMessage(error: string): string {
     return 'Network connection failed. Please check your internet connection and try again.';
   }
 
-  if (cleanError.includes('timeout')) {
+  if (cleanError.toLowerCase().includes('timeout')) {
     return 'Request timed out. Please try again.';
   }
 

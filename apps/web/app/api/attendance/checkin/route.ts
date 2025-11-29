@@ -5,10 +5,8 @@ import { CheckInRequest } from '@pgn/shared';
 import { addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
 import {
-  CheckInMobileRequestSchema,
   CheckInResponseSchema,
   DeviceInfoSchema,
-  LocationDataSchema,
   apiContract,
   z,
 } from '@pgn/shared';
@@ -26,13 +24,13 @@ const CheckInMobileRequestCompatSchema = z.object({
   selfieData: z.string().min(1, 'Selfie data is required').optional(),
   deviceInfo: DeviceInfoSchema.optional(),
 }).refine(
-  (data: any) => data.selfie || data.selfieData,
+  (data: { selfie?: string; selfieData?: string }) => data.selfie || data.selfieData,
   {
     message: "Either 'selfie' or 'selfieData' field is required",
     path: ['selfie']
   }
 ).transform(
-  (data: any) => ({
+  (data: { selfie?: string; selfieData?: string }) => ({
     ...data,
     selfie: data.selfie || data.selfieData // Normalize to 'selfie' field
   })
@@ -58,21 +56,26 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Use validated body from middleware
-    const body = (req as any).validatedBody;
+    const body = (req as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
     // Build check-in request
     const checkInRequest: CheckInRequest = {
       employeeId: user.employeeId,
       location: {
-        latitude: body.location.latitude,
-        longitude: body.location.longitude,
-        accuracy: body.location.accuracy || 0,
-        timestamp: new Date(body.location.timestamp || Date.now()),
-        address: body.location.address
+        latitude: (body.location as { latitude: number }).latitude,
+        longitude: (body.location as { longitude: number }).longitude,
+        accuracy: (body.location as { accuracy?: number }).accuracy || 0,
+        timestamp: new Date((body.location as { timestamp?: number }).timestamp || Date.now()),
+        address: (body.location as { address?: string }).address
       },
       timestamp: new Date(),
-      selfie: body.selfie, // Note: schema uses 'selfie', but original used 'selfieData'
-      deviceInfo: body.deviceInfo
+      selfie: body.selfie as string, // Note: schema uses 'selfie', but original used 'selfieData'
+      deviceInfo: body.deviceInfo as {
+        batteryLevel?: number;
+        platform?: string;
+        version?: string;
+        model?: string;
+      } | undefined
     };
 
     // Process check-in through service

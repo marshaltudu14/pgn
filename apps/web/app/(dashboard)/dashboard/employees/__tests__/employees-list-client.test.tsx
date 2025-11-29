@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import { Employee, EmploymentStatus } from '@pgn/shared';
@@ -432,7 +432,7 @@ describe('EmployeeListClient Component', () => {
 
       // Mock EmployeeList to pass null employee
       jest.doMock('@/components/employee-list', () => ({
-        EmployeeList: ({ onEmployeeSelect }: any) => (
+        EmployeeList: ({ onEmployeeSelect }: { onEmployeeSelect?: (employee: Employee | null) => void }) => (
           <div data-testid="employee-list">
             <button
               data-testid="select-null-employee"

@@ -10,8 +10,7 @@
     "clean": "rm -rf dist node_modules",
     "test": "jest",
     "lint": "eslint src --ext .ts,.tsx",
-    "validate-api": "node ../scripts/validate-api-contract.ts"
-  },
+      },
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@typescript-eslint/eslint-plugin": "^5.0.0",

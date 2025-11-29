@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ZodError, z, type ZodType } from 'zod';
+import { ZodError, type ZodType } from 'zod';
 
 /**
  * Configuration options for API route validation
  */
 export interface ApiValidationOptions {
-  body?: ZodType<any>; // Request body validation schema
-  query?: ZodType<any>; // Query parameters validation schema
-  params?: ZodType<any>; // Route parameters validation schema
-  response?: ZodType<any>; // Response validation schema
+  body?: ZodType<unknown>; // Request body validation schema
+  query?: ZodType<unknown>; // Query parameters validation schema
+  params?: ZodType<unknown>; // Route parameters validation schema
+  response?: ZodType<unknown>; // Response validation schema
   requireAuth?: boolean; // Whether authentication is required
   validateResponse?: boolean; // Whether to validate the response
-  onError?: (error: ZodError | any) => NextResponse; // Custom error handler
+  onError?: (error: ZodError | unknown) => NextResponse; // Custom error handler
 }
 
 /**
@@ -24,10 +24,10 @@ export interface ApiValidationOptions {
  * 4. Response data (optional)
  */
 export function withApiValidation<T extends NextResponse>(
-  handler: (req: NextRequest, context: { params?: any }) => Promise<T>,
+  handler: (req: NextRequest, context: { params?: unknown }) => Promise<T>,
   options: ApiValidationOptions
 ) {
-  return async (req: NextRequest, context: { params?: any }): Promise<T> => {
+  return async (req: NextRequest, context: { params?: unknown }): Promise<T> => {
     try {
       // Validate request body if schema is provided
       if (options.body) {

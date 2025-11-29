@@ -10,7 +10,7 @@ import { withApiValidation } from '@/lib/api-validation';
 import {
   UpdateVerificationRequestSchema,
   UpdateVerificationResponseSchema,
-  VerificationStatus,
+  VerificationStatusSchema,
   apiContract,
   z,
 } from '@pgn/shared';
@@ -22,16 +22,16 @@ const VerifyRouteParamsSchema = z.object({
 
 const updateVerificationHandler = async (
   request: NextRequest,
-  context: { params?: any }
+  _context: { params?: unknown }
 ): Promise<NextResponse> => {
   try {
     // Use validated data from middleware
-    const { id: recordId } = (request as any).validatedParams;
-    const body = (request as any).validatedBody;
+    const { id: recordId } = (request as unknown as { validatedParams: { id: string } }).validatedParams;
+    const body = (request as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
     const updateRequest = {
-      verificationStatus: body.verificationStatus,
-      verificationNotes: body.verificationNotes || undefined,
+      verificationStatus: VerificationStatusSchema.parse(body.verificationStatus),
+      verificationNotes: (body.verificationNotes as string) || undefined,
     };
 
     const updatedRecord = await updateAttendanceVerification(recordId, updateRequest);

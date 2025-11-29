@@ -4,7 +4,6 @@ import { attendanceService } from '@/services/attendance.service';
 import { CheckOutRequest, CheckOutMethod, EmergencyCheckOutRequest } from '@pgn/shared';
 import { withApiValidation } from '@/lib/api-validation';
 import {
-  CheckOutMobileRequestSchema,
   CheckOutResponseSchema,
   DeviceInfoSchema,
   apiContract,
@@ -33,7 +32,7 @@ const CheckOutMobileRequestCompatSchema = z.object({
   method: z.enum(['MANUAL', 'AUTOMATIC', 'APP_CLOSED', 'BATTERY_DRAIN', 'FORCE_CLOSE']).default('MANUAL'),
   reason: z.string().optional(),
 }).transform(
-  (data: any) => ({
+  (data: { selfie?: string; selfieData?: string }) => ({
     ...data,
     selfie: data.selfie || data.selfieData // Normalize to 'selfie' field
   })
@@ -59,7 +58,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Use validated body from middleware
-    const body = (req as any).validatedBody;
+    const body = (req as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
     // Check if this is an emergency check-out (only reason and method are required)
     if (body.method && body.method !== 'MANUAL' && body.reason) {
@@ -67,17 +66,22 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       const emergencyRequest: EmergencyCheckOutRequest = {
         employeeId: user.employeeId,
         timestamp: new Date(),
-        reason: body.reason,
+        reason: body.reason as string,
         method: body.method as CheckOutMethod,
         lastLocationData: body.lastLocationData ? {
-          latitude: body.lastLocationData.latitude,
-          longitude: body.lastLocationData.longitude,
-          accuracy: body.lastLocationData.accuracy || 0,
-          timestamp: new Date(body.lastLocationData.timestamp || Date.now()),
-          address: body.lastLocationData.address
+          latitude: (body.lastLocationData as { latitude: number }).latitude,
+          longitude: (body.lastLocationData as { longitude: number }).longitude,
+          accuracy: (body.lastLocationData as { accuracy?: number }).accuracy || 0,
+          timestamp: new Date((body.lastLocationData as { timestamp?: number }).timestamp || Date.now()),
+          address: (body.lastLocationData as { address?: string }).address
         } : undefined,
-        selfieData: body.selfie, // Optional for emergency, normalized field
-        deviceInfo: body.deviceInfo
+        selfieData: body.selfie as string, // Optional for emergency, normalized field
+        deviceInfo: body.deviceInfo as {
+          batteryLevel?: number;
+          platform?: string;
+          version?: string;
+          model?: string;
+        } | undefined
       };
 
       // Process emergency check-out through service
@@ -128,20 +132,26 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Build check-out request
+    const locationObj = body.location as { latitude: number; longitude: number; accuracy?: number; timestamp?: number; address?: string; };
     const checkOutRequest: CheckOutRequest = {
       employeeId: user.employeeId,
       location: {
-        latitude: body.location.latitude,
-        longitude: body.location.longitude,
-        accuracy: body.location.accuracy || 0,
-        timestamp: new Date(body.location.timestamp || Date.now()),
-        address: body.location.address
+        latitude: locationObj.latitude,
+        longitude: locationObj.longitude,
+        accuracy: locationObj.accuracy || 0,
+        timestamp: new Date(locationObj.timestamp || Date.now()),
+        address: locationObj.address
       },
       timestamp: new Date(),
-      selfie: body.selfie, // Using normalized field
-      deviceInfo: body.deviceInfo,
-      method: body.method || 'MANUAL',
-      reason: body.reason
+      selfie: body.selfie as string, // Using normalized field
+      deviceInfo: body.deviceInfo as {
+        batteryLevel?: number;
+        platform?: string;
+        version?: string;
+        model?: string;
+      } | undefined,
+      method: (body.method as CheckOutMethod) || 'MANUAL',
+      reason: body.reason as string | undefined
     };
 
     // Process check-out through service

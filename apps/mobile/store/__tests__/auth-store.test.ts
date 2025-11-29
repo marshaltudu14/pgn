@@ -556,7 +556,7 @@ describe('Auth Store', () => {
       const { result } = renderHook(() => useAuth());
 
       // Network errors - these should hit the instanceof Error check and get mapped
-      expect(result.current.parseAuthError(new Error('Network error: NETWORK_ERROR detected'))).toBe('Network error. Please check your internet connection.');
+      expect(result.current.parseAuthError(new Error('Network error: NETWORK_ERROR detected'))).toBe('Network connection failed. Please check your internet connection and try again.');
       expect(result.current.parseAuthError(new Error('Request TIMEOUT: Connection failed'))).toBe('Request timed out. Please try again.');
       expect(result.current.parseAuthError(new Error('Authentication UNAUTHORIZED: Invalid credentials'))).toBe('Invalid email or password.');
       expect(result.current.parseAuthError(new Error('Access FORBIDDEN: Permission denied'))).toBe('Access denied. You may not have permission to login.');

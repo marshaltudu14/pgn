@@ -70,7 +70,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
           </DialogTitle>
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-              <StatusIcon className="h-6 w-6 text-primary" />
+              <StatusIcon className="h-6 w-6 text-primary" data-testid="status-icon" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-foreground">
@@ -97,7 +97,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                 <div className="space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
                     <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <Mail className="h-4 w-4 text-muted-foreground" data-testid="mail-icon" />
                       <span className="text-sm font-medium">Email</span>
                     </div>
                     <span className="text-sm text-foreground break-all">{employee.email}</span>
@@ -105,7 +105,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
 
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <Phone className="h-4 w-4 text-muted-foreground" data-testid="phone-icon" />
                       <span className="text-sm font-medium">Phone</span>
                     </div>
                     <span className="text-sm text-foreground">{employee.phone || '-'}</span>
@@ -125,7 +125,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                 <div className="space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
                     <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <Building className="h-4 w-4 text-muted-foreground" data-testid="building-icon" />
                       <span className="text-sm font-medium">Status</span>
                     </div>
                     <Badge
@@ -138,14 +138,14 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
 
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
                     <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <Shield className="h-4 w-4 text-muted-foreground" data-testid="shield-icon" />
                       <span className="text-sm font-medium">Login Access</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {employee.can_login ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-green-600" data-testid="login-enabled-icon" />
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-red-600" data-testid="login-disabled-icon" />
                       )}
                       <span className="text-sm text-foreground">
                         {employee.can_login ? 'Enabled' : 'Disabled'}
@@ -163,7 +163,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                 <div className="space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Calendar className="h-4 w-4 text-muted-foreground" data-testid="calendar-icon" />
                       <span className="text-sm font-medium">Created</span>
                     </div>
                     <span className="text-sm text-foreground">{formatDate(employee.created_at!)}</span>
@@ -171,7 +171,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
 
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-1">
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Clock className="h-4 w-4 text-muted-foreground" data-testid="clock-icon" />
                       <span className="text-sm font-medium">Last Updated</span>
                     </div>
                     <span className="text-sm text-foreground">{formatDate(employee.updated_at!)}</span>

@@ -277,6 +277,7 @@ export async function listEmployees(
       page = 1,
       limit = 50,
       search,
+      search_field = 'human_readable_user_id',
       employment_status,
       primary_region,
       assigned_regions,
@@ -286,11 +287,26 @@ export async function listEmployees(
 
     let query = supabase.from('employees').select('*', { count: 'exact' });
 
-    // Apply search filter
+    // Apply search filter based on specific field using case-insensitive search
     if (search) {
-      query = query.or(
-        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,human_readable_user_id.ilike.%${search}%`
-      );
+      switch (search_field) {
+        case 'first_name':
+          query = query.ilike('first_name', `%${search}%`);
+          break;
+        case 'last_name':
+          query = query.ilike('last_name', `%${search}%`);
+          break;
+        case 'email':
+          query = query.ilike('email', `%${search}%`);
+          break;
+        case 'phone':
+          query = query.ilike('phone', `%${search}%`);
+          break;
+        case 'human_readable_user_id':
+        default:
+          query = query.ilike('human_readable_user_id', `%${search}%`);
+          break;
+      }
     }
 
     // Apply employment status filter

@@ -144,6 +144,7 @@ export interface EmployeeListParams {
   page?: number;
   limit?: number;
   search?: string;
+  search_field?: 'human_readable_user_id' | 'first_name' | 'last_name' | 'email' | 'phone';
   employment_status?: EmploymentStatus[];
   primary_region?: string;
   assigned_regions?: string[];
@@ -250,6 +251,7 @@ export const EmployeeListParamsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   search: z.string().optional(),
+  search_field: z.enum(['human_readable_user_id', 'first_name', 'last_name', 'email', 'phone']).optional(),
   employment_status: z.array(EmploymentStatusSchema).optional(),
   primary_region: z.string().optional(),
   assigned_regions: z.array(z.string()).optional(),

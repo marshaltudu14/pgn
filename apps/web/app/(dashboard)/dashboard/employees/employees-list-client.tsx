@@ -16,25 +16,45 @@ export default function EmployeeListClient() {
   const [showQuickView, setShowQuickView] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
-  const handleEmployeeSelect = (employee: Employee) => {
-    setSelectedEmployee(employee);
-    setShowQuickView(true);
+  const handleEmployeeSelect = (employee: Employee | null) => {
+    if (employee) {
+      setSelectedEmployee(employee);
+      setShowQuickView(true);
+    } else {
+      setSelectedEmployee(null);
+      setShowQuickView(false);
+    }
   };
 
-  const handleEmployeeEdit = (employee: Employee) => {
-    // Navigate to the form page with edit mode
-    router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
+  const handleEmployeeEdit = async (employee: Employee) => {
+    try {
+      // Navigate to the form page with edit mode
+      await router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      // Optionally show user feedback about navigation failure
+    }
   };
 
-  const handleEmployeeCreate = () => {
-    // Navigate to the form page with create mode
-    router.push('/dashboard/employees/form?mode=create');
+  const handleEmployeeCreate = async () => {
+    try {
+      // Navigate to the form page with create mode
+      await router.push('/dashboard/employees/form?mode=create');
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      // Optionally show user feedback about navigation failure
+    }
   };
 
-  
-  const handleQuickViewEdit = (employee: Employee) => {
-    // Navigate to the form page with edit mode
-    router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
+
+  const handleQuickViewEdit = async (employee: Employee) => {
+    try {
+      // Navigate to the form page with edit mode
+      await router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
+    } catch (error) {
+      console.error('Navigation failed:', error);
+      // Optionally show user feedback about navigation failure
+    }
   };
 
   return (

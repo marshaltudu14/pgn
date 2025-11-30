@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Employee, EmploymentStatus, CityAssignment } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
+import SearchFieldSelector from '@/components/search-field-selector';
 import { Search, Filter, Plus, Edit, Eye } from 'lucide-react';
 
 interface EmployeeListProps {
@@ -96,9 +97,19 @@ export function EmployeeList({
           </Button>
         </div>
         <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Skeleton className="h-10 w-64" />
+          {/* Desktop Layout Skeleton */}
+          <div className="hidden sm:flex items-center gap-4">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 flex-1" />
             <Skeleton className="h-10 w-40" />
+          </div>
+          {/* Mobile Layout Skeleton */}
+          <div className="sm:hidden space-y-4">
+            <div className="flex gap-4">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 flex-1" />
+            </div>
+            <Skeleton className="h-10 w-full" />
           </div>
         </div>
         <div className="bg-white dark:bg-black">
@@ -168,18 +179,26 @@ export function EmployeeList({
 
       {/* Search and Filter Section */}
       <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
-        <div className="flex flex-col sm:flex-row gap-4">
+        {/* Desktop Layout - selects on sides, search in center */}
+        <div className="hidden sm:flex items-center gap-4">
+          {/* Left: Search Field Selector */}
+          <SearchFieldSelector />
+
+          {/* Center: Search Input - takes full available width */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search employees..."
               value={filters.search}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10"
+              className="pl-10 w-full"
+              aria-label="Search employees"
             />
           </div>
+
+          {/* Right: Status Filter */}
           <Select value={filters.status} onValueChange={(value) => handleStatusChange(value as EmploymentStatus | 'all')}>
-            <SelectTrigger className="w-full sm:w-48 cursor-pointer">
+            <SelectTrigger className="w-48 cursor-pointer">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -192,6 +211,37 @@ export function EmployeeList({
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Mobile Layout - selects on top, search below */}
+        <div className="sm:hidden space-y-4">
+          <div className="flex gap-4">
+            <SearchFieldSelector />
+            <Select value={filters.status} onValueChange={(value) => handleStatusChange(value as EmploymentStatus | 'all')}>
+              <SelectTrigger className="flex-1 cursor-pointer">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {EMPLOYMENT_STATUSES.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status.replace('_', ' ')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search employees..."
+              value={filters.search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 w-full"
+              aria-label="Search employees"
+            />
+          </div>
         </div>
       </div>
 

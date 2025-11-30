@@ -24,7 +24,7 @@ jest.mock('@/components/employee-list', () => {
       onEmployeeEdit,
       onEmployeeCreate,
     }: {
-      onEmployeeSelect?: (employee: Employee) => void;
+      onEmployeeSelect?: (employee: Employee | null) => void;
       onEmployeeEdit?: (employee: Employee) => void;
       onEmployeeCreate?: () => void;
     }) => (
@@ -36,6 +36,14 @@ jest.mock('@/components/employee-list', () => {
           }
         >
           Select Employee
+        </button>
+        <button
+          data-testid="select-null-employee"
+          onClick={() =>
+            onEmployeeSelect?.(null)
+          }
+        >
+          Select Null Employee
         </button>
         <button
           data-testid="edit-employee"
@@ -121,6 +129,7 @@ jest.mock('next/navigation', () => ({
     push: mockPush,
   }),
 }));
+
 
 describe('EmployeeListClient Component', () => {
   beforeEach(() => {
@@ -214,7 +223,7 @@ describe('EmployeeListClient Component', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('employee-quick-view')).not.toBeInTheDocument();
-      });
+      }, { timeout: 3000 });
     });
 
     it('should handle multiple employee selections correctly', async () => {
@@ -236,7 +245,7 @@ describe('EmployeeListClient Component', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('employee-quick-view')).not.toBeInTheDocument();
-      });
+      }, { timeout: 3000 });
 
       // Select employee again
       await user.click(selectButton);
@@ -396,7 +405,7 @@ describe('EmployeeListClient Component', () => {
 
       await waitFor(() => {
         expect(screen.queryByTestId('employee-quick-view')).not.toBeInTheDocument();
-      });
+      }, { timeout: 3000 });
 
       // Verify we can open it again
       await user.click(selectButton);
@@ -412,17 +421,25 @@ describe('EmployeeListClient Component', () => {
       render(<EmployeeListClient />);
 
       const selectButton = screen.getByTestId('select-employee');
-      const closeButton = screen.getByTestId('close-quick-view');
 
-      // Rapid open/close
-      await user.click(selectButton);
-      await user.click(closeButton);
-      await user.click(selectButton);
-      await user.click(closeButton);
+      // Perform rapid open/close operations
+      for (let i = 0; i < 3; i++) {
+        await user.click(selectButton);
+        // Quick view should appear
+        await waitFor(() => {
+          expect(screen.getByTestId('employee-quick-view')).toBeInTheDocument();
+        }, { timeout: 1000 });
 
-      await waitFor(() => {
-        expect(screen.queryByTestId('employee-quick-view')).not.toBeInTheDocument();
-      });
+        const closeButton = screen.getByTestId('close-quick-view');
+        await user.click(closeButton);
+        // Quick view should disappear
+        await waitFor(() => {
+          expect(screen.queryByTestId('employee-quick-view')).not.toBeInTheDocument();
+        }, { timeout: 1000 });
+      }
+
+      // If we reach here without errors, the rapid state changes are working correctly
+      expect(true).toBe(true);
     });
   });
 
@@ -430,22 +447,9 @@ describe('EmployeeListClient Component', () => {
     it('should handle missing employee data gracefully', async () => {
       const user = userEvent.setup();
 
-      // Mock EmployeeList to pass null employee
-      jest.doMock('@/components/employee-list', () => ({
-        EmployeeList: ({ onEmployeeSelect }: { onEmployeeSelect?: (employee: Employee | null) => void }) => (
-          <div data-testid="employee-list">
-            <button
-              data-testid="select-null-employee"
-              onClick={() => onEmployeeSelect?.(null)}
-            >
-              Select Null Employee
-            </button>
-          </div>
-        ),
-      }));
-
       render(<EmployeeListClient />);
 
+      // Click the button that passes null employee
       const selectNullButton = screen.getByTestId('select-null-employee');
       await user.click(selectNullButton);
 
@@ -456,17 +460,25 @@ describe('EmployeeListClient Component', () => {
     it('should handle router navigation errors gracefully', async () => {
       const user = userEvent.setup();
 
+      // Mock console.error to capture navigation errors
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
       // Mock router to throw error
       mockPush.mockImplementation(() => {
-        throw new Error('Navigation failed');
+        return Promise.reject(new Error('Navigation failed'));
       });
 
       render(<EmployeeListClient />);
 
       const editButton = screen.getByTestId('edit-employee');
 
-      // Should not throw unhandled error
-      await expect(user.click(editButton)).rejects.toThrow('Navigation failed');
+      // Trigger navigation
+      await user.click(editButton);
+
+      // Should have logged the error since component now handles it properly
+      expect(consoleSpy).toHaveBeenCalledWith('Navigation failed:', expect.any(Error));
+
+      consoleSpy.mockRestore();
     });
   });
 

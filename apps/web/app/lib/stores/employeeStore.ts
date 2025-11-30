@@ -20,6 +20,7 @@ interface EmployeeState {
   };
   filters: {
     search: string;
+    searchField: SearchFieldType;
     status: EmploymentStatus | 'all';
     primaryRegion?: string;
     sortBy: string;
@@ -41,8 +42,16 @@ interface EmployeeState {
   refetch: () => Promise<void>;
 }
 
+type SearchFieldType =
+  | 'human_readable_user_id'
+  | 'first_name'
+  | 'last_name'
+  | 'email'
+  | 'phone';
+
 interface EmployeeFilters {
   search?: string;
+  searchField?: SearchFieldType;
   status?: EmploymentStatus | 'all';
   primaryRegion?: string;
   sortBy?: string;
@@ -65,6 +74,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   },
   filters: {
     search: '',
+    searchField: 'human_readable_user_id',
     status: 'all',
     sortBy: 'created_at',
     sortOrder: 'desc',
@@ -78,6 +88,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         page: params?.page || pagination.currentPage,
         limit: params?.limit || pagination.itemsPerPage,
         search: params?.search || filters.search || undefined,
+        search_field: params?.search_field || filters.searchField,
         employment_status: params?.employment_status || (filters.status !== 'all' ? [filters.status as EmploymentStatus] : undefined),
         primary_region: params?.primary_region || filters.primaryRegion,
         sort_by: params?.sort_by || filters.sortBy,
@@ -88,6 +99,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       if (queryParams.page) queryString.set('page', queryParams.page.toString());
       if (queryParams.limit) queryString.set('limit', queryParams.limit.toString());
       if (queryParams.search) queryString.set('search', queryParams.search);
+      if (queryParams.search_field) queryString.set('search_field', queryParams.search_field);
       if (queryParams.employment_status) queryString.set('employment_status', queryParams.employment_status.join(','));
       if (queryParams.primary_region) queryString.set('primary_region', queryParams.primary_region);
       if (queryParams.sort_by) queryString.set('sort_by', queryParams.sort_by);
@@ -361,6 +373,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     set({
       filters: {
         search: '',
+        searchField: 'human_readable_user_id',
         status: 'all',
         primaryRegion: undefined,
         sortBy: 'created_at',

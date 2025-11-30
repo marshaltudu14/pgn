@@ -143,7 +143,7 @@ describe('JWTService', () => {
 
       const result = jwtService.validateToken(expiredToken);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for invalid token', () => {
@@ -151,7 +151,7 @@ describe('JWTService', () => {
 
       const result = jwtService.validateToken(invalidToken);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for token with invalid signature', () => {
@@ -163,7 +163,7 @@ describe('JWTService', () => {
 
       const result = jwtService.validateToken(tamperedToken);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for token with wrong issuer', () => {
@@ -179,7 +179,7 @@ describe('JWTService', () => {
 
       const result = jwtService.validateToken(tokenWithWrongIssuer);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for token with wrong audience', () => {
@@ -195,19 +195,19 @@ describe('JWTService', () => {
 
       const result = jwtService.validateToken(tokenWithWrongAudience);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for empty token', () => {
       const result = jwtService.validateToken('');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for null token', () => {
       const result = jwtService.validateToken(null as unknown as string);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 
@@ -244,7 +244,7 @@ describe('JWTService', () => {
 
       const result = jwtService.refreshToken(invalidToken);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for token without required fields', () => {
@@ -257,7 +257,7 @@ describe('JWTService', () => {
 
       const result = jwtService.refreshToken(tokenWithoutRequiredFields);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should handle expired tokens and still refresh them', () => {
@@ -287,19 +287,19 @@ describe('JWTService', () => {
 
       const result = jwtService.refreshToken(malformedToken);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for empty token', () => {
       const result = jwtService.refreshToken('');
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
 
     it('should return null for null token', () => {
       const result = jwtService.refreshToken(null as unknown as string);
 
-      expect(result).toBeUndefined();
+      expect(result).toBeNull();
     });
   });
 
@@ -312,7 +312,7 @@ describe('JWTService', () => {
       expect(result).toBe('valid.jwt.token');
     });
 
-    it('should return null for header without Bearer prefix', () => {
+    it('should return undefined for header without Bearer prefix', () => {
       const headerValue = 'Basic valid.jwt.token';
 
       const result = jwtService.extractTokenFromHeader(headerValue);
@@ -320,7 +320,7 @@ describe('JWTService', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should return null for header with wrong format', () => {
+    it('should return undefined for header with wrong format', () => {
       const headerValue = 'Bearer token extra';
 
       const result = jwtService.extractTokenFromHeader(headerValue);
@@ -328,19 +328,19 @@ describe('JWTService', () => {
       expect(result).toBeUndefined();
     });
 
-    it('should return null for empty header', () => {
+    it('should return undefined for empty header', () => {
       const result = jwtService.extractTokenFromHeader('');
 
       expect(result).toBeUndefined();
     });
 
-    it('should return null for null header', () => {
+    it('should return undefined for null header', () => {
       const result = jwtService.extractTokenFromHeader(null as unknown as string);
 
       expect(result).toBeUndefined();
     });
 
-    it('should return null for undefined header', () => {
+    it('should return undefined for undefined header', () => {
       const result = jwtService.extractTokenFromHeader(undefined as unknown as string);
 
       expect(result).toBeUndefined();
@@ -351,7 +351,7 @@ describe('JWTService', () => {
 
       const result = jwtService.extractTokenFromHeader(headerValue);
 
-      // The actual implementation doesn't trim whitespace, so it returns null
+      // The actual implementation doesn't trim whitespace, so it returns undefined
       expect(result).toBeUndefined();
     });
   });

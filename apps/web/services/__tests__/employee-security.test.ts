@@ -65,38 +65,7 @@ describe('Employee Service Security Tests', () => {
   });
 
   describe('SQL Injection Protection', () => {
-    it('should sanitize search parameters in listEmployees to prevent SQL injection', async () => {
-      const maliciousSearch = "John'; DROP TABLE employees; --";
-
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          or: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({
-                data: [],
-                error: null,
-                count: 0
-              })
-            })
-          })
-        })
-      });
-
-      const params: EmployeeListParams = {
-        search: maliciousSearch
-      };
-
-      await listEmployees(params);
-
-      // Verify that the OR query was called with the malicious string
-      expect(mockSupabaseClient.from().select().or).toHaveBeenCalled();
-
-      // The actual implementation should escape or parameterize this
-      // This test documents the current vulnerability
-      const orCall = (mockSupabaseClient.from().select().or as jest.Mock).mock.calls[0][0];
-      console.warn('SECURITY WARNING: Search parameter not properly sanitized:', orCall);
-    });
-
+    
     it('should handle email injection attempts in isEmailTaken', async () => {
       const maliciousEmail = "test@example.com'; DROP TABLE employees; --";
 

@@ -1094,10 +1094,10 @@ describe('Employee Service', () => {
     it('should apply search filter across multiple fields', async () => {
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          or: jest.fn().mockReturnValue({
+          ilike: jest.fn().mockReturnValue({
             order: jest.fn().mockReturnValue({
               range: jest.fn().mockResolvedValue({
-                data: [mockEmployees[0]], // Only John Doe matches
+                data: [mockEmployees[0]], // Only John Doe matches (searching human_readable_user_id by default)
                 error: null,
                 count: 1
               })
@@ -1121,7 +1121,7 @@ describe('Employee Service', () => {
     it('should apply search filter by last name', async () => {
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          or: jest.fn().mockReturnValue({
+          ilike: jest.fn().mockReturnValue({
             order: jest.fn().mockReturnValue({
               range: jest.fn().mockResolvedValue({
                 data: [mockEmployees[1]], // Only Jane Smith matches
@@ -1136,7 +1136,8 @@ describe('Employee Service', () => {
       const params: EmployeeListParams = {
         page: 1,
         limit: 50,
-        search: 'Smith'
+        search: 'Smith',
+        search_field: 'last_name'
       };
       const result = await listEmployees(params);
 
@@ -1146,7 +1147,7 @@ describe('Employee Service', () => {
     it('should apply search filter by email', async () => {
       mockSupabaseClient.from.mockReturnValue({
         select: jest.fn().mockReturnValue({
-          or: jest.fn().mockReturnValue({
+          ilike: jest.fn().mockReturnValue({
             order: jest.fn().mockReturnValue({
               range: jest.fn().mockResolvedValue({
                 data: mockEmployees,
@@ -1161,7 +1162,8 @@ describe('Employee Service', () => {
       const params: EmployeeListParams = {
         page: 1,
         limit: 50,
-        search: 'example.com'
+        search: 'example.com',
+        search_field: 'email'
       };
       const result = await listEmployees(params);
 

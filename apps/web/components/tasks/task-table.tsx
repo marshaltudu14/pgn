@@ -125,6 +125,15 @@ export function TaskTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
+
+  const handleClearSearch = useCallback(() => {
+    setSearchTerm('');
+    // Apply filters immediately to clear search and fetch data
+    const filters: Partial<TaskListParams> = {};
+    if (statusFilter !== 'all') filters.status = statusFilter;
+    if (priorityFilter !== 'all') filters.priority = priorityFilter;
+    onFilterChange(filters);
+  }, [statusFilter, priorityFilter, onFilterChange]);
   const [showFilters, setShowFilters] = useState(false);
 
   // Apply filters when they change
@@ -141,45 +150,7 @@ export function TaskTable({
     applyFilters();
   }, [applyFilters]);
 
-  if (isLoading && tasks.length === 0) {
-    return (
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="hidden md:table-cell">Employee</TableHead>
-                  <TableHead className="hidden lg:table-cell">Status</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead className="hidden sm:table-cell">Progress</TableHead>
-                  <TableHead className="hidden xl:table-cell">Due Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
-                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-20 rounded" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-16 rounded" /></TableCell>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
-                    <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-8 w-16 rounded ml-auto cursor-pointer" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  
   return (
     <>
       {/* Filters */}
@@ -194,8 +165,17 @@ export function TaskTable({
                   placeholder="Search tasks..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                 />
+                {searchTerm && (
+                  <button
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
               {/* Filter Toggle */}
@@ -301,7 +281,24 @@ export function TaskTable({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tasks.map((task) => (
+                    {isLoading && tasks.length === 0 ? (
+                      // Show skeleton rows when loading and no data exists
+                      [...Array(5)].map((_, index) => (
+                        <TableRow key={index}>
+                          <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                          <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
+                          <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-20 rounded" /></TableCell>
+                          <TableCell><Skeleton className="h-8 w-16 rounded" /></TableCell>
+                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
+                          <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                          <TableCell className="text-right">
+                            <Skeleton className="h-8 w-16 rounded ml-auto cursor-pointer" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <>
+                        {tasks.map((task) => (
                       <TableRow key={task.id} className="hover:bg-muted/50">
                         <TableCell>
                           <div>
@@ -384,7 +381,19 @@ export function TaskTable({
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                        ))}
+                        {!isLoading && tasks.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="h-24 text-center">
+                              <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                <p className="text-lg font-medium">No tasks found</p>
+                                <p className="text-sm">Try adjusting your search or filter criteria</p>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    )}
                   </TableBody>
                 </Table>
               </div>

@@ -6,7 +6,8 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { useDebounce } from '@/lib/utils/debounce';
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dealer } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
-import { Search, Plus, Edit, Eye, Building, Mail, Phone } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Building, Mail, Phone, X } from 'lucide-react';
 
 interface DealerListProps {
   onDealerSelect?: (dealer: Dealer) => void;
@@ -52,19 +53,56 @@ export function DealerList({
     clearError,
   } = useDealerStore();
 
+  // Initial data fetch when component mounts
   useEffect(() => {
     fetchDealers();
   }, [fetchDealers]);
 
-  const handleSearchChange = (value: string) => {
-    setFilters({ search: value });
-    setPagination(1); // Reset to first page
-  };
+  // Local state for search inputs (immediate updates)
+  const [searchInput, setSearchInput] = useState(filters.search || '');
+  const [shopNameInput, setShopNameInput] = useState(filters.shop_name || '');
+  const debouncedSearchInput = useDebounce(searchInput, 300);
+  const debouncedShopNameInput = useDebounce(shopNameInput, 300);
 
-  const handleShopNameFilterChange = (value: string) => {
-    setFilters({ shop_name: value || undefined });
-    setPagination(1); // Reset to first page
-  };
+  // Handle search changes when debounced value updates
+  useEffect(() => {
+    if (filters.search !== debouncedSearchInput) {
+      setFilters({ search: debouncedSearchInput });
+      setPagination(1); // Reset to first page
+      fetchDealers();
+    }
+  }, [debouncedSearchInput, filters.search, setFilters, setPagination, fetchDealers]);
+
+  // Handle shop name changes when debounced value updates
+  useEffect(() => {
+    if (filters.shop_name !== debouncedShopNameInput) {
+      setFilters({ shop_name: debouncedShopNameInput || undefined });
+      setPagination(1); // Reset to first page
+      fetchDealers();
+    }
+  }, [debouncedShopNameInput, filters.shop_name, setFilters, setPagination, fetchDealers]);
+
+  // Handle search input changes (immediate)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    // If clearing the search, apply immediately for better UX
+    if (value === '' && filters.search !== '') {
+      setFilters({ search: '' });
+      setPagination(1);
+      fetchDealers();
+    }
+  }, [setFilters, setPagination, fetchDealers, filters.search]);
+
+  // Handle shop name input changes (immediate)
+  const handleShopNameFilterChange = useCallback((value: string) => {
+    setShopNameInput(value);
+    // If clearing the filter, apply immediately for better UX
+    if (value === '' && filters.shop_name !== undefined) {
+      setFilters({ shop_name: undefined });
+      setPagination(1);
+      fetchDealers();
+    }
+  }, [setFilters, setPagination, fetchDealers, filters.shop_name]);
 
   const handlePageChange = (page: number) => {
     setPagination(page);
@@ -74,6 +112,7 @@ export function DealerList({
     setPagination(1, size); // Reset to first page with new page size
   };
 
+  
   if (loading && dealers.length === 0) {
     return (
       <div className="space-y-4">
@@ -160,19 +199,47 @@ export function DealerList({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search dealers by name..."
-              value={filters.search || ''}
+              value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {searchInput && (
+              <button
+                onClick={() => {
+                  setSearchInput('');
+                  setFilters({ search: '' });
+                  setPagination(1);
+                  fetchDealers();
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="relative flex-1 sm:max-w-xs">
             <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Filter by shop name..."
-              value={filters.shop_name || ''}
+              value={shopNameInput}
               onChange={(e) => handleShopNameFilterChange(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {shopNameInput && (
+              <button
+                onClick={() => {
+                  setShopNameInput('');
+                  setFilters({ shop_name: undefined });
+                  setPagination(1);
+                  fetchDealers();
+                }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                aria-label="Clear shop name filter"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>

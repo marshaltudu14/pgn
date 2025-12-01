@@ -100,7 +100,12 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       if (queryParams.limit) queryString.set('limit', queryParams.limit.toString());
       if (queryParams.search) queryString.set('search', queryParams.search);
       if (queryParams.search_field) queryString.set('search_field', queryParams.search_field);
-      if (queryParams.employment_status) queryString.set('employment_status', queryParams.employment_status.join(','));
+      if (queryParams.employment_status) {
+        // Add each status as separate array parameter for proper API validation
+        queryParams.employment_status.forEach(status => {
+          queryString.append('employment_status[]', status);
+        });
+      }
       if (queryParams.primary_region) queryString.set('primary_region', queryParams.primary_region);
       if (queryParams.sort_by) queryString.set('sort_by', queryParams.sort_by);
       if (queryParams.sort_order) queryString.set('sort_order', queryParams.sort_order);

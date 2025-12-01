@@ -126,56 +126,7 @@ export function RegionsTable({
     return items;
   };
 
-  if (isLoading) {
-    return (
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>State</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-28" /></TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Skeleton className="h-8 w-8 rounded cursor-pointer" />
-                        <Skeleton className="h-8 w-8 rounded cursor-pointer" />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoading && regions.data.length === 0 && regions.total === 0) {
-    return (
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="flex flex-col items-center justify-center py-8">
-            <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No regions found</h3>
-            <p className="text-muted-foreground text-center max-w-md">
-              Start by adding your first region, or adjust your search to see more results.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  
   return (
     <div className="bg-white dark:bg-black">
       <div className="px-2 py-3 lg:p-6">
@@ -190,7 +141,24 @@ export function RegionsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {regions.data.map((region) => (
+              {isLoading ? (
+                // Show skeleton rows when loading
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-28" /></TableCell>
+                    <TableCell className="sm:hidden"><Skeleton className="h-8 w-32" /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Skeleton className="h-8 w-8 rounded cursor-pointer" />
+                        <Skeleton className="h-8 w-8 rounded cursor-pointer" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <>
+                  {regions.data.map((region) => (
                 <TableRow key={region.id} className="hover:bg-muted/50">
                   <TableCell className="font-medium">
                     {region.state}
@@ -250,7 +218,22 @@ export function RegionsTable({
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                  ))}
+                  {!isLoading && regions.data.length === 0 && regions.total === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">
+                        <div className="flex flex-col items-center justify-center py-8">
+                          <MapPin className="h-12 w-12 text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">No regions found</h3>
+                          <p className="text-muted-foreground text-center max-w-md">
+                            Start by adding your first region, or adjust your search to see more results.
+                          </p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              )}
             </TableBody>
           </Table>
         </div>

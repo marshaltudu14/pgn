@@ -53,65 +53,7 @@ export function AttendanceTable({
   onPageChange,
   pagination,
 }: AttendanceTableProps) {
-  if (isLoading && attendanceRecords.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="bg-white dark:bg-black">
-          <div className="px-2 py-3 lg:p-6">
-            <div className="w-full overflow-x-auto border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="hidden md:table-cell">Employee</TableHead>
-                    <TableHead>Check In</TableHead>
-                    <TableHead className="hidden sm:table-cell">Check Out</TableHead>
-                    <TableHead className="hidden lg:table-cell">Work Hours</TableHead>
-                    <TableHead className="hidden xl:table-cell">Distance</TableHead>
-                    <TableHead className="hidden lg:table-cell">Device</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...Array(5)].map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell><Skeleton className="h-8 w-20" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
-                      <TableCell className="text-right">
-                        <Skeleton className="h-8 w-8 rounded ml-auto cursor-pointer" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (attendanceRecords.length === 0 && !isLoading) {
-    return (
-      <div className="text-center py-12 bg-white dark:bg-black">
-        <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-          <Clock className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">No attendance records found</h3>
-        <p className="text-muted-foreground">
-          Try adjusting your filters or date range to see more results.
-        </p>
-      </div>
-    );
-  }
-
+  
   return (
     <div className="space-y-4">
       {/* Table View - Desktop and Mobile */}
@@ -133,7 +75,26 @@ export function AttendanceTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {attendanceRecords.map((record) => (
+                {isLoading && attendanceRecords.length === 0 ? (
+                  // Show skeleton rows when loading and no data exists
+                  [...Array(5)].map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-8 w-20" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="h-8 w-8 rounded ml-auto cursor-pointer" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <>
+                    {attendanceRecords.map((record) => (
                   <TableRow key={record.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       <div>
@@ -213,7 +174,24 @@ export function AttendanceTable({
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                                ))}
+                    {!isLoading && attendanceRecords.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="h-24 text-center">
+                          <div className="flex flex-col items-center justify-center py-8">
+                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                              <Clock className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">No attendance records found</h3>
+                            <p className="text-muted-foreground text-center max-w-md">
+                              Try adjusting your filters or date range to see more results.
+                            </p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                )}
               </TableBody>
             </Table>
           </div>

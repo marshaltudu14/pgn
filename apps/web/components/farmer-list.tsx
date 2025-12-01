@@ -6,7 +6,8 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useCallback, useState } from 'react';
+import { useDebounce } from '@/lib/utils/debounce';
 import {
   Table,
   TableBody,
@@ -28,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Farmer } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
-import { Search, Plus, Edit, Eye, Mail, Phone, User, Store } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Mail, Phone, User, Store, X } from 'lucide-react';
 
 interface FarmerListProps {
   onFarmerSelect?: (farmer: Farmer) => void;
@@ -60,19 +61,47 @@ export function FarmerList({
     fetchRetailers();
   }, [fetchRetailers]);
 
+  // Initial data fetch when component mounts
   useEffect(() => {
     fetchFarmers();
   }, [fetchFarmers]);
 
-  const handleSearchChange = (value: string) => {
-    setFilters({ search: value });
-    setPagination(1); // Reset to first page
-  };
+  // Local state for search input (immediate updates)
+  const [searchInput, setSearchInput] = useState(filters.search || '');
+  const debouncedSearchInput = useDebounce(searchInput, 300);
 
-  const handleRetailerFilterChange = (value: string) => {
+  // Handle search changes when debounced value updates
+  useEffect(() => {
+    if (filters.search !== debouncedSearchInput) {
+      setFilters({ search: debouncedSearchInput });
+      setPagination(1); // Reset to first page
+      fetchFarmers();
+    }
+  }, [debouncedSearchInput, filters.search, setFilters, setPagination, fetchFarmers]);
+
+  // Handle search input changes (immediate)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    // If clearing the search, apply immediately for better UX
+    if (value === '' && filters.search !== '') {
+      setFilters({ search: '' });
+      setPagination(1);
+      fetchFarmers();
+    }
+  }, [setFilters, setPagination, fetchFarmers, filters.search]);
+
+  const handleRetailerFilterChange = useCallback((value: string) => {
     setFilters({ retailer_id: value === 'all' ? undefined : value });
     setPagination(1); // Reset to first page
-  };
+    fetchFarmers(); // Non-search filter triggers immediate fetch
+  }, [setFilters, setPagination, fetchFarmers]);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchInput('');
+    setFilters({ search: '' });
+    setPagination(1);
+    fetchFarmers();
+  }, [setFilters, setPagination, fetchFarmers]);
 
   const handlePageChange = (page: number) => {
     setPagination(page);
@@ -82,63 +111,8 @@ export function FarmerList({
     setPagination(1, size); // Reset to first page with new page size
   };
 
-  if (loading && farmers.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Farmers</h2>
-          <Button onClick={onFarmerCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Farmer
-          </Button>
-        </div>
-        <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
-          <div className="flex gap-4">
-            <Skeleton className="h-10 w-64" />
-            <Skeleton className="h-10 w-40" />
-          </div>
-        </div>
-        <div className="bg-white dark:bg-black">
-          <div className="px-2 py-3 lg:p-6">
-            <div className="w-full overflow-x-auto border rounded-lg">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="hidden md:table-cell">Farm Name</TableHead>
-                    <TableHead className="hidden lg:table-cell">Retailer</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead className="hidden xl:table-cell">Address</TableHead>
-                    <TableHead className="hidden sm:table-cell">Created</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[...Array(5)].map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-8 w-8 rounded" />
-                          <Skeleton className="h-8 w-8 rounded" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  
+  
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -170,10 +144,19 @@ export function FarmerList({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
               placeholder="Search farmers by name..."
-              value={filters.search || ''}
+              value={searchInput}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
             />
+            {searchInput && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <Select
             value={filters.retailer_id || 'all'}
@@ -216,7 +199,27 @@ export function FarmerList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {farmers.map((farmer) => (
+                {loading && farmers.length === 0 ? (
+                  // Show skeleton rows when loading and no data exists
+                  [...Array(5)].map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <>
+                    {farmers.map((farmer) => (
                   <TableRow key={farmer.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       <div>
@@ -296,7 +299,19 @@ export function FarmerList({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                                ))}
+                    {!loading && farmers.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center">
+                          <div className="flex flex-col items-center justify-center text-muted-foreground">
+                            <p className="text-lg font-medium">No farmers found</p>
+                            <p className="text-sm">Try adjusting your search or filter criteria</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                )}
               </TableBody>
             </Table>
           </div>

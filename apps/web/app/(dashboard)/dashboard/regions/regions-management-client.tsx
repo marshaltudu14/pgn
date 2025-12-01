@@ -6,7 +6,7 @@ import { CreateRegionRequest, UpdateRegionRequest, Region } from '@pgn/shared';
 import { RegionsTable, RegionFormModal } from '@/components/regions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function RegionsManagementClient() {
@@ -51,13 +51,17 @@ export default function RegionsManagementClient() {
 
   // Handle search with debounce - only depends on searchTerm
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const store = useRegionsStore.getState();
+    const store = useRegionsStore.getState();
 
+    // If clearing search, apply immediately for better UX
+    if (!searchTermRef.current.trim()) {
+      store.fetchRegions(store.filter, store.pagination);
+      return;
+    }
+
+    const timer = setTimeout(() => {
       if (searchTermRef.current.trim()) {
         store.searchRegions(searchTermRef.current);
-      } else {
-        store.fetchRegions(store.filter, store.pagination);
       }
     }, 500);
 
@@ -86,6 +90,11 @@ export default function RegionsManagementClient() {
   // Handle pagination
   const handlePageChange = (page: number) => {
     setPagination({ page });
+  };
+
+  // Handle clear search
+  const handleClearSearch = () => {
+    setSearchTerm('');
   };
 
   // Handle region creation
@@ -188,8 +197,17 @@ export default function RegionsManagementClient() {
             placeholder="Search regions by state, district, or city..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 pr-10"
           />
+          {searchTerm && (
+            <button
+              onClick={handleClearSearch}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 

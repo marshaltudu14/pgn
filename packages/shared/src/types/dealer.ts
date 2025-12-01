@@ -48,7 +48,7 @@ export interface RetailerFormData {
   address?: string;
   shop_name?: string;
   email?: string;
-  dealer_id: string;
+  dealer_id?: string;
 }
 
 export interface FarmerFormData {
@@ -57,7 +57,7 @@ export interface FarmerFormData {
   address?: string;
   farm_name?: string;
   email?: string;
-  retailer_id: string;
+  retailer_id?: string;
 }
 
 // API Response types

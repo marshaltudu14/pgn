@@ -238,7 +238,6 @@ export default function UnifiedBottomNavigation({
         bottom: 0,
         left: 0,
         right: 0,
-        borderTopColor: colorScheme === 'dark' ? '#374151' : '#e5e7eb',
       }
     ]}>
       {tabs.slice(0, 2).map((tab) => (
@@ -269,7 +268,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 8,
     paddingHorizontal: 16,
-    borderTopWidth: 1,
   },
   tabButton: {
     flex: 1,

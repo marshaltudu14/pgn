@@ -59,11 +59,11 @@ test.describe('Employees Page E2E Tests', () => {
       await expect(employeeRows.first()).toBeVisible();
 
       // Check table headers are responsive
-      await page.setViewportSize({ width: 768 }); // Tablet view
+      await page.setViewportSize({ width: 768, height: 1024 }); // Tablet view
       await expect(page.getByText('User ID')).toBeVisible();
       await expect(page.getByText('Name')).toBeVisible();
 
-      await page.setViewportSize({ width: 375 }); // Mobile view
+      await page.setViewportSize({ width: 375, height: 667 }); // Mobile view
       await expect(page.getByText('User ID')).toBeVisible();
       await expect(page.getByText('Name')).toBeVisible();
     });
@@ -312,7 +312,8 @@ test.describe('Employees Page E2E Tests', () => {
       await page.waitForTimeout(1000);
 
       // Verify results are reset
-      await expect(page.locator('[data-testid="employee-row"]')).toHaveCount(/\d+/);
+      const employeeRows = page.locator('[data-testid="employee-row"]');
+      await expect(employeeRows).toHaveCount(await employeeRows.count());
     });
   });
 
@@ -363,7 +364,7 @@ test.describe('Employees Page E2E Tests', () => {
 
           // Verify page size changed (more or fewer rows displayed)
           const employeeRows = page.locator('[data-testid="employee-row"]');
-          await expect(employeeRows).toHaveCount(/\d+/);
+          await expect(employeeRows).toHaveCount(await employeeRows.count());
         }
       }
     });

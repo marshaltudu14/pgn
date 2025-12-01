@@ -13,9 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Plus, Phone, Mail, MapPin, Store, User } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRetailerStore } from '@/store/retailer-store';
-import { RetailerFormData } from '@pgn/shared';
+import { RetailerFormData, Dealer } from '@pgn/shared';
 import { COLORS } from '@/constants';
 import Spinner from '@/components/Spinner';
+import DealerSearchModal from '@/components/DealerSearchModal';
 
 interface CreateRetailerModalProps {
   visible: boolean;
@@ -46,6 +47,8 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showDealerSearch, setShowDealerSearch] = useState(false);
+  const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
 
   const colors = {
     background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
@@ -179,7 +182,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
 
     return (
       <View style={styles.inputContainer}>
-        <View style={[styles.inputLabelContainer, { borderColor: hasError ? colors.error : colors.border }]}>
+        <View style={styles.inputLabelContainer}>
           <Icon size={20} color={hasError ? colors.error : colors.primary} />
           <Text style={[styles.inputLabel, { color: hasError ? colors.error : colors.text }]}>
             {label}{required && ' *'}
@@ -189,7 +192,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
           style={[
             styles.input,
             {
-              backgroundColor: colors.input,
+              backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
               borderColor: hasError ? colors.error : colors.border,
               color: colors.text,
               height: multiline ? 100 : 50,
@@ -222,7 +225,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Modern Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={handleClose}
@@ -295,14 +298,64 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
           {/* Address Field */}
           {renderInput('address', 'Address', 'Enter complete address', MapPin, 'default', true)}
 
+          {/* Dealer Selection Field */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <Store size={20} color={colors.primary} />
+              <Text style={[styles.inputLabel, { color: colors.text }]}>
+                Dealer (Optional)
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.dealerSelectionButton,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={() => setShowDealerSearch(true)}
+              disabled={isCreating}
+            >
+              <Text style={[
+                styles.dealerSelectionText,
+                { color: selectedDealer ? colors.text : colors.textSecondary }
+              ]}>
+                {selectedDealer ? `${selectedDealer.shop_name || selectedDealer.name}` : 'Select dealer (optional)'}
+              </Text>
+              {selectedDealer && (
+                <TouchableOpacity
+                  style={styles.clearDealerButton}
+                  onPress={() => {
+                    setSelectedDealer(null);
+                    setFormData(prev => ({ ...prev, dealer_id: '' }));
+                  }}
+                >
+                  <ChevronLeft size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Info Box */}
           <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9FAFB' }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              Note: Retailers are linked to dealers. You can create unlimited retailers with proper tracking.
+              Note: Retailers can be independent or linked to dealers. Selecting a dealer helps with tracking.
             </Text>
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Dealer Search Modal */}
+      <DealerSearchModal
+        visible={showDealerSearch}
+        onClose={() => setShowDealerSearch(false)}
+        onDealerSelect={(dealer) => {
+          setSelectedDealer(dealer);
+          setFormData(prev => ({ ...prev, dealer_id: dealer.id }));
+        }}
+        selectedDealerId={selectedDealer?.id}
+      />
     </Modal>
   );
 }
@@ -317,7 +370,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderBottomWidth: 1,
   },
   backButton: {
     padding: 8,
@@ -375,10 +427,8 @@ const styles = StyleSheet.create({
   inputLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     marginBottom: 8,
   },
   inputIcon: {
@@ -410,5 +460,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  dealerSelectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dealerSelectionText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  clearDealerButton: {
+    marginLeft: 12,
+    padding: 4,
   },
 });

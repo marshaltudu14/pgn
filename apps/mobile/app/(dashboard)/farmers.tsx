@@ -48,11 +48,16 @@ export default function FarmersScreen() {
     input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
   };
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   const loadFarmers = useCallback(async () => {
     try {
+      setIsInitialLoad(true);
       await fetchFarmers({ refresh: true });
     } catch (error) {
       console.error('Error loading farmers:', error);
+    } finally {
+      setIsInitialLoad(false);
     }
   }, [fetchFarmers]);
 
@@ -91,99 +96,62 @@ export default function FarmersScreen() {
 
   const renderFarmerItem = ({ item }: { item: Farmer }) => (
     <TouchableOpacity
-      style={[
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderWidth: 1,
-          shadowColor: colorScheme === 'dark' ? 'transparent' : '#000000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 3,
-        },
-        {
-          marginHorizontal: 16,
-          marginVertical: 6,
-          padding: 16,
-          borderRadius: 16,
-        }
-      ]}
+      style={styles.listItem}
       onPress={() => handleFarmerPress(item)}
       activeOpacity={0.7}
     >
-      <View className="flex-row justify-between items-start mb-3">
-        <View className="flex-1 mr-3">
-          <View className="flex-row items-center mb-2">
-            <Sprout size={18} color={colors.primary} className="mr-2" />
-            <Text className={`font-bold text-lg flex-1 ${
-              colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              {item.farm_name || 'N/A'}
-            </Text>
+      <View style={styles.listItemContent}>
+        <View style={styles.listItemMain}>
+          <View style={styles.listItemHeader}>
+            <Sprout size={20} color="#F59E0B" style={styles.listItemIcon} />
+            <View style={styles.listItemTitles}>
+              <Text style={[styles.listItemTitle, { color: colors.text }]}>
+                {item.farm_name || 'N/A'}
+              </Text>
+              <Text style={[styles.listItemSubtitle, { color: colors.textSecondary }]}>
+                {item.name}
+              </Text>
+            </View>
           </View>
-          <Text className={`text-sm mb-1 ${
-            colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            {item.name}
-          </Text>
+
+          {/* Contact Info */}
+          <View style={styles.listItemDetails}>
+            {item.email && (
+              <Text style={[styles.listItemDetail, { color: colors.textSecondary }]}>
+                {item.email}
+              </Text>
+            )}
+            {item.phone && (
+              <Text style={[styles.listItemDetail, { color: colors.textSecondary }]}>
+                {item.phone}
+              </Text>
+            )}
+            {item.address && (
+              <Text style={[styles.listItemDetail, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.address}
+              </Text>
+            )}
+          </View>
         </View>
-        <View className={`px-3 py-1 rounded-full ${
-          colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-        }`}>
-          <Text className={`text-xs font-bold ${
-            colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          }`}>
+
+        <View style={[styles.listItemBadge, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
+          <Text style={[styles.listItemBadgeText, { color: colors.textSecondary }]}>
             F-{item.id.slice(-4)}
           </Text>
         </View>
       </View>
 
-      {/* Contact Info */}
-      <View className="space-y-2">
-        {item.email && (
-          <View className="flex-row items-center">
-            <Mail size={16} color={colors.textSecondary} className="mr-3" />
-            <Text className={`text-sm flex-1 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              {item.email}
-            </Text>
-          </View>
-        )}
-
-        {item.phone && (
-          <View className="flex-row items-center">
-            <Phone size={16} color={colors.textSecondary} className="mr-3" />
-            <Text className={`text-sm flex-1 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              {item.phone}
-            </Text>
-          </View>
-        )}
-
-        {item.address && (
-          <View className="flex-row items-center">
-            <MapPin size={16} color={colors.textSecondary} className="mr-3" />
-            <Text className={`text-sm flex-1 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              {item.address}
-            </Text>
-          </View>
-        )}
-      </View>
+      <View style={[styles.listItemSeparator, { backgroundColor: colors.separator }]} />
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Compact Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
-            <Sprout size={28} color="#F59E0B" style={styles.titleIcon} />
+            <Sprout size={18} color="#F59E0B" style={styles.titleIcon} />
             <Text style={[styles.title, { color: colors.text }]}>
               Farmers
             </Text>
@@ -193,16 +161,16 @@ export default function FarmersScreen() {
             onPress={() => setShowCreateModal(true)}
             activeOpacity={0.8}
           >
-            <Plus size={24} color="#ffffff" />
+            <Plus size={16} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colors.input, borderColor: colors.border }]}>
-          <Search size={22} color={colors.textSecondary} style={styles.searchIcon} />
+        <View style={[styles.searchContainer, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF', borderColor: colors.border }]}>
+          <Search size={16} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search farmers by name..."
+            style={[styles.searchInput, { color: colors.text, backgroundColor: 'transparent' }]}
+            placeholder="Search farmers..."
             placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={handleSearch}
@@ -225,67 +193,72 @@ export default function FarmersScreen() {
           />
         }
         contentContainerStyle={{ paddingBottom: 20 }}
-        ListEmptyComponent={() => (
-          <View style={{
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: 80,
-            paddingHorizontal: 40,
-          }}>
+        ListEmptyComponent={() => {
+          // Don't show empty state during initial load
+          if (isInitialLoad) return null;
+
+          return (
             <View style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: 20,
+              paddingVertical: 80,
+              paddingHorizontal: 40,
             }}>
-              <Sprout size={40} color="#F59E0B" />
+              <View style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 20,
+              }}>
+                <Sprout size={40} color="#F59E0B" />
+              </View>
+              <Text style={{
+                color: colors.text,
+                fontSize: 20,
+                fontWeight: '700',
+                marginBottom: 8,
+                textAlign: 'center',
+              }}>
+                No Farmers Found
+              </Text>
+              <Text style={{
+                color: colors.textSecondary,
+                fontSize: 16,
+                textAlign: 'center',
+                lineHeight: 22,
+                marginBottom: 24,
+              }}>
+                {searchQuery ? 'Try adjusting your search terms' : 'Add your first farmer to get started'}
+              </Text>
+              {!searchQuery && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#F59E0B',
+                    paddingHorizontal: 24,
+                    paddingVertical: 12,
+                    borderRadius: 24,
+                  }}
+                  onPress={() => setShowCreateModal(true)}
+                >
+                  <Text style={{
+                    color: '#ffffff',
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}>
+                    Add Farmer
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-            <Text style={{
-              color: colors.text,
-              fontSize: 20,
-              fontWeight: '700',
-              marginBottom: 8,
-              textAlign: 'center',
-            }}>
-              No Farmers Found
-            </Text>
-            <Text style={{
-              color: colors.textSecondary,
-              fontSize: 16,
-              textAlign: 'center',
-              lineHeight: 22,
-              marginBottom: 24,
-            }}>
-              {searchQuery ? 'Try adjusting your search terms' : 'Add your first farmer to get started'}
-            </Text>
-            {!searchQuery && (
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#F59E0B',
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                  borderRadius: 24,
-                }}
-                onPress={() => setShowCreateModal(true)}
-              >
-                <Text style={{
-                  color: '#ffffff',
-                  fontSize: 16,
-                  fontWeight: '600',
-                }}>
-                  Add Farmer
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+          );
+        }}
       />
 
-      {/* Loading */}
-      {loading && (
+      {/* Loading - only show during initial load */}
+      {isInitialLoad && (
         <View style={styles.loadingContainer}>
           <Spinner size={24} color="#F59E0B" />
         </View>
@@ -305,51 +278,103 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    borderBottomWidth: 1,
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 16,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   titleIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   title: {
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '600',
   },
   addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderWidth: 2,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
   },
   searchIcon: {
-    marginRight: 16,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 17,
-    paddingVertical: 2,
-    fontWeight: '500',
+    fontSize: 16,
+    paddingVertical: 0,
+    fontWeight: '400',
+  },
+  listItem: {
+    backgroundColor: 'transparent',
+  },
+  listItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  listItemMain: {
+    flex: 1,
+  },
+  listItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  listItemIcon: {
+    marginRight: 12,
+  },
+  listItemTitles: {
+    flex: 1,
+  },
+  listItemTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  listItemSubtitle: {
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  listItemDetails: {
+    paddingLeft: 32,
+  },
+  listItemDetail: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  listItemBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  listItemBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listItemSeparator: {
+    height: 1,
+    marginLeft: 16,
   },
   loadingContainer: {
     position: 'absolute',

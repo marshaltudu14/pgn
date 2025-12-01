@@ -9,11 +9,7 @@ test.describe('Authentication E2E Tests', () => {
   test.describe('Login Flow', () => {
     test('should redirect unauthenticated users to login', async ({ page }) => {
       // Try to access protected route without authentication header
-      await page.goto('http://localhost:3001/dashboard/employees', {
-        headers: {
-          'x-e2e-testing': 'false', // Disable test mode for this test
-        }
-      });
+      await page.goto('http://localhost:3001/dashboard/employees');
 
       // Should redirect to login
       await expect(page).toHaveURL(/.*\/login.*/);

@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Employee Form E2E Tests', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async () => {
     // Authentication is bypassed in test mode
   });
 
@@ -102,9 +102,6 @@ test.describe('Employee Form E2E Tests', () => {
     test('should handle file upload for reference photo', async ({ page }) => {
       const photoUpload = page.getByLabel(/Reference Photo|Profile Picture/i);
       if (await photoUpload.isVisible()) {
-        // Create a test file
-        const testFilePath = 'test-photo.jpg';
-
         // Note: In real tests, you would need to have actual test files
         // For now, just test the file upload interaction
         await expect(photoUpload).toBeVisible();

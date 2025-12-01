@@ -242,7 +242,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
-          retailer_id: string
+          retailer_id: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -255,7 +255,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
-          retailer_id: string
+          retailer_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -268,7 +268,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
-          retailer_id?: string
+          retailer_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -317,7 +317,7 @@ export type Database = {
           address: string | null
           created_at: string
           created_by: string | null
-          dealer_id: string
+          dealer_id: string | null
           email: string | null
           id: string
           name: string
@@ -330,7 +330,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           created_by?: string | null
-          dealer_id: string
+          dealer_id?: string | null
           email?: string | null
           id?: string
           name: string
@@ -343,7 +343,7 @@ export type Database = {
           address?: string | null
           created_at?: string
           created_by?: string | null
-          dealer_id?: string
+          dealer_id?: string | null
           email?: string | null
           id?: string
           name?: string

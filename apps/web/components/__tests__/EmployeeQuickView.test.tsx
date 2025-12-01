@@ -678,6 +678,8 @@ describe('EmployeeQuickView Component', () => {
     it('should handle employee with future dates', () => {
       const futureDate = new Date();
       futureDate.setFullYear(futureDate.getFullYear() + 1);
+      const futureYear = futureDate.getFullYear();
+      const expectedPattern = new RegExp(`[A-Za-z]{3} \\d{1,2}, ${futureYear}`);
 
       const mockEmployee = createMockEmployee({
         created_at: futureDate.toISOString(),
@@ -693,7 +695,8 @@ describe('EmployeeQuickView Component', () => {
       );
 
       // Should format future dates correctly (both Created and Last Updated should show the future date)
-      expect(screen.getAllByText(/Nov \d{1,2}, 2026/)).toHaveLength(2);
+      const dateElements = screen.getAllByText(expectedPattern);
+      expect(dateElements).toHaveLength(2);
     });
 
     it('should handle very long names', () => {

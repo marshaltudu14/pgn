@@ -16,9 +16,21 @@ import { authService } from '../services/auth.service';
 
 describe('Proxy Utility', () => {
   let mockRequest: NextRequest;
+  let originalNodeEnv: string | undefined;
+  let originalE2ETesting: string | undefined;
 
   beforeEach(() => {
     jest.clearAllMocks();
+
+    // Store original environment variables
+    originalNodeEnv = process.env.NODE_ENV;
+    originalE2ETesting = process.env.E2E_TESTING;
+
+    // Ensure we're not in test mode for these authentication tests
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processEnv = process.env as any;
+    processEnv.NODE_ENV = undefined;
+    processEnv.E2E_TESTING = undefined;
 
     // Create a mock request with default values
     mockRequest = {
@@ -36,6 +48,9 @@ describe('Proxy Utility', () => {
         hash: '',
         toJSON: jest.fn(),
       },
+      headers: {
+        get: jest.fn(),
+      },
     } as unknown as NextRequest;
 
     // Use Object.defineProperty to set the read-only url property
@@ -44,6 +59,14 @@ describe('Proxy Utility', () => {
       writable: true,
       configurable: true,
     });
+  });
+
+  afterEach(() => {
+    // Restore original environment variables
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const processEnv = process.env as any;
+    processEnv.NODE_ENV = originalNodeEnv;
+    processEnv.E2E_TESTING = originalE2ETesting;
   });
 
   describe('proxy function', () => {

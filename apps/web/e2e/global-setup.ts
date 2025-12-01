@@ -3,9 +3,9 @@
  * Prepares test environment before running e2e tests
  */
 
-import { chromium, FullConfig } from '@playwright/test';
+import { FullConfig } from '@playwright/test';
 
-async function globalSetup(config: FullConfig) {
+async function globalSetup(_config: FullConfig) {
   console.log('🚀 Setting up E2E test environment...');
 
   // Optional: Database setup for e2e tests

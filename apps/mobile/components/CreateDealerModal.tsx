@@ -168,7 +168,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
 
     return (
       <View style={styles.inputContainer}>
-        <View style={[styles.inputLabelContainer, { borderColor: hasError ? colors.error : colors.border }]}>
+        <View style={styles.inputLabelContainer}>
           <Icon size={20} color={hasError ? colors.error : colors.primary} />
           <Text style={[styles.inputLabel, { color: hasError ? colors.error : colors.text }]}>
             {label}
@@ -178,7 +178,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           style={[
             styles.input,
             {
-              backgroundColor: colors.input,
+              backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
               borderColor: hasError ? colors.error : colors.border,
               color: colors.text,
               height: multiline ? 100 : 50,
@@ -211,7 +211,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Modern Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={handleClose}
@@ -297,7 +297,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderBottomWidth: 1,
   },
   backButton: {
     padding: 8,
@@ -355,10 +354,8 @@ const styles = StyleSheet.create({
   inputLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     marginBottom: 8,
   },
   inputIcon: {

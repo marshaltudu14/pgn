@@ -10,12 +10,13 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Sprout } from 'lucide-react-native';
+import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Sprout, Users } from 'lucide-react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFarmerStore } from '@/store/farmer-store';
-import { FarmerFormData } from '@pgn/shared';
+import { FarmerFormData, Retailer } from '@pgn/shared';
 import { COLORS } from '@/constants';
 import Spinner from '@/components/Spinner';
+import RetailerSearchModal from '@/components/RetailerSearchModal';
 
 interface CreateFarmerModalProps {
   visible: boolean;
@@ -46,6 +47,8 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showRetailerSearch, setShowRetailerSearch] = useState(false);
+  const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
 
   const colors = {
     background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
@@ -179,7 +182,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
 
     return (
       <View style={styles.inputContainer}>
-        <View style={[styles.inputLabelContainer, { borderColor: hasError ? colors.error : colors.border }]}>
+        <View style={styles.inputLabelContainer}>
           <Icon size={20} color={hasError ? colors.error : colors.primary} />
           <Text style={[styles.inputLabel, { color: hasError ? colors.error : colors.text }]}>
             {label}{required && ' *'}
@@ -189,7 +192,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
           style={[
             styles.input,
             {
-              backgroundColor: colors.input,
+              backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
               borderColor: hasError ? colors.error : colors.border,
               color: colors.text,
               height: multiline ? 100 : 50,
@@ -222,7 +225,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
     >
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Modern Header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={handleClose}
@@ -295,14 +298,64 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
           {/* Address Field */}
           {renderInput('address', 'Address', 'Enter complete address', MapPin, 'default', true)}
 
+          {/* Retailer Selection Field */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <Users size={20} color={colors.primary} />
+              <Text style={[styles.inputLabel, { color: colors.text }]}>
+                Retailer (Optional)
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.retailerSelectionButton,
+                {
+                  backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+                  borderColor: colors.border,
+                }
+              ]}
+              onPress={() => setShowRetailerSearch(true)}
+              disabled={isCreating}
+            >
+              <Text style={[
+                styles.retailerSelectionText,
+                { color: selectedRetailer ? colors.text : colors.textSecondary }
+              ]}>
+                {selectedRetailer ? `${selectedRetailer.shop_name || selectedRetailer.name}` : 'Select retailer (optional)'}
+              </Text>
+              {selectedRetailer && (
+                <TouchableOpacity
+                  style={styles.clearRetailerButton}
+                  onPress={() => {
+                    setSelectedRetailer(null);
+                    setFormData(prev => ({ ...prev, retailer_id: '' }));
+                  }}
+                >
+                  <ChevronLeft size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* Info Box */}
           <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9FAFB' }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-              Note: Farmers are linked to retailers and dealers. You can create unlimited farmers with proper tracking.
+              Note: Farmers can be independent or linked to retailers. Selecting a retailer helps with tracking.
             </Text>
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* Retailer Search Modal */}
+      <RetailerSearchModal
+        visible={showRetailerSearch}
+        onClose={() => setShowRetailerSearch(false)}
+        onRetailerSelect={(retailer) => {
+          setSelectedRetailer(retailer);
+          setFormData(prev => ({ ...prev, retailer_id: retailer.id }));
+        }}
+        selectedRetailerId={selectedRetailer?.id}
+      />
     </Modal>
   );
 }
@@ -317,7 +370,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderBottomWidth: 1,
   },
   backButton: {
     padding: 8,
@@ -375,10 +427,8 @@ const styles = StyleSheet.create({
   inputLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     marginBottom: 8,
   },
   inputIcon: {
@@ -410,5 +460,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  retailerSelectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  retailerSelectionText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  clearRetailerButton: {
+    marginLeft: 12,
+    padding: 4,
   },
 });

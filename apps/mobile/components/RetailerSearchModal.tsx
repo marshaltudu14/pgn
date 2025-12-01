@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Search, Users, Check } from 'lucide-react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRetailerStore } from '@/store/retailer-store';
 import { Retailer } from '@pgn/shared';
 import { COLORS } from '@/constants';
@@ -30,29 +31,14 @@ export default function RetailerSearchModal({
   onRetailerSelect,
   selectedRetailerId,
 }: RetailerSearchModalProps) {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const { retailers, loading, hasMore, fetchRetailers, searchRetailers } = useRetailerStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const flatListRef = useRef<FlatList>(null);
-
-  const colors = {
-    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280',
-    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
-    border: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    primary: COLORS.SAFFRON,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
-  };
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -65,7 +51,7 @@ export default function RetailerSearchModal({
 
   const loadInitialRetailers = useCallback(async () => {
     try {
-      await fetchRetailers({ page: 1, limit: 20, refresh: true });
+      await fetchRetailers({ page: 1, itemsPerPage: 20, refresh: true });
     } catch (error) {
       console.error('Error loading retailers:', error);
     }
@@ -75,7 +61,7 @@ export default function RetailerSearchModal({
     setSearchQuery(query);
     setPage(1);
     try {
-      await searchRetailers(query, { page: 1, limit: 20 });
+      await searchRetailers(query, 20);
     } catch (error) {
       console.error('Error searching retailers:', error);
     }
@@ -87,7 +73,7 @@ export default function RetailerSearchModal({
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      await fetchRetailers({ page: nextPage, limit: 20 });
+      await fetchRetailers({ page: nextPage, itemsPerPage: 20 });
       setPage(nextPage);
     } catch (error) {
       console.error('Error loading more retailers:', error);
@@ -141,7 +127,7 @@ export default function RetailerSearchModal({
           </View>
         </View>
 
-        <View style={[styles.listItemBadge, { backgroundColor: selectedRetailerId === item.id ? colors.primary : (colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') }]}>
+        <View style={[styles.listItemBadge, { backgroundColor: selectedRetailerId === item.id ? colors.primary : colors.iconBg }]}>
           {selectedRetailerId === item.id ? (
             <Check size={16} color="#ffffff" />
           ) : (
@@ -193,7 +179,7 @@ export default function RetailerSearchModal({
         </View>
 
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF', borderColor: colors.border }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
           <Search size={16} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text, backgroundColor: 'transparent' }]}

@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Info,
 } from 'lucide-react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { permissionService, AppPermissions } from '@/services/permissions';
 import { COLORS, THEME } from '@/constants/theme';
 
@@ -29,7 +30,8 @@ export default function PermissionsScreen({
   permissions: initialPermissions,
   onPermissionsGranted
 }: PermissionsScreenProps) {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const [permissions, setPermissions] = useState<AppPermissions>(
     initialPermissions || { camera: 'denied', location: 'denied', notifications: 'denied' }
   );
@@ -38,7 +40,7 @@ export default function PermissionsScreen({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colorScheme === 'dark' ? COLORS.BACKGROUND_DARK : COLORS.BACKGROUND_LIGHT,
+      backgroundColor: colors.background,
     },
     content: {
       flex: 1,
@@ -62,7 +64,7 @@ export default function PermissionsScreen({
       backgroundColor: COLORS.SUCCESS_LIGHT,
     },
     iconContainerDefault: {
-      backgroundColor: colorScheme === 'dark' ? COLORS.SAFFRON_ALPHA_DARK : COLORS.WARNING_LIGHT,
+      backgroundColor: COLORS.WARNING_LIGHT,
     },
     title: {
       fontSize: THEME.FONT_SIZES.DISPLAY,
@@ -70,22 +72,10 @@ export default function PermissionsScreen({
       textAlign: 'center',
       marginBottom: THEME.SPACING.SM,
     },
-    titleDark: {
-      color: COLORS.TEXT_PRIMARY_DARK,
-    },
-    titleLight: {
-      color: COLORS.TEXT_PRIMARY_LIGHT,
-    },
     subtitle: {
       fontSize: THEME.FONT_SIZES.BASE,
       textAlign: 'center',
       paddingHorizontal: THEME.SPACING.SM,
-    },
-    subtitleDark: {
-      color: COLORS.TEXT_TERTIARY_DARK,
-    },
-    subtitleLight: {
-      color: COLORS.TEXT_TERTIARY_LIGHT,
     },
     permissionsList: {
       marginTop: THEME.SPACING.XL,
@@ -107,7 +97,7 @@ export default function PermissionsScreen({
       backgroundColor: COLORS.SUCCESS_LIGHT,
     },
     permissionIconContainerDefault: {
-      backgroundColor: colorScheme === 'dark' ? COLORS.SAFFRON_ALPHA_DARK : COLORS.WARNING_LIGHT,
+      backgroundColor: COLORS.WARNING_LIGHT,
     },
     permissionTextContainer: {
       flex: 1,
@@ -117,20 +107,8 @@ export default function PermissionsScreen({
       fontWeight: '600',
       marginBottom: THEME.SPACING.XS,
     },
-    permissionTitleDark: {
-      color: COLORS.TEXT_PRIMARY_DARK,
-    },
-    permissionTitleLight: {
-      color: COLORS.TEXT_PRIMARY_LIGHT,
-    },
     permissionDescription: {
       fontSize: THEME.FONT_SIZES.SM,
-    },
-    permissionDescriptionDark: {
-      color: COLORS.TEXT_TERTIARY_DARK,
-    },
-    permissionDescriptionLight: {
-      color: COLORS.TEXT_TERTIARY_LIGHT,
     },
     checkIconContainer: {
       backgroundColor: COLORS.SUCCESS_LIGHT,
@@ -157,32 +135,15 @@ export default function PermissionsScreen({
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-    },
-    refreshButtonDark: {
-      borderColor: COLORS.BORDER_DARK,
-    },
-    refreshButtonLight: {
-      borderColor: COLORS.BORDER_LIGHT,
+      borderColor: colors.border,
     },
     refreshTextDisabled: {
       fontSize: THEME.FONT_SIZES.BASE,
       fontWeight: '500',
     },
-    refreshTextDisabledDark: {
-      color: COLORS.TEXT_DISABLED_DARK,
-    },
-    refreshTextDisabledLight: {
-      color: COLORS.TEXT_DISABLED_LIGHT,
-    },
     refreshTextEnabled: {
       fontSize: THEME.FONT_SIZES.BASE,
       fontWeight: '500',
-    },
-    refreshTextEnabledDark: {
-      color: COLORS.TEXT_SECONDARY_DARK,
-    },
-    refreshTextEnabledLight: {
-      color: COLORS.TEXT_SECONDARY_LIGHT,
     },
     privacyContainer: {
       position: 'absolute',
@@ -198,12 +159,6 @@ export default function PermissionsScreen({
     privacyText: {
       fontSize: THEME.FONT_SIZES.XS,
       marginLeft: THEME.SPACING.XS,
-    },
-    privacyTextDark: {
-      color: COLORS.TEXT_DISABLED_DARK,
-    },
-    privacyTextLight: {
-      color: COLORS.TEXT_DISABLED_LIGHT,
     },
   });
 
@@ -297,17 +252,11 @@ export default function PermissionsScreen({
             />
           </View>
 
-          <Text style={[
-            styles.title,
-            colorScheme === 'dark' ? styles.titleDark : styles.titleLight
-          ]}>
+          <Text style={[styles.title, { color: colors.text }]}>
             {allGranted ? 'Permissions Granted' : 'Enable Permissions'}
           </Text>
 
-          <Text style={[
-            styles.subtitle,
-            colorScheme === 'dark' ? styles.subtitleDark : styles.subtitleLight
-          ]}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             {allGranted
               ? 'All required permissions are enabled. You can now use the app.'
               : 'PGN needs camera, location, and notification access for attendance tracking'
@@ -333,16 +282,10 @@ export default function PermissionsScreen({
                   )}
                 </View>
                 <View style={styles.permissionTextContainer}>
-                  <Text style={[
-                    styles.permissionTitle,
-                    colorScheme === 'dark' ? styles.permissionTitleDark : styles.permissionTitleLight
-                  ]}>
+                  <Text style={[styles.permissionTitle, { color: colors.text }]}>
                     Camera Access
                   </Text>
-                  <Text style={[
-                    styles.permissionDescription,
-                    colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
-                  ]}>
+                  <Text style={[styles.permissionDescription, { color: colors.textSecondary }]}>
                     Required for selfie check-in/out and face recognition
                   </Text>
                 </View>
@@ -367,18 +310,11 @@ export default function PermissionsScreen({
                   )}
                 </View>
                 <View style={styles.permissionTextContainer}>
-                  <Text style={[
-                    styles.permissionTitle,
-                    colorScheme === 'dark' ? styles.permissionTitleDark : styles.permissionTitleLight
-                  ]}>
+                  <Text style={[styles.permissionTitle, { color: colors.text }]}>
                     Location Access
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                    <Text style={[
-                      styles.permissionDescription,
-                      colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight,
-                      { flex: 1 }
-                    ]}>
+                    <Text style={[styles.permissionDescription, { color: colors.textSecondary, flex: 1 }]}>
                       Required for attendance tracking with background location monitoring.
                     </Text>
                     {needsAlwaysLocation && (
@@ -386,7 +322,7 @@ export default function PermissionsScreen({
                         onPress={() => permissionService.showLocationAlwaysRationale()}
                         style={{ padding: 4, marginLeft: 8 }}
                       >
-                        <Info size={16} color={colorScheme === 'dark' ? COLORS.SAFFRON : '#F59E0B'} />
+                        <Info size={16} color={COLORS.SAFFRON} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -412,16 +348,10 @@ export default function PermissionsScreen({
                   )}
                 </View>
                 <View style={styles.permissionTextContainer}>
-                  <Text style={[
-                    styles.permissionTitle,
-                    colorScheme === 'dark' ? styles.permissionTitleDark : styles.permissionTitleLight
-                  ]}>
+                  <Text style={[styles.permissionTitle, { color: colors.text }]}>
                     Notification Access
                   </Text>
-                  <Text style={[
-                    styles.permissionDescription,
-                    colorScheme === 'dark' ? styles.permissionDescriptionDark : styles.permissionDescriptionLight
-                  ]}>
+                  <Text style={[styles.permissionDescription, { color: colors.textSecondary }]}>
                     Required for attendance tracking alerts and important work updates
                   </Text>
                 </View>
@@ -466,20 +396,13 @@ export default function PermissionsScreen({
             {/* Check Again Button */}
             {(hasAnyBlocked || isRequesting) && (
               <TouchableOpacity
-                style={[
-                  styles.refreshButton,
-                  colorScheme === 'dark' ? styles.refreshButtonDark : styles.refreshButtonLight
-                ]}
+                style={styles.refreshButton}
                 onPress={checkPermissions}
                 disabled={isRequesting}
                 activeOpacity={0.9}
               >
-                <RefreshCw size={16} color={colorScheme === 'dark' ? COLORS.TEXT_SECONDARY_DARK : COLORS.TEXT_SECONDARY_LIGHT} />
-                <Text style={[
-                  styles.refreshTextEnabled,
-                  colorScheme === 'dark' ? styles.refreshTextEnabledDark : styles.refreshTextEnabledLight,
-                  { marginLeft: 8 }
-                ]}>
+                <RefreshCw size={16} color={colors.textSecondary} />
+                <Text style={[styles.refreshTextEnabled, { color: colors.textSecondary, marginLeft: 8 }]}>
                   Check Again
                 </Text>
               </TouchableOpacity>
@@ -490,11 +413,8 @@ export default function PermissionsScreen({
         {/* Privacy Note */}
         <View style={styles.privacyContainer}>
           <View style={styles.privacyRow}>
-            <Shield size={12} color={colorScheme === 'dark' ? '#6B7280' : '#9CA3AF'} />
-            <Text style={[
-              styles.privacyText,
-              colorScheme === 'dark' ? styles.privacyTextDark : styles.privacyTextLight
-            ]}>
+            <Shield size={12} color={colors.textTertiary} />
+            <Text style={[styles.privacyText, { color: colors.textTertiary }]}>
               Your privacy is respected. Permissions used only for work purposes.
             </Text>
           </View>

@@ -8,7 +8,8 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { showToast } from '@/utils/toast';
 import { useAttendance } from '@/store/attendance-store';
 import { DailyAttendanceRecord } from '@pgn/shared';
@@ -18,7 +19,8 @@ import AttendanceSkeleton from '@/components/AttendanceSkeleton';
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 
 export default function AttendanceScreen() {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const styles = createAttendanceStyles();
   const flatListRef = useRef<FlatList>(null);
 
@@ -31,22 +33,6 @@ export default function AttendanceScreen() {
     loadMoreHistory,
     refreshHistory,
   } = useAttendance();
-
-  // Theme colors - Black for dark mode, White for light mode
-  const colors = {
-    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#8E8E93' : '#3C3C43',
-    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
-    border: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    primary: COLORS.SAFFRON,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-  };
 
   // Load initial data
   const loadInitialData = useCallback(async () => {
@@ -207,7 +193,7 @@ export default function AttendanceScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
         <StatusBar
-          barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+          barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
           backgroundColor={colors.statusBar}
         />
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -221,7 +207,7 @@ export default function AttendanceScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <StatusBar
-        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+        barStyle={resolvedTheme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={colors.statusBar}
       />
 

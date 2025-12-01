@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 
 const AttendanceSkeleton = () => {
-  const colorScheme = useColorScheme();
+  const colors = useThemeColors();
 
   const skeletonColors = {
-    primary: colorScheme === 'dark' ? '#374151' : '#E5E7EB',
-    secondary: colorScheme === 'dark' ? '#4B5563' : '#F3F4F6',
+    primary: colors.border,
+    secondary: colors.listBg,
   };
   const skeletonItems = Array.from({ length: 5 }, (_, index) => index);
 

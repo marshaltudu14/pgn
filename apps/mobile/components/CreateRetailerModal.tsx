@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Plus, Phone, Mail, MapPin, Store, User } from 'lucide-react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRetailerStore } from '@/store/retailer-store';
 import { RetailerFormData, Dealer } from '@pgn/shared';
 import { COLORS } from '@/constants';
@@ -34,7 +35,8 @@ interface FormErrors {
 }
 
 export default function CreateRetailerModal({ visible, onClose, dealerId }: CreateRetailerModalProps) {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const { createRetailer, isCreating } = useRetailerStore();
 
   const [formData, setFormData] = useState<RetailerFormData>({
@@ -50,22 +52,6 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
   const [showDealerSearch, setShowDealerSearch] = useState(false);
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
 
-  const colors = {
-    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280',
-    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
-    border: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    primary: COLORS.SAFFRON,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
-  };
-
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
 
@@ -78,9 +64,9 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
       newErrors.name = 'Name must not exceed 100 characters';
     }
 
-    // Dealer ID validation (required for retailer)
-    if (!formData.dealer_id.trim()) {
-      newErrors.dealer_id = 'Dealer selection is required';
+    // Dealer ID validation (optional for retailer)
+    if (formData.dealer_id && !formData.dealer_id.trim()) {
+      newErrors.dealer_id = 'Invalid dealer selection';
     }
 
     // Phone validation
@@ -192,7 +178,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
           style={[
             styles.input,
             {
-              backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+              backgroundColor: colors.background,
               borderColor: hasError ? colors.error : colors.border,
               color: colors.text,
               height: multiline ? 100 : 50,
@@ -276,7 +262,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
 
           {/* Dealer ID (hidden field, but shown for debugging) */}
           {dealerId && (
-            <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9FAFB' }]}>
+            <View style={[styles.infoBox, { backgroundColor: colors.listBg }]}>
               <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                 Creating retailer under existing dealer
               </Text>
@@ -310,7 +296,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
               style={[
                 styles.dealerSelectionButton,
                 {
-                  backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+                  backgroundColor: colors.background,
                   borderColor: colors.border,
                 }
               ]}
@@ -338,7 +324,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
           </View>
 
           {/* Info Box */}
-          <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9FAFB' }]}>
+          <View style={[styles.infoBox, { backgroundColor: colors.listBg }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
               Note: Retailers can be independent or linked to dealers. Selecting a dealer helps with tracking.
             </Text>

@@ -1,10 +1,10 @@
 import { StyleSheet } from 'react-native';
 import { COLORS } from '@/constants';
 
-export const createLoginScreenStyles = (colorScheme: 'light' | 'dark' | null | undefined) => StyleSheet.create({
+export const createLoginScreenStyles = (resolvedTheme: 'light' | 'dark', colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+    backgroundColor: colors.background,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -29,7 +29,7 @@ export const createLoginScreenStyles = (colorScheme: 'light' | 'dark' | null | u
   logoContainer: {
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: colorScheme === 'dark' ? '#ffffff' : '#000000',
+    shadowColor: colors.text,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
@@ -48,13 +48,13 @@ export const createLoginScreenStyles = (colorScheme: 'light' | 'dark' | null | u
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: 6,
-    color: colorScheme === 'dark' ? '#ffffff' : '#000000',
+    color: colors.text,
     letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 15,
     textAlign: 'center',
-    color: colorScheme === 'dark' ? '#A1A1AA' : '#52525B',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   formSection: {
@@ -67,7 +67,7 @@ export const createLoginScreenStyles = (colorScheme: 'light' | 'dark' | null | u
   },
 });
 
-export const createLoginFormStyles = (colorScheme: 'light' | 'dark' | null | undefined) => StyleSheet.create({
+export const createLoginFormStyles = (resolvedTheme: 'light' | 'dark', colors: any) => StyleSheet.create({
   container: {
     width: '100%',
   },
@@ -79,7 +79,7 @@ export const createLoginFormStyles = (colorScheme: 'light' | 'dark' | null | und
     fontWeight: '600',
     marginBottom: 6,
     marginLeft: 4,
-    color: colorScheme === 'dark' ? '#E4E4E7' : '#3F3F46',
+    color: colors.textSecondary,
   },
   inputContainer: {
     position: 'relative',
@@ -100,17 +100,17 @@ export const createLoginFormStyles = (colorScheme: 'light' | 'dark' | null | und
     paddingRight: 14,
     fontSize: 15,
     fontWeight: '500',
-    backgroundColor: colorScheme === 'dark' ? '#18181B' : '#ffffff',
+    backgroundColor: colors.listBg,
     borderColor: 'transparent',
-    color: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
+    color: colors.text,
   },
   inputFocused: {
     borderColor: COLORS.SAFFRON,
-    backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+    backgroundColor: colors.background,
   },
   inputWithError: {
     borderColor: '#EF4444',
-    backgroundColor: colorScheme === 'dark' ? '#2A1515' : '#FEF2F2',
+    backgroundColor: colors.errorBg,
   },
   passwordToggle: {
     position: 'absolute',
@@ -136,25 +136,14 @@ export const createLoginFormStyles = (colorScheme: 'light' | 'dark' | null | und
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  errorMessageContainerDark: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  errorMessageContainerLight: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: colors.errorBg,
+    borderColor: colors.error + '30',
   },
   errorMessageText: {
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
-  },
-  errorMessageTextDark: {
-    color: '#F87171',
-  },
-  errorMessageTextLight: {
-    color: '#B91C1C',
+    color: colors.error,
   },
   buttonSection: {
     marginTop: 8,

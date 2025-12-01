@@ -118,7 +118,8 @@
       "Bash(yarn add:*)",
       "Bash(npm run test:*)",
       "Bash(npm run validate-api:*)",
-      "Bash(npm run test:web:*)"
+      "Bash(npm run test:web:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []

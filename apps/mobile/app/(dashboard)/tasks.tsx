@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { ClipboardList, Clock, MapPin, CheckCircle, AlertCircle } from 'lucide-react-native';
 import { COLORS } from '@/constants';
 
@@ -48,7 +49,8 @@ const mockTasks: TaskItem[] = [
 ];
 
 export default function TasksScreen() {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = React.useCallback(() => {
@@ -99,21 +101,16 @@ export default function TasksScreen() {
   const renderTaskItem = (task: TaskItem) => (
     <View
       key={task.id}
-      className={`rounded-lg p-4 mb-3 border ${
-        colorScheme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-      }`}
+      className={`rounded-lg p-4 mb-3 border`}
+      style={{ backgroundColor: colors.listBg, borderColor: colors.border }}
     >
       {/* Task Header */}
       <View className="flex-row justify-between items-start mb-2">
         <View className="flex-1 mr-3">
-          <Text className={`font-semibold text-base mb-1 ${
-            colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <Text className={`font-semibold text-base mb-1`} style={{ color: colors.text }}>
             {task.title}
           </Text>
-          <Text className={`text-sm leading-5 ${
-            colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-          }`}>
+          <Text className={`text-sm leading-5`} style={{ color: colors.textSecondary }}>
             {task.description}
           </Text>
         </View>
@@ -139,10 +136,8 @@ export default function TasksScreen() {
         {/* Due Time */}
         {task.dueTime && (
           <View className="flex-row items-center">
-            <Clock size={12} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
-            <Text className={`text-xs ml-1 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-            }`}>
+            <Clock size={12} color={colors.textTertiary} />
+            <Text className={`text-xs ml-1`} style={{ color: colors.textTertiary }}>
               Due {task.dueTime}
             </Text>
           </View>
@@ -151,10 +146,8 @@ export default function TasksScreen() {
         {/* Location */}
         {task.location && (
           <View className="flex-row items-center">
-            <MapPin size={12} color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'} />
-            <Text className={`text-xs ml-1 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-            }`}>
+            <MapPin size={12} color={colors.textTertiary} />
+            <Text className={`text-xs ml-1`} style={{ color: colors.textTertiary }}>
               {task.location}
             </Text>
           </View>
@@ -164,13 +157,10 @@ export default function TasksScreen() {
       {/* Action Button for pending tasks */}
       {task.status === 'pending' && (
         <TouchableOpacity
-          className={`mt-3 py-2 rounded-lg border ${
-            colorScheme === 'dark' ? 'bg-blue-600 border-blue-500' : 'bg-blue-50 border-blue-200'
-          }`}
+          className={`mt-3 py-2 rounded-lg border`}
+          style={{ backgroundColor: colors.primary + '20', borderColor: colors.primary }}
         >
-          <Text className={`text-center text-sm font-medium ${
-            colorScheme === 'dark' ? 'text-white' : 'text-blue-600'
-          }`}>
+          <Text className={`text-center text-sm font-medium`} style={{ color: colors.primary }}>
             Start Task
           </Text>
         </TouchableOpacity>
@@ -179,22 +169,16 @@ export default function TasksScreen() {
   );
 
   return (
-    <View className={`flex-1 ${colorScheme === 'dark' ? 'bg-black' : 'bg-gray-50'}`}>
+    <View className={`flex-1`} style={{ backgroundColor: colors.background }}>
       {/* Header */}
-      <View className={`px-6 pt-12 pb-6 border-b ${
-        colorScheme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-      }`}>
+      <View className={`px-6 pt-12 pb-6 border-b`} style={{ backgroundColor: colors.headerBg, borderBottomColor: colors.border }}>
         <View className="flex-row items-center mb-2">
           <ClipboardList size={24} color="#3B82F6" className="mr-3" />
-          <Text className={`text-2xl font-bold ${
-            colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <Text className={`text-2xl font-bold`} style={{ color: colors.text }}>
             Tasks
           </Text>
         </View>
-        <Text className={`text-sm ${
-          colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-        }`}>
+        <Text className={`text-sm`} style={{ color: colors.textSecondary }}>
           Your daily work tasks and activities
         </Text>
       </View>
@@ -207,25 +191,19 @@ export default function TasksScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'}
+            tintColor={colors.textTertiary}
           />
         }
       >
         {/* Coming Soon Notice */}
-        <View className={`rounded-lg p-4 mb-4 border ${
-          colorScheme === 'dark' ? 'bg-yellow-900/20 border-yellow-800' : 'bg-yellow-50 border-yellow-200'
-        }`}>
+        <View className={`rounded-lg p-4 mb-4 border`} style={{ backgroundColor: COLORS.WARNING + '20', borderColor: COLORS.WARNING }}>
           <View className="flex-row items-start">
             <AlertCircle size={20} color={COLORS.WARNING} className="mr-3 mt-0.5" />
             <View className="flex-1">
-              <Text className={`font-medium text-sm mb-1 ${
-                colorScheme === 'dark' ? 'text-yellow-400' : 'text-yellow-800'
-              }`}>
+              <Text className={`font-medium text-sm mb-1`} style={{ color: COLORS.WARNING }}>
                 Phase 2 Feature
               </Text>
-              <Text className={`text-xs leading-4 ${
-                colorScheme === 'dark' ? 'text-yellow-300' : 'text-yellow-700'
-              }`}>
+              <Text className={`text-xs leading-4`} style={{ color: COLORS.WARNING + 'DD' }}>
                 Task management is coming soon! This will include attendance check-in/out, location tracking, and work activity monitoring.
               </Text>
             </View>
@@ -234,17 +212,11 @@ export default function TasksScreen() {
 
         {/* Tasks Header */}
         <View className="flex-row justify-between items-center mb-4">
-          <Text className={`text-lg font-semibold ${
-            colorScheme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
+          <Text className={`text-lg font-semibold`} style={{ color: colors.text }}>
             Today&apos;s Tasks
           </Text>
-          <View className={`px-2 py-1 rounded-full ${
-            colorScheme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
-          }`}>
-            <Text className={`text-xs font-medium ${
-              colorScheme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-            }`}>
+          <View className={`px-2 py-1 rounded-full`} style={{ backgroundColor: colors.iconBg }}>
+            <Text className={`text-xs font-medium`} style={{ color: colors.textSecondary }}>
               {mockTasks.filter(t => t.status !== 'completed').length} pending
             </Text>
           </View>
@@ -256,15 +228,11 @@ export default function TasksScreen() {
         {/* No Tasks Message */}
         {mockTasks.length === 0 && (
           <View className="items-center py-12">
-            <ClipboardList size={48} color={colorScheme === 'dark' ? '#4B5563' : '#9CA3AF'} />
-            <Text className={`text-center mt-4 ${
-              colorScheme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-            }`}>
+            <ClipboardList size={48} color={colors.textTertiary} />
+            <Text className={`text-center mt-4`} style={{ color: colors.textSecondary }}>
               No tasks for today
             </Text>
-            <Text className={`text-center text-sm mt-1 ${
-              colorScheme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-            }`}>
+            <Text className={`text-center text-sm mt-1`} style={{ color: colors.textTertiary }}>
               Check back later for new tasks
             </Text>
           </View>

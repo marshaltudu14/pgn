@@ -39,8 +39,8 @@ export const COLORS = {
   BACKGROUND_SECONDARY_LIGHT: '#F9FAFB',
 
   // Border colors
-  BORDER_DARK: '#374151',
-  BORDER_LIGHT: '#D1D5DB',
+  BORDER_DARK: '#2A2A2A',
+  BORDER_LIGHT: '#E5E5E5',
 
   // Info colors
   INFO: '#3B82F6',

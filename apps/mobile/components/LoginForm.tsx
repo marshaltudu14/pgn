@@ -1,6 +1,7 @@
 import { createLoginFormStyles } from '@/styles/auth/login-styles';
 import Spinner from '@/components/Spinner';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { LoginRequest } from '@pgn/shared';
 import { AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { COLORS } from '@/constants';
@@ -19,8 +20,9 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSubmit, isLoggingIn = false, error }: LoginFormProps) {
-  const colorScheme = useColorScheme();
-  const styles = createLoginFormStyles(colorScheme);
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
+  const styles = createLoginFormStyles(resolvedTheme, colors);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -72,7 +74,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
     }
   };
 
-  const iconColor = colorScheme === 'dark' ? '#9CA3AF' : '#6B7280';
+  const iconColor = colors.textTertiary;
   const activeIconColor = COLORS.SAFFRON;
 
   return (
@@ -96,7 +98,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
               emailError ? styles.inputWithError : null
             ]}
             placeholder="Enter your email address"
-            placeholderTextColor={colorScheme === 'dark' ? '#52525B' : '#A1A1AA'}
+            placeholderTextColor={colors.textTertiary}
             value={email}
             onChangeText={(text) => {
               setEmail(text);
@@ -139,7 +141,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
               passwordError ? styles.inputWithError : null
             ]}
             placeholder="Enter your password"
-            placeholderTextColor={colorScheme === 'dark' ? '#52525B' : '#A1A1AA'}
+            placeholderTextColor={colors.textTertiary}
             value={password}
             onChangeText={(text) => {
               setPassword(text);
@@ -177,15 +179,9 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
 
       {/* Error Message Section */}
       {error ? (
-        <View style={[
-          styles.errorMessageContainer,
-          colorScheme === 'dark' ? styles.errorMessageContainerDark : styles.errorMessageContainerLight
-        ]}>
-          <AlertCircle size={18} color={colorScheme === 'dark' ? '#F87171' : '#B91C1C'} style={{ marginRight: 8 }} />
-          <Text style={[
-            styles.errorMessageText,
-            colorScheme === 'dark' ? styles.errorMessageTextDark : styles.errorMessageTextLight
-          ]}>{error}</Text>
+        <View style={styles.errorMessageContainer}>
+          <AlertCircle size={18} color={colors.error} style={{ marginRight: 8 }} />
+          <Text style={styles.errorMessageText}>{error}</Text>
         </View>
       ) : null}
 

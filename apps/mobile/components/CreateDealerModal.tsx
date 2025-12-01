@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Store } from 'lucide-react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useDealerStore } from '@/store/dealer-store';
 import { DealerFormData } from '@pgn/shared';
 import { COLORS } from '@/constants';
@@ -31,7 +32,8 @@ interface FormErrors {
 }
 
 export default function CreateDealerModal({ visible, onClose }: CreateDealerModalProps) {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const { createDealer, isCreating } = useDealerStore();
 
   const [formData, setFormData] = useState<DealerFormData>({
@@ -43,22 +45,6 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-
-  const colors = {
-    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#8E8E93' : '#3C3C43',
-    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
-    border: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    primary: COLORS.SAFFRON,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
-  };
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -178,7 +164,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           style={[
             styles.input,
             {
-              backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
+              backgroundColor: colors.background,
               borderColor: hasError ? colors.error : colors.border,
               color: colors.text,
               height: multiline ? 100 : 50,
@@ -276,7 +262,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           {renderInput('address', 'Address', 'Enter complete address', MapPin, 'default', true)}
 
           {/* Info Box */}
-          <View style={[styles.infoBox, { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9FAFB' }]}>
+          <View style={[styles.infoBox, { backgroundColor: colors.listBg }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
               Note: You can create unlimited dealers. This will be tracked in your activity log.
             </Text>

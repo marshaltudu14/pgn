@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
 import { COLORS } from '@/constants';
 import { useAttendance } from '@/store/attendance-store';
@@ -29,9 +30,8 @@ const AnimatedCheckInOutButton: React.FC<{
   isCheckedIn: boolean;
   onCheckInOut: () => void;
   isLocationTracking: boolean;
-  colorScheme?: 'light' | 'dark' | null;
   isLoading?: boolean;
-}> = ({ isCheckedIn, onCheckInOut, isLocationTracking, colorScheme, isLoading = false }) => {
+}> = ({ isCheckedIn, onCheckInOut, isLocationTracking, isLoading = false }) => {
   const showTimer = isCheckedIn && isLocationTracking && !isLoading;
   const [timeRemaining, setTimeRemaining] = useState(LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS);
   const fillAnimation = React.useRef(new Animated.Value(0)).current;
@@ -135,20 +135,20 @@ const AnimatedCheckInOutButton: React.FC<{
 
 const TabButton: React.FC<{
   item: TabItem;
-  colorScheme?: 'light' | 'dark' | null;
-}> = ({ item, colorScheme }) => {
+  colors: any;
+}> = ({ item, colors }) => {
   const getIconColor = () => {
-    if (item.disabled) return '#9ca3af';
+    if (item.disabled) return colors.textTertiary;
     return item.isActive
       ? COLORS.SAFFRON // Active state
-      : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
+      : colors.textTertiary;
   };
 
   const getTextColor = () => {
-    if (item.disabled) return '#9ca3af';
+    if (item.disabled) return colors.textTertiary;
     return item.isActive
       ? COLORS.SAFFRON // Active state
-      : (colorScheme === 'dark' ? '#9ca3af' : '#64748b');
+      : colors.textTertiary;
   };
 
   return (
@@ -176,7 +176,7 @@ export default function UnifiedBottomNavigation({
   onCheckInOut,
   isLoading = false,
 }: UnifiedBottomNavigationProps) {
-  const colorScheme = useColorScheme();
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isLocationTracking } = useAttendance();
 
@@ -232,7 +232,7 @@ export default function UnifiedBottomNavigation({
     <View style={[
       styles.container,
       {
-        backgroundColor: colorScheme === 'dark' ? '#000000' : '#ffffff',
+        backgroundColor: colors.background,
         paddingBottom: Math.max(insets.bottom, 8), // Use safe area inset or minimum padding
         position: 'absolute',
         bottom: 0,
@@ -241,7 +241,7 @@ export default function UnifiedBottomNavigation({
       }
     ]}>
       {tabs.slice(0, 2).map((tab) => (
-        <TabButton key={tab.key} item={tab} colorScheme={colorScheme} />
+        <TabButton key={tab.key} item={tab} colors={colors} />
       ))}
 
       {/* Check In/Out Button in Center */}
@@ -249,12 +249,11 @@ export default function UnifiedBottomNavigation({
         isCheckedIn={isCheckedIn}
         onCheckInOut={() => onCheckInOut?.()}
         isLocationTracking={isLocationTracking}
-        colorScheme={colorScheme}
         isLoading={isLoading}
       />
 
       {tabs.slice(2).map((tab) => (
-        <TabButton key={tab.key} item={tab} colorScheme={colorScheme} />
+        <TabButton key={tab.key} item={tab} colors={colors} />
       ))}
     </View>
   );

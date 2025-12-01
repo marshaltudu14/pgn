@@ -20,6 +20,7 @@ interface RetailerStoreState {
     hasPreviousPage: boolean;
   };
   filters: RetailerFilters;
+  hasMore: boolean;
 
   // UI state
   isCreating: boolean;
@@ -70,6 +71,7 @@ export const useRetailerStore = create<RetailerStoreState>()(
         filters: {
           search: '',
         },
+        hasMore: true,
         isCreating: false,
         isUpdating: false,
         isDeleting: false,

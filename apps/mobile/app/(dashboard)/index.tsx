@@ -1,6 +1,7 @@
 import FloatingActionButton from '@/components/FloatingActionButton';
 import { COLORS } from '@/constants';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAttendance } from '@/store/attendance-store';
 import { useAuth } from '@/store/auth-store';
 import { homeStyles } from '@/styles/dashboard/home-styles';
@@ -23,7 +24,8 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { fetchAttendanceHistory, attendanceHistory, getAttendanceStatus } =
     useAttendance();
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const [todayStats, setTodayStats] = useState({
     daysPresent: 0,
     totalHours: 0,
@@ -31,22 +33,7 @@ export default function HomeScreen() {
     totalDistance: 0,
   });
 
-  // Theme colors - consistent with attendance screen
-  const colors = {
-    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#8E8E93' : '#3C3C43',
-    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
-    border: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    primary: COLORS.SAFFRON,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-  };
-
+  
   // Load today's stats data
   const loadTodayStats = useCallback(async () => {
     try {

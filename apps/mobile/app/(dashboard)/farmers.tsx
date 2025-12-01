@@ -9,7 +9,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Sprout, Search, Plus, Phone, Mail, MapPin } from 'lucide-react-native';
 import { useFarmerStore } from '@/store/farmer-store';
 import { Farmer } from '@pgn/shared';
@@ -19,7 +20,8 @@ import Spinner from '@/components/Spinner';
 
 export default function FarmersScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -31,22 +33,6 @@ export default function FarmersScreen() {
     searchFarmers,
     setSelectedFarmer,
   } = useFarmerStore();
-
-  const colors = {
-    background: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    card: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280',
-    textTertiary: colorScheme === 'dark' ? '#48484A' : '#8E8E93',
-    border: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    primary: COLORS.SAFFRON,
-    success: COLORS.SUCCESS,
-    warning: COLORS.WARNING,
-    error: COLORS.ERROR,
-    separator: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
-    statusBar: colorScheme === 'dark' ? '#000000' : '#FFFFFF',
-    input: colorScheme === 'dark' ? '#2c2c2e' : '#f9fafb',
-  };
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -134,7 +120,7 @@ export default function FarmersScreen() {
           </View>
         </View>
 
-        <View style={[styles.listItemBadge, { backgroundColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]}>
+        <View style={[styles.listItemBadge, { backgroundColor: colors.iconBg }]}>
           <Text style={[styles.listItemBadgeText, { color: colors.textSecondary }]}>
             F-{item.id.slice(-4)}
           </Text>
@@ -166,7 +152,7 @@ export default function FarmersScreen() {
         </View>
 
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF', borderColor: colors.border }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
           <Search size={16} color={colors.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={[styles.searchInput, { color: colors.text, backgroundColor: 'transparent' }]}

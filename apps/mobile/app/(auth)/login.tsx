@@ -1,5 +1,6 @@
 import LoginForm from '@/components/LoginForm';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAuth, useIsAuthenticated } from '@/store/auth-store';
 import { LoginRequest } from '@pgn/shared';
 import { useRouter } from 'expo-router';
@@ -39,8 +40,9 @@ export default function LoginScreen() {
     }
   };
 
-  const colorScheme = useColorScheme();
-  const styles = createLoginScreenStyles(colorScheme);
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
+  const styles = createLoginScreenStyles(resolvedTheme, colors);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

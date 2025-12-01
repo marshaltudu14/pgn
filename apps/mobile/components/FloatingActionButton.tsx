@@ -1,5 +1,6 @@
 import { COLORS } from '@/constants';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -35,7 +36,7 @@ export default function FloatingActionButton({
   const [showDealerModal, setShowDealerModal] = useState(false);
   const [showRetailerModal, setShowRetailerModal] = useState(false);
   const [showFarmerModal, setShowFarmerModal] = useState(false);
-  const colorScheme = useColorScheme();
+  const colors = useThemeColors();
   const insets = useSafeAreaInsets();
 
   // Animation values
@@ -45,9 +46,9 @@ export default function FloatingActionButton({
     options.map(() => new Animated.Value(0))
   ).current;
 
-  const colors = {
-    background: colorScheme === 'dark' ? '#1c1c1e' : '#ffffff',
-    text: colorScheme === 'dark' ? '#ffffff' : '#000000',
+  const themeColors = {
+    background: colors.background,
+    text: colors.text,
     overlay: 'rgba(0, 0, 0, 0.3)',
   };
 
@@ -224,7 +225,7 @@ export default function FloatingActionButton({
                 style={[
                   styles.optionLabel,
                   {
-                    backgroundColor: colors.background,
+                    backgroundColor: themeColors.background,
                   },
                 ]}
               >
@@ -232,7 +233,7 @@ export default function FloatingActionButton({
                   style={[
                     styles.optionLabelText,
                     {
-                      color: colors.text,
+                      color: themeColors.text,
                     },
                   ]}
                 >

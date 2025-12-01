@@ -3,9 +3,10 @@ import {
   View,
   Text,
 } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Timer, Activity } from 'lucide-react-native';
 import { LOCATION_TRACKING_CONFIG } from '@/constants/location-tracking';
+import { COLORS } from '@/constants';
 
 interface LocationSyncTimerProps {
   isVisible: boolean;
@@ -16,17 +17,17 @@ export function LocationSyncTimer({
   isVisible,
   interval = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS
 }: LocationSyncTimerProps) {
-  const colorScheme = useColorScheme();
+  const colors = useThemeColors();
   const [timeRemaining, setTimeRemaining] = useState(interval);
   const [isActive, setIsActive] = useState(false);
 
-  const colors = {
-    background: colorScheme === 'dark' ? '#1C1C1E' : '#F2F2F7',
-    text: colorScheme === 'dark' ? '#FFFFFF' : '#000000',
-    textSecondary: colorScheme === 'dark' ? '#8E8E93' : '#3C3C43',
-    primary: '#F97316', // Saffron/Orange color
-    success: '#34C759',
-    border: colorScheme === 'dark' ? '#38383A' : '#C6C6C8',
+  const themeColors = {
+    background: colors.listBg,
+    text: colors.text,
+    textSecondary: colors.textSecondary,
+    primary: COLORS.SAFFRON,
+    success: COLORS.SUCCESS,
+    border: colors.border,
   };
 
   // Reset and start timer when visibility changes
@@ -70,29 +71,29 @@ export function LocationSyncTimer({
     <View style={[
       timerStyles.container,
       {
-        backgroundColor: colors.background,
-        borderColor: colors.border,
+        backgroundColor: themeColors.background,
+        borderColor: themeColors.border,
       }
     ]}>
       <View style={timerStyles.content}>
         <View style={timerStyles.iconSection}>
           <View style={[
             timerStyles.iconContainer,
-            { backgroundColor: `${colors.primary}20` }
+            { backgroundColor: `${themeColors.primary}20` }
           ]}>
             {timeRemaining <= 3 ? (
-              <Activity size={20} color={colors.primary} />
+              <Activity size={20} color={themeColors.primary} />
             ) : (
-              <Timer size={20} color={colors.primary} />
+              <Timer size={20} color={themeColors.primary} />
             )}
           </View>
         </View>
 
         <View style={timerStyles.textSection}>
-          <Text style={[timerStyles.title, { color: colors.text }]}>
+          <Text style={[timerStyles.title, { color: themeColors.text }]}>
             Location Tracking
           </Text>
-          <Text style={[timerStyles.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[timerStyles.subtitle, { color: themeColors.textSecondary }]}>
             Next sync in {formatTime(timeRemaining)}s
           </Text>
         </View>
@@ -101,14 +102,14 @@ export function LocationSyncTimer({
           <View style={[
             timerStyles.timerRing,
             {
-              borderColor: timeRemaining <= 3 ? colors.success : colors.primary,
+              borderColor: timeRemaining <= 3 ? themeColors.success : themeColors.primary,
               opacity: timeRemaining <= 3 ? 1 : 0.7,
             }
           ]}>
             <Text style={[
               timerStyles.timerText,
               {
-                color: timeRemaining <= 3 ? colors.success : colors.primary,
+                color: timeRemaining <= 3 ? themeColors.success : themeColors.primary,
                 fontSize: timeRemaining <= 3 ? 16 : 14,
                 fontWeight: (timeRemaining <= 3 ? '700' : '600') as '600' | '700',
               }

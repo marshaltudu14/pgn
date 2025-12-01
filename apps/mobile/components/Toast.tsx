@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react-native';
 import { setGlobalToastInstance } from '@/utils/toast';
 import { COLORS } from '@/constants';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -49,7 +50,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.9)).current;
-  const colorScheme = useColorScheme();
+  const colors = useThemeColors();
 
   const dismissToast = useCallback(() => {
     Animated.parallel([
@@ -142,7 +143,7 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   };
 
   const getBackgroundColor = () => {
-    return colorScheme === 'dark' ? '#1F2937' : '#FFFFFF'; // gray-800 or white
+    return colors.listBg;
   };
 
   const getBorderColor = () => {
@@ -160,11 +161,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
   };
 
   const getTitleColor = () => {
-    return colorScheme === 'dark' ? '#F9FAFB' : '#1F2937'; // gray-50 or gray-800
+    return colors.text;
   };
 
   const getDescriptionColor = () => {
-    return colorScheme === 'dark' ? '#D1D5DB' : '#6B7280'; // gray-300 or gray-500
+    return colors.textSecondary;
   };
 
   return (

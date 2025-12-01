@@ -12,7 +12,8 @@ import {
 // No longer need CameraView since we're using expo-image-picker
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Camera } from 'lucide-react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import {
   useAttendance,
   useAttendanceLoading,
@@ -31,7 +32,8 @@ interface CheckInOutModalProps {
 
 
 export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutModalProps) {
-  const colorScheme = useColorScheme();
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
   const isLoading = useAttendanceLoading();
   const error = useAttendanceError();
 
@@ -296,10 +298,10 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       </View>
 
       <View style={styles.textContainer}>
-        <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+        <Text style={[styles.stepTitle, { color: colors.text }]}>
           Getting Your Location
         </Text>
-        <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+        <Text style={[styles.stepDescription, { color: colors.textSecondary }]}>
           Please wait while we accurately determine your current location...
         </Text>
       </View>
@@ -317,10 +319,10 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       </View>
 
       <View style={styles.textContainer}>
-        <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+        <Text style={[styles.stepTitle, { color: colors.text }]}>
           Opening Camera...
         </Text>
-        <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+        <Text style={[styles.stepDescription, { color: colors.textSecondary }]}>
           Please wait while we open the camera for your selfie
         </Text>
       </View>
@@ -332,10 +334,10 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const renderPreviewStep = () => (
     <View style={styles.previewContainer}>
       <View style={styles.previewHeader}>
-        <Text style={[styles.previewTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+        <Text style={[styles.previewTitle, { color: colors.text }]}>
           Review Your Selfie
         </Text>
-        <Text style={[styles.previewDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+        <Text style={[styles.previewDescription, { color: colors.textSecondary }]}>
           Please confirm your photo is clear and your face is visible
         </Text>
       </View>
@@ -352,11 +354,11 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
 
       <View style={styles.previewButtons}>
         <TouchableOpacity
-          style={[styles.previewButton, styles.retakeButton, { borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)' }]}
+          style={[styles.previewButton, styles.retakeButton, { borderColor: colors.border }]}
           onPress={retakePhoto}
           disabled={isLoading}
         >
-          <Text style={[styles.retakeButtonText, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+          <Text style={[styles.retakeButtonText, { color: colors.text }]}>
             Retake
           </Text>
         </TouchableOpacity>
@@ -387,10 +389,10 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       </View>
 
       <View style={styles.textContainer}>
-        <Text style={[styles.stepTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+        <Text style={[styles.stepTitle, { color: colors.text }]}>
           Processing Attendance
         </Text>
-        <Text style={[styles.stepDescription, { color: colorScheme === 'dark' ? '#9CA3AF' : '#6B7280' }]}>
+        <Text style={[styles.stepDescription, { color: colors.textSecondary }]}>
           {mode === 'checkin' ? 'Checking you in and verifying your location...' : 'Checking you out and finalizing your attendance...'}
         </Text>
       </View>
@@ -404,9 +406,9 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
       presentationStyle="fullScreen"
       onRequestClose={closeModal}
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: colorScheme === 'dark' ? '#000000' : '#FFFFFF' }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Modern Header */}
-        <View style={[styles.header, { borderBottomColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={closeModal}
@@ -414,12 +416,12 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
           >
             <ChevronLeft
               size={24}
-              color={colorScheme === 'dark' ? '#9CA3AF' : '#6B7280'}
+              color={colors.textSecondary}
             />
           </TouchableOpacity>
 
           <View style={styles.titleContainer}>
-            <Text style={[styles.headerTitle, { color: colorScheme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
               {mode === 'checkin' ? 'Check In' : 'Check Out'}
             </Text>
           </View>

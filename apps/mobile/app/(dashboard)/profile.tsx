@@ -168,7 +168,9 @@ export default function ProfileScreen() {
             key={index}
             style={[
               newProfileStyles.listItem,
-              index !== profileItems.length - 1 && { borderBottomColor: colors.border }
+              index !== profileItems.length - 1
+                ? { borderBottomColor: colors.border }
+                : { borderBottomWidth: 0 }
             ]}
           >
             <View style={[newProfileStyles.iconContainer, { backgroundColor: colors.iconBg }]}>
@@ -197,7 +199,9 @@ export default function ProfileScreen() {
             key={index}
             style={[
               newProfileStyles.listItem,
-              index !== menuItems.length - 1 && { borderBottomColor: colors.border }
+              index !== menuItems.length - 1
+                ? { borderBottomColor: colors.border }
+                : { borderBottomWidth: 0 }
             ]}
             onPress={item.onPress}
           >

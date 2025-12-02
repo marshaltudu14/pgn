@@ -158,7 +158,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Profile Information List */}
-      <View style={newProfileStyles.content}>
+      <View style={[newProfileStyles.content, { paddingBottom: 0 }]}>
         <Text style={[newProfileStyles.sectionTitle, { color: colors.text }]}>
           Personal Information
         </Text>

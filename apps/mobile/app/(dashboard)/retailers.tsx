@@ -13,6 +13,7 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Users, Search, Plus } from 'lucide-react-native';
 import { useRetailerStore } from '@/store/retailer-store';
 import { Retailer } from '@pgn/shared';
+import { COLORS } from '@/constants/theme';
 import CreateRetailerModal from '@/components/CreateRetailerModal';
 import Spinner from '@/components/Spinner';
 

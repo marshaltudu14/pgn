@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDebounce } from '@/lib/utils/debounce';
 import {
   Table,
@@ -53,64 +53,80 @@ export function DealerList({
     clearError,
   } = useDealerStore();
 
-  // Initial data fetch when component mounts
-  useEffect(() => {
-    fetchDealers();
-  }, [fetchDealers]);
-
   // Local state for search inputs (immediate updates)
   const [searchInput, setSearchInput] = useState(filters.search || '');
   const [shopNameInput, setShopNameInput] = useState(filters.shop_name || '');
   const debouncedSearchInput = useDebounce(searchInput, 300);
   const debouncedShopNameInput = useDebounce(shopNameInput, 300);
 
+  // Use a ref to store the store functions to prevent re-renders
+  const storeFunctions = useRef({
+    fetchDealers,
+    setFilters,
+    setPagination,
+  });
+
+  // Update ref when store functions change
+  useEffect(() => {
+    storeFunctions.current = {
+      fetchDealers,
+      setFilters,
+      setPagination,
+    };
+  }, [fetchDealers, setFilters, setPagination]);
+
+  // Initial data fetch when component mounts
+  useEffect(() => {
+    storeFunctions.current.fetchDealers();
+  }, []); // Empty dependency array - only run once on mount
+
   // Handle search changes when debounced value updates
   useEffect(() => {
     if (filters.search !== debouncedSearchInput) {
-      setFilters({ search: debouncedSearchInput });
-      setPagination(1); // Reset to first page
-      fetchDealers();
+      storeFunctions.current.setFilters({ search: debouncedSearchInput });
+      storeFunctions.current.setPagination(1); // Reset to first page
+      storeFunctions.current.fetchDealers();
     }
-  }, [debouncedSearchInput, filters.search, setFilters, setPagination, fetchDealers]);
+  }, [debouncedSearchInput, filters.search]);
 
   // Handle shop name changes when debounced value updates
   useEffect(() => {
     if (filters.shop_name !== debouncedShopNameInput) {
-      setFilters({ shop_name: debouncedShopNameInput || undefined });
-      setPagination(1); // Reset to first page
-      fetchDealers();
+      storeFunctions.current.setFilters({ shop_name: debouncedShopNameInput || undefined });
+      storeFunctions.current.setPagination(1); // Reset to first page
+      storeFunctions.current.fetchDealers();
     }
-  }, [debouncedShopNameInput, filters.shop_name, setFilters, setPagination, fetchDealers]);
+  }, [debouncedShopNameInput, filters.shop_name]);
 
   // Handle search input changes (immediate)
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
     // If clearing the search, apply immediately for better UX
     if (value === '' && filters.search !== '') {
-      setFilters({ search: '' });
-      setPagination(1);
-      fetchDealers();
+      storeFunctions.current.setFilters({ search: '' });
+      storeFunctions.current.setPagination(1);
+      storeFunctions.current.fetchDealers();
     }
-  }, [setFilters, setPagination, fetchDealers, filters.search]);
+  }, [filters.search]);
 
   // Handle shop name input changes (immediate)
   const handleShopNameFilterChange = useCallback((value: string) => {
     setShopNameInput(value);
     // If clearing the filter, apply immediately for better UX
     if (value === '' && filters.shop_name !== undefined) {
-      setFilters({ shop_name: undefined });
-      setPagination(1);
-      fetchDealers();
+      storeFunctions.current.setFilters({ shop_name: undefined });
+      storeFunctions.current.setPagination(1);
+      storeFunctions.current.fetchDealers();
     }
-  }, [setFilters, setPagination, fetchDealers, filters.shop_name]);
+  }, [filters.shop_name]);
 
-  const handlePageChange = (page: number) => {
-    setPagination(page);
-  };
+  const handlePageChange = useCallback((page: number) => {
+    storeFunctions.current.setPagination(page);
+  }, []);
 
-  const handlePageSizeChange = (size: number) => {
-    setPagination(1, size); // Reset to first page with new page size
-  };
+  const handlePageSizeChange = useCallback((size: number) => {
+    storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+  }, []);
 
   
   if (loading && dealers.length === 0) {
@@ -207,9 +223,9 @@ export function DealerList({
               <button
                 onClick={() => {
                   setSearchInput('');
-                  setFilters({ search: '' });
-                  setPagination(1);
-                  fetchDealers();
+                  storeFunctions.current.setFilters({ search: '' });
+                  storeFunctions.current.setPagination(1);
+                  storeFunctions.current.fetchDealers();
                 }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 aria-label="Clear search"
@@ -230,9 +246,9 @@ export function DealerList({
               <button
                 onClick={() => {
                   setShopNameInput('');
-                  setFilters({ shop_name: undefined });
-                  setPagination(1);
-                  fetchDealers();
+                  storeFunctions.current.setFilters({ shop_name: undefined });
+                  storeFunctions.current.setPagination(1);
+                  storeFunctions.current.fetchDealers();
                 }}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 aria-label="Clear shop name filter"

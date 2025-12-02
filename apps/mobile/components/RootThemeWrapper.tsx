@@ -23,7 +23,6 @@ export function RootThemeWrapper({ children }: RootThemeWrapperProps) {
           {children}
           <StatusBar
             style={resolvedTheme === 'dark' ? 'light' : 'dark'}
-            translucent={true}
           />
         </View>
       </GestureHandlerRootView>

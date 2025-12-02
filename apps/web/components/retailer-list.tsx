@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDebounce } from '@/lib/utils/debounce';
 import {
   Table,
@@ -64,14 +64,32 @@ export function RetailerList({
 
   const { dealers, fetchDealers } = useDealerStore();
 
+  // Use a ref to store the store functions to prevent re-renders
+  const storeFunctions = useRef({
+    fetchDealers,
+    fetchRetailers,
+    setFilters,
+    setPagination,
+  });
+
+  // Update ref when store functions change
   useEffect(() => {
-    fetchDealers();
-  }, [fetchDealers]);
+    storeFunctions.current = {
+      fetchDealers,
+      fetchRetailers,
+      setFilters,
+      setPagination,
+    };
+  }, [fetchDealers, fetchRetailers, setFilters, setPagination]);
+
+  useEffect(() => {
+    storeFunctions.current.fetchDealers();
+  }, []); // Empty dependency array - only run once on mount
 
   // Initial data fetch when component mounts
   useEffect(() => {
-    fetchRetailers();
-  }, [fetchRetailers]);
+    storeFunctions.current.fetchRetailers();
+  }, []); // Empty dependency array - only run once on mount
 
   // Local state for search input (immediate updates)
   const [searchInput, setSearchInput] = useState(filters.search || '');
@@ -80,43 +98,43 @@ export function RetailerList({
   // Handle search changes when debounced value updates
   useEffect(() => {
     if (filters.search !== debouncedSearchInput) {
-      setFilters({ search: debouncedSearchInput });
-      setPagination(1); // Reset to first page
-      fetchRetailers();
+      storeFunctions.current.setFilters({ search: debouncedSearchInput });
+      storeFunctions.current.setPagination(1); // Reset to first page
+      storeFunctions.current.fetchRetailers();
     }
-  }, [debouncedSearchInput, filters.search, setFilters, setPagination, fetchRetailers]);
+  }, [debouncedSearchInput, filters.search]);
 
   // Handle search input changes (immediate)
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
     // If clearing the search, apply immediately for better UX
     if (value === '' && filters.search !== '') {
-      setFilters({ search: '' });
-      setPagination(1);
-      fetchRetailers();
+      storeFunctions.current.setFilters({ search: '' });
+      storeFunctions.current.setPagination(1);
+      storeFunctions.current.fetchRetailers();
     }
-  }, [setFilters, setPagination, fetchRetailers, filters.search]);
+  }, [filters.search]);
 
   const handleDealerFilterChange = useCallback((value: string) => {
-    setFilters({ dealer_id: value === 'all' ? undefined : value });
-    setPagination(1); // Reset to first page
-    fetchRetailers(); // Non-search filter triggers immediate fetch
-  }, [setFilters, setPagination, fetchRetailers]);
+    storeFunctions.current.setFilters({ dealer_id: value === 'all' ? undefined : value });
+    storeFunctions.current.setPagination(1); // Reset to first page
+    storeFunctions.current.fetchRetailers(); // Non-search filter triggers immediate fetch
+  }, []);
 
   const handleClearSearch = useCallback(() => {
     setSearchInput('');
-    setFilters({ search: '' });
-    setPagination(1);
-    fetchRetailers();
-  }, [setFilters, setPagination, fetchRetailers]);
+    storeFunctions.current.setFilters({ search: '' });
+    storeFunctions.current.setPagination(1);
+    storeFunctions.current.fetchRetailers();
+  }, []);
 
-  const handlePageChange = (page: number) => {
-    setPagination(page);
-  };
+  const handlePageChange = useCallback((page: number) => {
+    storeFunctions.current.setPagination(page);
+  }, []);
 
-  const handlePageSizeChange = (size: number) => {
-    setPagination(1, size); // Reset to first page with new page size
-  };
+  const handlePageSizeChange = useCallback((size: number) => {
+    storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+  }, []);
 
   
   

@@ -71,9 +71,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const updateSystemUI = async () => {
       if (Platform.OS === 'android') {
         try {
-          await NavigationBar.setPositionAsync('absolute');
-          await NavigationBar.setBackgroundColorAsync(resolvedTheme === 'dark' ? '#000000' : '#ffffff');
-          await NavigationBar.setButtonStyleAsync(resolvedTheme === 'dark' ? 'light' : 'dark');
+          // Use setStyle for edge-to-edge compatibility
+          // setPositionAsync and setBackgroundColorAsync are deprecated with edge-to-edge enabled
+          await NavigationBar.setStyle(resolvedTheme === 'dark' ? 'dark' : 'light');
         } catch (error) {
           console.warn('Failed to update navigation bar:', error);
         }

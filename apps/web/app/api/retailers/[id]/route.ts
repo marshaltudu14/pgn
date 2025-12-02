@@ -12,8 +12,8 @@ import {
   RetailerUpdatedResponseSchema,
   RetailerDeletedResponseSchema
 } from '@pgn/shared';
-import { RouteParamsSchema } from '@pgn/shared/src/schemas/base';
-import { apiContract } from '@pgn/shared';
+import { RouteParamsSchema } from '@pgn/shared';
+import { buildTimeApiContract } from '@pgn/shared';
 
 const getRetailerHandler = async (request: NextRequest, context: { params?: unknown }): Promise<NextResponse> => {
   try {
@@ -99,7 +99,7 @@ const deleteRetailerHandler = async (request: NextRequest, context: { params?: u
 };
 
 // Add routes to API contract
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/retailers/[id]',
   method: 'GET',
   inputSchema: RouteParamsSchema,
@@ -107,7 +107,7 @@ apiContract.addRoute({
   description: 'Get a single retailer by ID'
 });
 
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/retailers/[id]',
   method: 'PUT',
   inputSchema: RetailerFormDataSchema, // Body schema is the primary input for documentation
@@ -115,7 +115,7 @@ apiContract.addRoute({
   description: 'Update a retailer by ID'
 });
 
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/retailers/[id]',
   method: 'DELETE',
   inputSchema: RouteParamsSchema,

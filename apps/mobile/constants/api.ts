@@ -11,7 +11,8 @@ function getApiBaseUrl(): string {
   if (__DEV__) {
     // For development, use local IP address for mobile connectivity
     // You may need to update this IP address to match your development machine
-    return 'http://192.168.31.23:3000';
+    //192.168.31.23
+    return 'http://172.18.170.225:3000';
   } else {
     // Production URL
     return 'https://pgnwork.com';
@@ -26,30 +27,30 @@ export const API_BASE_URL = getApiBaseUrl();
  */
 export const API_ENDPOINTS = {
   // Authentication endpoints
-  LOGIN: "/auth/login",
-  REFRESH_TOKEN: "/auth/refresh",
-  LOGOUT: "/auth/logout",
-  GET_USER: "/employees/me",
-  GET_AUTH_USER: "/auth/user",
+  LOGIN: '/auth/login',
+  REFRESH_TOKEN: '/auth/refresh',
+  LOGOUT: '/auth/logout',
+  GET_USER: '/employees/me',
+  GET_AUTH_USER: '/auth/user',
 
   // Employee endpoints
-  EMPLOYEES: "/employees",
-  EMPLOYEE_BY_ID: "/employees", // Base for /employees/[id]
+  EMPLOYEES: '/employees',
+  EMPLOYEE_BY_ID: '/employees', // Base for /employees/[id]
 
   // Attendance endpoints
-  ATTENDANCE_CHECKIN: "/attendance/checkin",
-  ATTENDANCE_CHECKOUT: "/attendance/checkout",
-  ATTENDANCE_STATUS: "/attendance/status",
-  ATTENDANCE_LIST: "/attendance",
-  ATTENDANCE_LOCATION_UPDATE: "/attendance", // Base for /attendance/[id]/location-update
+  ATTENDANCE_CHECKIN: '/attendance/checkin',
+  ATTENDANCE_CHECKOUT: '/attendance/checkout',
+  ATTENDANCE_STATUS: '/attendance/status',
+  ATTENDANCE_LIST: '/attendance',
+  ATTENDANCE_LOCATION_UPDATE: '/attendance', // Base for /attendance/[id]/location-update
 
   // Dealer/Retailer/Farmer endpoints
-  DEALERS: "/dealers",
-  DEALER_BY_ID: "/dealers", // Base for /dealers/[id]
-  RETAILERS: "/retailers",
-  RETAILER_BY_ID: "/retailers", // Base for /retailers/[id]
-  FARMERS: "/farmers",
-  FARMER_BY_ID: "/farmers", // Base for /farmers/[id]
+  DEALERS: '/dealers',
+  DEALER_BY_ID: '/dealers', // Base for /dealers/[id]
+  RETAILERS: '/retailers',
+  RETAILER_BY_ID: '/retailers', // Base for /retailers/[id]
+  FARMERS: '/farmers',
+  FARMER_BY_ID: '/farmers', // Base for /farmers/[id]
 
   // Note: Face recognition endpoints will be added in Phase 4
   // GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding", // TODO: Add in Phase 4
@@ -66,8 +67,8 @@ export function buildApiUrl(endpoint: string): string {
  * Common request headers for API calls
  */
 export const API_HEADERS = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
+  'Content-Type': 'application/json',
+  Accept: 'application/json',
 } as const;
 
 /**
@@ -77,9 +78,9 @@ export function getApiHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     ...API_HEADERS,
     // Add mobile app identification header
-    "x-client-info": "pgn-mobile-client",
+    'x-client-info': 'pgn-mobile-client',
     // Add user agent for debugging
-    "User-Agent": "PGN-Mobile/1.0",
+    'User-Agent': 'PGN-Mobile/1.0',
   };
 
   return headers;

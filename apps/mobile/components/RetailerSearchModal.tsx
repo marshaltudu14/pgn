@@ -37,6 +37,14 @@ export default function RetailerSearchModal({
   const [loadingMore, setLoadingMore] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
+  const loadInitialRetailers = useCallback(async () => {
+    try {
+      await fetchRetailers({ page: 1, itemsPerPage: 20, refresh: true });
+    } catch (error) {
+      console.error('Error loading retailers:', error);
+    }
+  }, [fetchRetailers]);
+
   // Reset state when modal opens/closes
   useEffect(() => {
     if (visible) {
@@ -45,14 +53,6 @@ export default function RetailerSearchModal({
       loadInitialRetailers();
     }
   }, [visible, loadInitialRetailers]);
-
-  const loadInitialRetailers = useCallback(async () => {
-    try {
-      await fetchRetailers({ page: 1, itemsPerPage: 20, refresh: true });
-    } catch (error) {
-      console.error('Error loading retailers:', error);
-    }
-  }, [fetchRetailers]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);

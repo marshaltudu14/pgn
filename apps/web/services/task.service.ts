@@ -16,7 +16,7 @@ import {
   Database,
   TablesInsert,
   TablesUpdate,
-} from '@pgn/shared/src/types/supabase';
+} from '@pgn/shared';
 
 type TaskInsert = TablesInsert<'tasks'>;
 type TaskUpdate = TablesUpdate<'tasks'>;

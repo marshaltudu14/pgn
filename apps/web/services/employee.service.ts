@@ -16,7 +16,7 @@ import {
   TablesInsert,
   TablesUpdate,
   Json,
-} from '@pgn/shared/src/types/supabase';
+} from '@pgn/shared';
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;

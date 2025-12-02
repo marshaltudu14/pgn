@@ -13,7 +13,7 @@ import {
 } from '@pgn/shared';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
-import { apiContract } from '@pgn/shared/src/validation/build-time-checker';
+import { buildTimeApiContract } from '@pgn/shared';
 
 const getDealersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
@@ -73,7 +73,7 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
 };
 
 // Add route definitions to API contract
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/dealers',
   method: 'GET',
   inputSchema: DealerListParamsSchema,
@@ -81,7 +81,7 @@ apiContract.addRoute({
   description: 'List dealers with pagination and filtering'
 });
 
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/dealers',
   method: 'POST',
   inputSchema: DealerFormDataSchema,

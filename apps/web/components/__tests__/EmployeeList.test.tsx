@@ -135,6 +135,11 @@ jest.mock('@/components/ui/skeleton', () => ({
   ),
 }));
 
+// Mock useDebounce to return the value immediately for testing
+jest.mock('@/lib/utils/debounce', () => ({
+  useDebounce: (value: any, delay: number) => value,
+}));
+
 // Type for mocked store
 type MockEmployeeStore = jest.MockedFunction<typeof useEmployeeStore> & {
   fetchEmployees: jest.MockedFunction<() => Promise<void>>;

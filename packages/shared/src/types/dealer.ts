@@ -168,7 +168,7 @@ export const RetailerFormDataSchema = z.object({
   address: z.string().optional(),
   shop_name: z.string().optional(),
   email: z.string().email('Invalid email format').optional(),
-  dealer_id: z.string().min(1, 'Dealer ID is required'),
+  dealer_id: z.string().optional(),
 });
 
 export const FarmerFormDataSchema = z.object({
@@ -177,7 +177,7 @@ export const FarmerFormDataSchema = z.object({
   address: z.string().optional(),
   farm_name: z.string().optional(),
   email: z.string().email('Invalid email format').optional(),
-  retailer_id: z.string().min(1, 'Retailer ID is required'),
+  retailer_id: z.string().optional(),
 });
 
 export const DealerListParamsSchema = z.object({

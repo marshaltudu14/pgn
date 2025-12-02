@@ -1,0 +1,205 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { DealerForm } from '@/components/DealerForm';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Eye } from 'lucide-react';
+import Link from 'next/link';
+import { Dealer } from '@pgn/shared';
+
+export default function DealerFormClient() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const [dealer, setDealer] = useState<Dealer | null>(null);
+  const [formOpen, setFormOpen] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Form mode detection based on URL parameters
+  const mode = searchParams.get('mode') || (searchParams.get('id') ? 'edit' : 'create');
+  const dealerId = searchParams.get('id');
+  const isEditMode = mode === 'edit';
+
+  useEffect(() => {
+    async function loadDealer() {
+      if (isEditMode && dealerId) {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const response = await fetch(`/api/dealers/${dealerId}`);
+          const result = await response.json();
+
+          if (result.success) {
+            setDealer(result.data);
+          } else {
+            throw new Error(result.error || 'Failed to fetch dealer');
+          }
+        } catch (err) {
+          console.error('Error loading dealer:', err);
+          setError(err instanceof Error ? err.message : 'Failed to fetch dealer');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadDealer();
+  }, [isEditMode, dealerId]);
+
+  const handleFormSuccess = () => {
+    // Navigate back to dealer list
+    router.push('/dashboard/dealers');
+  };
+
+  const handleFormCancel = () => {
+    router.push('/dashboard/dealers');
+  };
+
+  const pageTitle = isEditMode ? 'Edit Dealer' : 'Create New Dealer';
+  const pageDescription = isEditMode
+    ? `Update information for ${dealer?.name}`
+    : 'Fill in the details to create a new dealer account';
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard/dealers">Dealers</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96" />
+          <div className="bg-white dark:bg-black border rounded-lg p-6">
+            <div className="space-y-6">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && isEditMode) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/dashboard/dealers">Dealers</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Edit Dealer</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <Alert variant="destructive">
+          <AlertDescription>
+            Failed to load dealer: {error}. Please try again or contact support.
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex space-x-4">
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+          <Button asChild>
+            <Link href="/dashboard/dealers">
+              Back to Dealer List
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          {isEditMode && dealer && (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/dashboard/dealers/${dealerId}`}>
+                <Eye className="h-4 w-4 mr-2" />
+                View Details
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/dashboard/dealers">Dealers</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
+          <p className="text-muted-foreground mt-2">{pageDescription}</p>
+        </div>
+
+        {isEditMode && dealer && (
+          <div className="bg-muted/50 border rounded-lg p-4">
+            <div className="flex items-center space-x-4">
+              <div>
+                <p className="text-sm font-medium">Dealer ID</p>
+                <p className="text-lg">{dealer.id}</p>
+              </div>
+              <div className="h-8 w-px bg-border"></div>
+              <div>
+                <p className="text-sm font-medium">Created</p>
+                <p className="text-lg">{new Date(dealer.created_at).toLocaleDateString()}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DealerForm
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          dealer={dealer}
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+        />
+      </div>
+    </div>
+  );
+}

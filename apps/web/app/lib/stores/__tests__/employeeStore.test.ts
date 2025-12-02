@@ -234,7 +234,7 @@ describe('useEmployeeStore', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/employees?page=2&limit=10&search=John&search_field=human_readable_user_id&employment_status=ACTIVE&primary_region=North&sort_by=first_name&sort_order=asc',
+        '/api/employees?page=2&limit=10&search=John&search_field=human_readable_user_id&employment_status%5B%5D=ACTIVE&primary_region=North&sort_by=first_name&sort_order=asc',
         {
           headers: {
             'Content-Type': 'application/json',

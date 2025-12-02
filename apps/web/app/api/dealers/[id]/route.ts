@@ -12,7 +12,7 @@ import {
 import { z } from 'zod';
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
-import { apiContract } from '@pgn/shared/src/validation/build-time-checker';
+import { buildTimeApiContract } from '@pgn/shared';
 
 // Route parameters schema for dealer ID
 const DealerRouteParamsSchema = z.object({
@@ -100,7 +100,7 @@ const deleteDealerHandler = async (request: NextRequest, context: { params?: unk
 };
 
 // Add route definitions to API contract
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/dealers/[id]',
   method: 'GET',
   inputSchema: DealerRouteParamsSchema,
@@ -108,7 +108,7 @@ apiContract.addRoute({
   description: 'Get a single dealer by ID'
 });
 
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/dealers/[id]',
   method: 'PUT',
   inputSchema: DealerFormDataSchema,
@@ -116,7 +116,7 @@ apiContract.addRoute({
   description: 'Update a dealer by ID'
 });
 
-apiContract.addRoute({
+buildTimeApiContract.addRoute({
   path: '/api/dealers/[id]',
   method: 'DELETE',
   inputSchema: DealerRouteParamsSchema,

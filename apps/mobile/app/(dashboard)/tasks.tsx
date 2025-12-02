@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { ClipboardList, Clock, MapPin, CheckCircle, AlertCircle } from 'lucide-react-native';
+import { COLORS } from '@/constants/theme';
 
 interface TaskItem {
   id: string;

@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     title: "PGN Admin Dashboard",
     description: "Internal enterprise location tracking and attendance management system with face recognition capabilities.",
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://pgn.example.com"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://pgn.example.com"),
 };
 
 export default function RootLayout({

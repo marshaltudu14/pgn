@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertCircle, CheckCircle, Info, XCircle } from 'lucide-react-native';

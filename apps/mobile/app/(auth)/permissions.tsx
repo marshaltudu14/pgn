@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Info,
 } from 'lucide-react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { permissionService, AppPermissions } from '@/services/permissions';
 import { COLORS, THEME } from '@/constants/theme';
@@ -30,7 +29,6 @@ export default function PermissionsScreen({
   permissions: initialPermissions,
   onPermissionsGranted
 }: PermissionsScreenProps) {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const [permissions, setPermissions] = useState<AppPermissions>(
     initialPermissions || { camera: 'denied', location: 'denied', notifications: 'denied' }

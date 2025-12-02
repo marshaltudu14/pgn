@@ -7,12 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Search, Users, Check } from 'lucide-react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRetailerStore } from '@/store/retailer-store';
 import { Retailer } from '@pgn/shared';
@@ -31,7 +29,6 @@ export default function RetailerSearchModal({
   onRetailerSelect,
   selectedRetailerId,
 }: RetailerSearchModalProps) {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const { retailers, loading, hasMore, fetchRetailers, searchRetailers } = useRetailerStore();
 
@@ -47,7 +44,7 @@ export default function RetailerSearchModal({
       setPage(1);
       loadInitialRetailers();
     }
-  }, [visible]);
+  }, [visible, loadInitialRetailers]);
 
   const loadInitialRetailers = useCallback(async () => {
     try {

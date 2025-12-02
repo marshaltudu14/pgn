@@ -9,9 +9,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { Store, Search, Plus, Phone, Mail, MapPin } from 'lucide-react-native';
+import { Store, Search, Plus } from 'lucide-react-native';
 import { useDealerStore } from '@/store/dealer-store';
 import { Dealer } from '@pgn/shared';
 import { COLORS } from '@/constants';
@@ -20,7 +19,6 @@ import Spinner from '@/components/Spinner';
 
 export default function DealersScreen() {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +26,6 @@ export default function DealersScreen() {
 
   const {
     dealers,
-    loading,
     fetchDealers,
     searchDealers,
     setSelectedDealer,

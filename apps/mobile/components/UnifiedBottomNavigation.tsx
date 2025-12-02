@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
 import { COLORS } from '@/constants';

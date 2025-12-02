@@ -2,14 +2,12 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/store/auth-store';
 import { Text, ActivityIndicator } from 'react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function IndexScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading, initializeAuth } = useAuth();
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
 
   useEffect(() => {

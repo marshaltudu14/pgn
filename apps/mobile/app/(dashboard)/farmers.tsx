@@ -9,18 +9,15 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { Sprout, Search, Plus, Phone, Mail, MapPin } from 'lucide-react-native';
+import { Sprout, Search, Plus } from 'lucide-react-native';
 import { useFarmerStore } from '@/store/farmer-store';
 import { Farmer } from '@pgn/shared';
-import { COLORS } from '@/constants';
 import CreateFarmerModal from '@/components/CreateFarmerModal';
 import Spinner from '@/components/Spinner';
 
 export default function FarmersScreen() {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +25,6 @@ export default function FarmersScreen() {
 
   const {
     farmers,
-    loading,
     fetchFarmers,
     searchFarmers,
     setSelectedFarmer,

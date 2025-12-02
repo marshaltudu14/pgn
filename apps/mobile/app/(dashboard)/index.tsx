@@ -1,6 +1,4 @@
 import FloatingActionButton from '@/components/FloatingActionButton';
-import { COLORS } from '@/constants';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAttendance } from '@/store/attendance-store';
 import { useAuth } from '@/store/auth-store';
@@ -24,7 +22,6 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const { fetchAttendanceHistory, attendanceHistory, getAttendanceStatus } =
     useAttendance();
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const [todayStats, setTodayStats] = useState({
     daysPresent: 0,

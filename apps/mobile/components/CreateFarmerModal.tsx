@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Sprout, Users } from 'lucide-react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFarmerStore } from '@/store/farmer-store';
 import { FarmerFormData, Retailer } from '@pgn/shared';
@@ -35,7 +34,6 @@ interface FormErrors {
 }
 
 export default function CreateFarmerModal({ visible, onClose, retailerId }: CreateFarmerModalProps) {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const { createFarmer, isCreating } = useFarmerStore();
 

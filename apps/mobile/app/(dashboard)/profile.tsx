@@ -6,8 +6,6 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  ActivityIndicator,
-  StyleSheet,
   Alert,
 } from 'react-native';
 import { useAuth } from '@/store/auth-store';

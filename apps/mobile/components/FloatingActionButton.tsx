@@ -1,5 +1,4 @@
 import { COLORS } from '@/constants';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Plus } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

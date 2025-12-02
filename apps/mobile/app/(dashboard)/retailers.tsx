@@ -9,18 +9,15 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { Users, Search, Plus, Phone, Mail, MapPin } from 'lucide-react-native';
+import { Users, Search, Plus } from 'lucide-react-native';
 import { useRetailerStore } from '@/store/retailer-store';
 import { Retailer } from '@pgn/shared';
-import { COLORS } from '@/constants';
 import CreateRetailerModal from '@/components/CreateRetailerModal';
 import Spinner from '@/components/Spinner';
 
 export default function RetailersScreen() {
   const router = useRouter();
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -28,7 +25,6 @@ export default function RetailersScreen() {
 
   const {
     retailers,
-    loading,
     fetchRetailers,
     searchRetailers,
     setSelectedRetailer,

@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Plus, Phone, Mail, MapPin, Store, User } from 'lucide-react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRetailerStore } from '@/store/retailer-store';
 import { RetailerFormData, Dealer } from '@pgn/shared';
@@ -35,7 +34,6 @@ interface FormErrors {
 }
 
 export default function CreateRetailerModal({ visible, onClose, dealerId }: CreateRetailerModalProps) {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const { createRetailer, isCreating } = useRetailerStore();
 

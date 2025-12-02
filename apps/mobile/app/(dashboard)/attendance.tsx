@@ -14,7 +14,6 @@ import { showToast } from '@/utils/toast';
 import { useAttendance } from '@/store/attendance-store';
 import { DailyAttendanceRecord } from '@pgn/shared';
 import { createAttendanceStyles } from '@/styles/attendance/attendance-styles';
-import { COLORS } from '@/constants';
 import AttendanceSkeleton from '@/components/AttendanceSkeleton';
 import { Calendar, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 

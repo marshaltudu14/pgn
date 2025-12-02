@@ -7,12 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Search, Store, Check } from 'lucide-react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useDealerStore } from '@/store/dealer-store';
 import { Dealer } from '@pgn/shared';
@@ -31,7 +29,6 @@ export default function DealerSearchModal({
   onDealerSelect,
   selectedDealerId,
 }: DealerSearchModalProps) {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const { dealers, loading, hasMore, fetchDealers, searchDealers } = useDealerStore();
 
@@ -47,7 +44,7 @@ export default function DealerSearchModal({
       setPage(1);
       loadInitialDealers();
     }
-  }, [visible]);
+  }, [visible, loadInitialDealers]);
 
   const loadInitialDealers = useCallback(async () => {
     try {

@@ -6,10 +6,8 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { ClipboardList, Clock, MapPin, CheckCircle, AlertCircle } from 'lucide-react-native';
-import { COLORS } from '@/constants';
 
 interface TaskItem {
   id: string;
@@ -49,7 +47,6 @@ const mockTasks: TaskItem[] = [
 ];
 
 export default function TasksScreen() {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const [refreshing, setRefreshing] = React.useState(false);
 

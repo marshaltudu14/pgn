@@ -12,7 +12,6 @@ import {
 // No longer need CameraView since we're using expo-image-picker
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronLeft, Camera } from 'lucide-react-native';
-import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import {
   useAttendance,
@@ -32,7 +31,6 @@ interface CheckInOutModalProps {
 
 
 export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutModalProps) {
-  const { resolvedTheme } = useTheme();
   const colors = useThemeColors();
   const isLoading = useAttendanceLoading();
   const error = useAttendanceError();

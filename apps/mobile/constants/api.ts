@@ -12,10 +12,10 @@ function getApiBaseUrl(): string {
     // For development, use local IP address for mobile connectivity
     // You may need to update this IP address to match your development machine
     //192.168.31.23
-    return 'http://172.18.170.225:3000';
+    return 'http://192.168.31.23:3000';
   } else {
     // Production URL
-    return 'https://pgnwork.com';
+    return 'https://pgn-web-iota.vercel.app';
   }
 }
 

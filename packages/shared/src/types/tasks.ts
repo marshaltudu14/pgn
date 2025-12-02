@@ -145,7 +145,7 @@ export const CreateTaskRequestSchema = z.object({
   description: z.string().optional(),
   assigned_employee_id: z.string().min(1, 'Assigned employee ID is required'),
   priority: TaskPrioritySchema.optional().default('MEDIUM'),
-  due_date: z.string().datetime().optional(),
+  due_date: z.string().optional(), // Accept any datetime format from database
 });
 
 export const UpdateTaskRequestSchema = z.object({
@@ -154,7 +154,7 @@ export const UpdateTaskRequestSchema = z.object({
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   progress: z.number().min(0).max(100).optional(),
-  due_date: z.string().datetime().optional(),
+  due_date: z.string().optional(), // Accept any datetime format from database
   completion_notes: z.string().optional(),
 });
 
@@ -170,10 +170,10 @@ export const TaskListParamsSchema = z.object({
   status: TaskStatusSchema.optional(),
   priority: TaskPrioritySchema.optional(),
   assigned_employee_id: z.string().optional(),
-  dateFrom: z.string().datetime().optional(),
-  dateTo: z.string().datetime().optional(),
-  due_date_from: z.string().datetime().optional(),
-  due_date_to: z.string().datetime().optional(),
+  dateFrom: z.string().optional(), // Accept any datetime format
+  dateTo: z.string().optional(), // Accept any datetime format
+  due_date_from: z.string().optional(), // Accept any datetime format
+  due_date_to: z.string().optional(), // Accept any datetime format
   sortBy: z.enum(['created_at', 'updated_at', 'due_date', 'priority', 'progress']).optional().default('created_at'),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
   search: z.string().optional(),

@@ -24,6 +24,9 @@ const searchRegionsHandler = withApiValidation(
       const result = await searchRegions(query.q, {
         page: query.page,
         limit: query.limit,
+      }, {
+        sort_by: query.sort_by,
+        sort_order: query.sort_order,
       });
 
       const response = NextResponse.json(result);

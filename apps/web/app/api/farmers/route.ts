@@ -34,10 +34,7 @@ const getFarmersHandler = withApiValidation(
 
       const response = NextResponse.json({
         success: true,
-        data: {
-          farmers: result.farmers,
-          pagination: result.pagination
-        },
+        data: result,
         message: 'Farmers retrieved successfully'
       });
       return addSecurityHeaders(response);

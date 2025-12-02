@@ -23,10 +23,7 @@ const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> 
 
     const response = NextResponse.json({
       success: true,
-      data: {
-        retailers: result.retailers,
-        pagination: result.pagination
-      },
+      data: result,
       message: 'Retailers retrieved successfully'
     });
     return addSecurityHeaders(response);

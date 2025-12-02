@@ -24,10 +24,7 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
 
     const response = NextResponse.json({
       success: true,
-      data: {
-        dealers: result.dealers,
-        pagination: result.pagination
-      },
+      data: result,
       message: 'Dealers retrieved successfully'
     });
     return addSecurityHeaders(response);

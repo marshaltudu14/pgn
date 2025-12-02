@@ -194,7 +194,7 @@ describe('Regions Service', () => {
       },
     ];
 
-    it('should return paginated regions with default parameters', async () => {
+    it('should return paginated regions with default parameters and sorting', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
@@ -218,6 +218,7 @@ describe('Regions Service', () => {
         limit: 20,
         hasMore: true, // (1-1)*20 + 2 = 2 < 25
       });
+      expect(mockQueryChain.order).toHaveBeenCalledWith('city', { ascending: true });
     });
 
     it('should return paginated regions with custom parameters', async () => {
@@ -396,6 +397,66 @@ describe('Regions Service', () => {
       expect(mockQueryChain.select).toHaveBeenCalledWith('*', { count: 'exact' });
       // The range should be called with limit=100 (max allowed)
       expect(mockQueryChain.range).toHaveBeenCalled();
+    });
+
+    it('should apply state sorting ascending', async () => {
+      const mockQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockResolvedValue({
+          data: mockRegions,
+          error: null,
+          count: 25,
+        }),
+      };
+
+      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+
+      const filters: RegionFilter = { sort_by: 'state', sort_order: 'asc' };
+      const result = await getRegions(filters);
+
+      expect(result.data).toEqual(mockRegions);
+      expect(mockQueryChain.order).toHaveBeenCalledWith('state', { ascending: true });
+    });
+
+    it('should apply state sorting descending', async () => {
+      const mockQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockResolvedValue({
+          data: mockRegions,
+          error: null,
+          count: 25,
+        }),
+      };
+
+      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+
+      const filters: RegionFilter = { sort_by: 'state', sort_order: 'desc' };
+      const result = await getRegions(filters);
+
+      expect(result.data).toEqual(mockRegions);
+      expect(mockQueryChain.order).toHaveBeenCalledWith('state', { ascending: false });
+    });
+
+    it('should apply city sorting descending', async () => {
+      const mockQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockResolvedValue({
+          data: mockRegions,
+          error: null,
+          count: 25,
+        }),
+      };
+
+      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+
+      const filters: RegionFilter = { sort_by: 'city', sort_order: 'desc' };
+      const result = await getRegions(filters);
+
+      expect(result.data).toEqual(mockRegions);
+      expect(mockQueryChain.order).toHaveBeenCalledWith('city', { ascending: false });
     });
   });
 
@@ -842,7 +903,7 @@ describe('Regions Service', () => {
     it('should return paginated search results with default parameters', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: mockRegions,
@@ -853,9 +914,10 @@ describe('Regions Service', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQueryChain);
 
-      const searchTerm = 'California';
+      const searchTerm = 'Los Angeles';
       const pagination: PaginationParams = {};
-      const result = await searchRegions(searchTerm, pagination);
+      const filters = { sort_by: 'city', sort_order: 'asc' };
+      const result = await searchRegions(searchTerm, pagination, filters);
 
       expect(result).toEqual({
         data: mockRegions,
@@ -866,19 +928,18 @@ describe('Regions Service', () => {
       });
 
       expect(mockQueryChain.select).toHaveBeenCalledWith('*', { count: 'exact' });
-      expect(mockQueryChain.order).toHaveBeenCalledWith('city', {
-        ascending: true,
-      });
+      expect(mockQueryChain.ilike).toHaveBeenCalledWith('city', `%${searchTerm}%`);
+      expect(mockQueryChain.order).toHaveBeenCalledWith('city', { ascending: true });
       expect(mockQueryChain.range).toHaveBeenCalled();
     });
 
-    it('should search across both state and city fields', async () => {
+    it('should search by city field only', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: [mockRegions[0]], // Only California/Los Angeles matches
+          data: [mockRegions[0]], // Only Los Angeles matches
           error: null,
           count: 1,
         }),
@@ -886,19 +947,18 @@ describe('Regions Service', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQueryChain);
 
-      const searchTerm = 'California';
-      const result = await searchRegions(searchTerm);
+      const searchTerm = 'Los Angeles';
+      const filters = { sort_by: 'city', sort_order: 'asc' };
+      const result = await searchRegions(searchTerm, {}, filters);
 
       expect(result.data).toHaveLength(1);
-      expect(mockQueryChain.or).toHaveBeenCalledWith(
-        `state.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`
-      );
+      expect(mockQueryChain.ilike).toHaveBeenCalledWith('city', `%${searchTerm}%`);
     });
 
     it('should return paginated search results with custom parameters', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: mockRegions,
@@ -915,7 +975,8 @@ describe('Regions Service', () => {
         limit: 25,
         offset: 25,
       };
-      const result = await searchRegions(searchTerm, pagination);
+      const filters = { sort_by: 'city', sort_order: 'asc' };
+      const result = await searchRegions(searchTerm, pagination, filters);
 
       expect(result).toEqual({
         data: mockRegions,
@@ -929,7 +990,7 @@ describe('Regions Service', () => {
     it('should handle null data response', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: null,
@@ -940,7 +1001,9 @@ describe('Regions Service', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQueryChain);
 
-      const result = await searchRegions('test');
+      const searchTerm = 'test';
+      const filters = { sort_by: 'city', sort_order: 'asc' };
+      const result = await searchRegions(searchTerm, {}, filters);
 
       expect(result).toEqual({
         data: [],
@@ -954,7 +1017,7 @@ describe('Regions Service', () => {
     it('should handle undefined count', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: mockRegions,
@@ -965,7 +1028,9 @@ describe('Regions Service', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQueryChain);
 
-      const result = await searchRegions('test');
+      const searchTerm = 'test';
+      const filters = { sort_by: 'city', sort_order: 'asc' };
+      const result = await searchRegions(searchTerm, {}, filters);
 
       expect(result.total).toBe(0);
       expect(result.hasMore).toBe(false);
@@ -974,7 +1039,7 @@ describe('Regions Service', () => {
     it('should handle database errors', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: null,
@@ -984,7 +1049,9 @@ describe('Regions Service', () => {
 
       mockSupabaseClient.from.mockReturnValue(mockQueryChain);
 
-      await expect(searchRegions('test')).rejects.toThrow(
+      const searchTerm = 'test';
+      const filters = { sort_by: 'city', sort_order: 'asc' };
+      await expect(searchRegions(searchTerm, {}, filters)).rejects.toThrow(
         'Failed to search regions'
       );
     });
@@ -992,7 +1059,7 @@ describe('Regions Service', () => {
     it('should handle empty search term', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: [],
@@ -1012,7 +1079,7 @@ describe('Regions Service', () => {
     it('should limit maximum results per page to 100', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
-        or: jest.fn().mockReturnThis(),
+        ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
           data: mockRegions,

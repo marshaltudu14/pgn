@@ -55,9 +55,12 @@ export async function getRegions(
 
   let query = supabase
     .from('regions')
-    .select('*', { count: 'exact' })
-    .order('city', { ascending: true })
-    .order('state', { ascending: true });
+    .select('*', { count: 'exact' });
+
+  // Apply sorting
+  const sortBy = filters.sort_by || 'city';
+  const sortOrder = filters.sort_order || 'asc';
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
 
   // Apply filters
   if (filters.state) {
@@ -195,24 +198,30 @@ export async function getStates(): Promise<StateOption[]> {
 
 
 /**
- * Search regions by text (searches across state and city)
+ * Search regions by city only with database-level sorting
  */
 export async function searchRegions(
   searchTerm: string,
-  pagination: PaginationParams = {}
+  pagination: PaginationParams = {},
+  filters: RegionFilter = {}
 ): Promise<RegionsResponse> {
   const supabase = await createClient();
   const page = pagination.page || 1;
   const limit = Math.min(pagination.limit || 20, 100);
   const offset = pagination.offset || ((page - 1) * limit);
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from('regions')
     .select('*', { count: 'exact' })
-    .or(`state.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%`)
-    .order('city', { ascending: true })
-    .order('state', { ascending: true })
+    .ilike('city', `%${searchTerm}%`);
+
+  // Apply sorting
+  const sortBy = filters.sort_by || 'city';
+  const sortOrder = filters.sort_order || 'asc';
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' })
     .range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('Error searching regions:', error);

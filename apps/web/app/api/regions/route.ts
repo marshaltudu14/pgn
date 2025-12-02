@@ -26,6 +26,8 @@ const getRegionsHandler = withApiValidation(
       const filters = {
         state: query.state,
         city: query.city,
+        sort_by: query.sort_by,
+        sort_order: query.sort_order,
       };
 
       const pagination = {

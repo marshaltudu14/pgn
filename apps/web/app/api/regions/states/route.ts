@@ -11,7 +11,7 @@ const getStatesHandler = withApiValidation(
     try {
       const states = await getStates();
 
-      const response = NextResponse.json(states);
+      const response = NextResponse.json({ data: states });
       return addSecurityHeaders(response);
     } catch (error) {
       console.error('Error fetching states:', error);

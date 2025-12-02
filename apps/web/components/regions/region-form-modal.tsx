@@ -161,10 +161,15 @@ export function RegionFormModal({
               variant="outline"
               onClick={handleClose}
               disabled={isSubmitting}
+              className="cursor-pointer hover:bg-accent transition-colors"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="cursor-pointer hover:bg-primary/90 transition-colors"
+            >
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {initialData ? 'Update' : 'Create'}
             </Button>

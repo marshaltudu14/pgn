@@ -106,7 +106,10 @@ describe('Regions Store', () => {
       isDeleting: false,
       error: null,
       createError: null,
-      filter: {},
+      filter: {
+        sort_by: 'city',
+        sort_order: 'asc',
+      },
       pagination: {
         page: 1,
         limit: 20,
@@ -114,12 +117,18 @@ describe('Regions Store', () => {
     });
 
     // Mock fetch responses
-    (fetch as jest.MockedFunction<typeof fetch>).mockImplementation(() =>
-      Promise.resolve({
+    (fetch as jest.MockedFunction<typeof fetch>).mockImplementation((url) => {
+      if (url?.includes('/states')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ data: createMockStates() }),
+        } as Response);
+      }
+      return Promise.resolve({
         ok: true,
         json: () => Promise.resolve(createMockRegionsResponse()),
-      } as Response)
-    );
+      } as Response);
+    });
   });
 
   afterEach(() => {
@@ -145,7 +154,10 @@ describe('Regions Store', () => {
       expect(result.current.isDeleting).toBe(false);
       expect(result.current.error).toBe(null);
       expect(result.current.createError).toBe(null);
-      expect(result.current.filter).toEqual({});
+      expect(result.current.filter).toEqual({
+        sort_by: 'city',
+        sort_order: 'asc',
+      });
       expect(result.current.pagination).toEqual({
         page: 1,
         limit: 20,
@@ -170,14 +182,17 @@ describe('Regions Store', () => {
 
       expect(result.current.isLoading).toBe(false);
       expect(result.current.regions).toEqual(mockResponse);
-      expect(result.current.filter).toEqual({});
+      expect(result.current.filter).toEqual({
+        sort_by: 'city',
+        sort_order: 'asc',
+      });
       expect(result.current.pagination).toEqual({
         page: mockResponse.page,
         limit: mockResponse.limit,
       });
       expect(result.current.error).toBe(null);
 
-      expect(fetch).toHaveBeenCalledWith('/api/regions?', {
+      expect(fetch).toHaveBeenCalledWith('/api/regions?sort_by=city&sort_order=asc', {
         method: 'GET',
         headers: mockGetAuthHeaders(),
       });
@@ -203,7 +218,7 @@ describe('Regions Store', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/regions?state=California&city=Los+Angeles&page=2&limit=10',
+        '/api/regions?state=California&city=Los+Angeles&sort_by=city&sort_order=asc&page=2&limit=10',
         {
           method: 'GET',
           headers: mockGetAuthHeaders(),
@@ -488,7 +503,7 @@ describe('Regions Store', () => {
       const mockStates = createMockStates();
       (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockStates),
+        json: () => Promise.resolve({ data: mockStates }),
       } as Response);
 
       const { result } = renderHook(() => useRegionsStore());
@@ -556,7 +571,7 @@ describe('Regions Store', () => {
       });
       expect(result.current.error).toBe(null);
 
-      expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California', {
+      expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California&sort_by=city&sort_order=asc', {
         headers: mockGetAuthHeaders(),
       });
     });
@@ -577,7 +592,7 @@ describe('Regions Store', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/regions/search?q=California&page=2&limit=10',
+        '/api/regions/search?q=California&page=2&limit=10&sort_by=city&sort_order=asc',
         {
           headers: mockGetAuthHeaders(),
         }
@@ -624,13 +639,19 @@ describe('Regions Store', () => {
         result.current.setFilter({ state: 'California' });
       });
 
-      expect(result.current.filter).toEqual({ state: 'California' });
+      expect(result.current.filter).toEqual({
+        sort_by: 'city',
+        sort_order: 'asc',
+        state: 'California',
+      });
 
       act(() => {
         result.current.setFilter({ city: 'Los Angeles' });
       });
 
       expect(result.current.filter).toEqual({
+        sort_by: 'city',
+        sort_order: 'asc',
         state: 'California',
         city: 'Los Angeles',
       });
@@ -711,7 +732,11 @@ describe('Regions Store', () => {
         result.current.setPagination({ page: 2, limit: 10 });
       });
 
-      expect(result.current.filter).toEqual({ state: 'California' });
+      expect(result.current.filter).toEqual({
+        sort_by: 'city',
+        sort_order: 'asc',
+        state: 'California',
+      });
       expect(result.current.pagination).toEqual({ page: 2, limit: 10 });
 
       // Reset store
@@ -733,7 +758,10 @@ describe('Regions Store', () => {
       expect(result.current.isDeleting).toBe(false);
       expect(result.current.error).toBe(null);
       expect(result.current.createError).toBe(null);
-      expect(result.current.filter).toEqual({});
+      expect(result.current.filter).toEqual({
+        sort_by: 'city',
+        sort_order: 'asc',
+      });
       expect(result.current.pagination).toEqual({
         page: 1,
         limit: 20,

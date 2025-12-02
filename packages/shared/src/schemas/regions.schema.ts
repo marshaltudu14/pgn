@@ -22,6 +22,8 @@ export interface UpdateRegionRequest {
 export interface RegionFilter {
   state?: string;
   city?: string;
+  sort_by?: 'state' | 'city';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface PaginationParams {
@@ -69,12 +71,16 @@ export const regionsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   state: z.string().optional(),
   city: z.string().optional(),
+  sort_by: z.enum(['state', 'city']).optional().default('city'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
 export const searchRegionsSchema = z.object({
   q: z.string().min(1, 'Search query is required'),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  sort_by: z.enum(['state', 'city']).optional().default('city'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
 // Response schemas
@@ -84,8 +90,8 @@ export const RegionSchema = z.object({
   city: z.string(),
   state_slug: z.string(),
   city_slug: z.string(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string(), // Accept any datetime format from database
+  updated_at: z.string(), // Accept any datetime format from database
 });
 
 export const RegionsListResponseSchema = z.object({
@@ -102,8 +108,8 @@ export const RegionResponseSchema = z.object({
   city: z.string(),
   state_slug: z.string(),
   city_slug: z.string(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  created_at: z.string(), // Accept any datetime format from database
+  updated_at: z.string(), // Accept any datetime format from database
 });
 
 export const StateOptionSchema = z.object({

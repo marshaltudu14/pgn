@@ -19,9 +19,9 @@ import {
 } from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Edit, Trash2, MapPin } from 'lucide-react';
+import { Edit, Trash2, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { RegionsResponse } from '@pgn/shared';
+import { RegionsResponse, RegionFilter } from '@pgn/shared';
 
 interface RegionsTableProps {
   regions: RegionsResponse;
@@ -29,6 +29,8 @@ interface RegionsTableProps {
   onEdit: (region: Region) => void;
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
+  filter: RegionFilter;
+  setFilter: (filter: Partial<RegionFilter>) => void;
 }
 
 export function RegionsTable({
@@ -37,7 +39,15 @@ export function RegionsTable({
   onEdit,
   onDelete,
   onPageChange,
+  filter,
+  setFilter,
 }: RegionsTableProps) {
+
+  const handleSort = (sortBy: 'state' | 'city') => {
+    const newSortOrder =
+      filter.sort_by === sortBy && filter.sort_order === 'asc' ? 'desc' : 'asc';
+    setFilter({ sort_by: sortBy, sort_order: newSortOrder });
+  };
   const renderPaginationItems = () => {
     const { page, limit, total, hasMore } = regions;
     const totalPages = Math.ceil(total / limit);
@@ -134,8 +144,48 @@ export function RegionsTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>State</TableHead>
-                <TableHead className="hidden sm:table-cell">City</TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
+                    State
+                    <button
+                      onClick={() => handleSort('state')}
+                      className="cursor-pointer hover:bg-muted/50 rounded p-1 transition-colors"
+                      title={`Sort by state (${filter.sort_by === 'state' && filter.sort_order === 'asc' ? 'descending' : 'ascending'})`}
+                    >
+                      {filter.sort_by === 'state' && (
+                        filter.sort_order === 'asc' ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )
+                      )}
+                      {filter.sort_by !== 'state' && (
+                        <ChevronUp className="h-4 w-4 opacity-30" />
+                      )}
+                    </button>
+                  </div>
+                </TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  <div className="flex items-center gap-2">
+                    City
+                    <button
+                      onClick={() => handleSort('city')}
+                      className="cursor-pointer hover:bg-muted/50 rounded p-1 transition-colors"
+                      title={`Sort by city (${filter.sort_by === 'city' && filter.sort_order === 'asc' ? 'descending' : 'ascending'})`}
+                    >
+                      {filter.sort_by === 'city' && (
+                        filter.sort_order === 'asc' ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )
+                      )}
+                      {filter.sort_by !== 'city' && (
+                        <ChevronUp className="h-4 w-4 opacity-30" />
+                      )}
+                    </button>
+                  </div>
+                </TableHead>
                 <TableHead className="sm:hidden">Location</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -178,10 +228,10 @@ export function RegionsTable({
                         onClick={() => onEdit(region)}
                         disabled={isLoading}
                         className="cursor-pointer hover:bg-accent transition-colors"
+                        title="Edit region"
                       >
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
-                        <span className="hidden sm:inline ml-2">Edit</span>
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -190,10 +240,10 @@ export function RegionsTable({
                             size="sm"
                             className="text-destructive hover:text-destructive cursor-pointer hover:bg-destructive/10 transition-colors"
                             disabled={isLoading}
+                            title="Delete region"
                           >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Delete</span>
-                            <span className="hidden sm:inline ml-2">Delete</span>
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -240,15 +290,7 @@ export function RegionsTable({
 
         {/* Pagination */}
         {(regions.total > regions.limit || regions.page > 1) && (
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
-            <div className="text-sm text-muted-foreground">
-              {regions.total > 0 && (
-                <>
-                  Showing {((regions.page - 1) * regions.limit) + 1} to{' '}
-                  {Math.min(regions.page * regions.limit, regions.total)} of {regions.total} results
-                </>
-              )}
-            </div>
+          <div className="mt-4 flex justify-center">
             <Pagination>
               <PaginationContent>{renderPaginationItems()}</PaginationContent>
             </Pagination>

@@ -58,7 +58,10 @@ export const useRegionsStore = create<RegionsStore>()(
       isDeleting: false,
       error: null,
       createError: null,
-      filter: {},
+      filter: {
+        sort_by: 'city',
+        sort_order: 'asc',
+      },
       pagination: {
         page: 1,
         limit: 20,
@@ -69,9 +72,15 @@ export const useRegionsStore = create<RegionsStore>()(
         try {
           set({ isLoading: true, error: null });
 
+          // Ensure default sort values are always included
+          const sortBy = filters.sort_by || 'city';
+          const sortOrder = filters.sort_order || 'asc';
+
           const queryParams = new URLSearchParams();
           if (filters.state) queryParams.append('state', filters.state);
           if (filters.city) queryParams.append('city', filters.city);
+          queryParams.append('sort_by', sortBy);
+          queryParams.append('sort_order', sortOrder);
           if (pagination.page) queryParams.append('page', pagination.page.toString());
           if (pagination.limit) queryParams.append('limit', pagination.limit.toString());
 
@@ -89,7 +98,11 @@ export const useRegionsStore = create<RegionsStore>()(
           set({
             regions: data,
             isLoading: false,
-            filter: filters,
+            filter: {
+              sort_by: sortBy,
+              sort_order: sortOrder,
+              ...filters,
+            },
             pagination: {
               page: data.page,
               limit: data.limit,
@@ -208,8 +221,8 @@ export const useRegionsStore = create<RegionsStore>()(
           if (!response.ok) {
             throw new Error('Failed to fetch states');
           }
-          const states = await response.json();
-          set({ states });
+          const statesResponse = await response.json();
+          set({ states: statesResponse.data });
         } catch (error) {
           set({ error: error instanceof Error ? error.message : 'Failed to fetch states' });
         }
@@ -221,10 +234,16 @@ export const useRegionsStore = create<RegionsStore>()(
         try {
           set({ isLoading: true, error: null });
 
+          const store = get();
+          const sortBy = store.filter.sort_by || 'city';
+          const sortOrder = store.filter.sort_order || 'asc';
+
           const queryParams = new URLSearchParams();
           queryParams.append('q', searchTerm);
           if (pagination.page) queryParams.append('page', pagination.page.toString());
           if (pagination.limit) queryParams.append('limit', pagination.limit.toString());
+          queryParams.append('sort_by', sortBy);
+          queryParams.append('sort_order', sortOrder);
 
           const response = await fetch(`/api/regions/search?${queryParams.toString()}`, {
             headers: getAuthHeaders(),
@@ -253,7 +272,15 @@ export const useRegionsStore = create<RegionsStore>()(
       // Set filter
       setFilter: (filter: Partial<RegionFilter>) => {
         const currentFilter = get().filter;
-        set({ filter: { ...currentFilter, ...filter } });
+        const currentPagination = get().pagination;
+
+        // Reset to page 1 when sort parameters change
+        const shouldResetPage = filter.sort_by !== undefined || filter.sort_order !== undefined;
+
+        set({
+          filter: { ...currentFilter, ...filter },
+          pagination: shouldResetPage ? { ...currentPagination, page: 1 } : currentPagination
+        });
       },
 
       // Set pagination
@@ -283,7 +310,10 @@ export const useRegionsStore = create<RegionsStore>()(
           isDeleting: false,
           error: null,
           createError: null,
-          filter: {},
+          filter: {
+            sort_by: 'city',
+            sort_order: 'asc',
+          },
           pagination: {
             page: 1,
             limit: 20,

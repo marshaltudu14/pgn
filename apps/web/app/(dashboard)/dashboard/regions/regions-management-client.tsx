@@ -24,6 +24,7 @@ export default function RegionsManagementClient() {
     updateRegion,
     deleteRegion,
     setPagination,
+    setFilter,
     clearError,
     clearCreateError,
   } = useRegionsStore();
@@ -40,7 +41,7 @@ export default function RegionsManagementClient() {
   // Load initial data only once
   useEffect(() => {
     const store = useRegionsStore.getState();
-    store.fetchRegions();
+    store.fetchRegions(store.filter, store.pagination);
     store.fetchStates();
   }, []); // Empty dependency array to run only once
 
@@ -61,7 +62,9 @@ export default function RegionsManagementClient() {
 
     const timer = setTimeout(() => {
       if (searchTermRef.current.trim()) {
-        store.searchRegions(searchTermRef.current);
+        // Reset to page 1 when searching
+        store.setPagination({ page: 1 });
+        store.searchRegions(searchTermRef.current, { page: 1 });
       }
     }, 500);
 
@@ -190,11 +193,11 @@ export default function RegionsManagementClient() {
       )}
 
       {/* Search */}
-      <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
+      <div className="px-2 py-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search regions by state, district, or city..."
+            placeholder="Search by city..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-10"
@@ -218,6 +221,8 @@ export default function RegionsManagementClient() {
         onEdit={handleEdit}
         onDelete={handleDeleteRegion}
         onPageChange={handlePageChange}
+        filter={filter}
+        setFilter={setFilter}
       />
 
       {/* Create Region Modal */}

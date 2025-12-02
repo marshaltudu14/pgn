@@ -3,7 +3,7 @@ import { useColorScheme, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as NavigationBar from 'expo-navigation-bar';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
@@ -28,9 +28,9 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const deviceColorScheme = useColorScheme();
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [theme, setThemeState] = useState<Theme>('light');
 
-  const resolvedTheme = theme === 'system' ? (deviceColorScheme || 'light') : theme;
+  const resolvedTheme = theme;
 
   const setTheme = async (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -42,12 +42,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   };
 
   const toggleTheme = () => {
-    if (theme === 'system') {
-      setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
-    } else if (theme === 'light') {
+    if (theme === 'light') {
       setTheme('dark');
     } else {
-      setTheme('system');
+      setTheme('light');
     }
   };
 
@@ -55,16 +53,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const loadTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('app_theme');
-        if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+        if (savedTheme && ['light', 'dark'].includes(savedTheme)) {
           setThemeState(savedTheme as Theme);
+        } else {
+          // If no saved theme, use system theme as default
+          const systemTheme = deviceColorScheme || 'light';
+          setThemeState(systemTheme as Theme);
         }
       } catch (error) {
         console.error('Failed to load theme preference:', error);
+        // Fallback to system theme on error
+        const systemTheme = deviceColorScheme || 'light';
+        setThemeState(systemTheme as Theme);
       }
     };
 
     loadTheme();
-  }, []);
+  }, [deviceColorScheme]);
 
   // Update system UI elements when theme changes
   useEffect(() => {

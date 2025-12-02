@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,13 +22,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -39,28 +32,27 @@ import {
   Loader2,
   Save,
   X,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Building,
-  Store,
 } from 'lucide-react';
-import { Retailer, RetailerFormData, Dealer } from '@pgn/shared';
+import { Retailer, RetailerFormData } from '@pgn/shared';
+import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 
 interface RetailerFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   retailer?: Retailer | null;
   onSuccess?: (retailer: Retailer) => void;
   onCancel?: () => void;
 }
 
-export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel }: RetailerFormProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [dealers, setDealers] = useState<Dealer[]>([]);
-  const [loadingDealers, setLoadingDealers] = useState(false);
+export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProps) {
+  const {
+    loading,
+    error,
+    dealers,
+    loadingDealers,
+    createRetailer,
+    updateRetailer,
+    fetchDealers,
+    clearError
+  } = useRetailerStore();
   const isEditing = !!retailer;
 
   const form = useForm<RetailerFormData>({
@@ -77,29 +69,11 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
 
   // Load dealers for dropdown
   useEffect(() => {
-    async function loadDealers() {
-      if (open) {
-        setLoadingDealers(true);
-        try {
-          const response = await fetch('/api/dealers?limit=1000');
-          const result = await response.json();
-
-          if (result.success) {
-            setDealers(result.data.dealers || []);
-          }
-        } catch (err) {
-          console.error('Error loading dealers:', err);
-        } finally {
-          setLoadingDealers(false);
-        }
-      }
-    }
-
-    loadDealers();
-  }, [open]);
+    fetchDealers();
+  }, [fetchDealers]); // Load once on mount
 
   useEffect(() => {
-    if (retailer && open) {
+    if (retailer) {
       form.reset({
         name: retailer.name,
         phone: retailer.phone || '',
@@ -108,7 +82,7 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
         email: retailer.email || '',
         dealer_id: retailer.dealer_id || '',
       });
-    } else if (!retailer && open) {
+    } else {
       form.reset({
         name: '',
         phone: '',
@@ -118,69 +92,36 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
         dealer_id: '',
       });
     }
-  }, [retailer, open, form]);
+  }, [retailer, form]);
 
   const onSubmit = async (data: RetailerFormData) => {
-    setLoading(true);
-    setError(null);
+    clearError();
 
-    try {
-      const url = isEditing ? `/api/retailers/${retailer.id}` : '/api/retailers';
-      const method = isEditing ? 'PUT' : 'POST';
+    const result = isEditing
+      ? await updateRetailer(retailer!.id, data)
+      : await createRetailer(data);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(isEditing ? 'Retailer updated successfully!' : 'Retailer created successfully!');
-        onSuccess?.(result.data);
-        onOpenChange(false);
-      } else {
-        throw new Error(result.error || 'Failed to save retailer');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save retailer';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+    if (result.success && result.data) {
+      toast.success(isEditing ? 'Retailer updated successfully!' : 'Retailer created successfully!');
+      onSuccess?.(result.data);
+    } else {
+      toast.error(result.error || 'Failed to save retailer');
     }
   };
 
   const handleCancel = () => {
     form.reset();
-    setError(null);
+    clearError();
     onCancel?.();
-    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Store className="h-5 w-5" />
-            {isEditing ? 'Edit Retailer' : 'Create New Retailer'}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? 'Update the retailer information below.'
-              : 'Fill in the details to create a new retailer record.'
-            }
-          </DialogDescription>
-        </DialogHeader>
+    <div className="max-w-2xl mx-auto space-y-6">
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Basic Information</CardTitle>
                 <CardDescription>
@@ -220,7 +161,7 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
                         />
                       </FormControl>
                       <FormDescription>
-                        The registered name of the retailer's shop
+                        The registered name of the retailer&apos;s shop
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -230,7 +171,7 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
             </Card>
 
             {/* Dealer Assignment */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Dealer Assignment</CardTitle>
                 <CardDescription>
@@ -274,7 +215,7 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
             </Card>
 
             {/* Contact Information */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Contact Information</CardTitle>
                 <CardDescription>
@@ -323,7 +264,7 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
             </Card>
 
             {/* Address Information */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Address Information</CardTitle>
                 <CardDescription>
@@ -387,7 +328,6 @@ export function RetailerForm({ open, onOpenChange, retailer, onSuccess, onCancel
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }

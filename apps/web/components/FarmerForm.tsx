@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -22,13 +22,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -39,28 +32,27 @@ import {
   Loader2,
   Save,
   X,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Building,
-  Sprout,
 } from 'lucide-react';
-import { Farmer, FarmerFormData, Retailer } from '@pgn/shared';
+import { Farmer, FarmerFormData } from '@pgn/shared';
+import { useFarmerStore } from '@/app/lib/stores/farmerStore';
 
 interface FarmerFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   farmer?: Farmer | null;
   onSuccess?: (farmer: Farmer) => void;
   onCancel?: () => void;
 }
 
-export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: FarmerFormProps) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [retailers, setRetailers] = useState<Retailer[]>([]);
-  const [loadingRetailers, setLoadingRetailers] = useState(false);
+export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
+  const {
+    loading,
+    error,
+    retailers,
+    loadingRetailers,
+    createFarmer,
+    updateFarmer,
+    fetchRetailers,
+    clearError
+  } = useFarmerStore();
   const isEditing = !!farmer;
 
   const form = useForm<FarmerFormData>({
@@ -77,29 +69,11 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
 
   // Load retailers for dropdown
   useEffect(() => {
-    async function loadRetailers() {
-      if (open) {
-        setLoadingRetailers(true);
-        try {
-          const response = await fetch('/api/retailers?limit=1000');
-          const result = await response.json();
-
-          if (result.success) {
-            setRetailers(result.data.retailers || []);
-          }
-        } catch (err) {
-          console.error('Error loading retailers:', err);
-        } finally {
-          setLoadingRetailers(false);
-        }
-      }
-    }
-
-    loadRetailers();
-  }, [open]);
+    fetchRetailers();
+  }, [fetchRetailers]); // Load once on mount
 
   useEffect(() => {
-    if (farmer && open) {
+    if (farmer) {
       form.reset({
         name: farmer.name,
         phone: farmer.phone || '',
@@ -108,7 +82,7 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
         email: farmer.email || '',
         retailer_id: farmer.retailer_id || '',
       });
-    } else if (!farmer && open) {
+    } else {
       form.reset({
         name: '',
         phone: '',
@@ -118,69 +92,36 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
         retailer_id: '',
       });
     }
-  }, [farmer, open, form]);
+  }, [farmer, form]);
 
   const onSubmit = async (data: FarmerFormData) => {
-    setLoading(true);
-    setError(null);
+    clearError();
 
-    try {
-      const url = isEditing ? `/api/farmers/${farmer.id}` : '/api/farmers';
-      const method = isEditing ? 'PUT' : 'POST';
+    const result = isEditing
+      ? await updateFarmer(farmer!.id, data)
+      : await createFarmer(data);
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(isEditing ? 'Farmer updated successfully!' : 'Farmer created successfully!');
-        onSuccess?.(result.data);
-        onOpenChange(false);
-      } else {
-        throw new Error(result.error || 'Failed to save farmer');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save farmer';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+    if (result.success && result.data) {
+      toast.success(isEditing ? 'Farmer updated successfully!' : 'Farmer created successfully!');
+      onSuccess?.(result.data);
+    } else {
+      toast.error(result.error || 'Failed to save farmer');
     }
   };
 
   const handleCancel = () => {
     form.reset();
-    setError(null);
+    clearError();
     onCancel?.();
-    onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sprout className="h-5 w-5" />
-            {isEditing ? 'Edit Farmer' : 'Create New Farmer'}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? 'Update the farmer information below.'
-              : 'Fill in the details to create a new farmer record.'
-            }
-          </DialogDescription>
-        </DialogHeader>
+    <div className="max-w-2xl mx-auto space-y-6">
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Information */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Basic Information</CardTitle>
                 <CardDescription>
@@ -220,7 +161,7 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
                         />
                       </FormControl>
                       <FormDescription>
-                        The registered name of the farmer's farm
+                        The registered name of the farmer&apos;s farm
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -230,7 +171,7 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
             </Card>
 
             {/* Retailer Assignment */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Retailer Assignment</CardTitle>
                 <CardDescription>
@@ -273,7 +214,7 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
             </Card>
 
             {/* Contact Information */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Contact Information</CardTitle>
                 <CardDescription>
@@ -322,7 +263,7 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
             </Card>
 
             {/* Address Information */}
-            <Card>
+            <Card className="bg-white dark:bg-black border">
               <CardHeader>
                 <CardTitle className="text-lg">Address Information</CardTitle>
                 <CardDescription>
@@ -386,7 +327,6 @@ export function FarmerForm({ open, onOpenChange, farmer, onSuccess, onCancel }: 
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+    </div>
   );
 }

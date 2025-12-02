@@ -1,23 +1,10 @@
-import { redirect } from 'next/navigation';
 import LoginForm from './login-form';
-import { authService } from '@/services/auth.service';
 
+// This page should be static - the LoginForm component will handle client-side auth checks
+// and server actions for authentication. Server-side auth checks should be done in
+// protected routes, not the public landing page.
 export default async function Home() {
-  // Check if user is already authenticated - if yes, redirect to dashboard immediately
-  let currentUser = null;
-
-  try {
-    currentUser = await authService.getCurrentUser();
-  } catch (error) {
-    // Error checking authentication, show login form
-    console.error('Error checking authentication:', error);
-  }
-
-  if (currentUser) {
-    // User is authenticated, redirect to dashboard immediately
-    redirect('/dashboard');
-  }
-
-  // User is not authenticated, show login form
+  // Public landing page - show login form
+  // Authentication checks happen in the LoginForm component and protected routes
   return <LoginForm />;
 }

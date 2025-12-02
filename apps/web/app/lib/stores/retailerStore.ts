@@ -1,11 +1,13 @@
 import { create } from 'zustand';
-import { Retailer, RetailerFilters, RetailerListResponse, RetailerFormData } from '@pgn/shared';
+import { Retailer, RetailerFilters, RetailerListResponse, RetailerFormData, Dealer } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface RetailerState {
   retailers: Retailer[];
+  dealers: Dealer[];
   loading: boolean;
+  loadingDealers: boolean;
   error: string | null;
   pagination: {
     currentPage: number;
@@ -18,6 +20,7 @@ interface RetailerState {
   filters: RetailerFilters;
 
   fetchRetailers: (params?: Partial<{ page: number; itemsPerPage: number; filters: RetailerFilters }>) => Promise<void>;
+  fetchDealers: () => Promise<void>;
   createRetailer: (retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   updateRetailer: (id: string, retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   deleteRetailer: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -30,7 +33,9 @@ interface RetailerState {
 
 export const useRetailerStore = create<RetailerState>((set, get) => ({
   retailers: [],
+  dealers: [],
   loading: false,
+  loadingDealers: false,
   error: null,
   pagination: {
     currentPage: 1,
@@ -98,6 +103,27 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
         error: errorMessage,
         loading: false,
       });
+    }
+  },
+
+  fetchDealers: async () => {
+    set({ loadingDealers: true });
+
+    try {
+      const token = useAuthStore.getState().token;
+      const response = await fetch('/api/dealers?limit=1000', {
+        headers: getAuthHeaders(token),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch dealers');
+      }
+
+      const data = await response.json();
+      set({ dealers: data.dealers || [], loadingDealers: false });
+    } catch (error) {
+      console.error('Error fetching dealers:', error);
+      set({ loadingDealers: false });
     }
   },
 

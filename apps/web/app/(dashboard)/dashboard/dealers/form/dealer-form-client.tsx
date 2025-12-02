@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DealerForm } from '@/components/DealerForm';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,6 @@ export default function DealerFormClient() {
   const router = useRouter();
 
   const [dealer, setDealer] = useState<Dealer | null>(null);
-  const [formOpen, setFormOpen] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,32 +65,18 @@ export default function DealerFormClient() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard/dealers">Dealers</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
-          <div className="bg-white dark:bg-black border rounded-lg p-6">
-            <div className="space-y-6">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-32 w-full" />
+      <div className="min-h-screen bg-white dark:bg-black">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96" />
+            <div className="bg-white dark:bg-black border rounded-lg p-6">
+              <div className="space-y-6">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
             </div>
           </div>
         </div>
@@ -102,82 +86,51 @@ export default function DealerFormClient() {
 
   if (error && isEditMode) {
     return (
-      <div className="space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard/dealers">Dealers</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Edit Dealer</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+      <div className="min-h-screen bg-white dark:bg-black">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <Alert variant="destructive">
+            <AlertDescription>
+              Failed to load dealer: {error}. Please try again or contact support.
+            </AlertDescription>
+          </Alert>
 
-        <Alert variant="destructive">
-          <AlertDescription>
-            Failed to load dealer: {error}. Please try again or contact support.
-          </AlertDescription>
-        </Alert>
-
-        <div className="flex space-x-4">
-          <Button variant="outline" onClick={() => window.location.reload()}>
-            Try Again
-          </Button>
-          <Button asChild>
-            <Link href="/dashboard/dealers">
-              Back to Dealer List
-            </Link>
-          </Button>
+          <div className="flex space-x-4 mt-4">
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+            <Button asChild>
+              <Link href="/dashboard/dealers">
+                Back to Dealer List
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {isEditMode && dealer && (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/dashboard/dealers/${dealerId}`}>
-                <Eye className="h-4 w-4 mr-2" />
-                View Details
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard/dealers">Dealers</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
-          <p className="text-muted-foreground mt-2">{pageDescription}</p>
+    <div className="min-h-screen bg-white dark:bg-black">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>
+            <p className="text-muted-foreground mt-2">{pageDescription}</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            {isEditMode && dealer && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/dashboard/dealers/${dealerId}`}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Details
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         {isEditMode && dealer && (
-          <div className="bg-muted/50 border rounded-lg p-4">
+          <div className="bg-muted/50 border rounded-lg p-4 mb-8">
             <div className="flex items-center space-x-4">
               <div>
                 <p className="text-sm font-medium">Dealer ID</p>
@@ -193,8 +146,6 @@ export default function DealerFormClient() {
         )}
 
         <DealerForm
-          open={formOpen}
-          onOpenChange={setFormOpen}
           dealer={dealer}
           onSuccess={handleFormSuccess}
           onCancel={handleFormCancel}

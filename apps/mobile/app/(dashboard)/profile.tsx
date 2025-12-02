@@ -66,42 +66,33 @@ export default function ProfileScreen() {
   }, [refreshUserData]);
 
   const getThemeIcon = () => {
-    switch (theme) {
-      case 'light':
-        return Sun;
-      case 'dark':
-        return Moon;
-      default:
-        return Sun; // Default to Sun for system
-    }
+    return theme === 'light' ? Sun : Moon;
   };
 
   const getThemeText = () => {
-    switch (theme) {
-      case 'light':
-        return 'Light Mode';
-      case 'dark':
-        return 'Dark Mode';
-      default:
-        return 'System';
-    }
+    return theme === 'light' ? 'Light Mode' : 'Dark Mode';
   };
 
   const profileItems = [
     {
       icon: User,
       label: 'Full Name',
-      value: (user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : 'N/A',
+      value: (user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : '-',
     },
     {
       icon: Mail,
       label: 'Email Address',
-      value: user?.email || 'N/A',
+      value: user?.email || '-',
     },
     {
       icon: MapPin,
       label: 'Employee ID',
-      value: user?.humanReadableId || 'N/A',
+      value: user?.humanReadableId || '-',
+    },
+    {
+      icon: User,
+      label: 'Phone',
+      value: user?.phone || '-',
     },
   ];
 
@@ -168,9 +159,7 @@ export default function ProfileScreen() {
             key={index}
             style={[
               newProfileStyles.listItem,
-              index !== profileItems.length - 1
-                ? { borderBottomColor: colors.border }
-                : { borderBottomWidth: 0 }
+              { borderBottomWidth: 0 }
             ]}
           >
             <View style={[newProfileStyles.iconContainer, { backgroundColor: colors.iconBg }]}>
@@ -199,9 +188,7 @@ export default function ProfileScreen() {
             key={index}
             style={[
               newProfileStyles.listItem,
-              index !== menuItems.length - 1
-                ? { borderBottomColor: colors.border }
-                : { borderBottomWidth: 0 }
+              { borderBottomWidth: 0 }
             ]}
             onPress={item.onPress}
           >

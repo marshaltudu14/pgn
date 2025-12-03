@@ -51,12 +51,11 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!employee;
 
-  // Use a key to force re-rendering of form when editing different employees
+  // Use a key to force re-rendering of form when editing different employees or mode changes
   // This helps prevent hydration mismatches by ensuring clean state
-  const formKey = isEditing ? employee?.id || 'edit' : 'create';
+  const formKey = `${isEditing ? 'edit' : 'create'}-${employee?.id || 'new'}`;
 
   const form = useForm<EmployeeFormData>({
-    // resolver: zodResolver(EmployeeFormSchema),
     defaultValues: {
       first_name: '',
       last_name: '',
@@ -109,35 +108,31 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         ? data.phone.replace(/\D/g, '').slice(-10) // Keep only last 10 digits
         : '';
 
-      // For validation, if phone is empty after cleaning, don't include it in validation
-      // since EmployeeFormSchema now allows optional phone
+      // Prepare data for validation
       const dataForValidation = {
         ...data,
-        phone: cleanPhone || undefined,
+        phone: cleanPhone,
       };
 
-      // For editing, create a modified schema that doesn't require password
-      const schemaForValidation = isEditing ?
+      // Choose schema based on editing mode
+      const schema = isEditing ?
         EmployeeFormSchema.omit({ password: true, confirm_password: true }) :
         EmployeeFormSchema;
 
-      // Manual validation with Zod
-      const validationResult = schemaForValidation.safeParse(dataForValidation);
+      // Validate with zod
+      const validationResult = schema.safeParse(dataForValidation);
+
       if (!validationResult.success) {
-        const errorMessages = validationResult.error.issues.map(err => err.message).join(', ');
-        toast.error('Validation failed: ' + errorMessages);
-        return;
-      }
-
-      // For new employees, password is required
-      if (!isEditing && !data.password) {
-        toast.error('Password is required for creating new employees');
-        return;
-      }
-
-      // For editing, if password is provided, validate it separately
-      if (isEditing && data.password && data.password.length < 6) {
-        toast.error('Password must be at least 6 characters');
+        // Set field-level errors
+        validationResult.error.issues.forEach((issue) => {
+          const fieldName = issue.path[0] as keyof EmployeeFormData;
+          if (fieldName) {
+            form.setError(fieldName, {
+              type: 'validation',
+              message: issue.message,
+            });
+          }
+        });
         return;
       }
 
@@ -152,6 +147,8 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           employment_status: data.employment_status,
           can_login: data.can_login,
           assigned_cities: data.assigned_cities,
+          // Include password only if it's provided when editing
+          ...(data.password && { password: data.password }),
         };
 
         result = await updateEmployee(employee.id, updateData);
@@ -225,6 +222,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
             <Button
               type="button"
               variant="outline"
+              className="cursor-pointer"
               onClick={() => {
                 onCancel?.();
                 onOpenChange(false);
@@ -236,6 +234,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
             <Button
               type="submit"
               disabled={loading}
+              className="cursor-pointer"
             >
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Save className="h-4 w-4 mr-2" />

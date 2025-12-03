@@ -27,7 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { MapPin, X, ChevronDown, Check } from 'lucide-react';
+import { MapPin, X, ChevronDown, Check, Loader2 } from 'lucide-react';
 import { type EmployeeFormData } from '@pgn/shared';
 import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { cn } from '@/lib/utils';
@@ -165,11 +165,21 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                       className="w-full justify-between h-12"
                       type="button"
                       onClick={() => field.onChange(selectedCities)}
+                      disabled={loading}
                     >
-                      {selectedCities.length > 0
-                        ? `${selectedCities.length} cit${selectedCities.length > 1 ? 'ies' : 'y'} selected`
-                        : "Select cities..."}
-                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <div className="flex items-center gap-2">
+                        {loading && regions.length === 0 ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Loading cities...</span>
+                          </>
+                        ) : selectedCities.length > 0 ? (
+                          `${selectedCities.length} cit${selectedCities.length > 1 ? 'ies' : 'y'} selected`
+                        ) : (
+                          "Select cities..."
+                        )}
+                      </div>
+                      {!loading && <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
@@ -185,10 +195,17 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                         onValueChange={setSearchQuery}
                       />
                       <CommandList>
-                        <CommandEmpty>
-                          {searchQuery ? 'No cities found matching your search.' : 'No cities available.'}
-                        </CommandEmpty>
-                        <CommandGroup>
+                        {loading && regions.length === 0 ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <span className="text-sm text-muted-foreground">Loading cities...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <CommandEmpty>
+                              {searchQuery ? 'No cities found matching your search.' : 'No cities available.'}
+                            </CommandEmpty>
+                            <CommandGroup>
                           {allAvailableCities.map((pair) => {
                             const isSelected = selectedCities.some(
                               (c: { city: string; state: string }) => c.city === pair.city && c.state === pair.state
@@ -213,6 +230,8 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                             );
                           })}
                             </CommandGroup>
+                          </>
+                        )}
                       </CommandList>
                     </Command>
                   </PopoverContent>

@@ -206,10 +206,7 @@ export const EmployeeFormSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  phone: z.string().optional().refine((val) => {
-    if (!val || val === '') return true; // Allow empty phone
-    return /^[0-9]{10}$/.test(val); // Must be exactly 10 digits if provided
-  }, 'Phone number must be exactly 10 digits if provided'),
+  phone: z.string().min(10, 'Phone number must be exactly 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
   employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']),
   can_login: z.boolean(),
   assigned_cities: z.array(z.object({

@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Retailer } from '@pgn/shared';
+import { RetailerWithFarmers } from '@pgn/shared';
 
 // Define dealer type based on usage
 interface Dealer {
@@ -40,8 +40,8 @@ import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { Search, Plus, Edit, Eye, Store, Mail, Phone, Building2, X } from 'lucide-react';
 
 interface RetailerListProps {
-  onRetailerSelect?: (retailer: Retailer) => void;
-  onRetailerEdit?: (retailer: Retailer) => void;
+  onRetailerSelect?: (retailer: RetailerWithFarmers) => void;
+  onRetailerEdit?: (retailer: RetailerWithFarmers) => void;
   onRetailerCreate?: () => void;
 }
 
@@ -219,7 +219,8 @@ export function RetailerList({
                   <TableHead className="hidden lg:table-cell">Dealer</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="hidden lg:table-cell">Created By</TableHead>
+                  <TableHead className="hidden lg:table-cell">Updated By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -233,7 +234,8 @@ export function RetailerList({
                       <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded" />
@@ -300,9 +302,28 @@ export function RetailerList({
                         {retailer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(retailer.created_at).toLocaleDateString()}
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="text-sm">
+                        {retailer.created_by_employee ? (
+                          <div>
+                            <div className="font-medium">{retailer.created_by_employee.first_name} {retailer.created_by_employee.last_name}</div>
+                            <div className="text-muted-foreground">{retailer.created_by_employee.human_readable_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="text-sm">
+                        {retailer.updated_by_employee ? (
+                          <div>
+                            <div className="font-medium">{retailer.updated_by_employee.first_name} {retailer.updated_by_employee.last_name}</div>
+                            <div className="text-muted-foreground">{retailer.updated_by_employee.human_readable_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

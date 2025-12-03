@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { Retailer, RetailerFilters, RetailerListResponse, RetailerFormData, Dealer } from '@pgn/shared';
+import { Retailer, RetailerWithFarmers, RetailerFilters, RetailerListResponse, RetailerFormData, Dealer } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface RetailerState {
-  retailers: Retailer[];
+  retailers: RetailerWithFarmers[];
   dealers: Dealer[];
   loading: boolean;
   loadingDealers: boolean;

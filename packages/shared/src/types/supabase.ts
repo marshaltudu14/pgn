@@ -221,7 +221,7 @@ export type Database = {
           human_readable_user_id?: string
           id?: string
           last_name?: string
-          phone?: string | null
+          phone?: string
           updated_at?: string | null
         }
         Relationships: []

@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Retailer } from '@pgn/shared';
+import { RetailerWithFarmers } from '@pgn/shared';
 import { RetailerList } from '@/components/retailer-list';
 import { RetailerQuickView } from '@/components/retailer-quick-view';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -15,14 +15,14 @@ import { useRouter } from 'next/navigation';
 export default function RetailerListClient() {
   const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(false);
-  const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
+  const [selectedRetailer, setSelectedRetailer] = useState<RetailerWithFarmers | null>(null);
 
-  const handleRetailerSelect = (retailer: Retailer) => {
+  const handleRetailerSelect = (retailer: RetailerWithFarmers) => {
     setSelectedRetailer(retailer);
     setShowQuickView(true);
   };
 
-  const handleRetailerEdit = (retailer: Retailer) => {
+  const handleRetailerEdit = (retailer: RetailerWithFarmers) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/retailers/form?id=${retailer.id}&mode=edit`);
   };
@@ -32,7 +32,7 @@ export default function RetailerListClient() {
     router.push('/dashboard/retailers/form?mode=create');
   };
 
-  const handleQuickViewEdit = (retailer: Retailer) => {
+  const handleQuickViewEdit = (retailer: RetailerWithFarmers) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/retailers/form?id=${retailer.id}&mode=edit`);
   };

@@ -16,21 +16,35 @@ export type Farmer = Database['public']['Tables']['farmers']['Row'];
 export type FarmerInsert = Database['public']['Tables']['farmers']['Insert'];
 export type FarmerUpdate = Database['public']['Tables']['farmers']['Update'];
 
+// Employee info type for created_by/updated_by fields
+export interface EmployeeInfo {
+  id: string;
+  human_readable_user_id: string;
+  first_name: string;
+  last_name: string;
+}
+
 // Enhanced types with relationships
 export interface DealerWithRetailers extends Dealer {
   retailers?: RetailerWithFarmers[];
   retailers_count?: number;
+  created_by_employee?: EmployeeInfo | null;
+  updated_by_employee?: EmployeeInfo | null;
 }
 
 export interface RetailerWithFarmers extends Retailer {
   dealer?: Dealer;
   farmers?: Farmer[];
   farmers_count?: number;
+  created_by_employee?: EmployeeInfo | null;
+  updated_by_employee?: EmployeeInfo | null;
 }
 
 export interface FarmerWithRetailer extends Farmer {
   retailer?: Retailer;
   retailer_dealer?: Dealer;
+  created_by_employee?: EmployeeInfo | null;
+  updated_by_employee?: EmployeeInfo | null;
 }
 
 // Form types

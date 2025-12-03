@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { Dealer, DealerFilters, DealerListResponse, DealerInsert, DealerUpdate } from '@pgn/shared';
+import { Dealer, DealerWithRetailers, DealerFilters, DealerListResponse, DealerInsert, DealerUpdate } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface DealerState {
-  dealers: Dealer[];
+  dealers: DealerWithRetailers[];
   loading: boolean;
   error: string | null;
   pagination: {

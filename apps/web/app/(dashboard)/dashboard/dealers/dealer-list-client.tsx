@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dealer } from '@pgn/shared';
+import { DealerWithRetailers } from '@pgn/shared';
 import { DealerList } from '@/components/dealer-list';
 import { DealerQuickView } from '@/components/dealer-quick-view';
 import { useRouter } from 'next/navigation';
@@ -14,14 +14,14 @@ import { useRouter } from 'next/navigation';
 export default function DealerListClient() {
   const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(false);
-  const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
+  const [selectedDealer, setSelectedDealer] = useState<DealerWithRetailers | null>(null);
 
-  const handleDealerSelect = (dealer: Dealer) => {
+  const handleDealerSelect = (dealer: DealerWithRetailers) => {
     setSelectedDealer(dealer);
     setShowQuickView(true);
   };
 
-  const handleDealerEdit = (dealer: Dealer) => {
+  const handleDealerEdit = (dealer: DealerWithRetailers) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/dealers/form?id=${dealer.id}&mode=edit`);
   };
@@ -31,7 +31,7 @@ export default function DealerListClient() {
     router.push('/dashboard/dealers/form?mode=create');
   };
 
-  const handleQuickViewEdit = (dealer: Dealer) => {
+  const handleQuickViewEdit = (dealer: DealerWithRetailers) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/dealers/form?id=${dealer.id}&mode=edit`);
   };

@@ -26,13 +26,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dealer } from '@pgn/shared';
+import { DealerWithRetailers } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { Search, Plus, Edit, Eye, Building, Mail, Phone, X } from 'lucide-react';
 
 interface DealerListProps {
-  onDealerSelect?: (dealer: Dealer) => void;
-  onDealerEdit?: (dealer: Dealer) => void;
+  onDealerSelect?: (dealer: DealerWithRetailers) => void;
+  onDealerEdit?: (dealer: DealerWithRetailers) => void;
   onDealerCreate?: () => void;
 }
 
@@ -155,7 +155,8 @@ export function DealerList({
                     <TableHead className="hidden md:table-cell">Shop Name</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead className="hidden xl:table-cell">Address</TableHead>
-                    <TableHead className="hidden sm:table-cell">Created</TableHead>
+                    <TableHead className="hidden lg:table-cell">Created By</TableHead>
+                    <TableHead className="hidden lg:table-cell">Updated By</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -166,7 +167,8 @@ export function DealerList({
                       <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded cursor-pointer" />
@@ -271,7 +273,8 @@ export function DealerList({
                   <TableHead className="hidden md:table-cell">Shop Name</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="hidden lg:table-cell">Created By</TableHead>
+                  <TableHead className="hidden lg:table-cell">Updated By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -323,9 +326,28 @@ export function DealerList({
                         {dealer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(dealer.created_at).toLocaleDateString()}
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="text-sm">
+                        {dealer.created_by_employee ? (
+                          <div>
+                            <div className="font-medium">{dealer.created_by_employee.first_name} {dealer.created_by_employee.last_name}</div>
+                            <div className="text-muted-foreground">{dealer.created_by_employee.human_readable_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="text-sm">
+                        {dealer.updated_by_employee ? (
+                          <div>
+                            <div className="font-medium">{dealer.updated_by_employee.first_name} {dealer.updated_by_employee.last_name}</div>
+                            <div className="text-muted-foreground">{dealer.updated_by_employee.human_readable_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

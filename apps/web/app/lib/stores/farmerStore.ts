@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { Farmer, FarmerFilters, FarmerListResponse, Retailer, FarmerFormData } from '@pgn/shared';
+import { Farmer, FarmerWithRetailer, FarmerFilters, FarmerListResponse, Retailer, FarmerFormData } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
 
 interface FarmerState {
-  farmers: Farmer[];
+  farmers: FarmerWithRetailer[];
   retailers: Retailer[];
   loading: boolean;
   loadingRetailers: boolean;

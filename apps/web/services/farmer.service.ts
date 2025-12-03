@@ -36,7 +36,21 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
 
   let query = supabase
     .from('farmers')
-    .select('*', { count: 'exact' });
+    .select(`
+      *,
+      created_by_employee:created_by (
+        id,
+        human_readable_user_id,
+        first_name,
+        last_name
+      ),
+      updated_by_employee:updated_by (
+        id,
+        human_readable_user_id,
+        first_name,
+        last_name
+      )
+    `, { count: 'exact' });
 
   // Apply search and filters
   if (search) {

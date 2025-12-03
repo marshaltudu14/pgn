@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Farmer } from '@pgn/shared';
+import { FarmerWithRetailer } from '@pgn/shared';
 import { FarmerList } from '@/components/farmer-list';
 import { FarmerQuickView } from '@/components/farmer-quick-view';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
@@ -15,14 +15,14 @@ import { useRouter } from 'next/navigation';
 export default function FarmerListClient() {
   const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(false);
-  const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerWithRetailer | null>(null);
 
-  const handleFarmerSelect = (farmer: Farmer) => {
+  const handleFarmerSelect = (farmer: FarmerWithRetailer) => {
     setSelectedFarmer(farmer);
     setShowQuickView(true);
   };
 
-  const handleFarmerEdit = (farmer: Farmer) => {
+  const handleFarmerEdit = (farmer: FarmerWithRetailer) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/farmers/form?id=${farmer.id}&mode=edit`);
   };
@@ -32,7 +32,7 @@ export default function FarmerListClient() {
     router.push('/dashboard/farmers/form?mode=create');
   };
 
-  const handleQuickViewEdit = (farmer: Farmer) => {
+  const handleQuickViewEdit = (farmer: FarmerWithRetailer) => {
     // Navigate to the form page with edit mode
     router.push(`/dashboard/farmers/form?id=${farmer.id}&mode=edit`);
   };

@@ -27,13 +27,13 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Farmer } from '@pgn/shared';
+import { FarmerWithRetailer } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
 import { Search, Plus, Edit, Eye, Mail, Phone, User, Store, X } from 'lucide-react';
 
 interface FarmerListProps {
-  onFarmerSelect?: (farmer: Farmer) => void;
-  onFarmerEdit?: (farmer: Farmer) => void;
+  onFarmerSelect?: (farmer: FarmerWithRetailer) => void;
+  onFarmerEdit?: (farmer: FarmerWithRetailer) => void;
   onFarmerCreate?: () => void;
 }
 
@@ -212,7 +212,8 @@ export function FarmerList({
                   <TableHead className="hidden lg:table-cell">Retailer</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="hidden lg:table-cell">Created By</TableHead>
+                  <TableHead className="hidden lg:table-cell">Updated By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -226,7 +227,8 @@ export function FarmerList({
                       <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded" />
@@ -291,9 +293,28 @@ export function FarmerList({
                         {farmer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(farmer.created_at).toLocaleDateString()}
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="text-sm">
+                        {farmer.created_by_employee ? (
+                          <div>
+                            <div className="font-medium">{farmer.created_by_employee.first_name} {farmer.created_by_employee.last_name}</div>
+                            <div className="text-muted-foreground">{farmer.created_by_employee.human_readable_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="text-sm">
+                        {farmer.updated_by_employee ? (
+                          <div>
+                            <div className="font-medium">{farmer.updated_by_employee.first_name} {farmer.updated_by_employee.last_name}</div>
+                            <div className="text-muted-foreground">{farmer.updated_by_employee.human_readable_user_id}</div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

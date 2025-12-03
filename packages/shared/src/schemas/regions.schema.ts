@@ -26,6 +26,26 @@ export interface RegionFilter {
   sort_order?: 'asc' | 'desc';
 }
 
+export interface RegionListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  state?: string;
+  city?: string;
+  sort_by?: 'state' | 'city';
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface RegionListResponse {
+  regions: Region[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+  };
+}
+
 export interface StateOption {
   state: string;
   state_slug: string;
@@ -53,6 +73,9 @@ export const updateRegionSchema = z.object({
 );
 
 export const regionsQuerySchema = z.object({
+  page: z.coerce.number().min(1).optional().default(1),
+  limit: z.coerce.number().min(1).max(100).optional().default(10),
+  search: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
   sort_by: z.enum(['state', 'city']).optional().default('city'),
@@ -99,6 +122,16 @@ export const StatesListResponseSchema = z.object({
 export const RegionDeleteResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+});
+
+export const RegionListResponseSchema = z.object({
+  regions: z.array(RegionSchema),
+  pagination: z.object({
+    currentPage: z.number(),
+    totalPages: z.number(),
+    totalItems: z.number(),
+    itemsPerPage: z.number(),
+  }),
 });
 
 // Route parameter schemas

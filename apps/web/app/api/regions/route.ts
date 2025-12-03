@@ -3,8 +3,8 @@ import { getRegions, createRegion } from '@/services/regions.service';
 import {
   createRegionSchema,
   regionsQuerySchema,
-  RegionSchema,
   RegionResponseSchema,
+  RegionListResponseSchema,
 } from '@pgn/shared';
 import { z } from 'zod';
 import { withApiValidation } from '@/lib/api-validation';
@@ -17,20 +17,23 @@ interface ValidatedNextRequest extends NextRequest {
   validatedBody?: z.infer<typeof createRegionSchema>;
 }
 
-// GET /api/regions - Fetch all regions with filtering (limited to 10 results)
+// GET /api/regions - Fetch regions with filtering and pagination
 const getRegionsHandler = withApiValidation(
   async (req: NextRequest): Promise<NextResponse> => {
     try {
-      // Extract filters from validated query
+      // Extract pagination and filter params from validated query
       const query = (req as ValidatedNextRequest).validatedQuery!;
-      const filters = {
+      const params = {
+        page: query.page,
+        limit: query.limit,
+        search: query.search,
         state: query.state,
         city: query.city,
         sort_by: query.sort_by,
         sort_order: query.sort_order,
       };
 
-      const result = await getRegions(filters);
+      const result = await getRegions(params);
 
       const response = NextResponse.json(result);
       return addSecurityHeaders(response);
@@ -56,7 +59,7 @@ const getRegionsHandler = withApiValidation(
   },
   {
     query: regionsQuerySchema,
-    response: RegionSchema.array(),
+    response: RegionListResponseSchema,
     validateResponse: process.env.NODE_ENV === 'development',
   }
 );
@@ -104,8 +107,8 @@ apiContract.addRoute({
   path: '/api/regions',
   method: 'GET',
   inputSchema: regionsQuerySchema,
-  outputSchema: RegionSchema.array(),
-  description: 'Fetch all regions with filtering (limited to 10 results)'
+  outputSchema: RegionListResponseSchema,
+  description: 'Fetch regions with filtering, sorting, and pagination'
 });
 
 apiContract.addRoute({

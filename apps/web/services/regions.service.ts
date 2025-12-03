@@ -3,7 +3,8 @@ import {
   type Region,
   type CreateRegionRequest,
   type UpdateRegionRequest,
-  type RegionFilter,
+  type RegionListParams,
+  type RegionListResponse,
   type StateOption,
 } from '@pgn/shared';
 
@@ -40,40 +41,71 @@ export async function createRegion(data: CreateRegionRequest): Promise<Region> {
 }
 
 /**
- * Get all regions with filtering (limited to 10 results)
+ * Get regions with filtering and pagination
  */
 export async function getRegions(
-  filters: RegionFilter = {}
-): Promise<Region[]> {
+  params: RegionListParams = {}
+): Promise<RegionListResponse> {
   const supabase = await createClient();
+
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    state,
+    city,
+    sort_by = 'city',
+    sort_order = 'asc'
+  } = params;
+
+  // Calculate pagination
+  const offset = (page - 1) * limit;
 
   let query = supabase
     .from('regions')
-    .select('*')
-    .limit(10); // Always limit to 10 results
+    .select('*', { count: 'exact' });
+
+  // Apply search filter (searches both state and city)
+  if (search) {
+    query = query.or(`state.ilike.%${search}%,city.ilike.%${search}%`);
+  }
+
+  // Apply specific filters
+  if (state) {
+    query = query.eq('state', state);
+  }
+  if (city) {
+    query = query.ilike('city', `%${city}%`);
+  }
 
   // Apply sorting
-  const sortBy = filters.sort_by || 'city';
-  const sortOrder = filters.sort_order || 'asc';
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
+  query = query.order(sort_by, { ascending: sort_order === 'asc' });
 
-  // Apply filters
-  if (filters.state) {
-    query = query.eq('state', filters.state);
-  }
-  if (filters.city) {
-    query = query.ilike('city', `%${filters.city}%`);
-  }
+  // Apply pagination
+  query = query.range(offset, offset + limit - 1);
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('Error fetching regions:', error);
     throw new Error('Failed to fetch regions');
   }
 
-  return data || [];
+  const regions = data || [];
+  const totalItems = count || 0;
+  const totalPages = Math.ceil(totalItems / limit);
+
+  return {
+    regions,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems,
+      itemsPerPage: limit,
+    },
+  };
 }
+
 
 /**
  * Get region by ID
@@ -184,31 +216,49 @@ export async function getStates(): Promise<StateOption[]> {
 
 
 /**
- * Search regions by city only with database-level sorting (limited to 10 results)
+ * Search regions by city only with database-level sorting and pagination
  */
 export async function searchRegions(
   searchTerm: string,
-  filters: RegionFilter = {}
-): Promise<Region[]> {
+  params: Omit<RegionListParams, 'search'> = {}
+): Promise<RegionListResponse> {
   const supabase = await createClient();
 
-  let query = supabase
+  const {
+    page = 1,
+    limit = 10,
+    sort_by = 'city',
+    sort_order = 'asc'
+  } = params;
+
+  // Calculate pagination
+  const offset = (page - 1) * limit;
+
+  const query = supabase
     .from('regions')
-    .select('*')
+    .select('*', { count: 'exact' })
     .ilike('city', `%${searchTerm}%`)
-    .limit(10); // Always limit to 10 results
+    .order(sort_by, { ascending: sort_order === 'asc' })
+    .range(offset, offset + limit - 1);
 
-  // Apply sorting
-  const sortBy = filters.sort_by || 'city';
-  const sortOrder = filters.sort_order || 'asc';
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
-
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('Error searching regions:', error);
     throw new Error('Failed to search regions');
   }
 
-  return data || [];
+  const regions = data || [];
+  const totalItems = count || 0;
+  const totalPages = Math.ceil(totalItems / limit);
+
+  return {
+    regions,
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalItems,
+      itemsPerPage: limit,
+    },
+  };
 }

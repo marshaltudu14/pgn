@@ -26,7 +26,7 @@ import {
   Save,
   X,
 } from 'lucide-react';
-import { Dealer, DealerFormData } from '@pgn/shared';
+import { Dealer, DealerFormData, DealerFormDataSchema } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
 
 interface DealerFormProps {
@@ -73,9 +73,42 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
   const onSubmit = async (data: DealerFormData) => {
     clearError();
 
+    // Clean phone number - remove formatting and special characters, keep only digits
+    const cleanPhone = data.phone
+      ? data.phone.replace(/\D/g, '').slice(-10) // Keep only last 10 digits
+      : '';
+
+    // Prepare data for validation
+    const dataForValidation = {
+      ...data,
+      phone: cleanPhone,
+    };
+
+    // Validate with zod
+    const validationResult = DealerFormDataSchema.safeParse(dataForValidation);
+
+    if (!validationResult.success) {
+      // Set field-level errors
+      validationResult.error.issues.forEach((issue) => {
+        const fieldName = issue.path[0] as keyof DealerFormData;
+        if (fieldName) {
+          form.setError(fieldName, {
+            type: 'validation',
+            message: issue.message,
+          });
+        }
+      });
+      return;
+    }
+
+    const finalData = {
+      ...data,
+      phone: cleanPhone,
+    };
+
     const result = isEditing
-      ? await updateDealer(dealer!.id, data)
-      : await createDealer(data);
+      ? await updateDealer(dealer!.id, finalData)
+      : await createDealer(finalData);
 
     if (result.success && result.data) {
       toast.success(isEditing ? 'Dealer updated successfully!' : 'Dealer created successfully!');
@@ -92,7 +125,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -128,16 +161,16 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                 name="shop_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Shop Name</FormLabel>
+                    <FormLabel>Shop/Business Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Enter shop name"
+                        placeholder="Enter shop/business name"
                         {...field}
                         disabled={loading}
                       />
                     </FormControl>
                     <FormDescription>
-                      The registered name of the dealer&apos;s shop
+                      The registered name of the dealer&apos;s shop or business
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -160,7 +193,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Enter phone number"
@@ -209,7 +242,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Address *</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Enter complete address"
@@ -240,6 +273,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
             <Button
               type="button"
               variant="outline"
+              className="cursor-pointer"
               onClick={handleCancel}
               disabled={loading}
             >
@@ -248,6 +282,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
             </Button>
             <Button
               type="submit"
+              className="cursor-pointer"
               disabled={loading}
             >
               {loading ? (

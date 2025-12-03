@@ -36,16 +36,16 @@ export interface FarmerWithRetailer extends Farmer {
 // Form types
 export interface DealerFormData {
   name: string;
-  phone?: string;
-  address?: string;
+  phone: string;
+  address: string;
   shop_name?: string;
   email?: string;
 }
 
 export interface RetailerFormData {
   name: string;
-  phone?: string;
-  address?: string;
+  phone: string;
+  address: string;
   shop_name?: string;
   email?: string;
   dealer_id?: string;
@@ -53,8 +53,8 @@ export interface RetailerFormData {
 
 export interface FarmerFormData {
   name: string;
-  phone?: string;
-  address?: string;
+  phone: string;
+  address: string;
   farm_name?: string;
   email?: string;
   retailer_id?: string;
@@ -156,28 +156,28 @@ export interface FarmerFilters {
 // Zod schemas for API validation
 export const DealerFormDataSchema = z.object({
   name: z.string().min(1, 'Dealer name is required'),
-  phone: z.string().optional(),
-  address: z.string().optional(),
+  phone: z.string().min(10, 'Phone number must be exactly 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+  address: z.string().min(1, 'Address is required'),
   shop_name: z.string().optional(),
-  email: z.string().email('Invalid email format').optional(),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
 });
 
 export const RetailerFormDataSchema = z.object({
   name: z.string().min(1, 'Retailer name is required'),
-  phone: z.string().optional(),
-  address: z.string().optional(),
+  phone: z.string().min(10, 'Phone number must be exactly 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+  address: z.string().min(1, 'Address is required'),
   shop_name: z.string().optional(),
-  email: z.string().email('Invalid email format').optional(),
-  dealer_id: z.string().optional(),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  dealer_id: z.string().optional().or(z.literal('')),
 });
 
 export const FarmerFormDataSchema = z.object({
   name: z.string().min(1, 'Farmer name is required'),
-  phone: z.string().optional(),
-  address: z.string().optional(),
+  phone: z.string().min(10, 'Phone number must be exactly 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
+  address: z.string().min(1, 'Address is required'),
   farm_name: z.string().optional(),
-  email: z.string().email('Invalid email format').optional(),
-  retailer_id: z.string().optional(),
+  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  retailer_id: z.string().optional().or(z.literal('')),
 });
 
 export const DealerListParamsSchema = z.object({

@@ -95,7 +95,7 @@ describe('Regions Store', () => {
       isDeleting: false,
       error: null,
       createError: null,
-      filter: {
+      filters: {
         sort_by: 'city',
         sort_order: 'asc',
       },
@@ -133,7 +133,7 @@ describe('Regions Store', () => {
       expect(result.current.isDeleting).toBe(false);
       expect(result.current.error).toBe(null);
       expect(result.current.createError).toBe(null);
-      expect(result.current.filter).toEqual({
+      expect(result.current.filters).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
       });
@@ -157,7 +157,7 @@ describe('Regions Store', () => {
 
       expect(result.current.isLoading).toBe(false);
       expect(result.current.regions).toEqual(mockResponse);
-      expect(result.current.filter).toEqual({
+      expect(result.current.filters).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
       });
@@ -574,25 +574,25 @@ describe('Regions Store', () => {
     });
   });
 
-  describe('setFilter', () => {
+  describe('setFilters', () => {
     it('should update filter state', () => {
       const { result } = renderHook(() => useRegionsStore());
 
       act(() => {
-        result.current.setFilter({ state: 'California' });
+        result.current.setFilters({ state: 'California' });
       });
 
-      expect(result.current.filter).toEqual({
+      expect(result.current.filters).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
         state: 'California',
       });
 
       act(() => {
-        result.current.setFilter({ city: 'Los Angeles' });
+        result.current.setFilters({ city: 'Los Angeles' });
       });
 
-      expect(result.current.filter).toEqual({
+      expect(result.current.filters).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
         state: 'California',
@@ -648,10 +648,10 @@ describe('Regions Store', () => {
 
       // Change some state
       act(() => {
-        result.current.setFilter({ state: 'California' });
+        result.current.setFilters({ state: 'California' });
       });
 
-      expect(result.current.filter).toEqual({
+      expect(result.current.filters).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
         state: 'California',
@@ -670,7 +670,7 @@ describe('Regions Store', () => {
       expect(result.current.isDeleting).toBe(false);
       expect(result.current.error).toBe(null);
       expect(result.current.createError).toBe(null);
-      expect(result.current.filter).toEqual({
+      expect(result.current.filters).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
       });

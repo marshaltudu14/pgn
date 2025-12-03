@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { CreateRegionRequest, UpdateRegionRequest, Region } from '@pgn/shared';
 import { RegionsTable, RegionFormModal } from '@/components/regions';
@@ -18,11 +18,15 @@ export default function RegionsManagementClient() {
     isUpdating,
     error,
     createError,
-    filter,
+    pagination,
+    filters,
     createRegion,
     updateRegion,
     deleteRegion,
-    setFilter,
+    fetchRegions,
+    searchRegions,
+    setFilters,
+    setPagination,
     clearError,
     clearCreateError,
   } = useRegionsStore();
@@ -31,56 +35,54 @@ export default function RegionsManagementClient() {
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Use refs to track current values to prevent infinite loops
-  const searchTermRef = useRef(searchTerm);
-  const prevFilterRef = useRef(filter);
-
   // Load initial data only once
   useEffect(() => {
-    const store = useRegionsStore.getState();
-    store.fetchRegions(store.filter);
-    store.fetchStates();
-  }, []); // Empty dependency array to run only once
+    fetchRegions();
+  }, [fetchRegions]); // Empty dependency array to run only once
 
-  // Update ref when searchTerm changes
+  // Handle search with debounce
   useEffect(() => {
-    searchTermRef.current = searchTerm;
-  }, [searchTerm]);
-
-  // Handle search with debounce - only depends on searchTerm
-  useEffect(() => {
-    const store = useRegionsStore.getState();
-
-    // If clearing search, apply immediately for better UX
-    if (!searchTermRef.current.trim()) {
-      store.fetchRegions(store.filter);
-      return;
-    }
-
     const timer = setTimeout(() => {
-      if (searchTermRef.current.trim()) {
-        store.searchRegions(searchTermRef.current);
+      if (searchTerm.trim()) {
+        searchRegions(searchTerm.trim());
+      } else {
+        fetchRegions();
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]); // Only depend on searchTerm
+  }, [searchTerm, fetchRegions, searchRegions]);
 
-  // Handle filter changes
-  useEffect(() => {
-    const store = useRegionsStore.getState();
-    const currentFilter = store.filter;
-
-    // Only fetch if filter actually changed
-    if (JSON.stringify(currentFilter) !== JSON.stringify(prevFilterRef.current)) {
-      if (!searchTermRef.current.trim()) {
-        store.fetchRegions(currentFilter);
-      }
-      prevFilterRef.current = { ...currentFilter };
+  // Handle page changes
+  const handlePageChange = (page: number) => {
+    setPagination(page);
+    if (searchTerm.trim()) {
+      searchRegions(searchTerm.trim(), { ...filters, page });
+    } else {
+      fetchRegions({ ...filters, page });
     }
-  }, [filter]); // Monitor filter changes
+  };
 
-  
+  // Handle page size changes
+  const handlePageSizeChange = (size: number) => {
+    setPagination(1, size);
+    if (searchTerm.trim()) {
+      searchRegions(searchTerm.trim(), { ...filters, page: 1, limit: size });
+    } else {
+      fetchRegions({ ...filters, page: 1, limit: size });
+    }
+  };
+
+  // Handle sort changes
+  const handleSortChange = (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => {
+    setFilters({ sort_by: sortBy, sort_order: sortOrder, page: 1 });
+    if (searchTerm.trim()) {
+      searchRegions(searchTerm.trim(), { ...filters, sort_by: sortBy, sort_order: sortOrder, page: 1 });
+    } else {
+      fetchRegions({ ...filters, sort_by: sortBy, sort_order: sortOrder, page: 1 });
+    }
+  };
+
   // Handle clear search
   const handleClearSearch = () => {
     setSearchTerm('');
@@ -156,7 +158,7 @@ export default function RegionsManagementClient() {
           <div>
             <h1 className="text-3xl font-bold">Regions Management</h1>
             <p className="text-muted-foreground">
-              {regions.length} region{regions.length !== 1 ? 's' : ''} found
+              {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} found
             </p>
           </div>
           <Button
@@ -204,10 +206,13 @@ export default function RegionsManagementClient() {
       <RegionsTable
         regions={regions}
         isLoading={isLoading}
+        pagination={pagination}
+        filters={filters}
         onEdit={handleEdit}
         onDelete={handleDeleteRegion}
-        filter={filter}
-        setFilter={setFilter}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onSortChange={handleSortChange}
       />
 
       {/* Create Region Modal */}

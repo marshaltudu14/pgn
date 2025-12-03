@@ -1,6 +1,6 @@
 'use client';
 
-import { Region, RegionFilter } from '@pgn/shared';
+import { Region, RegionListParams } from '@pgn/shared';
 import {
   Table,
   TableBody,
@@ -11,56 +11,164 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 import { Edit, Trash2, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+interface PaginationState {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+}
 
 interface RegionsTableProps {
   regions: Region[];
   isLoading: boolean;
+  pagination: PaginationState;
+  filters: RegionListParams;
   onEdit: (region: Region) => void;
   onDelete: (id: string) => void;
-  filter: RegionFilter;
-  setFilter: (filter: Partial<RegionFilter>) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onSortChange: (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => void;
 }
 
 export function RegionsTable({
   regions,
   isLoading,
+  pagination,
+  filters,
   onEdit,
   onDelete,
-  filter,
-  setFilter,
+  onPageChange,
+  onPageSizeChange,
+  onSortChange,
 }: RegionsTableProps) {
 
   const handleSort = (sortBy: 'state' | 'city') => {
     const newSortOrder =
-      filter.sort_by === sortBy && filter.sort_order === 'asc' ? 'desc' : 'asc';
-    setFilter({ sort_by: sortBy, sort_order: newSortOrder });
+      filters.sort_by === sortBy && filters.sort_order === 'asc' ? 'desc' : 'asc';
+    onSortChange(sortBy, newSortOrder);
   };
 
-  const sortedRegions = [...regions].sort((a, b) => {
-    const sortBy = filter.sort_by || 'city';
-    const sortOrder = filter.sort_order || 'asc';
+  const handlePageChange = (page: number) => {
+    onPageChange(page);
+  };
 
-    if (sortBy === 'city') {
-      const compareResult = a.city.localeCompare(b.city);
-      return sortOrder === 'asc' ? compareResult : -compareResult;
-    } else {
-      const compareResult = a.state.localeCompare(b.state);
-      return sortOrder === 'asc' ? compareResult : -compareResult;
+  const handlePageSizeChange = (size: number) => {
+    onPageSizeChange(size);
+  };
+
+  // Generate pagination items
+  const generatePaginationItems = () => {
+    const items = [];
+    const { currentPage, totalPages } = pagination;
+
+    // Always show first page
+    if (currentPage > 3) {
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink href="#" onClick={() => handlePageChange(1)}>
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+
+      if (currentPage > 4) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
     }
-  });
+
+    // Show pages around current page
+    const startPage = Math.max(1, currentPage - 1);
+    const endPage = Math.min(totalPages, currentPage + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink
+            href="#"
+            isActive={i === currentPage}
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    // Always show last page
+    if (currentPage < totalPages - 2) {
+      if (currentPage < totalPages - 3) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink href="#" onClick={() => handlePageChange(totalPages)}>
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">
-            {regions.length} region{regions.length !== 1 ? 's' : ''} total
+            {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} total
           </h3>
           <p className="text-sm text-muted-foreground">
-            Showing up to 10 results
+            Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
           </p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-muted-foreground">Items per page:</span>
+            <Select
+              value={pagination.itemsPerPage.toString()}
+              onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+            >
+              <SelectTrigger className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -75,8 +183,8 @@ export function RegionsTable({
                 onClick={() => handleSort('state')}
               >
                 State
-                {filter.sort_by === 'state' && (
-                  filter.sort_order === 'asc' ? (
+                {filters.sort_by === 'state' && (
+                  filters.sort_order === 'asc' ? (
                     <ChevronUp className="ml-1 h-4 w-4" />
                   ) : (
                     <ChevronDown className="ml-1 h-4 w-4" />
@@ -92,8 +200,8 @@ export function RegionsTable({
                 onClick={() => handleSort('city')}
               >
                 City
-                {filter.sort_by === 'city' && (
-                  filter.sort_order === 'asc' ? (
+                {filters.sort_by === 'city' && (
+                  filters.sort_order === 'asc' ? (
                     <ChevronUp className="ml-1 h-4 w-4" />
                   ) : (
                     <ChevronDown className="ml-1 h-4 w-4" />
@@ -131,7 +239,7 @@ export function RegionsTable({
                 </TableCell>
               </TableRow>
             ))
-          ) : sortedRegions.length === 0 ? (
+          ) : regions.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="text-center py-8">
                 <div className="flex flex-col items-center gap-2">
@@ -146,7 +254,7 @@ export function RegionsTable({
               </TableCell>
             </TableRow>
           ) : (
-            sortedRegions.map((region: Region) => (
+            regions.map((region: Region) => (
               <TableRow key={region.id}>
                 <TableCell className="font-medium">{region.state}</TableCell>
                 <TableCell>{region.city}</TableCell>
@@ -197,6 +305,34 @@ export function RegionsTable({
           )}
         </TableBody>
       </Table>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Page {pagination.currentPage} of {pagination.totalPages}
+          </div>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+              {generatePaginationItems()}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 }

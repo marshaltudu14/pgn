@@ -20,7 +20,7 @@ interface FarmerState {
   filters: FarmerFilters;
 
   fetchFarmers: (params?: Partial<{ page: number; itemsPerPage: number; filters: FarmerFilters }>) => Promise<void>;
-  fetchRetailers: () => Promise<void>;
+  fetchRetailers: (params?: { search?: string; limit?: number }) => Promise<void>;
   createFarmer: (farmerData: FarmerFormData) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
   updateFarmer: (id: string, farmerData: FarmerFormData) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
   deleteFarmer: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -109,12 +109,17 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
     }
   },
 
-  fetchRetailers: async () => {
+  fetchRetailers: async (params) => {
     set({ loadingRetailers: true });
 
     try {
+      const searchParams = new URLSearchParams();
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+      if (!params?.limit) searchParams.set('limit', '10'); // Default limit for dropdown
+
       const token = useAuthStore.getState().token;
-      const response = await fetch('/api/retailers?limit=1000', {
+      const response = await fetch(`/api/retailers?${searchParams}`, {
         headers: getAuthHeaders(token),
       });
 
@@ -123,7 +128,9 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       }
 
       const data = await response.json();
-      set({ retailers: data.retailers || [], loadingRetailers: false });
+      // Handle different response formats
+      const retailers = data.data?.retailers || data.retailers || [];
+      set({ retailers, loadingRetailers: false });
     } catch (error) {
       console.error('Error fetching retailers:', error);
       set({ loadingRetailers: false });

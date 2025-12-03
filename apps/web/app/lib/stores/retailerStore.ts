@@ -20,7 +20,7 @@ interface RetailerState {
   filters: RetailerFilters;
 
   fetchRetailers: (params?: Partial<{ page: number; itemsPerPage: number; filters: RetailerFilters }>) => Promise<void>;
-  fetchDealers: () => Promise<void>;
+  fetchDealers: (params?: { search?: string; limit?: number }) => Promise<void>;
   createRetailer: (retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   updateRetailer: (id: string, retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   deleteRetailer: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -106,12 +106,17 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
     }
   },
 
-  fetchDealers: async () => {
+  fetchDealers: async (params) => {
     set({ loadingDealers: true });
 
     try {
+      const searchParams = new URLSearchParams();
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+      if (!params?.limit) searchParams.set('limit', '10'); // Default limit for dropdown
+
       const token = useAuthStore.getState().token;
-      const response = await fetch('/api/dealers?limit=1000', {
+      const response = await fetch(`/api/dealers?${searchParams}`, {
         headers: getAuthHeaders(token),
       });
 
@@ -120,7 +125,9 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       }
 
       const data = await response.json();
-      set({ dealers: data.dealers || [], loadingDealers: false });
+      // Handle different response formats
+      const dealers = data.data?.dealers || data.dealers || [];
+      set({ dealers, loadingDealers: false });
     } catch (error) {
       console.error('Error fetching dealers:', error);
       set({ loadingDealers: false });

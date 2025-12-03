@@ -3,12 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { EmployeeForm } from '@/components/EmployeeForm';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink,BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
-import Link from 'next/link';
 import { Employee } from '@pgn/shared';
 
 export default function EmployeeFormClient() {
@@ -72,22 +69,6 @@ export default function EmployeeFormClient() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard/employees">Employees</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <div className="space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96" />
@@ -107,22 +88,6 @@ export default function EmployeeFormClient() {
   if (error && isEditMode) {
     return (
       <div className="space-y-6">
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard/employees">Employees</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Edit Employee</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
         <Alert variant="destructive">
           <AlertDescription>
             Failed to load employee: {error}. Please try again or contact support.
@@ -133,10 +98,8 @@ export default function EmployeeFormClient() {
           <Button variant="outline" onClick={() => window.location.reload()}>
             Try Again
           </Button>
-          <Button asChild>
-            <Link href="/dashboard/employees">
-              Back to Employee List
-            </Link>
+          <Button variant="outline" onClick={() => router.push('/dashboard/employees')}>
+            Back to Employee List
           </Button>
         </div>
       </div>
@@ -145,35 +108,6 @@ export default function EmployeeFormClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {isEditMode && employee && (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/dashboard/employees/${employeeId}`}>
-                <Eye className="h-4 w-4 mr-2" />
-                View Details
-              </Link>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard/employees">Employees</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div className="space-y-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{pageTitle}</h1>

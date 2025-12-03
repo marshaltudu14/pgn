@@ -192,6 +192,7 @@ describe('Employee Service Security Tests', () => {
         first_name: maliciousName,
         last_name: 'Test',
         email: 'test@example.com',
+        phone: '1234567890',
         password: 'password123'
       };
 
@@ -212,6 +213,7 @@ describe('Employee Service Security Tests', () => {
         first_name: 'Test',
         last_name: 'User',
         email: 'test@example.com',
+        phone: '1234567890',
         password: 'password123'
       };
 
@@ -233,6 +235,7 @@ describe('Employee Service Security Tests', () => {
         first_name: 'Test',
         last_name: 'User',
         email: 'test@example.com',
+        phone: '1234567890',
         password: 'password123'
       };
 

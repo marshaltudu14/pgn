@@ -5,15 +5,13 @@ import {
   CreateRegionRequest,
   UpdateRegionRequest,
   RegionFilter,
-  PaginationParams,
-  RegionsResponse,
   StateOption,
 } from '@pgn/shared';
 import { getAuthHeaders } from './utils/errorHandling';
 
 interface RegionsStore {
   // State
-  regions: RegionsResponse;
+  regions: Region[];
   states: StateOption[];
   isLoading: boolean;
   isCreating: boolean;
@@ -22,29 +20,21 @@ interface RegionsStore {
   error: string | null;
   createError: string | null;
   filter: RegionFilter;
-  pagination: PaginationParams;
 
   // Actions
-  fetchRegions: (filters?: RegionFilter, pagination?: PaginationParams) => Promise<void>;
+  fetchRegions: (filters?: RegionFilter) => Promise<void>;
   createRegion: (data: CreateRegionRequest) => Promise<Region>;
   updateRegion: (id: string, data: UpdateRegionRequest) => Promise<Region>;
   deleteRegion: (id: string) => Promise<void>;
   fetchStates: () => Promise<void>;
-  searchRegions: (searchTerm: string, pagination?: PaginationParams) => Promise<void>;
+  searchRegions: (searchTerm: string) => Promise<void>;
   setFilter: (filter: Partial<RegionFilter>) => void;
-  setPagination: (pagination: Partial<PaginationParams>) => void;
   clearError: () => void;
   clearCreateError: () => void;
   reset: () => void;
 }
 
-const initialState: RegionsResponse = {
-  data: [],
-  total: 0,
-  page: 1,
-  limit: 20,
-  hasMore: false,
-};
+const initialState: Region[] = [];
 
 export const useRegionsStore = create<RegionsStore>()(
   devtools(
@@ -62,13 +52,9 @@ export const useRegionsStore = create<RegionsStore>()(
         sort_by: 'city',
         sort_order: 'asc',
       },
-      pagination: {
-        page: 1,
-        limit: 20,
-      },
 
-      // Fetch regions with filtering and pagination
-      fetchRegions: async (filters: RegionFilter = {}, pagination: PaginationParams = {}) => {
+      // Fetch regions with filtering (limited to 10 results)
+      fetchRegions: async (filters: RegionFilter = {}) => {
         try {
           set({ isLoading: true, error: null });
 
@@ -81,8 +67,7 @@ export const useRegionsStore = create<RegionsStore>()(
           if (filters.city) queryParams.append('city', filters.city);
           queryParams.append('sort_by', sortBy);
           queryParams.append('sort_order', sortOrder);
-          if (pagination.page) queryParams.append('page', pagination.page.toString());
-          if (pagination.limit) queryParams.append('limit', pagination.limit.toString());
+          queryParams.append('limit', '10'); // Always limit to 10 results
 
           const response = await fetch(`/api/regions?${queryParams.toString()}`, {
             method: 'GET',
@@ -96,16 +81,12 @@ export const useRegionsStore = create<RegionsStore>()(
           const data = await response.json();
 
           set({
-            regions: data,
+            regions: data, // Direct array of regions
             isLoading: false,
             filter: {
               sort_by: sortBy,
               sort_order: sortOrder,
               ...filters,
-            },
-            pagination: {
-              page: data.page,
-              limit: data.limit,
             },
           });
         } catch (error) {
@@ -135,8 +116,8 @@ export const useRegionsStore = create<RegionsStore>()(
           const newRegion = await response.json();
 
           // Refresh the regions list
-          const { filter, pagination } = get();
-          await get().fetchRegions(filter, pagination);
+          const { filter } = get();
+          await get().fetchRegions(filter);
 
           set({ isCreating: false, createError: null });
           return newRegion;
@@ -169,8 +150,8 @@ export const useRegionsStore = create<RegionsStore>()(
           const updatedRegion = await response.json();
 
           // Refresh the regions list
-          const { filter, pagination } = get();
-          await get().fetchRegions(filter, pagination);
+          const { filter } = get();
+          await get().fetchRegions(filter);
 
           set({ isUpdating: false });
           return updatedRegion;
@@ -199,8 +180,8 @@ export const useRegionsStore = create<RegionsStore>()(
           }
 
           // Refresh the regions list
-          const { filter, pagination } = get();
-          await get().fetchRegions(filter, pagination);
+          const { filter } = get();
+          await get().fetchRegions(filter);
 
           set({ isDeleting: false });
         } catch (error) {
@@ -229,8 +210,8 @@ export const useRegionsStore = create<RegionsStore>()(
       },
 
   
-      // Search regions
-      searchRegions: async (searchTerm: string, pagination: PaginationParams = {}) => {
+      // Search regions (limited to 10 results)
+      searchRegions: async (searchTerm: string) => {
         try {
           set({ isLoading: true, error: null });
 
@@ -240,8 +221,7 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const queryParams = new URLSearchParams();
           queryParams.append('q', searchTerm);
-          if (pagination.page) queryParams.append('page', pagination.page.toString());
-          if (pagination.limit) queryParams.append('limit', pagination.limit.toString());
+          queryParams.append('limit', '10'); // Always limit to 10 results
           queryParams.append('sort_by', sortBy);
           queryParams.append('sort_order', sortOrder);
 
@@ -254,12 +234,8 @@ export const useRegionsStore = create<RegionsStore>()(
           const data = await response.json();
 
           set({
-            regions: data,
+            regions: data, // Direct array of regions
             isLoading: false,
-            pagination: {
-              page: data.page,
-              limit: data.limit,
-            },
           });
         } catch (error) {
           set({
@@ -272,21 +248,9 @@ export const useRegionsStore = create<RegionsStore>()(
       // Set filter
       setFilter: (filter: Partial<RegionFilter>) => {
         const currentFilter = get().filter;
-        const currentPagination = get().pagination;
-
-        // Reset to page 1 when sort parameters change
-        const shouldResetPage = filter.sort_by !== undefined || filter.sort_order !== undefined;
-
         set({
           filter: { ...currentFilter, ...filter },
-          pagination: shouldResetPage ? { ...currentPagination, page: 1 } : currentPagination
         });
-      },
-
-      // Set pagination
-      setPagination: (pagination: Partial<PaginationParams>) => {
-        const currentPagination = get().pagination;
-        set({ pagination: { ...currentPagination, ...pagination } });
       },
 
       // Clear error
@@ -313,10 +277,6 @@ export const useRegionsStore = create<RegionsStore>()(
           filter: {
             sort_by: 'city',
             sort_order: 'asc',
-          },
-          pagination: {
-            page: 1,
-            limit: 20,
           },
         });
       },

@@ -4,7 +4,9 @@ import {
   getEmployeeById,
   updateEmployee,
   changeEmploymentStatus,
-  resetEmployeePassword
+  resetEmployeePassword,
+  isPhoneTaken,
+  isEmailTaken
 } from '@/services/employee.service';
 import {
   UpdateEmployeeRequestSchema,
@@ -81,13 +83,25 @@ const updateEmployeeHandler = withApiValidation(
     try {
       const { id } = (request as NextRequest & { validatedParams: Record<string, string> }).validatedParams;
       const body = (request as NextRequest & { validatedBody: unknown }).validatedBody;
+      const typedBody = body as { email?: string; phone?: string; [key: string]: unknown };
+
+      // Check if employee exists first
+      const existingEmployee = await getEmployeeById(id);
+      if (!existingEmployee) {
+        const response = NextResponse.json(
+          {
+            success: false,
+            error: 'Employee not found'
+          },
+          { status: 404 }
+        );
+        return addSecurityHeaders(response);
+      }
 
       // Check if email is already taken by another employee
-      const typedBody = body as { email?: string; [key: string]: unknown };
-      if (typedBody.email) {
-        const { getEmployeeByEmail } = await import('@/services/employee.service');
-        const existingEmployee = await getEmployeeByEmail(typedBody.email);
-        if (existingEmployee && existingEmployee.id !== id) {
+      if (typedBody.email && typedBody.email !== existingEmployee.email) {
+        const emailTaken = await isEmailTaken(typedBody.email, id);
+        if (emailTaken) {
           const response = NextResponse.json(
             {
               success: false,
@@ -96,6 +110,25 @@ const updateEmployeeHandler = withApiValidation(
             { status: 409 }
           );
           return addSecurityHeaders(response);
+        }
+      }
+
+      // Check if phone number is already taken by another employee
+      if (typedBody.phone && typedBody.phone !== existingEmployee.phone) {
+        // Clean phone number before checking
+        const cleanPhone = typedBody.phone.toString().replace(/\D/g, '').slice(-10);
+        if (cleanPhone && cleanPhone.length === 10) {
+          const phoneTaken = await isPhoneTaken(cleanPhone, id);
+          if (phoneTaken) {
+            const response = NextResponse.json(
+              {
+                success: false,
+                error: 'Phone number is already taken by another employee'
+              },
+              { status: 409 }
+            );
+            return addSecurityHeaders(response);
+          }
         }
       }
 
@@ -114,10 +147,17 @@ const updateEmployeeHandler = withApiValidation(
       // Handle specific error cases
       if (error instanceof Error) {
         if (error.message.includes('duplicate key')) {
+          let errorMessage = 'Employee with this information already exists';
+          if (error.message.includes('email')) {
+            errorMessage = 'Email is already taken by another employee';
+          } else if (error.message.includes('phone')) {
+            errorMessage = 'Phone number is already taken by another employee';
+          }
+
           const response = NextResponse.json(
             {
               success: false,
-              error: 'Employee with this email already exists'
+              error: errorMessage
             },
             { status: 409 }
           );
@@ -220,10 +260,9 @@ const patchEmployeeHandler = withApiValidation(
       }
 
       // Check if email is already taken by another employee
-      if (typedBody.email) {
-        const { getEmployeeByEmail } = await import('@/services/employee.service');
-        const existingEmployee = await getEmployeeByEmail(typedBody.email);
-        if (existingEmployee && existingEmployee.id !== id) {
+      if (typedBody.email && typedBody.email !== employee.email) {
+        const emailTaken = await isEmailTaken(typedBody.email, id);
+        if (emailTaken) {
           const response = NextResponse.json(
             {
               success: false,
@@ -232,6 +271,25 @@ const patchEmployeeHandler = withApiValidation(
             { status: 409 }
           );
           return addSecurityHeaders(response);
+        }
+      }
+
+      // Check if phone number is already taken by another employee
+      if (typedBody.phone && typedBody.phone !== employee.phone) {
+        // Clean phone number before checking
+        const cleanPhone = typedBody.phone.toString().replace(/\D/g, '').slice(-10);
+        if (cleanPhone && cleanPhone.length === 10) {
+          const phoneTaken = await isPhoneTaken(cleanPhone, id);
+          if (phoneTaken) {
+            const response = NextResponse.json(
+              {
+                success: false,
+                error: 'Phone number is already taken by another employee'
+              },
+              { status: 409 }
+            );
+            return addSecurityHeaders(response);
+          }
         }
       }
 

@@ -113,7 +113,7 @@ export interface CreateEmployeeRequest {
   first_name: string;
   last_name: string;
   email: string;
-  phone?: string;
+  phone: string;
   employment_status?: EmploymentStatus;
   can_login?: boolean;
   assigned_cities?: CityAssignment[];
@@ -192,13 +192,13 @@ export const CreateEmployeeRequestSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  phone: z.string().optional(),
+  phone: z.string().min(10, 'Phone number must be at least 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
   employment_status: EmploymentStatusSchema.default('ACTIVE'),
   can_login: z.boolean().default(true),
   assigned_cities: z.array(z.object({
     city: z.string(),
     state: z.string(),
-  })).min(1, 'At least one city must be assigned'),
+  })).optional(), // Make city assignment optional
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
 
@@ -206,13 +206,16 @@ export const EmployeeFormSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email format'),
-  phone: z.string().optional(),
+  phone: z.string().optional().refine((val) => {
+    if (!val || val === '') return true; // Allow empty phone
+    return /^[0-9]{10}$/.test(val); // Must be exactly 10 digits if provided
+  }, 'Phone number must be exactly 10 digits if provided'),
   employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']),
   can_login: z.boolean(),
   assigned_cities: z.array(z.object({
     city: z.string(),
     state: z.string(),
-  })).min(1, 'At least one city must be assigned'),
+  })).optional(), // Make city assignment optional
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   confirm_password: z.string().optional(),
 }).refine((data) => {

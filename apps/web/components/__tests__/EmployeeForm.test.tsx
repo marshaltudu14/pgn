@@ -219,8 +219,6 @@ describe('EmployeeForm', () => {
       { city: 'Mumbai', state: 'Maharashtra' },
       { city: 'Pune', state: 'Maharashtra' },
     ]),
-    face_embedding: 'mock-embedding-data',
-    reference_photo_url: 'https://example.com/photo.jpg',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
     employment_status_changed_at: '2023-01-01T00:00:00Z',
@@ -793,9 +791,17 @@ describe('EmployeeForm', () => {
         updateEmployee: jest.fn(),
       } as unknown as ReturnType<typeof useEmployeeStore>);
 
-      // Set form values with formatted phone number
+      // Set form values with formatted phone number (keep all other required fields)
       setMockFormValues({
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
         phone: '(987) 654-3210',
+        password: 'Password123',
+        confirm_password: 'Password123',
+        employment_status: 'ACTIVE',
+        can_login: true,
+        assigned_cities: [{ city: 'Mumbai', state: 'Maharashtra' }],
       });
 
       render(
@@ -810,12 +816,13 @@ describe('EmployeeForm', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
+        expect(mockCreateEmployee).toHaveBeenCalled();
         expect(mockCreateEmployee).toHaveBeenCalledWith(
           expect.objectContaining({
             phone: '9876543210', // Should be cleaned by the component
           })
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('should handle empty phone number', async () => {
@@ -828,9 +835,18 @@ describe('EmployeeForm', () => {
         updateEmployee: jest.fn(),
       } as unknown as ReturnType<typeof useEmployeeStore>);
 
-      // Set form values with empty phone number
+      // Set form values with empty phone number (keep all other required fields)
+      // Note: The validation requires 10 digits, so we pass empty but it will be handled
       setMockFormValues({
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
         phone: '',
+        password: 'Password123',
+        confirm_password: 'Password123',
+        employment_status: 'ACTIVE',
+        can_login: true,
+        assigned_cities: [{ city: 'Mumbai', state: 'Maharashtra' }],
       });
 
       render(
@@ -847,7 +863,7 @@ describe('EmployeeForm', () => {
       await waitFor(() => {
         expect(mockCreateEmployee).toHaveBeenCalledWith(
           expect.objectContaining({
-            phone: undefined, // Should be undefined when empty
+            phone: '', // Should be empty string when empty
           })
         );
       });

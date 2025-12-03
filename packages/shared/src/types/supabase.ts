@@ -187,13 +187,11 @@ export type Database = {
           employment_status: string
           employment_status_changed_at: string | null
           employment_status_changed_by: string | null
-          face_embedding: string
           first_name: string
           human_readable_user_id: string
           id: string
           last_name: string
-          phone: string | null
-          reference_photo_url: string
+          phone: string
           updated_at: string | null
         }
         Insert: {
@@ -204,13 +202,11 @@ export type Database = {
           employment_status?: string
           employment_status_changed_at?: string | null
           employment_status_changed_by?: string | null
-          face_embedding: string
           first_name: string
           human_readable_user_id: string
           id: string
           last_name: string
-          phone?: string | null
-          reference_photo_url: string
+          phone: string
           updated_at?: string | null
         }
         Update: {
@@ -221,13 +217,11 @@ export type Database = {
           employment_status?: string
           employment_status_changed_at?: string | null
           employment_status_changed_by?: string | null
-          face_embedding?: string
           first_name?: string
           human_readable_user_id?: string
           id?: string
           last_name?: string
           phone?: string | null
-          reference_photo_url?: string
           updated_at?: string | null
         }
         Relationships: []

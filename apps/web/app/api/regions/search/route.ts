@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { searchRegions } from '@/services/regions.service';
 import {
   searchRegionsSchema,
-  RegionSearchResponseSchema,
+  RegionSchema,
 } from '@pgn/shared';
 import { z } from 'zod';
 import { withApiValidation } from '@/lib/api-validation';
@@ -14,7 +14,7 @@ interface ValidatedNextRequest extends NextRequest {
   validatedQuery?: z.infer<typeof searchRegionsSchema>;
 }
 
-// GET /api/regions/search - Search regions
+// GET /api/regions/search - Search regions (limited to 10 results)
 const searchRegionsHandler = withApiValidation(
   async (req: NextRequest): Promise<NextResponse> => {
     try {
@@ -22,9 +22,6 @@ const searchRegionsHandler = withApiValidation(
       const query = (req as ValidatedNextRequest).validatedQuery!;
 
       const result = await searchRegions(query.q, {
-        page: query.page,
-        limit: query.limit,
-      }, {
         sort_by: query.sort_by,
         sort_order: query.sort_order,
       });
@@ -43,7 +40,7 @@ const searchRegionsHandler = withApiValidation(
   },
   {
     query: searchRegionsSchema,
-    response: RegionSearchResponseSchema,
+    response: RegionSchema.array(),
     validateResponse: process.env.NODE_ENV === 'development',
   }
 );
@@ -53,8 +50,8 @@ apiContract.addRoute({
   path: '/api/regions/search',
   method: 'GET',
   inputSchema: searchRegionsSchema,
-  outputSchema: RegionSearchResponseSchema,
-  description: 'Search regions by text across state and city fields'
+  outputSchema: RegionSchema.array(),
+  description: 'Search regions by city name (limited to 10 results)'
 });
 
 export const GET = withSecurity(searchRegionsHandler);

@@ -83,17 +83,42 @@ export async function createEmployee(
     throw new Error('Password is required for creating new employee');
   }
 
+  // Clean phone number before processing
+  const cleanPhone = createData.phone
+    ? createData.phone.replace(/\D/g, '').slice(-10)
+    : '';
+
   let authUserId: string | null = null;
+  let isNewAuthUser = false;
 
   try {
-    // Step 1: Check if auth user already exists
-    const existingAuthUser = await getUserByEmail(createData.email);
+    // Step 1: Comprehensive validation - check both employee table and auth users
+    const [existingEmployee, existingAuthUser] = await Promise.all([
+      getEmployeeByEmail(createData.email),
+      getUserByEmail(createData.email)
+    ]);
 
+    if (existingEmployee && existingAuthUser.success && existingAuthUser.data) {
+      throw new Error('An employee with this email address already exists in the system. Please use the edit functionality to update their information.');
+    }
+
+    if (existingAuthUser.success && existingAuthUser.data && !existingEmployee) {
+      throw new Error('A user with this email address exists in the authentication system but not in the employee database. This requires manual administrator intervention to resolve the data inconsistency.');
+    }
+
+    // Step 2: Check phone number uniqueness (if provided)
+    if (cleanPhone) {
+      const phoneTaken = await isPhoneTaken(cleanPhone);
+      if (phoneTaken) {
+        throw new Error('An employee with this phone number already exists in the system.');
+      }
+    }
+
+    // Step 3: Create or update auth user
     if (existingAuthUser.success && existingAuthUser.data) {
       // Auth user exists, update their password and use their ID
       authUserId = existingAuthUser.data.id;
 
-      // Update the existing user's password
       const updateResult = await updateUserPasswordByEmail(
         createData.email,
         createData.password
@@ -104,25 +129,28 @@ export async function createEmployee(
           `Failed to update existing auth user password: ${updateResult.error || 'Unknown error'}`
         );
       }
-
-          // Updated password for existing auth user: ${createData.email}
     } else {
       // Create new auth user
+      isNewAuthUser = true;
       const authResult = await createAuthUser(
         createData.email,
         createData.password
       );
 
       if (!authResult.success) {
+        const errorMessage = authResult.error as string;
+        if (errorMessage && errorMessage.includes('user_already_exists')) {
+          throw new Error('A user with this email address already exists in the authentication system. Please check if there is a data inconsistency.');
+        }
         throw new Error(
-          `Failed to create auth user: ${authResult.error || 'Unknown error'}`
+          `Failed to create auth user: ${errorMessage || 'Unknown error'}`
         );
       }
 
       authUserId = authResult.data?.user?.id || null;
 
       if (!authUserId) {
-        throw new Error('Failed to get auth user ID');
+        throw new Error('Failed to get auth user ID after creation');
       }
     }
   } catch (error) {
@@ -136,20 +164,18 @@ export async function createEmployee(
     // Generate human readable user ID
     const humanReadableUserId = await generateHumanReadableUserId();
 
-    // Step 2: Create employee record with auth user ID as the primary key
+    // Step 4: Create employee record with auth user ID as the primary key
     const employeeData: EmployeeInsert = {
       id: authUserId, // Use auth user ID directly as employee ID
       human_readable_user_id: humanReadableUserId,
       first_name: createData.first_name,
       last_name: createData.last_name,
       email: createData.email,
-      phone: createData.phone || null,
+      phone: cleanPhone, // Use cleaned phone number
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
       assigned_cities: (createData.assigned_cities as unknown as Json) || [],
-      face_embedding: '', // Will be updated when reference photo is processed
-      reference_photo_url: '', // Will be updated when reference photo is uploaded
-    };
+      };
 
     const { data, error } = await supabase
       .from('employees')
@@ -158,15 +184,37 @@ export async function createEmployee(
       .single();
 
     if (error) {
-      // If employee creation fails, we log the error but don't delete the auth user
-      // as per policy: once a user is created, they are never deleted
-      console.error('Error creating employee:', error);
+      // Enhanced error handling with specific error messages
+      let errorMessage = 'Failed to create employee';
+
+      if (error.message.includes('duplicate key')) {
+        if (error.message.includes('email')) {
+          errorMessage = 'An employee with this email address already exists in the system.';
+        } else if (error.message.includes('phone')) {
+          errorMessage = 'An employee with this phone number already exists in the system.';
+        } else {
+          errorMessage = 'A record with these details already exists in the system.';
+        }
+      } else if (error.message.includes('new row violates row-level security policy')) {
+        errorMessage = 'You do not have permission to create employees. Please contact your administrator.';
+      } else {
+        errorMessage = `Failed to create employee: ${error.message}`;
+      }
+
+      // CRITICAL: Log the state for potential cleanup
       if (authUserId) {
         console.error(
-          `Employee creation failed for auth user ID ${authUserId}. Auth user remains in system.`
+          `Employee creation failed for auth user ID ${authUserId}. Manual cleanup may be required. Error: ${error.message}`
         );
+
+        if (isNewAuthUser) {
+          console.warn(
+            `Newly created auth user ${authUserId} may need manual cleanup as employee creation failed.`
+          );
+        }
       }
-      throw new Error(`Failed to create employee: ${error.message}`);
+
+      throw new Error(errorMessage);
     }
 
     return data; // Return the database row directly
@@ -483,6 +531,50 @@ export async function isEmailTaken(
     return !!(data && data.length > 0);
   } catch (error) {
     console.error('Error in isEmailTaken:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if phone number is already taken by another employee
+ */
+export async function isPhoneTaken(
+  phone: string,
+  excludeId?: string
+): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+
+    if (!phone || typeof phone !== 'string') {
+      return false;
+    }
+
+    // Clean phone number - remove formatting, keep digits only
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      return false; // Invalid phone number format
+    }
+
+    let query = supabase
+      .from('employees')
+      .select('id')
+      .eq('phone', cleanPhone);
+
+    if (excludeId) {
+      query = query.neq('id', excludeId);
+    }
+
+    const { data, error } = await query.limit(1);
+
+    if (error) {
+      console.error('Error checking phone availability:', error);
+      return false;
+    }
+
+    return !!(data && data.length > 0);
+  } catch (error) {
+    console.error('Error in isPhoneTaken:', error);
     return false;
   }
 }

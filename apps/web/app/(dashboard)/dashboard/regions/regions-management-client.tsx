@@ -19,11 +19,9 @@ export default function RegionsManagementClient() {
     error,
     createError,
     filter,
-    pagination,
     createRegion,
     updateRegion,
     deleteRegion,
-    setPagination,
     setFilter,
     clearError,
     clearCreateError,
@@ -36,12 +34,11 @@ export default function RegionsManagementClient() {
   // Use refs to track current values to prevent infinite loops
   const searchTermRef = useRef(searchTerm);
   const prevFilterRef = useRef(filter);
-  const prevPaginationRef = useRef(pagination);
 
   // Load initial data only once
   useEffect(() => {
     const store = useRegionsStore.getState();
-    store.fetchRegions(store.filter, store.pagination);
+    store.fetchRegions(store.filter);
     store.fetchStates();
   }, []); // Empty dependency array to run only once
 
@@ -56,45 +53,34 @@ export default function RegionsManagementClient() {
 
     // If clearing search, apply immediately for better UX
     if (!searchTermRef.current.trim()) {
-      store.fetchRegions(store.filter, store.pagination);
+      store.fetchRegions(store.filter);
       return;
     }
 
     const timer = setTimeout(() => {
       if (searchTermRef.current.trim()) {
-        // Reset to page 1 when searching
-        store.setPagination({ page: 1 });
-        store.searchRegions(searchTermRef.current, { page: 1 });
+        store.searchRegions(searchTermRef.current);
       }
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchTerm]); // Only depend on searchTerm
 
-  // Handle filter and pagination changes
+  // Handle filter changes
   useEffect(() => {
     const store = useRegionsStore.getState();
     const currentFilter = store.filter;
-    const currentPagination = store.pagination;
 
-    // Only fetch if filter or pagination actually changed
-    if (
-      JSON.stringify(currentFilter) !== JSON.stringify(prevFilterRef.current) ||
-      JSON.stringify(currentPagination) !== JSON.stringify(prevPaginationRef.current)
-    ) {
+    // Only fetch if filter actually changed
+    if (JSON.stringify(currentFilter) !== JSON.stringify(prevFilterRef.current)) {
       if (!searchTermRef.current.trim()) {
-        store.fetchRegions(currentFilter, currentPagination);
+        store.fetchRegions(currentFilter);
       }
       prevFilterRef.current = { ...currentFilter };
-      prevPaginationRef.current = { ...currentPagination };
     }
-  }, [filter, pagination]); // Monitor changes but prevent infinite loops
+  }, [filter]); // Monitor filter changes
 
-  // Handle pagination
-  const handlePageChange = (page: number) => {
-    setPagination({ page });
-  };
-
+  
   // Handle clear search
   const handleClearSearch = () => {
     setSearchTerm('');
@@ -170,7 +156,7 @@ export default function RegionsManagementClient() {
           <div>
             <h1 className="text-3xl font-bold">Regions Management</h1>
             <p className="text-muted-foreground">
-              {regions.total} region{regions.total !== 1 ? 's' : ''} found
+              {regions.length} region{regions.length !== 1 ? 's' : ''} found
             </p>
           </div>
           <Button
@@ -220,7 +206,6 @@ export default function RegionsManagementClient() {
         isLoading={isLoading}
         onEdit={handleEdit}
         onDelete={handleDeleteRegion}
-        onPageChange={handlePageChange}
         filter={filter}
         setFilter={setFilter}
       />

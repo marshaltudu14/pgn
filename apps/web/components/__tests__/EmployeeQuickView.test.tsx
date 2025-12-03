@@ -114,8 +114,6 @@ const createMockEmployee = (overrides: Partial<Employee> = {}): Employee => ({
     { city: 'Mumbai', state: 'Maharashtra' },
     { city: 'Pune', state: 'Maharashtra' },
   ]),
-  face_embedding: 'mock-embedding-data',
-  reference_photo_url: 'https://example.com/photo.jpg',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   employment_status_changed_at: '2024-01-01T00:00:00Z',
@@ -411,7 +409,7 @@ describe('EmployeeQuickView Component', () => {
 
   describe('Data Handling', () => {
     it('should handle employee with null phone', () => {
-      const mockEmployee = createMockEmployee({ phone: null });
+      const mockEmployee = createMockEmployee({ phone: '' });
 
       render(
         <EmployeeQuickView
@@ -655,8 +653,6 @@ describe('EmployeeQuickView Component', () => {
         employment_status: 'ACTIVE' as EmploymentStatus,
         can_login: true,
         assigned_cities: null,
-        face_embedding: '',
-        reference_photo_url: '',
         created_at: null,
         updated_at: null,
         employment_status_changed_at: null,

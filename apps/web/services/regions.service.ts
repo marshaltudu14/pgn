@@ -4,8 +4,6 @@ import {
   type CreateRegionRequest,
   type UpdateRegionRequest,
   type RegionFilter,
-  type PaginationParams,
-  type RegionsResponse,
   type StateOption,
 } from '@pgn/shared';
 
@@ -42,20 +40,17 @@ export async function createRegion(data: CreateRegionRequest): Promise<Region> {
 }
 
 /**
- * Get all regions with pagination and filtering
+ * Get all regions with filtering (limited to 10 results)
  */
 export async function getRegions(
-  filters: RegionFilter = {},
-  pagination: PaginationParams = {}
-): Promise<RegionsResponse> {
+  filters: RegionFilter = {}
+): Promise<Region[]> {
   const supabase = await createClient();
-  const page = pagination.page || 1;
-  const limit = Math.min(pagination.limit || 20, 100); // Max 100 per request, default 20
-  const offset = pagination.offset || ((page - 1) * limit);
 
   let query = supabase
     .from('regions')
-    .select('*', { count: 'exact' });
+    .select('*')
+    .limit(10); // Always limit to 10 results
 
   // Apply sorting
   const sortBy = filters.sort_by || 'city';
@@ -70,23 +65,14 @@ export async function getRegions(
     query = query.ilike('city', `%${filters.city}%`);
   }
 
-  // Apply pagination
-  query = query.range(offset, offset + limit - 1);
-
-  const { data, error, count } = await query;
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching regions:', error);
     throw new Error('Failed to fetch regions');
   }
 
-  return {
-    data: data || [],
-    total: count || 0,
-    page,
-    limit,
-    hasMore: (offset + (data?.length || 0)) < (count || 0),
-  };
+  return data || [];
 }
 
 /**
@@ -198,41 +184,31 @@ export async function getStates(): Promise<StateOption[]> {
 
 
 /**
- * Search regions by city only with database-level sorting
+ * Search regions by city only with database-level sorting (limited to 10 results)
  */
 export async function searchRegions(
   searchTerm: string,
-  pagination: PaginationParams = {},
   filters: RegionFilter = {}
-): Promise<RegionsResponse> {
+): Promise<Region[]> {
   const supabase = await createClient();
-  const page = pagination.page || 1;
-  const limit = Math.min(pagination.limit || 20, 100);
-  const offset = pagination.offset || ((page - 1) * limit);
 
   let query = supabase
     .from('regions')
-    .select('*', { count: 'exact' })
-    .ilike('city', `%${searchTerm}%`);
+    .select('*')
+    .ilike('city', `%${searchTerm}%`)
+    .limit(10); // Always limit to 10 results
 
   // Apply sorting
   const sortBy = filters.sort_by || 'city';
   const sortOrder = filters.sort_order || 'asc';
-  query = query.order(sortBy, { ascending: sortOrder === 'asc' })
-    .range(offset, offset + limit - 1);
+  query = query.order(sortBy, { ascending: sortOrder === 'asc' });
 
-  const { data, error, count } = await query;
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error searching regions:', error);
     throw new Error('Failed to search regions');
   }
 
-  return {
-    data: data || [],
-    total: count || 0,
-    page,
-    limit,
-    hasMore: (offset + (data?.length || 0)) < (count || 0),
-  };
+  return data || [];
 }

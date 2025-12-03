@@ -4,10 +4,8 @@
 
 import {
   CreateRegionRequest,
-  PaginationParams,
   Region,
   RegionFilter,
-  RegionsResponse,
   StateOption,
   UpdateRegionRequest,
 } from '@pgn/shared';
@@ -37,17 +35,14 @@ const createMockRegion = (overrides: Partial<Region> = {}): Region => ({
   ...overrides,
 });
 
-// Helper function to create mock regions response
-const createMockRegionsResponse = (
-  overrides: Partial<RegionsResponse> = {}
-): RegionsResponse => ({
-  data: [createMockRegion()],
-  total: 1,
-  page: 1,
-  limit: 20,
-  hasMore: false,
-  ...overrides,
-});
+// Helper function to create mock regions data
+const createMockRegions = (count: number = 1, overrides: Partial<Region> = {}): Region[] => {
+  const regions: Region[] = [];
+  for (let i = 0; i < count; i++) {
+    regions.push(createMockRegion({ ...overrides, id: `region-${i + 1}` }));
+  }
+  return regions;
+};
 
 // Helper function to create mock state options
 const createMockStates = (): StateOption[] => [
@@ -92,13 +87,7 @@ describe('Regions Store', () => {
 
     // Force complete store reset by recreating the store
     useRegionsStore.setState({
-      regions: {
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        hasMore: false,
-      },
+      regions: [],
       states: [],
       isLoading: true,
       isCreating: false,
@@ -110,15 +99,11 @@ describe('Regions Store', () => {
         sort_by: 'city',
         sort_order: 'asc',
       },
-      pagination: {
-        page: 1,
-        limit: 20,
-      },
     });
 
     // Mock fetch responses
     (fetch as jest.MockedFunction<typeof fetch>).mockImplementation((url) => {
-      if (url?.includes('/states')) {
+      if (typeof url === 'string' && url.includes('/states')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ data: createMockStates() }),
@@ -126,7 +111,7 @@ describe('Regions Store', () => {
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(createMockRegionsResponse()),
+        json: () => Promise.resolve(createMockRegions()),
       } as Response);
     });
   });
@@ -140,13 +125,7 @@ describe('Regions Store', () => {
     it('should have correct initial state', () => {
       const { result } = renderHook(() => useRegionsStore());
 
-      expect(result.current.regions).toEqual({
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        hasMore: false,
-      });
+      expect(result.current.regions).toEqual([]);
       expect(result.current.states).toEqual([]);
       expect(result.current.isLoading).toBe(true);
       expect(result.current.isCreating).toBe(false);
@@ -158,17 +137,13 @@ describe('Regions Store', () => {
         sort_by: 'city',
         sort_order: 'asc',
       });
-      expect(result.current.pagination).toEqual({
-        page: 1,
-        limit: 20,
-      });
     });
   });
 
   
   describe('fetchRegions', () => {
     it('should fetch regions successfully with default parameters', async () => {
-      const mockResponse = createMockRegionsResponse();
+      const mockResponse = createMockRegions();
       (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
@@ -186,10 +161,6 @@ describe('Regions Store', () => {
         sort_by: 'city',
         sort_order: 'asc',
       });
-      expect(result.current.pagination).toEqual({
-        page: mockResponse.page,
-        limit: mockResponse.limit,
-      });
       expect(result.current.error).toBe(null);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions?sort_by=city&sort_order=asc', {
@@ -198,8 +169,8 @@ describe('Regions Store', () => {
       });
     });
 
-    it('should fetch regions with filters and pagination', async () => {
-      const mockResponse = createMockRegionsResponse();
+    it('should fetch regions with filters', async () => {
+      const mockResponse = createMockRegions();
       (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
@@ -211,14 +182,13 @@ describe('Regions Store', () => {
         state: 'California',
         city: 'Los Angeles',
       };
-      const pagination: PaginationParams = { page: 2, limit: 10 };
 
       await act(async () => {
-        await result.current.fetchRegions(filters, pagination);
+        await result.current.fetchRegions(filters);
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/regions?state=California&city=Los+Angeles&sort_by=city&sort_order=asc&page=2&limit=10',
+        '/api/regions?state=California&city=Los+Angeles&sort_by=city&sort_order=asc',
         {
           method: 'GET',
           headers: mockGetAuthHeaders(),
@@ -267,7 +237,7 @@ describe('Regions Store', () => {
     const mockNewRegion = createMockRegion();
 
     it('should create region successfully', async () => {
-      const mockResponse = createMockRegionsResponse();
+      const mockRegionsResponse = createMockRegions();
       // Mock create API call
       (fetch as jest.MockedFunction<typeof fetch>)
         .mockResolvedValueOnce({
@@ -277,7 +247,7 @@ describe('Regions Store', () => {
         // Mock fetchRegions call that happens after creation
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve(mockResponse),
+          json: () => Promise.resolve(mockRegionsResponse),
         } as Response);
 
       const { result } = renderHook(() => useRegionsStore());
@@ -289,7 +259,7 @@ describe('Regions Store', () => {
 
       expect(result.current.isCreating).toBe(false);
       expect(result.current.createError).toBe(null);
-      expect(result.current.regions).toEqual(mockResponse);
+      expect(result.current.regions).toEqual(mockRegionsResponse);
       expect(createdRegion).toEqual(mockNewRegion);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions', {
@@ -352,7 +322,7 @@ describe('Regions Store', () => {
     });
 
     it('should update region successfully', async () => {
-      const mockResponse = createMockRegionsResponse();
+      const mockRegionsResponse = createMockRegions();
       // Mock update API call
       (fetch as jest.MockedFunction<typeof fetch>)
         .mockResolvedValueOnce({
@@ -362,7 +332,7 @@ describe('Regions Store', () => {
         // Mock fetchRegions call that happens after update
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve(mockResponse),
+          json: () => Promise.resolve(mockRegionsResponse),
         } as Response);
 
       const { result } = renderHook(() => useRegionsStore());
@@ -377,7 +347,7 @@ describe('Regions Store', () => {
 
       expect(result.current.isUpdating).toBe(false);
       expect(result.current.error).toBe(null);
-      expect(result.current.regions).toEqual(mockResponse);
+      expect(result.current.regions).toEqual(mockRegionsResponse);
       expect(updatedRegion).toEqual(mockUpdatedRegion);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/region-123', {
@@ -429,7 +399,7 @@ describe('Regions Store', () => {
 
   describe('deleteRegion', () => {
     it('should delete region successfully', async () => {
-      const mockResponse = createMockRegionsResponse();
+      const mockRegionsResponse = createMockRegions();
       // Mock delete API call
       (fetch as jest.MockedFunction<typeof fetch>)
         .mockResolvedValueOnce({
@@ -439,7 +409,7 @@ describe('Regions Store', () => {
         // Mock fetchRegions call that happens after deletion
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve(mockResponse),
+          json: () => Promise.resolve(mockRegionsResponse),
         } as Response);
 
       const { result } = renderHook(() => useRegionsStore());
@@ -450,7 +420,7 @@ describe('Regions Store', () => {
 
       expect(result.current.isDeleting).toBe(false);
       expect(result.current.error).toBe(null);
-      expect(result.current.regions).toEqual(mockResponse);
+      expect(result.current.regions).toEqual(mockRegionsResponse);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/region-123', {
         method: 'DELETE',
@@ -551,7 +521,7 @@ describe('Regions Store', () => {
 
   describe('searchRegions', () => {
     it('should search regions successfully with default parameters', async () => {
-      const mockResponse = createMockRegionsResponse();
+      const mockResponse = createMockRegions();
       (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
@@ -565,38 +535,11 @@ describe('Regions Store', () => {
 
       expect(result.current.isLoading).toBe(false);
       expect(result.current.regions).toEqual(mockResponse);
-      expect(result.current.pagination).toEqual({
-        page: mockResponse.page,
-        limit: mockResponse.limit,
-      });
       expect(result.current.error).toBe(null);
 
       expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California&sort_by=city&sort_order=asc', {
         headers: mockGetAuthHeaders(),
       });
-    });
-
-    it('should search regions with pagination', async () => {
-      const mockResponse = createMockRegionsResponse();
-      (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-      } as Response);
-
-      const { result } = renderHook(() => useRegionsStore());
-
-      const pagination: PaginationParams = { page: 2, limit: 10 };
-
-      await act(async () => {
-        await result.current.searchRegions('California', pagination);
-      });
-
-      expect(fetch).toHaveBeenCalledWith(
-        '/api/regions/search?q=California&page=2&limit=10&sort_by=city&sort_order=asc',
-        {
-          headers: mockGetAuthHeaders(),
-        }
-      );
     });
 
     it('should handle search regions error', async () => {
@@ -658,30 +601,7 @@ describe('Regions Store', () => {
     });
   });
 
-  describe('setPagination', () => {
-    it('should update pagination state', () => {
-      const { result } = renderHook(() => useRegionsStore());
-
-      act(() => {
-        result.current.setPagination({ page: 2 });
-      });
-
-      expect(result.current.pagination).toEqual({
-        page: 2,
-        limit: 20,
-      });
-
-      act(() => {
-        result.current.setPagination({ limit: 10 });
-      });
-
-      expect(result.current.pagination).toEqual({
-        page: 2,
-        limit: 10,
-      });
-    });
-  });
-
+  
   describe('clearError', () => {
     it('should clear error state', () => {
       const { result } = renderHook(() => useRegionsStore());
@@ -729,7 +649,6 @@ describe('Regions Store', () => {
       // Change some state
       act(() => {
         result.current.setFilter({ state: 'California' });
-        result.current.setPagination({ page: 2, limit: 10 });
       });
 
       expect(result.current.filter).toEqual({
@@ -737,20 +656,13 @@ describe('Regions Store', () => {
         sort_order: 'asc',
         state: 'California',
       });
-      expect(result.current.pagination).toEqual({ page: 2, limit: 10 });
 
       // Reset store
       act(() => {
         result.current.reset();
       });
 
-      expect(result.current.regions).toEqual({
-        data: [],
-        total: 0,
-        page: 1,
-        limit: 20,
-        hasMore: false,
-      });
+      expect(result.current.regions).toEqual([]);
       expect(result.current.states).toEqual([]);
       expect(result.current.isLoading).toBe(true);
       expect(result.current.isCreating).toBe(false);
@@ -761,10 +673,6 @@ describe('Regions Store', () => {
       expect(result.current.filter).toEqual({
         sort_by: 'city',
         sort_order: 'asc',
-      });
-      expect(result.current.pagination).toEqual({
-        page: 1,
-        limit: 20,
       });
     });
   });

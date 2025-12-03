@@ -67,6 +67,9 @@ export function EmployeeList({
     clearError,
   } = useEmployeeStore();
 
+  // Local loading state for filtering operations
+  const [isFiltering, setIsFiltering] = useState(false);
+
   // Initial data fetch when component mounts
   useEffect(() => {
     fetchEmployees();
@@ -96,10 +99,12 @@ export function EmployeeList({
     }
   }, [setFilters, setPagination, fetchEmployees, filters.search]);
 
-  const handleStatusChange = useCallback((value: EmploymentStatus | 'all') => {
+  const handleStatusChange = useCallback(async (value: EmploymentStatus | 'all') => {
+    setIsFiltering(true);
     setFilters({ status: value });
     setPagination(1); // Reset to first page
-    fetchEmployees(); // Non-search filter triggers immediate fetch
+    await fetchEmployees(); // Non-search filter triggers immediate fetch
+    setIsFiltering(false);
   }, [setFilters, setPagination, fetchEmployees]);
 
   const handleSearchFieldChange = useCallback((value: SearchFieldType) => {
@@ -252,8 +257,8 @@ export function EmployeeList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && employees.length === 0 ? (
-                  // Show skeleton rows when loading and no data exists
+                {(loading && employees.length === 0) || isFiltering ? (
+                  // Show skeleton rows when loading and no data exists OR when filtering
                   [...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
@@ -307,7 +312,24 @@ export function EmployeeList({
                     </TableCell>
                     <TableCell className="hidden xl:table-cell">
                       <div className="text-sm">
-                        {(employee.assigned_cities as unknown as CityAssignment[])?.map((city: CityAssignment) => city.city).join(', ') || '-'}
+                        {(() => {
+                          const cities = (employee.assigned_cities as unknown as CityAssignment[]) || [];
+                          if (cities.length === 0) return '-';
+
+                          const displayCities = cities.slice(0, 2);
+                          const remainingCount = cities.length - displayCities.length;
+
+                          return (
+                            <>
+                              {displayCities.map((city: CityAssignment) => city.city).join(', ')}
+                              {remainingCount > 0 && (
+                                <span className="text-muted-foreground">
+                                  {' '}+{remainingCount} more
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -15,6 +15,7 @@ import {
   changeEmploymentStatus,
   updateRegionalAssignments,
   isEmailTaken,
+  isPhoneTaken,
   isHumanReadableIdTaken,
   resetEmployeePassword
 } from '../employee.service';
@@ -247,6 +248,10 @@ describe('Employee Service', () => {
         data: null
       } as any);
 
+      // Mock getEmployeeByEmail to return null (no existing employee)
+      const getEmployeeByEmailSpy = jest.spyOn({ getEmployeeByEmail }, 'getEmployeeByEmail');
+      getEmployeeByEmailSpy.mockResolvedValue(null);
+
       // Mock auth user creation success
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
         success: true,
@@ -291,7 +296,11 @@ describe('Employee Service', () => {
         validCreateRequest.email,
         validCreateRequest.password
       );
-      expect(callCount).toBe(2); // Should be called twice
+      expect(callCount).toBe(2); // Should be called twice (userId check, insert)
+      expect(getEmployeeByEmailSpy).toHaveBeenCalledWith(validCreateRequest.email);
+
+      // Cleanup spy
+      getEmployeeByEmailSpy.mockRestore();
     });
 
     it('should create employee with optional fields as null when not provided', async () => {
@@ -299,6 +308,7 @@ describe('Employee Service', () => {
         first_name: 'Jane',
         last_name: 'Smith',
         email: 'jane.smith@example.com',
+        phone: '1234567890',
         password: 'password123'
       };
 
@@ -351,7 +361,7 @@ describe('Employee Service', () => {
 
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          phone: null,
+          phone: '1234567890',
           employment_status: 'ACTIVE',
           can_login: true,
           assigned_cities: []
@@ -2469,6 +2479,142 @@ describe('Employee Service', () => {
         success: false,
         error: 'Email is required for password reset'
       });
+    });
+  });
+
+  describe('isPhoneTaken', () => {
+    it('should return true when phone number is taken', async () => {
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue({
+              data: [{ id: 'existing-employee' }],
+              error: null
+            })
+          })
+        })
+      });
+
+      const result = await isPhoneTaken('9876543210');
+
+      expect(result).toBe(true);
+      expect(mockSupabaseClient.from().select().eq).toHaveBeenCalledWith('phone', '9876543210');
+    });
+
+    it('should return false when phone number is available', async () => {
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue({
+              data: [],
+              error: null
+            })
+          })
+        })
+      });
+
+      const result = await isPhoneTaken('9876543210');
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle phone number with formatting', async () => {
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue({
+              data: [],
+              error: null
+            })
+          })
+        })
+      });
+
+      const result = await isPhoneTaken('(987) 654-3210');
+
+      expect(result).toBe(false);
+      // Should clean phone number and check with last 10 digits
+      expect(mockSupabaseClient.from().select().eq).toHaveBeenCalledWith('phone', '9876543210');
+    });
+
+    it('should exclude specified ID from check', async () => {
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            neq: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue({
+                data: [],
+                error: null
+              })
+            })
+          })
+        })
+      });
+
+      const result = await isPhoneTaken('9876543210', 'current-employee-id');
+
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from().select().eq).toHaveBeenCalledWith('phone', '9876543210');
+      expect(mockSupabaseClient.from().select().eq().neq).toHaveBeenCalledWith('id', 'current-employee-id');
+    });
+
+    it('should return false for invalid phone numbers', async () => {
+      const result = await isPhoneTaken('123'); // Too short
+
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should return false for empty phone string', async () => {
+      const result = await isPhoneTaken('');
+
+      expect(result).toBe(false);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should return false for null/undefined phone', async () => {
+      const result1 = await isPhoneTaken(null as any);
+      const result2 = await isPhoneTaken(undefined as any);
+
+      expect(result1).toBe(false);
+      expect(result2).toBe(false);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalled();
+    });
+
+    it('should handle database errors gracefully', async () => {
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue({
+              data: null,
+              error: { message: 'Database connection failed' }
+            })
+          })
+        })
+      });
+
+      const result = await isPhoneTaken('9876543210');
+
+      expect(result).toBe(false);
+    });
+
+    it('should handle phone numbers longer than 10 digits', async () => {
+      mockSupabaseClient.from.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          eq: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue({
+              data: [{ id: 'existing-employee' }],
+              error: null
+            })
+          })
+        })
+      });
+
+      // Should only use last 10 digits
+      const result = await isPhoneTaken('1239876543210');
+
+      expect(result).toBe(true);
+      expect(mockSupabaseClient.from().select().eq).toHaveBeenCalledWith('phone', '9876543210');
     });
   });
 });

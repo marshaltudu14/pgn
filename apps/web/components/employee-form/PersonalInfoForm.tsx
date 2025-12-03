@@ -83,7 +83,7 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
           name="phone"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone Number</FormLabel>
+              <FormLabel>Phone Number *</FormLabel>
               <FormControl>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground">
@@ -93,11 +93,23 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
                     type="tel"
                     placeholder="9876543210"
                     className="pl-10"
-                    {...field}
+                    value={field.value || ''}
+                    onChange={(e) => {
+                      // Only allow digits and limit to 10 characters
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                      field.onChange(value);
+                    }}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
                   />
                 </div>
               </FormControl>
               <FormMessage />
+              {field.value && field.value.length < 10 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Phone number must be exactly 10 digits
+                </p>
+              )}
             </FormItem>
           )}
         />
@@ -116,7 +128,10 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter password (min 6 characters)"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
                     />
                     <button
                       type="button"
@@ -142,7 +157,10 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
                     <Input
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm password"
-                      {...field}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
                     />
                     <button
                       type="button"

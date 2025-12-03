@@ -61,12 +61,12 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       first_name: '',
       last_name: '',
       email: '',
-      phone: undefined,
+      phone: '',
       employment_status: 'ACTIVE',
       can_login: true,
       assigned_cities: [],
-      password: undefined,
-      confirm_password: undefined,
+      password: '',
+      confirm_password: '',
     },
     mode: 'onBlur', // Validate on blur for better UX
   });
@@ -77,24 +77,24 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         first_name: employee.first_name,
         last_name: employee.last_name,
         email: employee.email,
-        phone: employee.phone || undefined,
+        phone: employee.phone || '',
         employment_status: employee.employment_status as EmploymentStatus,
         can_login: employee.can_login ?? true,
         assigned_cities: (employee.assigned_cities as unknown as CityAssignment[]) || [],
-        password: undefined, // Don't pre-fill password
-        confirm_password: undefined, // Don't pre-fill confirm password
+        password: '', // Don't pre-fill password
+        confirm_password: '', // Don't pre-fill confirm password
       });
     } else if (!employee && open) {
       form.reset({
         first_name: '',
         last_name: '',
         email: '',
-        phone: undefined,
+        phone: '',
         employment_status: 'ACTIVE',
         can_login: true,
         assigned_cities: [],
-        password: undefined,
-        confirm_password: undefined,
+        password: '',
+        confirm_password: '',
       });
     }
   }, [employee, open, form]);
@@ -104,8 +104,25 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       setLoading(true);
       setError(null);
 
+      // Clean phone number - remove formatting, keep digits only
+      const cleanPhone = data.phone
+        ? data.phone.replace(/\D/g, '').slice(-10) // Keep only last 10 digits
+        : '';
+
+      // For validation, if phone is empty after cleaning, don't include it in validation
+      // since EmployeeFormSchema now allows optional phone
+      const dataForValidation = {
+        ...data,
+        phone: cleanPhone || undefined,
+      };
+
+      // For editing, create a modified schema that doesn't require password
+      const schemaForValidation = isEditing ?
+        EmployeeFormSchema.omit({ password: true, confirm_password: true }) :
+        EmployeeFormSchema;
+
       // Manual validation with Zod
-      const validationResult = EmployeeFormSchema.safeParse(data);
+      const validationResult = schemaForValidation.safeParse(dataForValidation);
       if (!validationResult.success) {
         const errorMessages = validationResult.error.issues.map(err => err.message).join(', ');
         toast.error('Validation failed: ' + errorMessages);
@@ -118,10 +135,11 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         return;
       }
 
-      // Clean phone number - remove formatting, keep digits only
-      const cleanPhone = data.phone
-        ? data.phone.replace(/\D/g, '').slice(-10) // Keep only last 10 digits
-        : undefined;
+      // For editing, if password is provided, validate it separately
+      if (isEditing && data.password && data.password.length < 6) {
+        toast.error('Password must be at least 6 characters');
+        return;
+      }
 
       let result;
 

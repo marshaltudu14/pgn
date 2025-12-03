@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  createEmployee,
-  getEmployeeByEmail
+  createEmployee
 } from '@/services/employee.service';
 import {
   CreateEmployeeRequestSchema,
@@ -64,21 +63,7 @@ const createEmployeeHandler = withApiValidation(
       // Use validated request body
       const body = (request as ValidatedBodyRequest).validatedBody;
 
-      // Check if email is already taken by an existing employee
-      const typedBody = body as { email: string; [key: string]: unknown };
-      const existingEmployee = await getEmployeeByEmail(typedBody.email);
-      if (existingEmployee) {
-        const response = NextResponse.json(
-          {
-            success: false,
-            error: 'An employee with this email address already exists. Please use the Edit Employee page to update their information instead.'
-          },
-          { status: 409 }
-        );
-        return addSecurityHeaders(response);
-      }
-
-      // Create employee
+      // Create employee - the service now handles all validation including email and phone uniqueness
       const newEmployee = await createEmployee(body as CreateEmployeeRequest);
 
       const response = NextResponse.json({
@@ -90,47 +75,82 @@ const createEmployeeHandler = withApiValidation(
     } catch (error) {
       console.error('Error creating employee:', error);
 
-      // Handle specific error cases and pass through the actual error message
+      // Handle specific error cases with improved messages
       if (error instanceof Error) {
-        // Handle duplicate user error - but now we'll allow it since we can update existing auth users
-        if (error.message.includes('A user with this email address has already been registered')) {
-          // This shouldn't happen anymore since we handle existing auth users
-          // but keeping it as a fallback
+        // Handle validation errors from the service layer
+        if (error.message.includes('already exists in the system')) {
           const response = NextResponse.json(
             {
               success: false,
-              error: 'An error occurred while processing the auth user. Please try again.'
-            },
-            { status: 500 }
-          );
-          return addSecurityHeaders(response);
-        }
-
-        // Handle row-level security policy errors
-        if (error.message.includes('new row violates row-level security policy')) {
-          const response = NextResponse.json(
-            {
-              success: false,
-              error: 'You do not have permission to create employees. Please contact your administrator.'
-            },
-            { status: 403 }
-          );
-          return addSecurityHeaders(response);
-        }
-
-        // Handle duplicate key errors
-        if (error.message.includes('duplicate key')) {
-          const response = NextResponse.json(
-            {
-              success: false,
-              error: 'Employee with this email or user ID already exists'
+              error: error.message
             },
             { status: 409 }
           );
           return addSecurityHeaders(response);
         }
 
-        // Pass through the actual error message
+        // Handle authentication system inconsistency
+        if (error.message.includes('exists in the authentication system but not in the employee database')) {
+          const response = NextResponse.json(
+            {
+              success: false,
+              error: error.message,
+              requiresManualIntervention: true
+            },
+            { status: 409 }
+          );
+          return addSecurityHeaders(response);
+        }
+
+        // Handle row-level security policy errors
+        if (error.message.includes('permission to create employees')) {
+          const response = NextResponse.json(
+            {
+              success: false,
+              error: error.message
+            },
+            { status: 403 }
+          );
+          return addSecurityHeaders(response);
+        }
+
+        // Handle duplicate key errors (fallback)
+        if (error.message.includes('duplicate key')) {
+          const response = NextResponse.json(
+            {
+              success: false,
+              error: 'An employee with this email or phone number already exists in the system.'
+            },
+            { status: 409 }
+          );
+          return addSecurityHeaders(response);
+        }
+
+        // Handle auth user creation failures
+        if (error.message.includes('Failed to create auth user')) {
+          const response = NextResponse.json(
+            {
+              success: false,
+              error: 'Failed to create user authentication. Please check the email address and try again.'
+            },
+            { status: 500 }
+          );
+          return addSecurityHeaders(response);
+        }
+
+        // Handle password-related errors
+        if (error.message.includes('Failed to update existing auth user password')) {
+          const response = NextResponse.json(
+            {
+              success: false,
+              error: 'Failed to set password for existing user. Please contact technical support.'
+            },
+            { status: 500 }
+          );
+          return addSecurityHeaders(response);
+        }
+
+        // Pass through the actual error message for other cases
         const response = NextResponse.json(
           {
             success: false,
@@ -145,7 +165,7 @@ const createEmployeeHandler = withApiValidation(
         {
           success: false,
           error: 'Failed to create employee',
-          message: 'Unknown error'
+          message: 'An unexpected error occurred while creating the employee'
         },
         { status: 500 }
       );

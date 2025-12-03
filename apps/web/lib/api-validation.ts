@@ -29,6 +29,11 @@ export function withApiValidation<T extends NextResponse>(
 ) {
   return async (req: NextRequest, context: { params?: unknown }): Promise<T> => {
     try {
+      // Handle Next.js 16 dynamic params - params is now a Promise
+      let resolvedParams = context.params;
+      if (context.params && typeof context.params === 'object' && 'then' in context.params) {
+        resolvedParams = await context.params;
+      }
       // Validate request body if schema is provided
       if (options.body) {
         const clonedReq = req.clone();
@@ -116,8 +121,8 @@ export function withApiValidation<T extends NextResponse>(
       }
 
       // Validate route parameters if schema is provided
-      if (options.params && context.params) {
-        const validationResult = options.params.safeParse(context.params);
+      if (options.params && resolvedParams) {
+        const validationResult = options.params.safeParse(resolvedParams);
 
         if (!validationResult.success) {
           const errorMessage = validationResult.error.issues.map(err =>
@@ -141,8 +146,8 @@ export function withApiValidation<T extends NextResponse>(
         (req as NextRequest & { validatedParams: unknown }).validatedParams = validationResult.data;
       }
 
-      // Call the original handler
-      const response = await handler(req, context);
+      // Call the original handler with resolved params
+      const response = await handler(req, { params: resolvedParams });
 
       // Validate response if schema is provided and validation is enabled
       if (options.validateResponse && options.response && response instanceof NextResponse) {

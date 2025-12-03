@@ -111,8 +111,6 @@ const createMockEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   assigned_cities: JSON.stringify([
     { city: 'Mumbai', state: 'Maharashtra' },
   ]),
-  face_embedding: 'mock-embedding-data',
-  reference_photo_url: 'https://example.com/photo.jpg',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   employment_status_changed_at: '2024-01-01T00:00:00Z',

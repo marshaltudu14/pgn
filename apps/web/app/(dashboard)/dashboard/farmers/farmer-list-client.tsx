@@ -9,7 +9,6 @@ import { useState } from 'react';
 import { FarmerWithRetailer } from '@pgn/shared';
 import { FarmerList } from '@/components/farmer-list';
 import { FarmerQuickView } from '@/components/farmer-quick-view';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useRouter } from 'next/navigation';
 
 export default function FarmerListClient() {
@@ -39,18 +38,6 @@ export default function FarmerListClient() {
 
   return (
     <div className="space-y-6">
-      <Breadcrumb className="mb-6">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Farmers</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <FarmerList
         onFarmerSelect={handleFarmerSelect}
         onFarmerEdit={handleFarmerEdit}

@@ -49,7 +49,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
     search: '',
   },
 
-  fetchRetailers: async (params) => {
+  fetchRetailers: async (params = {}) => {
     const state = get();
     const page = params?.page || state.pagination.currentPage;
     const itemsPerPage = params?.itemsPerPage || state.pagination.itemsPerPage;
@@ -60,7 +60,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
     try {
       const searchParams = new URLSearchParams({
         page: page.toString(),
-        itemsPerPage: itemsPerPage.toString(),
+        limit: itemsPerPage.toString(),
         ...(filters.search && { search: filters.search }),
         ...(filters.shop_name && { shop_name: filters.shop_name }),
         ...(filters.email && { email: filters.email }),

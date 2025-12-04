@@ -124,71 +124,57 @@ export function DealerList({
     const { currentPage, totalPages } = pagination;
     const items = [];
 
-    // Show previous page
-    if (currentPage > 1) {
-      items.push(
-        <PaginationItem key="prev">
-          <PaginationPrevious
-            onClick={() => handlePageChange(currentPage - 1)}
-            className="cursor-pointer"
-          />
-        </PaginationItem>
-      );
-    }
-
     // Always show first page
-    items.push(
-      <PaginationItem key={1}>
-        <PaginationLink
-          onClick={() => handlePageChange(1)}
-          isActive={currentPage === 1}
-          className="cursor-pointer"
-        >
-          1
-        </PaginationLink>
-      </PaginationItem>
-    );
-
-    // Show ellipsis if current page is far from start
     if (currentPage > 3) {
       items.push(
-        <PaginationItem key="ellipsis-start">
-          <PaginationEllipsis />
+        <PaginationItem key={1}>
+          <PaginationLink
+            onClick={() => handlePageChange(1)}
+            isActive={currentPage === 1}
+            className="cursor-pointer"
+          >
+            1
+          </PaginationLink>
         </PaginationItem>
       );
-    }
 
-    // Show pages around current page
-    const startPage = Math.max(2, currentPage - 1);
-    const endPage = Math.min(totalPages - 1, currentPage + 1);
-
-    for (let i = startPage; i <= endPage; i++) {
-      if (i > 1 && i < totalPages) {
+      if (currentPage > 4) {
         items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              onClick={() => handlePageChange(i)}
-              isActive={currentPage === i}
-              className="cursor-pointer"
-            >
-              {i}
-            </PaginationLink>
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
           </PaginationItem>
         );
       }
     }
 
-    // Show ellipsis if current page is far from end
-    if (currentPage < totalPages - 2) {
+    // Show pages around current page
+    const startPage = Math.max(1, currentPage - 1);
+    const endPage = Math.min(totalPages, currentPage + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
       items.push(
-        <PaginationItem key="ellipsis-end">
-          <PaginationEllipsis />
+        <PaginationItem key={i}>
+          <PaginationLink
+            onClick={() => handlePageChange(i)}
+            isActive={i === currentPage}
+            className="cursor-pointer"
+          >
+            {i}
+          </PaginationLink>
         </PaginationItem>
       );
     }
 
-    // Always show last page if more than 1 page
-    if (totalPages > 1) {
+    // Always show last page
+    if (currentPage < totalPages - 2) {
+      if (currentPage < totalPages - 3) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
       items.push(
         <PaginationItem key={totalPages}>
           <PaginationLink
@@ -198,18 +184,6 @@ export function DealerList({
           >
             {totalPages}
           </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    // Show next page
-    if (currentPage < totalPages) {
-      items.push(
-        <PaginationItem key="next">
-          <PaginationNext
-            onClick={() => handlePageChange(currentPage + 1)}
-            className="cursor-pointer"
-          />
         </PaginationItem>
       );
     }
@@ -430,34 +404,24 @@ export function DealerList({
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
-              </div>
-              <Select
-                value={pagination.itemsPerPage.toString()}
-                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
-              >
-                <SelectTrigger className="w-20 cursor-pointer">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Pagination>
-                <PaginationContent>
-                  {generatePaginationItems()}
-                </PaginationContent>
-              </Pagination>
-            </div>
+        <div className="flex items-center justify-center p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
+          <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                {generatePaginationItems()}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         </div>
       )}

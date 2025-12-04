@@ -141,34 +141,11 @@ export function RegionsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">
-            {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} total
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm text-muted-foreground">Items per page:</span>
-            <Select
-              value={pagination.itemsPerPage.toString()}
-              onValueChange={(value) => handlePageSizeChange(parseInt(value))}
-            >
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="5">5</SelectItem>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <div>
+        <h3 className="text-lg font-semibold">
+          {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} total
+        </h3>
+      </div>
         </div>
       </div>
 
@@ -308,10 +285,7 @@ export function RegionsTable({
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Page {pagination.currentPage} of {pagination.totalPages}
-          </div>
+        <div className="flex items-center justify-center">
           <Pagination>
             <PaginationContent>
               <PaginationItem>

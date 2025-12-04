@@ -1,29 +1,21 @@
 /**
  * Dealer Quick View Component
- * Displays a modal with dealer details and quick actions
+ * Displays a full-screen modal with dealer details and quick actions
  */
 
 'use client';
 
-import { Dealer } from '@pgn/shared';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { DealerWithRetailers } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Edit, Building, Mail, Phone, MapPin, Calendar, User } from 'lucide-react';
+import { FullScreenModal } from '@/components/ui/full-screen-modal';
+import { Edit, Mail, Phone, MapPin, Calendar, User, Clock, UserCheck, AlertCircle, Briefcase } from 'lucide-react';
 
 interface DealerQuickViewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  dealer: Dealer | null;
-  onEdit?: (dealer: Dealer) => void;
+  dealer: DealerWithRetailers | null;
+  onEdit?: (dealer: DealerWithRetailers) => void;
 }
 
 export function DealerQuickView({
@@ -34,124 +26,202 @@ export function DealerQuickView({
 }: DealerQuickViewProps) {
   if (!dealer) return null;
 
+  const actions = (
+    <>
+      <Button variant="outline" onClick={() => onOpenChange(false)}>
+        Close
+      </Button>
+      <Button onClick={() => onEdit?.(dealer)}>
+        <Edit className="h-4 w-4 mr-2" />
+        Edit Dealer
+      </Button>
+    </>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5" />
-            {dealer.name}
-          </DialogTitle>
-          <DialogDescription>
-            Dealer information and details
-          </DialogDescription>
-        </DialogHeader>
-
+    <FullScreenModal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={dealer.name}
+      description="Complete dealer information and all details"
+      actions={actions}
+    >
+      <div className="space-y-8">
+        {/* Basic Information */}
         <div className="space-y-4">
-          {/* Basic Information */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Dealer ID:</span>
-                <Badge variant="outline" className="font-mono text-xs">
-                  {dealer.id.slice(0, 8)}...
-                </Badge>
-              </div>
-
-              {dealer.shop_name && (
-                <div className="space-y-1">
-                  <span className="text-sm font-medium">Shop Name:</span>
-                  <p className="text-sm">{dealer.shop_name}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* Contact Information */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Contact Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {dealer.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="text-sm font-medium">Email:</span>
-                    <p className="text-sm">{dealer.email}</p>
-                  </div>
-                </div>
-              )}
-
-              {dealer.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <span className="text-sm font-medium">Phone:</span>
-                    <p className="text-sm">{dealer.phone}</p>
-                  </div>
-                </div>
-              )}
-
-              {dealer.address && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <span className="text-sm font-medium">Address:</span>
-                    <p className="text-sm">{dealer.address}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          {/* System Information */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                System Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Created:</span>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(dealer.created_at).toLocaleDateString()}
+          <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <User className="h-5 w-5" />
+            Basic Information
+          </h3>
+          <div className="space-y-4 pl-7">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Dealer Name</span>
+              <span className="text-gray-900 dark:text-gray-100">{dealer.name}</span>
+            </div>
+            {dealer.shop_name && (
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <Briefcase className="h-4 w-4" />
+                  Shop Name
                 </span>
+                <span className="text-gray-900 dark:text-gray-100">{dealer.shop_name}</span>
               </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Last Updated:</span>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(dealer.updated_at).toLocaleDateString()}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex gap-2 pt-2">
-            <Button
-              onClick={() => onEdit?.(dealer)}
-              className="flex-1"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Dealer
-            </Button>
+            )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Contact Information */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Mail className="h-5 w-5" />
+            Contact Information
+          </h3>
+          <div className="space-y-4 pl-7">
+            {dealer.email && (
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  Email
+                </span>
+                <a
+                  href={`mailto:${dealer.email}`}
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-gray-900 dark:text-gray-100"
+                >
+                  {dealer.email}
+                </a>
+              </div>
+            )}
+            {dealer.phone && (
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  Phone
+                </span>
+                <a
+                  href={`tel:${dealer.phone}`}
+                  className="text-blue-600 dark:text-blue-400 hover:underline text-gray-900 dark:text-gray-100"
+                >
+                  {dealer.phone}
+                </a>
+              </div>
+            )}
+            {dealer.address && (
+              <div className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-800">
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2 pt-1">
+                  <MapPin className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  Address
+                </span>
+                <p className="text-right text-gray-900 dark:text-gray-100 max-w-md">{dealer.address}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* System Information */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Clock className="h-5 w-5" />
+            System Information
+          </h3>
+          <div className="space-y-4 pl-7">
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                Created Date
+              </span>
+              <div className="text-right">
+                <p className="text-gray-900 dark:text-gray-100">
+                  {new Date(dealer.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {new Date(dealer.created_at).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Last Updated
+              </span>
+              <div className="text-right">
+                <p className="text-gray-900 dark:text-gray-100">
+                  {new Date(dealer.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {new Date(dealer.updated_at).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <AlertCircle className="h-4 w-4" />
+                Status
+              </span>
+              <Badge variant="default" className="text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30">
+                Active
+              </Badge>
+            </div>
+
+            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <UserCheck className="h-4 w-4" />
+                Created By
+              </span>
+              <div className="text-right">
+                {dealer.created_by_employee ? (
+                  <div>
+                    <p className="text-gray-900 dark:text-gray-100">
+                      {dealer.created_by_employee.first_name} {dealer.created_by_employee.last_name}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {dealer.created_by_employee.human_readable_user_id}
+                    </p>
+                  </div>
+                ) : (
+                  <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center py-2">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <UserCheck className="h-4 w-4" />
+                Last Updated By
+              </span>
+              <div className="text-right">
+                {dealer.updated_by_employee ? (
+                  <div>
+                    <p className="text-gray-900 dark:text-gray-100">
+                      {dealer.updated_by_employee.first_name} {dealer.updated_by_employee.last_name}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      {dealer.updated_by_employee.human_readable_user_id}
+                    </p>
+                  </div>
+                ) : (
+                  <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </FullScreenModal>
   );
 }

@@ -45,7 +45,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     search: '',
   },
 
-  fetchDealers: async (params) => {
+  fetchDealers: async (params = {}) => {
     const state = get();
     const page = params?.page || state.pagination.currentPage;
     const itemsPerPage = params?.itemsPerPage || state.pagination.itemsPerPage;
@@ -56,7 +56,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
     try {
       const searchParams = new URLSearchParams({
         page: page.toString(),
-        itemsPerPage: itemsPerPage.toString(),
+        limit: itemsPerPage.toString(),
         ...(filters.search && { search: filters.search }),
         ...(filters.email && { email: filters.email }),
         ...(filters.phone && { phone: filters.phone }),

@@ -78,9 +78,11 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
 
   // Extract created_by and updated_by IDs from farmers table
   const employeeIds = new Set<string>();
+  const retailerIds = new Set<string>();
   farmers.forEach(farmer => {
     if (farmer.created_by) employeeIds.add(farmer.created_by);
     if (farmer.updated_by) employeeIds.add(farmer.updated_by);
+    if (farmer.retailer_id) retailerIds.add(farmer.retailer_id);
   });
 
   // Fetch employee details using these array of IDs
@@ -96,15 +98,29 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
     });
   }
 
-  // Attach employee details to farmers
-  const farmersWithEmployees = farmers.map(farmer => ({
+  // Fetch retailer details using these array of IDs
+  const retailersMap = new Map<string, { id: string; name: string; shop_name?: string | null }>();
+  if (retailerIds.size > 0) {
+    const { data: retailers } = await supabase
+      .from('retailers')
+      .select('id, name, shop_name')
+      .in('id', Array.from(retailerIds));
+
+    retailers?.forEach(retailer => {
+      retailersMap.set(retailer.id, retailer);
+    });
+  }
+
+  // Attach employee and retailer details to farmers
+  const farmersWithDetails = farmers.map(farmer => ({
     ...farmer,
     created_by_employee: farmer.created_by ? employeesMap.get(farmer.created_by) || null : null,
     updated_by_employee: farmer.updated_by ? employeesMap.get(farmer.updated_by) || null : null,
+    retailer: farmer.retailer_id ? retailersMap.get(farmer.retailer_id) || null : null,
   }));
 
   return {
-    farmers: farmersWithEmployees,
+    farmers: farmersWithDetails,
     pagination: {
       currentPage: page,
       totalPages,

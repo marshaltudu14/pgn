@@ -50,7 +50,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
     search: '',
   },
 
-  fetchFarmers: async (params) => {
+  fetchFarmers: async (params = {}) => {
     const state = get();
     const page = params?.page || state.pagination.currentPage;
     const itemsPerPage = params?.itemsPerPage || state.pagination.itemsPerPage;
@@ -61,7 +61,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
     try {
       const searchParams = new URLSearchParams({
         page: page.toString(),
-        itemsPerPage: itemsPerPage.toString(),
+        limit: itemsPerPage.toString(),
         ...(filters.search && { search: filters.search }),
         ...(filters.farm_name && { farm_name: filters.farm_name }),
         ...(filters.email && { email: filters.email }),

@@ -375,26 +375,7 @@ export function EmployeeList({
       {/* Pagination - visible on all screen sizes */}
       {pagination.totalPages > 1 && (
         <div className="px-2 py-3 lg:p-6 border-t border-border bg-white dark:bg-black">
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Showing {((pagination.currentPage - 1) * pagination.itemsPerPage) + 1} to {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of {pagination.totalItems} results
-              </div>
-              <Select
-                value={pagination.itemsPerPage.toString()}
-                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
-              >
-                <SelectTrigger className="w-20 cursor-pointer">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center justify-center">
             <div className="flex gap-2">
               <Button
                 variant="outline"

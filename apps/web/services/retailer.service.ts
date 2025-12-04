@@ -78,9 +78,11 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
 
   // Extract created_by and updated_by IDs from retailers table
   const employeeIds = new Set<string>();
+  const dealerIds = new Set<string>();
   retailers.forEach(retailer => {
     if (retailer.created_by) employeeIds.add(retailer.created_by);
     if (retailer.updated_by) employeeIds.add(retailer.updated_by);
+    if (retailer.dealer_id) dealerIds.add(retailer.dealer_id);
   });
 
   // Fetch employee details using these array of IDs
@@ -96,15 +98,29 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
     });
   }
 
-  // Attach employee details to retailers
-  const retailersWithEmployees = retailers.map(retailer => ({
+  // Fetch dealer details using these array of IDs
+  const dealersMap = new Map<string, { id: string; name: string; shop_name?: string | null }>();
+  if (dealerIds.size > 0) {
+    const { data: dealers } = await supabase
+      .from('dealers')
+      .select('id, name, shop_name')
+      .in('id', Array.from(dealerIds));
+
+    dealers?.forEach(dealer => {
+      dealersMap.set(dealer.id, dealer);
+    });
+  }
+
+  // Attach employee and dealer details to retailers
+  const retailersWithDetails = retailers.map(retailer => ({
     ...retailer,
     created_by_employee: retailer.created_by ? employeesMap.get(retailer.created_by) || null : null,
     updated_by_employee: retailer.updated_by ? employeesMap.get(retailer.updated_by) || null : null,
+    dealer: retailer.dealer_id ? dealersMap.get(retailer.dealer_id) || null : null,
   }));
 
   return {
-    retailers: retailersWithEmployees,
+    retailers: retailersWithDetails,
     pagination: {
       currentPage: page,
       totalPages,

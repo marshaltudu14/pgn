@@ -76,8 +76,35 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
   const totalItems = count || 0;
   const totalPages = Math.ceil(totalItems / limit);
 
+  // Extract created_by and updated_by IDs from farmers table
+  const employeeIds = new Set<string>();
+  farmers.forEach(farmer => {
+    if (farmer.created_by) employeeIds.add(farmer.created_by);
+    if (farmer.updated_by) employeeIds.add(farmer.updated_by);
+  });
+
+  // Fetch employee details using these array of IDs
+  let employeesMap = new Map<string, any>();
+  if (employeeIds.size > 0) {
+    const { data: employees } = await supabase
+      .from('employees')
+      .select('id, human_readable_user_id, first_name, last_name')
+      .in('id', Array.from(employeeIds));
+
+    employees?.forEach(employee => {
+      employeesMap.set(employee.id, employee);
+    });
+  }
+
+  // Attach employee details to farmers
+  const farmersWithEmployees = farmers.map(farmer => ({
+    ...farmer,
+    created_by_employee: farmer.created_by ? employeesMap.get(farmer.created_by) || null : null,
+    updated_by_employee: farmer.updated_by ? employeesMap.get(farmer.updated_by) || null : null,
+  }));
+
   return {
-    farmers,
+    farmers: farmersWithEmployees,
     pagination: {
       currentPage: page,
       totalPages,

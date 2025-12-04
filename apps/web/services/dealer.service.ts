@@ -71,8 +71,34 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
   const totalItems = count || 0;
   const totalPages = Math.ceil(totalItems / limit);
 
+  // Fetch employee details for all unique created_by and updated_by IDs
+  const employeeIds = new Set<string>();
+  dealers.forEach(dealer => {
+    if (dealer.created_by) employeeIds.add(dealer.created_by);
+    if (dealer.updated_by) employeeIds.add(dealer.updated_by);
+  });
+
+  let employeesMap = new Map<string, any>();
+  if (employeeIds.size > 0) {
+    const { data: employees } = await supabase
+      .from('employees')
+      .select('id, human_readable_user_id, first_name, last_name')
+      .in('id', Array.from(employeeIds));
+
+    employees?.forEach(employee => {
+      employeesMap.set(employee.id, employee);
+    });
+  }
+
+  // Attach employee details to dealers
+  const dealersWithEmployees = dealers.map(dealer => ({
+    ...dealer,
+    created_by_employee: dealer.created_by ? employeesMap.get(dealer.created_by) || null : null,
+    updated_by_employee: dealer.updated_by ? employeesMap.get(dealer.updated_by) || null : null,
+  }));
+
   return {
-    dealers,
+    dealers: dealersWithEmployees,
     pagination: {
       currentPage: page,
       totalPages,

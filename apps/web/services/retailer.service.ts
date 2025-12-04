@@ -76,8 +76,35 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
   const totalItems = count || 0;
   const totalPages = Math.ceil(totalItems / limit);
 
+  // Extract created_by and updated_by IDs from retailers table
+  const employeeIds = new Set<string>();
+  retailers.forEach(retailer => {
+    if (retailer.created_by) employeeIds.add(retailer.created_by);
+    if (retailer.updated_by) employeeIds.add(retailer.updated_by);
+  });
+
+  // Fetch employee details using these array of IDs
+  let employeesMap = new Map<string, any>();
+  if (employeeIds.size > 0) {
+    const { data: employees } = await supabase
+      .from('employees')
+      .select('id, human_readable_user_id, first_name, last_name')
+      .in('id', Array.from(employeeIds));
+
+    employees?.forEach(employee => {
+      employeesMap.set(employee.id, employee);
+    });
+  }
+
+  // Attach employee details to retailers
+  const retailersWithEmployees = retailers.map(retailer => ({
+    ...retailer,
+    created_by_employee: retailer.created_by ? employeesMap.get(retailer.created_by) || null : null,
+    updated_by_employee: retailer.updated_by ? employeesMap.get(retailer.updated_by) || null : null,
+  }));
+
   return {
-    retailers,
+    retailers: retailersWithEmployees,
     pagination: {
       currentPage: page,
       totalPages,

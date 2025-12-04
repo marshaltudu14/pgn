@@ -26,7 +26,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DealerWithRetailers, UserInfo } from '@pgn/shared';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { DealerWithRetailers } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { Search, Plus, Edit, Eye, Building, Mail, Phone, X } from 'lucide-react';
 
@@ -53,11 +62,9 @@ export function DealerList({
     clearError,
   } = useDealerStore();
 
-  // Local state for search inputs (immediate updates)
+  // Local state for search input (immediate updates)
   const [searchInput, setSearchInput] = useState(filters.search || '');
-  const [shopNameInput, setShopNameInput] = useState(filters.shop_name || '');
   const debouncedSearchInput = useDebounce(searchInput, 300);
-  const debouncedShopNameInput = useDebounce(shopNameInput, 300);
 
   // Use a ref to store the store functions to prevent re-renders
   const storeFunctions = useRef({
@@ -89,15 +96,7 @@ export function DealerList({
     }
   }, [debouncedSearchInput, filters.search]);
 
-  // Handle shop name changes when debounced value updates
-  useEffect(() => {
-    if (filters.shop_name !== debouncedShopNameInput) {
-      storeFunctions.current.setFilters({ shop_name: debouncedShopNameInput || undefined });
-      storeFunctions.current.setPagination(1); // Reset to first page
-      storeFunctions.current.fetchDealers();
-    }
-  }, [debouncedShopNameInput, filters.shop_name]);
-
+  
   // Handle search input changes (immediate)
   const handleSearchChange = useCallback((value: string) => {
     setSearchInput(value);
@@ -109,24 +108,114 @@ export function DealerList({
     }
   }, [filters.search]);
 
-  // Handle shop name input changes (immediate)
-  const handleShopNameFilterChange = useCallback((value: string) => {
-    setShopNameInput(value);
-    // If clearing the filter, apply immediately for better UX
-    if (value === '' && filters.shop_name !== undefined) {
-      storeFunctions.current.setFilters({ shop_name: undefined });
-      storeFunctions.current.setPagination(1);
-      storeFunctions.current.fetchDealers();
-    }
-  }, [filters.shop_name]);
-
+  
   const handlePageChange = useCallback((page: number) => {
     storeFunctions.current.setPagination(page);
+    storeFunctions.current.fetchDealers();
   }, []);
 
   const handlePageSizeChange = useCallback((size: number) => {
     storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+    storeFunctions.current.fetchDealers();
   }, []);
+
+  // Generate pagination items
+  const generatePaginationItems = () => {
+    const { currentPage, totalPages } = pagination;
+    const items = [];
+
+    // Show previous page
+    if (currentPage > 1) {
+      items.push(
+        <PaginationItem key="prev">
+          <PaginationPrevious
+            onClick={() => handlePageChange(currentPage - 1)}
+            className="cursor-pointer"
+          />
+        </PaginationItem>
+      );
+    }
+
+    // Always show first page
+    items.push(
+      <PaginationItem key={1}>
+        <PaginationLink
+          onClick={() => handlePageChange(1)}
+          isActive={currentPage === 1}
+          className="cursor-pointer"
+        >
+          1
+        </PaginationLink>
+      </PaginationItem>
+    );
+
+    // Show ellipsis if current page is far from start
+    if (currentPage > 3) {
+      items.push(
+        <PaginationItem key="ellipsis-start">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+
+    // Show pages around current page
+    const startPage = Math.max(2, currentPage - 1);
+    const endPage = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      if (i > 1 && i < totalPages) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              onClick={() => handlePageChange(i)}
+              isActive={currentPage === i}
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    }
+
+    // Show ellipsis if current page is far from end
+    if (currentPage < totalPages - 2) {
+      items.push(
+        <PaginationItem key="ellipsis-end">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+
+    // Always show last page if more than 1 page
+    if (totalPages > 1) {
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink
+            onClick={() => handlePageChange(totalPages)}
+            isActive={currentPage === totalPages}
+            className="cursor-pointer"
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    // Show next page
+    if (currentPage < totalPages) {
+      items.push(
+        <PaginationItem key="next">
+          <PaginationNext
+            onClick={() => handlePageChange(currentPage + 1)}
+            className="cursor-pointer"
+          />
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
 
   
   if (loading && dealers.length === 0) {
@@ -142,7 +231,6 @@ export function DealerList({
         <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
           <div className="flex flex-col sm:flex-row gap-4">
             <Skeleton className="h-10 w-64" />
-            <Skeleton className="h-10 w-40" />
           </div>
         </div>
         <div className="bg-white dark:bg-black">
@@ -152,7 +240,6 @@ export function DealerList({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead className="hidden md:table-cell">Shop Name</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead className="hidden xl:table-cell">Address</TableHead>
                     <TableHead className="hidden lg:table-cell">Created By</TableHead>
@@ -164,7 +251,6 @@ export function DealerList({
                   {[...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
@@ -236,29 +322,6 @@ export function DealerList({
               </button>
             )}
           </div>
-          <div className="relative flex-1 sm:max-w-xs">
-            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Filter by shop name..."
-              value={shopNameInput}
-              onChange={(e) => handleShopNameFilterChange(e.target.value)}
-              className="pl-10 pr-10"
-            />
-            {shopNameInput && (
-              <button
-                onClick={() => {
-                  setShopNameInput('');
-                  storeFunctions.current.setFilters({ shop_name: undefined });
-                  storeFunctions.current.setPagination(1);
-                  storeFunctions.current.fetchDealers();
-                }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                aria-label="Clear shop name filter"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -270,7 +333,6 @@ export function DealerList({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Shop Name</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
                   <TableHead className="hidden lg:table-cell">Created By</TableHead>
@@ -290,18 +352,6 @@ export function DealerList({
                             {dealer.email.length > 15 ? `${dealer.email.slice(0, 15)}...` : dealer.email}
                           </div>
                         )}
-                        {dealer.shop_name && (
-                          <div className="text-sm text-muted-foreground md:hidden flex items-center gap-1">
-                            <Building className="h-3 w-3" />
-                            {dealer.shop_name}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span>{dealer.shop_name || '-'}</span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -401,28 +451,12 @@ export function DealerList({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-                className="cursor-pointer hover:bg-accent transition-colors"
-              >
-                Previous
-              </Button>
-              <span className="flex items-center px-3 text-sm text-gray-600 dark:text-gray-400">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className="cursor-pointer hover:bg-accent transition-colors"
-              >
-                Next
-              </Button>
+            <div className="flex items-center space-x-2">
+              <Pagination>
+                <PaginationContent>
+                  {generatePaginationItems()}
+                </PaginationContent>
+              </Pagination>
             </div>
           </div>
         </div>

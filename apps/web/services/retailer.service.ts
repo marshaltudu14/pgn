@@ -84,7 +84,7 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
   });
 
   // Fetch employee details using these array of IDs
-  let employeesMap = new Map<string, any>();
+  const employeesMap = new Map<string, { id: string; human_readable_user_id: string; first_name: string; last_name: string }>();
   if (employeeIds.size > 0) {
     const { data: employees } = await supabase
       .from('employees')

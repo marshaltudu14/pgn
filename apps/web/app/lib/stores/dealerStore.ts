@@ -58,7 +58,6 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         page: page.toString(),
         itemsPerPage: itemsPerPage.toString(),
         ...(filters.search && { search: filters.search }),
-        ...(filters.shop_name && { shop_name: filters.shop_name }),
         ...(filters.email && { email: filters.email }),
         ...(filters.phone && { phone: filters.phone }),
       });

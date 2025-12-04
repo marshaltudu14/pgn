@@ -27,9 +27,18 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FarmerWithRetailer, UserInfo } from '@pgn/shared';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
+import { FarmerWithRetailer } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
-import { Search, Plus, Edit, Eye, Mail, Phone, User, Store, X } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Mail, Phone, User, X } from 'lucide-react';
 
 interface FarmerListProps {
   onFarmerSelect?: (farmer: FarmerWithRetailer) => void;
@@ -123,11 +132,111 @@ export function FarmerList({
 
   const handlePageChange = useCallback((page: number) => {
     storeFunctions.current.setPagination(page);
+    storeFunctions.current.fetchFarmers();
   }, []);
 
   const handlePageSizeChange = useCallback((size: number) => {
     storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+    storeFunctions.current.fetchFarmers();
   }, []);
+
+  // Generate pagination items
+  const generatePaginationItems = () => {
+    const { currentPage, totalPages } = pagination;
+    const items = [];
+
+    // Show previous page
+    if (currentPage > 1) {
+      items.push(
+        <PaginationItem key="prev">
+          <PaginationPrevious
+            onClick={() => handlePageChange(currentPage - 1)}
+            className="cursor-pointer"
+          />
+        </PaginationItem>
+      );
+    }
+
+    // Always show first page
+    items.push(
+      <PaginationItem key={1}>
+        <PaginationLink
+          onClick={() => handlePageChange(1)}
+          isActive={currentPage === 1}
+          className="cursor-pointer"
+        >
+          1
+        </PaginationLink>
+      </PaginationItem>
+    );
+
+    // Show ellipsis if current page is far from start
+    if (currentPage > 3) {
+      items.push(
+        <PaginationItem key="ellipsis-start">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+
+    // Show pages around current page
+    const startPage = Math.max(2, currentPage - 1);
+    const endPage = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      if (i > 1 && i < totalPages) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              onClick={() => handlePageChange(i)}
+              isActive={currentPage === i}
+              className="cursor-pointer"
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    }
+
+    // Show ellipsis if current page is far from end
+    if (currentPage < totalPages - 2) {
+      items.push(
+        <PaginationItem key="ellipsis-end">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+
+    // Always show last page if more than 1 page
+    if (totalPages > 1) {
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink
+            onClick={() => handlePageChange(totalPages)}
+            isActive={currentPage === totalPages}
+            className="cursor-pointer"
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    // Show next page
+    if (currentPage < totalPages) {
+      items.push(
+        <PaginationItem key="next">
+          <PaginationNext
+            onClick={() => handlePageChange(currentPage + 1)}
+            className="cursor-pointer"
+          />
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
 
   
   
@@ -182,7 +291,6 @@ export function FarmerList({
             disabled={loadingRetailers}
           >
             <SelectTrigger className="w-full sm:w-48">
-              <Store className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter by retailer">
                 {filters.retailer_id ? retailers.find(r => r.id === filters.retailer_id)?.name : "All Retailers"}
               </SelectValue>
@@ -370,26 +478,12 @@ export function FarmerList({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-              >
-                Previous
-              </Button>
-              <span className="flex items-center px-3 text-sm text-gray-600 dark:text-gray-400">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-              >
-                Next
-              </Button>
+            <div className="flex items-center space-x-2">
+              <Pagination>
+                <PaginationContent>
+                  {generatePaginationItems()}
+                </PaginationContent>
+              </Pagination>
             </div>
           </div>
         </div>

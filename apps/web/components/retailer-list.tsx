@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RetailerWithFarmers } from '@pgn/shared';
+import { RetailerWithFarmers, UserInfo } from '@pgn/shared';
 
 // Define dealer type based on usage
 interface Dealer {
@@ -310,7 +310,7 @@ export function RetailerList({
                             <div className="text-muted-foreground">{retailer.created_by_employee.human_readable_user_id}</div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">Admin</span>
                         )}
                       </div>
                     </TableCell>
@@ -322,7 +322,7 @@ export function RetailerList({
                             <div className="text-muted-foreground">{retailer.updated_by_employee.human_readable_user_id}</div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">Admin</span>
                         )}
                       </div>
                     </TableCell>
@@ -348,17 +348,7 @@ export function RetailerList({
                     </TableCell>
                   </TableRow>
                               ))}
-                    {!loading && retailers.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                          <div className="flex flex-col items-center justify-center text-muted-foreground">
-                            <p className="text-lg font-medium">No retailers found</p>
-                            <p className="text-sm">Try adjusting your search or filter criteria</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </>
+                    </>
                 )}
               </TableBody>
             </Table>

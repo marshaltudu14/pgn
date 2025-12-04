@@ -24,6 +24,16 @@ export interface EmployeeInfo {
   last_name: string;
 }
 
+// Type for user info with fallback to admin
+export interface UserInfo {
+  id: string;
+  human_readable_user_id?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  isAdmin?: boolean;
+}
+
 // Enhanced types with relationships
 export interface DealerWithRetailers extends Dealer {
   retailers?: RetailerWithFarmers[];

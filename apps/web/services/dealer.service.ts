@@ -35,21 +35,7 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
 
   let query = supabase
     .from('dealers')
-    .select(`
-      *,
-      created_by_employee:created_by (
-        id,
-        human_readable_user_id,
-        first_name,
-        last_name
-      ),
-      updated_by_employee:updated_by (
-        id,
-        human_readable_user_id,
-        first_name,
-        last_name
-      )
-    `, { count: 'exact' });
+    .select('*', { count: 'exact' });
 
   // Apply search and filters
   if (search) {
@@ -206,23 +192,17 @@ export async function searchDealers(query: string, limit: number = 10): Promise<
 /**
  * Get dealers with their retailers count
  */
-export async function getDealersWithRetailerCount(): Promise<(Dealer & { retailers_count: number })[]> {
+export async function getDealersWithRetailerCount(): Promise<Dealer[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('dealers')
-    .select(`
-      *,
-      retailers(count)
-    `);
+    .select('*');
 
   if (error) {
     console.error('Error fetching dealers with retailer count:', error);
     throw new Error(`Failed to fetch dealers with retailer count: ${error.message}`);
   }
 
-  return data?.map(dealer => ({
-    ...dealer,
-    retailers_count: dealer.retailers?.length || 0,
-  })) || [];
+  return data || [];
 }

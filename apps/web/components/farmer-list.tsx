@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FarmerWithRetailer } from '@pgn/shared';
+import { FarmerWithRetailer, UserInfo } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
 import { Search, Plus, Edit, Eye, Mail, Phone, User, Store, X } from 'lucide-react';
 
@@ -301,7 +301,7 @@ export function FarmerList({
                             <div className="text-muted-foreground">{farmer.created_by_employee.human_readable_user_id}</div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">Admin</span>
                         )}
                       </div>
                     </TableCell>
@@ -313,7 +313,7 @@ export function FarmerList({
                             <div className="text-muted-foreground">{farmer.updated_by_employee.human_readable_user_id}</div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">Admin</span>
                         )}
                       </div>
                     </TableCell>
@@ -339,17 +339,7 @@ export function FarmerList({
                     </TableCell>
                   </TableRow>
                                 ))}
-                    {!loading && farmers.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
-                          <div className="flex flex-col items-center justify-center text-muted-foreground">
-                            <p className="text-lg font-medium">No farmers found</p>
-                            <p className="text-sm">Try adjusting your search or filter criteria</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </>
+                    </>
                 )}
               </TableBody>
             </Table>

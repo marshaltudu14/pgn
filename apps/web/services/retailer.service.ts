@@ -36,21 +36,7 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
 
   let query = supabase
     .from('retailers')
-    .select(`
-      *,
-      created_by_employee:created_by (
-        id,
-        human_readable_user_id,
-        first_name,
-        last_name
-      ),
-      updated_by_employee:updated_by (
-        id,
-        human_readable_user_id,
-        first_name,
-        last_name
-      )
-    `, { count: 'exact' });
+    .select('*', { count: 'exact' });
 
   // Apply search and filters
   if (search) {
@@ -109,10 +95,7 @@ export async function getRetailerById(id: string): Promise<Retailer> {
 
   const { data, error } = await supabase
     .from('retailers')
-    .select(`
-      *,
-      dealer:dealers(name, shop_name)
-    `)
+    .select('*')
     .eq('id', id)
     .single();
 
@@ -134,13 +117,11 @@ export async function createRetailer(retailerData: RetailerInsert): Promise<Reta
     .from('retailers')
     .insert({
       ...retailerData,
+      dealer_id: retailerData.dealer_id || null, // Convert empty string to null
       created_by: (await supabase.auth.getUser()).data.user?.id,
       updated_by: (await supabase.auth.getUser()).data.user?.id,
     })
-    .select(`
-      *,
-      dealer:dealers(name, shop_name)
-    `)
+    .select('*')
     .single();
 
   if (error) {
@@ -161,14 +142,12 @@ export async function updateRetailer(id: string, retailerData: RetailerUpdate): 
     .from('retailers')
     .update({
       ...retailerData,
+      dealer_id: retailerData.dealer_id || null, // Convert empty string to null
       updated_by: (await supabase.auth.getUser()).data.user?.id,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select(`
-      *,
-      dealer:dealers(name, shop_name)
-    `)
+    .select('*')
     .single();
 
   if (error) {
@@ -204,10 +183,7 @@ export async function searchRetailers(query: string, limit: number = 10): Promis
 
   const { data, error } = await supabase
     .from('retailers')
-    .select(`
-      *,
-      dealer:dealers(name, shop_name)
-    `)
+    .select('*')
     .or(`name.ilike.%${query}%,shop_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
     .limit(limit)
     .order('created_at', { ascending: false });
@@ -223,30 +199,17 @@ export async function searchRetailers(query: string, limit: number = 10): Promis
 /**
  * Get retailers with their dealer and farmer counts
  */
-export async function getRetailersWithCounts(): Promise<(Retailer & {
-  dealer?: {
-    name: string;
-    shop_name: string | null;
-  } | null;
-  farmers_count: number;
-})[]> {
+export async function getRetailersWithCounts(): Promise<Retailer[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('retailers')
-    .select(`
-      *,
-      dealer:dealers(name, shop_name),
-      farmers(count)
-    `);
+    .select('*');
 
   if (error) {
     console.error('Error fetching retailers with counts:', error);
     throw new Error(`Failed to fetch retailers with counts: ${error.message}`);
   }
 
-  return data?.map((retailer: Retailer & { farmers?: unknown[] }) => ({
-    ...retailer,
-    farmers_count: retailer.farmers?.length || 0,
-  })) || [];
+  return data || [];
 }

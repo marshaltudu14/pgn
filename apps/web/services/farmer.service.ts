@@ -36,21 +36,7 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
 
   let query = supabase
     .from('farmers')
-    .select(`
-      *,
-      created_by_employee:created_by (
-        id,
-        human_readable_user_id,
-        first_name,
-        last_name
-      ),
-      updated_by_employee:updated_by (
-        id,
-        human_readable_user_id,
-        first_name,
-        last_name
-      )
-    `, { count: 'exact' });
+    .select('*', { count: 'exact' });
 
   // Apply search and filters
   if (search) {
@@ -109,10 +95,7 @@ export async function getFarmerById(id: string): Promise<Farmer> {
 
   const { data, error } = await supabase
     .from('farmers')
-    .select(`
-      *,
-      retailer:retailers(name, shop_name, dealer:dealers(name, shop_name))
-    `)
+    .select('*')
     .eq('id', id)
     .single();
 
@@ -134,13 +117,11 @@ export async function createFarmer(farmerData: FarmerInsert): Promise<Farmer> {
     .from('farmers')
     .insert({
       ...farmerData,
+      retailer_id: farmerData.retailer_id || null, // Convert empty string to null
       created_by: (await supabase.auth.getUser()).data.user?.id,
       updated_by: (await supabase.auth.getUser()).data.user?.id,
     })
-    .select(`
-      *,
-      retailer:retailers(name, shop_name, dealer:dealers(name, shop_name))
-    `)
+    .select('*')
     .single();
 
   if (error) {
@@ -161,14 +142,12 @@ export async function updateFarmer(id: string, farmerData: FarmerUpdate): Promis
     .from('farmers')
     .update({
       ...farmerData,
+      retailer_id: farmerData.retailer_id || null, // Convert empty string to null
       updated_by: (await supabase.auth.getUser()).data.user?.id,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select(`
-      *,
-      retailer:retailers(name, shop_name, dealer:dealers(name, shop_name))
-    `)
+    .select('*')
     .single();
 
   if (error) {
@@ -204,10 +183,7 @@ export async function searchFarmers(query: string, limit: number = 10): Promise<
 
   const { data, error } = await supabase
     .from('farmers')
-    .select(`
-      *,
-      retailer:retailers(name, shop_name, dealer:dealers(name, shop_name))
-    `)
+    .select('*')
     .or(`name.ilike.%${query}%,farm_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`)
     .limit(limit)
     .order('created_at', { ascending: false });

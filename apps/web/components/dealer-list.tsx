@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DealerWithRetailers } from '@pgn/shared';
+import { DealerWithRetailers, UserInfo } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { Search, Plus, Edit, Eye, Building, Mail, Phone, X } from 'lucide-react';
 
@@ -334,7 +334,7 @@ export function DealerList({
                             <div className="text-muted-foreground">{dealer.created_by_employee.human_readable_user_id}</div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">Admin</span>
                         )}
                       </div>
                     </TableCell>
@@ -346,7 +346,7 @@ export function DealerList({
                             <div className="text-muted-foreground">{dealer.updated_by_employee.human_readable_user_id}</div>
                           </div>
                         ) : (
-                          <span className="text-muted-foreground">-</span>
+                          <span className="text-muted-foreground">Admin</span>
                         )}
                       </div>
                     </TableCell>

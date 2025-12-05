@@ -16,6 +16,7 @@ interface FarmerQuickViewProps {
   onOpenChange: (open: boolean) => void;
   farmer: FarmerWithRetailer | null;
   onEdit?: (farmer: FarmerWithRetailer) => void;
+  hideEditButtons?: boolean;
 }
 
 export function FarmerQuickView({
@@ -23,18 +24,21 @@ export function FarmerQuickView({
   onOpenChange,
   farmer,
   onEdit,
+  hideEditButtons = false,
 }: FarmerQuickViewProps) {
   if (!farmer) return null;
 
   const actions = (
     <>
-      <Button variant="outline" onClick={() => onOpenChange(false)}>
+      <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">
         Close
       </Button>
-      <Button onClick={() => onEdit?.(farmer)}>
-        <Edit className="h-4 w-4 mr-2" />
-        Edit Farmer
-      </Button>
+      {!hideEditButtons && onEdit && (
+        <Button onClick={() => onEdit(farmer)} className="cursor-pointer">
+          <Edit className="h-4 w-4 mr-2" />
+          Edit Farmer
+        </Button>
+      )}
     </>
   );
 
@@ -140,60 +144,6 @@ export function FarmerQuickView({
           <div className="space-y-4 pl-7">
             <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                Created Date
-              </span>
-              <div className="text-right">
-                <p className="text-gray-900 dark:text-gray-100">
-                  {new Date(farmer.created_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(farmer.created_at).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Last Updated
-              </span>
-              <div className="text-right">
-                <p className="text-gray-900 dark:text-gray-100">
-                  {new Date(farmer.updated_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(farmer.updated_at).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                <AlertCircle className="h-4 w-4" />
-                Status
-              </span>
-              <Badge variant="default" className="text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30">
-                Active
-              </Badge>
-            </div>
-
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <UserCheck className="h-4 w-4" />
                 Created By
               </span>
@@ -206,9 +156,31 @@ export function FarmerQuickView({
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {farmer.created_by_employee.human_readable_user_id}
                     </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(farmer.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(farmer.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   </div>
                 ) : (
-                  <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                  <div>
+                    <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(farmer.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(farmer.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -227,9 +199,31 @@ export function FarmerQuickView({
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {farmer.updated_by_employee.human_readable_user_id}
                     </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(farmer.updated_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(farmer.updated_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   </div>
                 ) : (
-                  <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                  <div>
+                    <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(farmer.updated_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(farmer.updated_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

@@ -123,7 +123,7 @@ export interface DealerListParams {
   shop_name?: string;
   email?: string;
   phone?: string;
-  sort_by?: string;
+  sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -135,7 +135,7 @@ export interface RetailerListParams {
   email?: string;
   phone?: string;
   dealer_id?: string;
-  sort_by?: string;
+  sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -148,7 +148,7 @@ export interface FarmerListParams {
   phone?: string;
   retailer_id?: string;
   dealer_id?: string;
-  sort_by?: string;
+  sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -158,6 +158,8 @@ export interface DealerFilters {
   shop_name?: string;
   email?: string;
   phone?: string;
+  sort_by?: 'name' | 'created_at' | 'updated_at';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface RetailerFilters {
@@ -166,6 +168,8 @@ export interface RetailerFilters {
   email?: string;
   phone?: string;
   dealer_id?: string;
+  sort_by?: 'name' | 'created_at' | 'updated_at';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface FarmerFilters {
@@ -175,6 +179,8 @@ export interface FarmerFilters {
   phone?: string;
   retailer_id?: string;
   dealer_id?: string;
+  sort_by?: 'name' | 'created_at' | 'updated_at';
+  sort_order?: 'asc' | 'desc';
 }
 
 // Zod schemas for API validation
@@ -211,7 +217,7 @@ export const DealerListParamsSchema = z.object({
   shop_name: z.string().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
-  sort_by: z.string().optional().default('created_at'),
+  sort_by: z.enum(['name', 'created_at', 'updated_at']).optional().default('updated_at'),
   sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
@@ -223,7 +229,7 @@ export const RetailerListParamsSchema = z.object({
   email: z.string().optional(),
   phone: z.string().optional(),
   dealer_id: z.string().optional(),
-  sort_by: z.string().optional().default('created_at'),
+  sort_by: z.enum(['name', 'created_at', 'updated_at']).optional().default('updated_at'),
   sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
@@ -236,7 +242,7 @@ export const FarmerListParamsSchema = z.object({
   phone: z.string().optional(),
   retailer_id: z.string().optional(),
   dealer_id: z.string().optional(),
-  sort_by: z.string().optional().default('created_at'),
+  sort_by: z.enum(['name', 'created_at', 'updated_at']).optional().default('updated_at'),
   sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 

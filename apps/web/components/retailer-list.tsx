@@ -18,13 +18,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Pagination,
@@ -39,18 +32,22 @@ import { RetailerWithFarmers } from '@pgn/shared';
 
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
-import { Search, Plus, Edit, Eye, Store, Mail, Phone, X } from 'lucide-react';
+import { RetailerQuickView } from '@/components/retailer-quick-view';
+import { DealerQuickView } from '@/components/dealer-quick-view';
+import { Search, Plus, Edit, Eye, Store, Mail, Phone, X, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 
 interface RetailerListProps {
   onRetailerSelect?: (retailer: RetailerWithFarmers) => void;
   onRetailerEdit?: (retailer: RetailerWithFarmers) => void;
   onRetailerCreate?: () => void;
+  hideEditButtons?: boolean;
 }
 
 export function RetailerList({
   onRetailerSelect,
   onRetailerEdit,
   onRetailerCreate,
+  hideEditButtons = false,
 }: RetailerListProps) {
   const {
     retailers,
@@ -97,6 +94,14 @@ export function RetailerList({
   const [searchInput, setSearchInput] = useState(filters.search || '');
   const debouncedSearchInput = useDebounce(searchInput, 300);
 
+  // Quick view state
+  const [showRetailerQuickView, setShowRetailerQuickView] = useState(false);
+  const [showDealerQuickView, setShowDealerQuickView] = useState(false);
+  const [selectedRetailer, setSelectedRetailer] = useState<RetailerWithFarmers | null>(null);
+  const [selectedDealer, setSelectedDealer] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [hideEditButtons, setHideEditButtons] = useState(false);
+
   // Handle search changes when debounced value updates
   useEffect(() => {
     if (filters.search !== debouncedSearchInput) {
@@ -130,10 +135,35 @@ export function RetailerList({
     storeFunctions.current.fetchRetailers();
   }, []);
 
-  const handlePageSizeChange = useCallback((size: number) => {
-    storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+  const handleSort = useCallback((sortBy: 'name' | 'created_at' | 'updated_at') => {
+    const newSortOrder = filters.sort_by === sortBy && filters.sort_order === 'asc' ? 'desc' : 'asc';
+    storeFunctions.current.setFilters({ sort_by: sortBy, sort_order: newSortOrder });
     storeFunctions.current.fetchRetailers();
-  }, []);
+  }, [filters.sort_by, filters.sort_order]);
+
+  // Handle quick view
+  const handleRetailerQuickView = async (retailer: RetailerWithFarmers) => {
+    setSelectedRetailer(retailer);
+    setShowRetailerQuickView(true);
+  };
+
+  // Get dealer store methods
+  const { getDealerById } = useDealerStore();
+
+  const handleDealerQuickView = async (dealerId: string) => {
+    setLoadingDetails(true);
+    try {
+      const dealer = await getDealerById(dealerId);
+      if (dealer) {
+        setSelectedDealer(dealer);
+        setShowDealerQuickView(true);
+      }
+    } catch (error) {
+      console.error('Error fetching dealer details:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   // Generate pagination items
   const generatePaginationItems = () => {
@@ -264,12 +294,51 @@ export function RetailerList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                    <div className="flex items-center">
+                      Name
+                      {filters.sort_by === 'name' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">Dealer</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden lg:table-cell">Created By</TableHead>
-                  <TableHead className="hidden lg:table-cell">Updated By</TableHead>
+                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
+                    <div className="flex items-center">
+                      Created By
+                      {filters.sort_by === 'created_at' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('updated_at')}>
+                    <div className="flex items-center">
+                      Updated By
+                      {filters.sort_by === 'updated_at' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -311,10 +380,15 @@ export function RetailerList({
                       <div className="text-sm max-w-xs">
                         {retailer.dealer ? (
                           <div>
-                            <div className="font-medium">{retailer.dealer.name}</div>
-                            {retailer.dealer.shop_name && (
-                              <div className="text-muted-foreground text-xs">{retailer.dealer.shop_name}</div>
-                            )}
+                            <div
+                              className="font-medium cursor-pointer"
+                              onClick={() => {
+                                // Open dealer quick view
+                                handleDealerQuickView(retailer.dealer.id);
+                              }}
+                            >
+                              {retailer.dealer.name}
+                            </div>
                           </div>
                         ) : '-'}
                       </div>
@@ -399,23 +473,22 @@ export function RetailerList({
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-center p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
           <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-                {generatePaginationItems()}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {generatePaginationItems()}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
@@ -431,6 +504,37 @@ export function RetailerList({
             <Plus className="h-4 w-4 mr-2" />
             Add Retailer
           </Button>
+        </div>
+      )}
+
+      {/* Quick View Modals */}
+      <RetailerQuickView
+        open={showRetailerQuickView}
+        onOpenChange={setShowRetailerQuickView}
+        retailer={selectedRetailer}
+        onEdit={hideEditButtons ? undefined : onRetailerEdit}
+        hideEditButtons={hideEditButtons}
+      />
+
+      {selectedDealer && (
+        <DealerQuickView
+          open={showDealerQuickView}
+          onOpenChange={setShowDealerQuickView}
+          dealer={selectedDealer}
+          onEdit={(dealer) => {
+            // Navigate to dealer edit page
+            window.location.href = `/dashboard/dealers/form?id=${dealer.id}&mode=edit`;
+          }}
+        />
+      )}
+
+      {/* Loading Overlay */}
+      {loadingDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-black rounded-lg p-6 flex items-center gap-3 border border-border">
+            <Loader2 className="h-6 w-6 animate-spin text-foreground" />
+            <span className="text-foreground">Loading details...</span>
+          </div>
         </div>
       )}
     </div>

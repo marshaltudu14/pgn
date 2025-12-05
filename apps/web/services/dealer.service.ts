@@ -25,7 +25,7 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
     shop_name,
     email,
     phone,
-    sort_by = 'created_at',
+    sort_by = 'updated_at',
     sort_order = 'desc'
   } = params;
 

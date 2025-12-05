@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Dealer, DealerWithRetailers, DealerFilters, DealerListResponse, DealerInsert, DealerUpdate } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
+import { listDealers } from '@/services/dealer.service';
 
 interface DealerState {
   dealers: DealerWithRetailers[];
@@ -21,6 +22,7 @@ interface DealerState {
   createDealer: (dealerData: DealerInsert) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
   updateDealer: (id: string, dealerData: DealerUpdate) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
   deleteDealer: (id: string) => Promise<{ success: boolean; error?: string }>;
+  getDealerById: (id: string) => Promise<DealerWithRetailers | null>;
   setFilters: (filters: Partial<DealerFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearError: () => void;
@@ -43,6 +45,8 @@ export const useDealerStore = create<DealerState>((set, get) => ({
   },
   filters: {
     search: '',
+    sort_by: 'updated_at',
+    sort_order: 'desc',
   },
 
   fetchDealers: async (params = {}) => {
@@ -60,6 +64,8 @@ export const useDealerStore = create<DealerState>((set, get) => ({
         ...(filters.search && { search: filters.search }),
         ...(filters.email && { email: filters.email }),
         ...(filters.phone && { phone: filters.phone }),
+        sort_by: filters.sort_by || 'updated_at',
+        sort_order: filters.sort_order || 'desc',
       });
 
       const token = useAuthStore.getState().token;
@@ -208,6 +214,25 @@ export const useDealerStore = create<DealerState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   setError: (error) => set({ error }),
+
+  getDealerById: async (id: string): Promise<DealerWithRetailers | null> => {
+    try {
+      const token = useAuthStore.getState().token;
+      const response = await fetch(`/api/dealers/${id}`, {
+        headers: getAuthHeaders(token),
+      });
+
+      const result = await handleApiResponse(response, 'Failed to fetch dealer');
+
+      if (result.success) {
+        return result.data as DealerWithRetailers;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching dealer:', error);
+      return null;
+    }
+  },
 
   refetch: async () => {
     await get().fetchDealers();

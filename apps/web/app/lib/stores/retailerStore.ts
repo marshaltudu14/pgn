@@ -47,6 +47,8 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
   },
   filters: {
     search: '',
+    sort_by: 'updated_at',
+    sort_order: 'desc',
   },
 
   fetchRetailers: async (params = {}) => {
@@ -65,6 +67,9 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
         ...(filters.shop_name && { shop_name: filters.shop_name }),
         ...(filters.email && { email: filters.email }),
         ...(filters.phone && { phone: filters.phone }),
+        ...(filters.dealer_id && { dealer_id: filters.dealer_id }),
+        sort_by: filters.sort_by || 'updated_at',
+        sort_order: filters.sort_order || 'desc',
       });
 
       const token = useAuthStore.getState().token;

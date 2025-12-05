@@ -16,6 +16,7 @@ interface RetailerQuickViewProps {
   onOpenChange: (open: boolean) => void;
   retailer: RetailerWithFarmers | null;
   onEdit?: (retailer: RetailerWithFarmers) => void;
+  hideEditButtons?: boolean;
 }
 
 export function RetailerQuickView({
@@ -23,18 +24,21 @@ export function RetailerQuickView({
   onOpenChange,
   retailer,
   onEdit,
+  hideEditButtons = false,
 }: RetailerQuickViewProps) {
   if (!retailer) return null;
 
   const actions = (
     <>
-      <Button variant="outline" onClick={() => onOpenChange(false)}>
+      <Button variant="outline" onClick={() => onOpenChange(false)} className="cursor-pointer">
         Close
       </Button>
-      <Button onClick={() => onEdit?.(retailer)}>
-        <Edit className="h-4 w-4 mr-2" />
-        Edit Retailer
-      </Button>
+      {!hideEditButtons && onEdit && (
+        <Button onClick={() => onEdit(retailer)} className="cursor-pointer">
+          <Edit className="h-4 w-4 mr-2" />
+          Edit Retailer
+        </Button>
+      )}
     </>
   );
 
@@ -135,28 +139,7 @@ export function RetailerQuickView({
             System Information
           </h3>
           <div className="space-y-4 pl-7">
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                Created Date
-              </span>
-              <div className="text-right">
-                <p className="text-gray-900 dark:text-gray-100">
-                  {new Date(retailer.created_at).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {new Date(retailer.created_at).toLocaleTimeString('en-US', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            </div>
-
+            
             <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -181,16 +164,6 @@ export function RetailerQuickView({
 
             <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                <AlertCircle className="h-4 w-4" />
-                Status
-              </span>
-              <Badge variant="default" className="text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/30">
-                Active
-              </Badge>
-            </div>
-
-            <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <UserCheck className="h-4 w-4" />
                 Created By
               </span>
@@ -203,9 +176,31 @@ export function RetailerQuickView({
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {retailer.created_by_employee.human_readable_user_id}
                     </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(retailer.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(retailer.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   </div>
                 ) : (
-                  <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                  <div>
+                    <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(retailer.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(retailer.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -224,9 +219,31 @@ export function RetailerQuickView({
                     <p className="text-sm text-gray-500 dark:text-gray-400">
                       {retailer.updated_by_employee.human_readable_user_id}
                     </p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(retailer.updated_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(retailer.updated_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
                   </div>
                 ) : (
-                  <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                  <div>
+                    <span className="text-gray-900 dark:text-gray-100">Admin</span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      {new Date(retailer.updated_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })} at {new Date(retailer.updated_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

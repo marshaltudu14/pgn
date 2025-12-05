@@ -146,7 +146,7 @@ export interface CheckInMobileRequest {
     latitude: number;
     longitude: number;
     accuracy?: number;
-    timestamp?: number;
+    timestamp?: number; // Unix timestamp in milliseconds
     address?: string;
   };
   selfie: string; // Base64 encoded image
@@ -270,7 +270,7 @@ export const CheckInMobileRequestSchema = z.object({
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
     accuracy: z.number().min(0).optional(),
-    timestamp: z.number().optional(),
+    timestamp: z.number().optional().describe('Unix timestamp in milliseconds. Required for accurate location tracking.'),
     address: z.string().optional(),
   }),
   selfie: z.string().min(1, 'Selfie is required'),
@@ -345,6 +345,12 @@ export const CheckOutResponseSchema = BaseApiResponseSchema.extend({
     verificationStatus: VerificationStatusSchema,
   }),
 });
+
+// Export inferred types for compile-time type checking
+export type CheckInResponse = z.infer<typeof CheckInResponseSchema>;
+export type CheckOutResponse = z.infer<typeof CheckOutResponseSchema>;
+export type CheckInResponseData = z.infer<typeof CheckInResponseSchema>['data'];
+export type CheckOutResponseData = z.infer<typeof CheckOutResponseSchema>['data'];
 
 export const AttendanceStatusResponseSchema = BaseApiResponseSchema.extend({
   success: z.literal(true),

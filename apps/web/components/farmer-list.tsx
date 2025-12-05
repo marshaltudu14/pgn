@@ -18,13 +18,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Pagination,
@@ -37,7 +30,10 @@ import {
 } from '@/components/ui/pagination';
 import { FarmerWithRetailer } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
-import { Search, Plus, Edit, Eye, Mail, Phone, User, X } from 'lucide-react';
+import { useRetailerStore } from '@/app/lib/stores/retailerStore';
+import { FarmerQuickView } from '@/components/farmer-quick-view';
+import { RetailerQuickView } from '@/components/retailer-quick-view';
+import { Search, Plus, Edit, Eye, Mail, Phone, User, X, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 
 interface FarmerListProps {
   onFarmerSelect?: (farmer: FarmerWithRetailer) => void;
@@ -94,6 +90,13 @@ export function FarmerList({
   const [searchInput, setSearchInput] = useState(filters.search || '');
   const debouncedSearchInput = useDebounce(searchInput, 300);
 
+  // Quick view state
+  const [showFarmerQuickView, setShowFarmerQuickView] = useState(false);
+  const [showRetailerQuickView, setShowRetailerQuickView] = useState(false);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerWithRetailer | null>(null);
+  const [selectedRetailer, setSelectedRetailer] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
   // Handle search changes when debounced value updates
   useEffect(() => {
     if (filters.search !== debouncedSearchInput) {
@@ -127,10 +130,22 @@ export function FarmerList({
     storeFunctions.current.fetchFarmers();
   }, []);
 
-  const handlePageSizeChange = useCallback((size: number) => {
-    storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+  const handleSort = useCallback((sortBy: 'name' | 'created_at' | 'updated_at') => {
+    const newSortOrder = filters.sort_by === sortBy && filters.sort_order === 'asc' ? 'desc' : 'asc';
+    storeFunctions.current.setFilters({ sort_by: sortBy, sort_order: newSortOrder });
     storeFunctions.current.fetchFarmers();
-  }, []);
+  }, [filters.sort_by, filters.sort_order]);
+
+  // Handle quick view
+  const handleFarmerQuickView = async (farmer: FarmerWithRetailer) => {
+    setSelectedFarmer(farmer);
+    setShowFarmerQuickView(true);
+  };
+
+  const handleRetailerQuickView = async (retailer: any) => {
+    setSelectedRetailer(retailer);
+    setShowRetailerQuickView(true);
+  };
 
   // Generate pagination items
   const generatePaginationItems = () => {
@@ -261,12 +276,51 @@ export function FarmerList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                    <div className="flex items-center">
+                      Name
+                      {filters.sort_by === 'name' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">Retailer</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden lg:table-cell">Created By</TableHead>
-                  <TableHead className="hidden lg:table-cell">Updated By</TableHead>
+                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
+                    <div className="flex items-center">
+                      Created By
+                      {filters.sort_by === 'created_at' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('updated_at')}>
+                    <div className="flex items-center">
+                      Updated By
+                      {filters.sort_by === 'updated_at' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -308,10 +362,15 @@ export function FarmerList({
                       <div className="text-sm max-w-xs">
                         {farmer.retailer ? (
                           <div>
-                            <div className="font-medium">{farmer.retailer.name}</div>
-                            {farmer.retailer.shop_name && (
-                              <div className="text-muted-foreground text-xs">{farmer.retailer.shop_name}</div>
-                            )}
+                            <div
+                              className="font-medium cursor-pointer"
+                              onClick={() => {
+                                // Open retailer quick view
+                                handleRetailerQuickView(farmer.retailer);
+                              }}
+                            >
+                              {farmer.retailer.name}
+                            </div>
                           </div>
                         ) : '-'}
                       </div>
@@ -396,23 +455,22 @@ export function FarmerList({
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-center p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
           <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-                {generatePaginationItems()}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {generatePaginationItems()}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
@@ -428,6 +486,36 @@ export function FarmerList({
             <Plus className="h-4 w-4 mr-2" />
             Add Farmer
           </Button>
+        </div>
+      )}
+
+      {/* Quick View Modals */}
+      <FarmerQuickView
+        open={showFarmerQuickView}
+        onOpenChange={setShowFarmerQuickView}
+        farmer={selectedFarmer}
+        onEdit={onFarmerEdit}
+      />
+
+      {selectedRetailer && (
+        <RetailerQuickView
+          open={showRetailerQuickView}
+          onOpenChange={setShowRetailerQuickView}
+          retailer={selectedRetailer}
+          onEdit={(retailer) => {
+            // Navigate to retailer edit page
+            window.location.href = `/dashboard/retailers/form?id=${retailer.id}&mode=edit`;
+          }}
+        />
+      )}
+
+      {/* Loading Overlay */}
+      {loadingDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-black rounded-lg p-6 flex items-center gap-3 border border-border">
+            <Loader2 className="h-6 w-6 animate-spin text-foreground" />
+            <span className="text-foreground">Loading details...</span>
+          </div>
         </div>
       )}
     </div>

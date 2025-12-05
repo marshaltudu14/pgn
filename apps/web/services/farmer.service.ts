@@ -26,7 +26,7 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
     email,
     phone,
     retailer_id,
-    sort_by = 'created_at',
+    sort_by = 'updated_at',
     sort_order = 'desc'
   } = params;
 

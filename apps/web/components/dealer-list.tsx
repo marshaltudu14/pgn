@@ -18,13 +18,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Pagination,
@@ -37,7 +30,7 @@ import {
 } from '@/components/ui/pagination';
 import { DealerWithRetailers } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
-import { Search, Plus, Edit, Eye, Building, Mail, Phone, X } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Building, Mail, Phone, X, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface DealerListProps {
   onDealerSelect?: (dealer: DealerWithRetailers) => void;
@@ -114,10 +107,11 @@ export function DealerList({
     storeFunctions.current.fetchDealers();
   }, []);
 
-  const handlePageSizeChange = useCallback((size: number) => {
-    storeFunctions.current.setPagination(1, size); // Reset to first page with new page size
+  const handleSort = useCallback((sortBy: 'name' | 'created_at' | 'updated_at') => {
+    const newSortOrder = filters.sort_by === sortBy && filters.sort_order === 'asc' ? 'desc' : 'asc';
+    storeFunctions.current.setFilters({ sort_by: sortBy, sort_order: newSortOrder });
     storeFunctions.current.fetchDealers();
-  }, []);
+  }, [filters.sort_by, filters.sort_order]);
 
   // Generate pagination items
   const generatePaginationItems = () => {
@@ -213,11 +207,50 @@ export function DealerList({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                      <div className="flex items-center">
+                        Name
+                        {filters.sort_by === 'name' ? (
+                          filters.sort_order === 'asc' ? (
+                            <ChevronUp className="ml-1 h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          )
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead className="hidden xl:table-cell">Address</TableHead>
-                    <TableHead className="hidden lg:table-cell">Created By</TableHead>
-                    <TableHead className="hidden lg:table-cell">Updated By</TableHead>
+                    <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
+                      <div className="flex items-center">
+                        Created By
+                        {filters.sort_by === 'created_at' ? (
+                          filters.sort_order === 'asc' ? (
+                            <ChevronUp className="ml-1 h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          )
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('updated_at')}>
+                      <div className="flex items-center">
+                        Updated By
+                        {filters.sort_by === 'updated_at' ? (
+                          filters.sort_order === 'asc' ? (
+                            <ChevronUp className="ml-1 h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          )
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -306,11 +339,67 @@ export function DealerList({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={() => handleSort('name')}
+                    >
+                      Name
+                      {filters.sort_by === 'name' && (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      )}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+                    <div className="flex items-center">
+                      Name
+                      {filters.sort_by === 'name' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden lg:table-cell">Created By</TableHead>
-                  <TableHead className="hidden lg:table-cell">Updated By</TableHead>
+                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
+                    <div className="flex items-center">
+                      Created By
+                      {filters.sort_by === 'created_at' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('updated_at')}>
+                    <div className="flex items-center">
+                      Updated By
+                      {filters.sort_by === 'updated_at' ? (
+                        filters.sort_order === 'asc' ? (
+                          <ChevronUp className="ml-1 h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="ml-1 h-4 w-4" />
+                        )
+                      ) : (
+                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -406,23 +495,22 @@ export function DealerList({
       {pagination.totalPages > 1 && (
         <div className="flex items-center justify-center p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
           <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => handlePageChange(pagination.currentPage - 1)}
-                    className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-                {generatePaginationItems()}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => handlePageChange(pagination.currentPage + 1)}
-                    className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {generatePaginationItems()}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 

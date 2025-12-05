@@ -48,6 +48,8 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
   },
   filters: {
     search: '',
+    sort_by: 'updated_at',
+    sort_order: 'desc',
   },
 
   fetchFarmers: async (params = {}) => {
@@ -68,6 +70,8 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
         ...(filters.phone && { phone: filters.phone }),
         ...(filters.retailer_id && { retailer_id: filters.retailer_id }),
         ...(filters.dealer_id && { dealer_id: filters.dealer_id }),
+        sort_by: filters.sort_by || 'updated_at',
+        sort_order: filters.sort_order || 'desc',
       });
 
       const token = useAuthStore.getState().token;

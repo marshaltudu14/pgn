@@ -63,16 +63,7 @@ export default function RegionsManagementClient() {
     }
   };
 
-  // Handle page size changes
-  const handlePageSizeChange = (size: number) => {
-    setPagination(1, size);
-    if (searchTerm.trim()) {
-      searchRegions(searchTerm.trim(), { ...filters, page: 1, limit: size });
-    } else {
-      fetchRegions({ ...filters, page: 1, limit: size });
-    }
-  };
-
+  
   // Handle sort changes
   const handleSortChange = (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => {
     setFilters({ sort_by: sortBy, sort_order: sortOrder, page: 1 });
@@ -211,7 +202,6 @@ export default function RegionsManagementClient() {
         onEdit={handleEdit}
         onDelete={handleDeleteRegion}
         onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
         onSortChange={handleSortChange}
       />
 

@@ -169,11 +169,11 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-    // Return success response following the schema format
+    // Build response following the schema structure
     const response = NextResponse.json({
       success: true,
-      message: result.message,
       data: {
+        message: result.message || 'Check-out successful',
         attendanceId: result.attendanceId!,
         checkOutTime: result.checkOutTime!.toISOString(),
         status: result.status!,

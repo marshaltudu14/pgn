@@ -1,9 +1,7 @@
-import { useColorScheme } from 'react-native';
 import { useTheme } from '@/contexts/theme-context';
 import { COLORS } from '@/constants';
 
 export const useThemeColors = () => {
-  const deviceColorScheme = useColorScheme();
   const { resolvedTheme } = useTheme();
 
   const colors = {

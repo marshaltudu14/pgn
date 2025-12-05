@@ -28,7 +28,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { RetailerWithFarmers } from '@pgn/shared';
+import { RetailerWithFarmers, DealerWithRetailers } from '@pgn/shared';
 
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
@@ -37,14 +37,12 @@ import { DealerQuickView } from '@/components/dealer-quick-view';
 import { Search, Plus, Edit, Eye, Store, Mail, Phone, X, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 
 interface RetailerListProps {
-  onRetailerSelect?: (retailer: RetailerWithFarmers) => void;
   onRetailerEdit?: (retailer: RetailerWithFarmers) => void;
   onRetailerCreate?: () => void;
   hideEditButtons?: boolean;
 }
 
 export function RetailerList({
-  onRetailerSelect,
   onRetailerEdit,
   onRetailerCreate,
   hideEditButtons = false,
@@ -98,9 +96,8 @@ export function RetailerList({
   const [showRetailerQuickView, setShowRetailerQuickView] = useState(false);
   const [showDealerQuickView, setShowDealerQuickView] = useState(false);
   const [selectedRetailer, setSelectedRetailer] = useState<RetailerWithFarmers | null>(null);
-  const [selectedDealer, setSelectedDealer] = useState<any>(null);
+  const [selectedDealer, setSelectedDealer] = useState<DealerWithRetailers | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [hideEditButtons, setHideEditButtons] = useState(false);
 
   // Handle search changes when debounced value updates
   useEffect(() => {
@@ -146,16 +143,17 @@ export function RetailerList({
     setSelectedRetailer(retailer);
     setShowRetailerQuickView(true);
   };
-
+  
   // Get dealer store methods
   const { getDealerById } = useDealerStore();
 
   const handleDealerQuickView = async (dealerId: string) => {
     setLoadingDetails(true);
     try {
-      const dealer = await getDealerById(dealerId);
-      if (dealer) {
-        setSelectedDealer(dealer);
+      // Always fetch fresh dealer data from API route
+      const dealerData = await getDealerById(dealerId);
+      if (dealerData) {
+        setSelectedDealer(dealerData);
         setShowDealerQuickView(true);
       }
     } catch (error) {
@@ -308,9 +306,9 @@ export function RetailerList({
                       )}
                     </div>
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">Dealer</TableHead>
+                  <TableHead >Dealer</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead className="hidden xl:table-cell">Address</TableHead>
+                  <TableHead >Address</TableHead>
                   <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
                     <div className="flex items-center">
                       Created By
@@ -348,11 +346,11 @@ export function RetailerList({
                   [...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded" />
@@ -376,7 +374,7 @@ export function RetailerList({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm max-w-xs">
                         {retailer.dealer ? (
                           <div>
@@ -384,7 +382,7 @@ export function RetailerList({
                               className="font-medium cursor-pointer"
                               onClick={() => {
                                 // Open dealer quick view
-                                handleDealerQuickView(retailer.dealer.id);
+                                handleDealerQuickView(retailer.dealer!.id);
                               }}
                             >
                               {retailer.dealer.name}
@@ -410,12 +408,12 @@ export function RetailerList({
                         {!retailer.phone && !retailer.email && '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell >
                       <div className="text-sm max-w-xs truncate">
                         {retailer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {retailer.created_by_employee ? (
                           <div>
@@ -427,7 +425,7 @@ export function RetailerList({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {retailer.updated_by_employee ? (
                           <div>
@@ -444,7 +442,7 @@ export function RetailerList({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onRetailerSelect?.(retailer)}
+                          onClick={() => handleRetailerQuickView(retailer)}
                           className="cursor-pointer"
                         >
                           <Eye className="h-4 w-4" />
@@ -521,10 +519,7 @@ export function RetailerList({
           open={showDealerQuickView}
           onOpenChange={setShowDealerQuickView}
           dealer={selectedDealer}
-          onEdit={(dealer) => {
-            // Navigate to dealer edit page
-            window.location.href = `/dashboard/dealers/form?id=${dealer.id}&mode=edit`;
-          }}
+          hideEditButtons={true}
         />
       )}
 

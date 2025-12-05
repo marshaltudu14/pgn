@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { Dealer, DealerWithRetailers, DealerFilters, DealerListResponse, DealerInsert, DealerUpdate } from '@pgn/shared';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
-import { listDealers } from '@/services/dealer.service';
 
 interface DealerState {
   dealers: DealerWithRetailers[];

@@ -222,7 +222,7 @@ export function DealerList({
                       </div>
                     </TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead className="hidden xl:table-cell">Address</TableHead>
+                    <TableHead >Address</TableHead>
                     <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
                       <div className="flex items-center">
                         Created By
@@ -259,9 +259,9 @@ export function DealerList({
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded cursor-pointer" />
@@ -371,8 +371,8 @@ export function DealerList({
                     </div>
                   </TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead className="hidden xl:table-cell">Address</TableHead>
-                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
+                  <TableHead>Address</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>
                     <div className="flex items-center">
                       Created By
                       {filters.sort_by === 'created_at' ? (
@@ -386,7 +386,7 @@ export function DealerList({
                       )}
                     </div>
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('updated_at')}>
+                  <TableHead className="cursor-pointer" onClick={() => handleSort('updated_at')}>
                     <div className="flex items-center">
                       Updated By
                       {filters.sort_by === 'updated_at' ? (
@@ -434,12 +434,12 @@ export function DealerList({
                         {!dealer.phone && !dealer.email && '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell >
                       <div className="text-sm max-w-xs truncate">
                         {dealer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {dealer.created_by_employee ? (
                           <div>
@@ -451,7 +451,7 @@ export function DealerList({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {dealer.updated_by_employee ? (
                           <div>

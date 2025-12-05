@@ -272,11 +272,11 @@ export function TaskTable({
                   <TableHeader>
                     <TableRow>
                       <TableHead>Title</TableHead>
-                      <TableHead className="hidden md:table-cell">Employee</TableHead>
-                      <TableHead className="hidden lg:table-cell">Status</TableHead>
+                      <TableHead >Employee</TableHead>
+                      <TableHead >Status</TableHead>
                       <TableHead>Priority</TableHead>
-                      <TableHead className="hidden sm:table-cell">Progress</TableHead>
-                      <TableHead className="hidden xl:table-cell">Due Date</TableHead>
+                      <TableHead >Progress</TableHead>
+                      <TableHead >Due Date</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -286,11 +286,11 @@ export function TaskTable({
                       [...Array(5)].map((_, index) => (
                         <TableRow key={index}>
                           <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                          <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
-                          <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-20 rounded" /></TableCell>
+                          <TableCell ><Skeleton className="h-8 w-40" /></TableCell>
+                          <TableCell ><Skeleton className="h-8 w-20 rounded" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-16 rounded" /></TableCell>
-                          <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
-                          <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
+                          <TableCell ><Skeleton className="h-8 w-16" /></TableCell>
+                          <TableCell ><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell className="text-right">
                             <Skeleton className="h-8 w-16 rounded ml-auto cursor-pointer" />
                           </TableCell>
@@ -320,7 +320,7 @@ export function TaskTable({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell >
                           <div>
                             <div className="font-medium">
                               {task.assigned_employee_name || 'Unknown'}
@@ -330,13 +330,13 @@ export function TaskTable({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden lg:table-cell">
+                        <TableCell >
                           <StatusBadge status={task.status} />
                         </TableCell>
                         <TableCell>
                           <PriorityBadge priority={task.priority} />
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">
+                        <TableCell >
                           <div className="flex items-center gap-2">
                             <div className="flex-1 bg-secondary rounded-full h-2">
                               <div
@@ -349,7 +349,7 @@ export function TaskTable({
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="hidden xl:table-cell">
+                        <TableCell >
                           {task.due_date ? (
                             <div>
                               <div className="font-medium">

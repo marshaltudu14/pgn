@@ -6,7 +6,9 @@ import {
   AttendanceResponse,
   AttendanceStatus,
   CheckInMobileRequest,
+  CheckInMobileRequestSchema,
   CheckOutMobileRequest,
+  CheckOutMobileRequestSchema,
   DailyAttendanceRecord,
   LocationData
 } from '@pgn/shared';
@@ -127,7 +129,6 @@ interface AttendanceStoreState {
   getAttendanceStatus: (employeeId: string) => Promise<void>;
   checkIn: (request: CheckInMobileRequest) => Promise<AttendanceResponse>;
   checkOut: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
-  emergencyCheckOut: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
 
   // Attendance history actions
   fetchAttendanceHistory: (params?: AttendanceListParams) => Promise<void>;
@@ -150,6 +151,20 @@ interface AttendanceStoreState {
   // Permissions and initialization
   initializePermissions: () => Promise<void>;
   checkPermissions: () => Promise<void>;
+
+  // Emergency recovery
+  checkForInterruptedSession: () => Promise<void>;
+  emergencyCheckOut: (data: {
+    attendanceId: string;
+    reason: string;
+    lastLocation: {
+      timestamp: number;
+      coordinates: [number, number];
+      batteryLevel: number;
+    };
+    lastKnownTime: number;
+  }) => Promise<void>;
+  emergencyCheckOutManual: (request: CheckOutMobileRequest) => Promise<AttendanceResponse>;
 
   // Offline management
   loadOfflineQueue: () => Promise<void>;
@@ -239,25 +254,27 @@ export const useAttendance = create<AttendanceStoreState>()(
               locationPermission: locationAvailable,
             });
 
+            // Check for interrupted session first
+            await get().checkForInterruptedSession();
+
             // Initialize location service and check if tracking is already active
             await get().initializeLocationService();
 
             // Check if service is already running (persisted across restarts)
             const isTracking = locationTrackingServiceNotifee.isTrackingActive();
-            if (isTracking) {
-              const authStore = useAuth.getState();
-              const employeeId = authStore.user?.id;
-              if (employeeId) {
-                await get().getAttendanceStatus(employeeId); // Fetch status to sync currentAttendanceId
-              } else {
-                set({
-                  currentStatus: 'CHECKED_IN',
-                  isLocationTracking: true,
-                  lastLocationUpdate: new Date(),
-                  checkInTime: new Date(),
-                  requiresCheckOut: true,
-                });
-              }
+
+            // Get auth state
+            const authStore = useAuth.getState();
+            const employeeId = authStore.user?.id;
+
+            if (isTracking && employeeId) {
+              // Both service is running AND user is authenticated
+              // Fetch the actual server status to sync UI state
+              await get().getAttendanceStatus(employeeId);
+            } else if (isTracking && !employeeId) {
+              // Service is running but user is not authenticated
+              // Can't fetch status without employeeId, but we should stop the service
+              await locationTrackingServiceNotifee.stopTracking('User not authenticated');
             }
 
           } catch (_error) {
@@ -280,6 +297,124 @@ export const useAttendance = create<AttendanceStoreState>()(
             });
           } catch (_error) {
             // Permission check failed
+          }
+        },
+
+        // Check for interrupted session and handle emergency check-out
+        checkForInterruptedSession: async () => {
+          try {
+            const emergencyData = await locationTrackingServiceNotifee.getEmergencyData();
+
+            if (emergencyData && emergencyData.trackingActive && emergencyData.attendanceId) {
+              const timeSinceLastUpdate = Date.now() - emergencyData.lastKnownTime;
+
+              // If it's been more than 10 minutes, force emergency check-out
+              if (timeSinceLastUpdate > 10 * 60 * 1000) {
+                console.warn('[AttendanceStore] Detected interrupted session, forcing emergency check-out');
+
+                await get().emergencyCheckOut({
+                  attendanceId: emergencyData.attendanceId,
+                  reason: 'App restart - tracking interrupted',
+                  lastLocation: emergencyData.lastLocationUpdate,
+                  lastKnownTime: emergencyData.lastKnownTime
+                });
+              } else {
+                // Try to resume normal tracking
+                console.log('[AttendanceStore] Resuming tracking after short interruption');
+                const authStore = useAuth.getState();
+                if (authStore.user) {
+                  // Check if still checked in on server
+                  await get().getAttendanceStatus(authStore.user.id);
+                }
+              }
+            }
+          } catch (error) {
+            console.error('[AttendanceStore] Error checking interrupted session:', error);
+          }
+        },
+
+        // Emergency check-out method
+        emergencyCheckOut: async (data: {
+          attendanceId: string;
+          reason: string;
+          lastLocation: {
+            timestamp: number;
+            coordinates: [number, number];
+            batteryLevel: number;
+          };
+          lastKnownTime: number;
+        }) => {
+          set({ isCheckingOut: true, error: null });
+
+          try {
+            // Determine method based on reason
+            let method: 'APP_CLOSED' | 'BATTERY_DRAIN' | 'FORCE_CLOSE';
+            const reasonLower = data.reason.toLowerCase();
+            if (reasonLower.includes('battery') || reasonLower.includes('low battery')) {
+              method = 'BATTERY_DRAIN';
+            } else if (reasonLower.includes('permission')) {
+              method = 'FORCE_CLOSE';
+            } else {
+              method = 'APP_CLOSED';
+            }
+
+            // Get device info for consistency with regular check-in/check-out
+            const deviceInfo = await get().getDeviceInfo();
+            deviceInfo.batteryLevel = data.lastLocation.batteryLevel; // Update with current battery level
+
+            // Build checkout request using same format as regular check-out
+            const checkoutRequest = {
+              attendanceId: data.attendanceId,
+              location: {
+                latitude: data.lastLocation.coordinates[0],
+                longitude: data.lastLocation.coordinates[1],
+                accuracy: 0,
+                timestamp: data.lastLocation.timestamp, // Unix timestamp in milliseconds
+                address: undefined
+              },
+              selfie: undefined,
+              deviceInfo: deviceInfo,
+              reason: data.reason,
+              method: method
+            };
+
+            // Call existing checkout API with emergency parameters
+            const response = await api.post(API_ENDPOINTS.ATTENDANCE_CHECKOUT, checkoutRequest);
+
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Emergency check-out failed');
+
+            if (!handledResponse.success) {
+              const errorMessage = handledResponse.error || 'Emergency check-out failed';
+              throw new Error(errorMessage);
+            }
+
+            // Update local state
+            set({
+              currentStatus: 'CHECKED_OUT',
+              currentAttendanceId: null,
+              isCheckingOut: false,
+              isLocationTracking: false,
+              requiresCheckOut: false,
+              checkOutTime: new Date(data.lastLocation.timestamp),
+              workHours: (data.lastLocation.timestamp - (get().checkInTime?.getTime() || Date.now())) / (1000 * 60 * 60),
+              error: null
+            });
+
+            // Clear emergency data only after successful server response
+            await locationTrackingServiceNotifee.clearEmergencyData();
+
+            // Stop location tracking service since check-out is complete
+            await locationTrackingServiceNotifee.stopTracking('Emergency check-out completed');
+
+            console.log('[AttendanceStore] Emergency check-out completed successfully');
+          } catch (error) {
+            const errorMessage = transformApiErrorMessage(error);
+            console.error('[AttendanceStore] Emergency check-out failed:', errorMessage);
+
+            set({
+              isCheckingOut: false,
+              error: errorMessage
+            });
           }
         },
 
@@ -331,14 +466,25 @@ export const useAttendance = create<AttendanceStoreState>()(
               isLocationTracking: apiData.status === 'CHECKED_IN' // Sync tracking state with status
             });
 
-            // If checked in, ensure tracking is started
+            // Note: Tracking is started only after successful checkin, not here
+            // This prevents tracking from starting when user is in CHECKED_IN state
+            // but hasn't actually completed the checkin process
+
+            // Special case: If user is already checked in and app is starting,
+            // ensure tracking is started. This is a one-time sync on app start.
             if (apiData.status === 'CHECKED_IN') {
               const authStore = useAuth.getState();
               if (authStore.user?.id && authStore.user?.firstName) {
-                locationTrackingServiceNotifee.startTracking(
-                  authStore.user.id,
-                  authStore.user.firstName
-                );
+                // Check if tracking service is actually running, not just the store state
+                const isTrackingRunning = locationTrackingServiceNotifee.isTrackingActive();
+                if (!isTrackingRunning) {
+                  console.log('[AttendanceStore] Starting tracking for already checked-in user');
+                  await locationTrackingServiceNotifee.startTracking(
+                    authStore.user.id,
+                    authStore.user.firstName,
+                    apiData.currentAttendanceId
+                  );
+                }
               }
             }
 
@@ -386,14 +532,14 @@ export const useAttendance = create<AttendanceStoreState>()(
                 latitude: request.location.latitude,
                 longitude: request.location.longitude,
                 accuracy: request.location.accuracy,
-                timestamp: request.location.timestamp ? new Date(request.location.timestamp).toISOString() : new Date().toISOString(),
+                timestamp: request.location.timestamp || Date.now(),
                 address: request.location.address
               },
               selfieData: request.selfie,
               deviceInfo
             };
 
-            // Make API call
+            // Make API call with proper typing
             const response = await api.post<any>(API_ENDPOINTS.ATTENDANCE_CHECKIN, apiRequest);
 
             // Handle API response with validation error support
@@ -403,19 +549,31 @@ export const useAttendance = create<AttendanceStoreState>()(
               throw new Error(handledResponse.error || 'Failed to check in');
             }
 
-            const responseData = handledResponse.data as any;
-
-            if (!responseData) {
-              throw new Error('Invalid check-in response');
+            // Ensure responseData has the proper type structure
+            const responseData = handledResponse.data;
+            if (!responseData || typeof responseData !== 'object') {
+              throw new Error('Invalid check-in response: missing data');
             }
 
+            // Type the response data to allow property access
+            const data = responseData as Record<string, unknown>;
+
+            // Runtime validation - check if required fields exist
+            const requiredFields = ['message', 'attendanceId', 'checkInTime', 'status', 'verificationStatus'];
+            for (const field of requiredFields) {
+              if (!(field in data)) {
+                throw new Error(`API response missing required field: ${field}`);
+              }
+            }
+
+            // Now use the typed response structure
             const result: AttendanceResponse = {
               success: true,
-              message: 'Check-in successful',
-              timestamp: new Date(responseData.timestamp),
-              checkInTime: new Date(responseData.checkInTime),
-              verificationStatus: responseData.verificationStatus,
-              attendanceId: responseData.attendanceId
+              message: data.message as string,
+              attendanceId: data.attendanceId as string,
+              checkInTime: new Date(data.checkInTime as string),
+              verificationStatus: data.verificationStatus as any,
+              workHours: data.workHours as number | undefined
             };
 
             if (result.success) {
@@ -436,7 +594,15 @@ export const useAttendance = create<AttendanceStoreState>()(
 
               if (employeeId && employeeName) {
                 try {
-                  const success = await locationTrackingServiceNotifee.startTracking(employeeId, employeeName);
+                  // Get the attendance ID from the response data
+                  const attendanceId = (handledResponse.data as any)?.attendanceId;
+
+                  const success = await locationTrackingServiceNotifee.startTracking(
+                    employeeId,
+                    employeeName,
+                    attendanceId
+                  );
+
                   if (success) {
                     set({
                       isLocationTracking: true,
@@ -531,18 +697,32 @@ export const useAttendance = create<AttendanceStoreState>()(
               };
             }
 
-            const apiResponse = handledResponse.data as any;
-            const checkOutTime = apiResponse.timestamp ? new Date(apiResponse.timestamp) : new Date();
+            // Ensure responseData has the proper type structure
+            const responseData = handledResponse.data;
+            if (!responseData || typeof responseData !== 'object') {
+              throw new Error('Invalid check-out response: missing data');
+            }
+
+            // Type the response data to allow property access
+            const data = responseData as Record<string, unknown>;
+
+            // Runtime validation - check if required fields exist
+            const requiredFields = ['message', 'attendanceId', 'checkOutTime', 'status', 'workHours', 'verificationStatus'];
+            for (const field of requiredFields) {
+              if (!(field in data)) {
+                throw new Error(`API response missing required field: ${field}`);
+              }
+            }
 
             // Convert API response to store format
             const result: AttendanceResponse = {
               success: true,
-              message: 'Check-out successful',
-              timestamp: checkOutTime,
-              checkOutTime: checkOutTime,
-              workHours: apiResponse.workHours,
-              verificationStatus: apiResponse.verificationStatus,
-              attendanceId: apiResponse.attendanceId
+              message: data.message as string,
+              attendanceId: data.attendanceId as string,
+              checkOutTime: new Date(data.checkOutTime as string),
+              verificationStatus: data.verificationStatus as any,
+              workHours: data.workHours as number,
+              timestamp: new Date()
             };
 
             if (result.success) {
@@ -560,7 +740,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               // Stop location tracking using Notifee
               try {
                 const checkOutData = JSON.stringify({
-                  checkOutTime: checkOutTime.toISOString(),
+                  checkOutTime: result.checkOutTime?.toISOString() || new Date().toISOString(),
                   deviceInfo: deviceInfo,
                 });
                 const success = await locationTrackingServiceNotifee.stopTracking(checkOutData);
@@ -593,7 +773,7 @@ export const useAttendance = create<AttendanceStoreState>()(
         },
 
         // Emergency check-out (for scenarios like app closure, battery drain, etc.)
-        emergencyCheckOut: async (request: CheckOutMobileRequest): Promise<AttendanceResponse> => {
+        emergencyCheckOutManual: async (request: CheckOutMobileRequest): Promise<AttendanceResponse> => {
           set({ isCheckingOut: true, error: null });
 
           try {
@@ -606,7 +786,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                 latitude: request.location?.latitude || 0,
                 longitude: request.location?.longitude || 0,
                 accuracy: request.location?.accuracy,
-                timestamp: request.location?.timestamp ? new Date(request.location.timestamp).toISOString() : new Date().toISOString(),
+                timestamp: request.location?.timestamp || Date.now(),
                 address: request.location?.address
               },
               selfieData: request.selfie,
@@ -970,6 +1150,20 @@ export const useAttendance = create<AttendanceStoreState>()(
                   }
                 );
 
+                // Set emergency data callback for handling emergency check-outs
+                locationTrackingServiceNotifee.setEmergencyDataCallback(
+                  async (emergencyData) => {
+                    if (emergencyData.trackingActive && emergencyData.attendanceId) {
+                      await get().emergencyCheckOut({
+                        attendanceId: emergencyData.attendanceId,
+                        reason: 'Low battery - automatic check-out',
+                        lastLocation: emergencyData.lastLocationUpdate,
+                        lastKnownTime: emergencyData.lastKnownTime
+                      });
+                    }
+                  }
+                );
+
             set({
               isServiceAvailable: isAvailable,
               error: isAvailable ? null : 'Location service not available',
@@ -1214,9 +1408,9 @@ export const useAttendance = create<AttendanceStoreState>()(
             let appVersion = 'Unknown';
 
             try {
-              deviceModel = ReactNativeDeviceInfo.getModel();
-              deviceBrand = ReactNativeDeviceInfo.getBrand();
-              appVersion = ReactNativeDeviceInfo.getVersion();
+              deviceModel = await ReactNativeDeviceInfo.getModel();
+              deviceBrand = await ReactNativeDeviceInfo.getBrand();
+              appVersion = await ReactNativeDeviceInfo.getVersion();
             } catch (_deviceError) {
               // Device info methods failed, will use defaults
             }

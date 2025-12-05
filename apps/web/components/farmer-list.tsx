@@ -28,7 +28,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { FarmerWithRetailer } from '@pgn/shared';
+import { FarmerWithRetailer, RetailerWithFarmers } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 import { FarmerQuickView } from '@/components/farmer-quick-view';
@@ -36,13 +36,11 @@ import { RetailerQuickView } from '@/components/retailer-quick-view';
 import { Search, Plus, Edit, Eye, Mail, Phone, User, X, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 
 interface FarmerListProps {
-  onFarmerSelect?: (farmer: FarmerWithRetailer) => void;
   onFarmerEdit?: (farmer: FarmerWithRetailer) => void;
   onFarmerCreate?: () => void;
 }
 
 export function FarmerList({
-  onFarmerSelect,
   onFarmerEdit,
   onFarmerCreate,
 }: FarmerListProps) {
@@ -94,7 +92,7 @@ export function FarmerList({
   const [showFarmerQuickView, setShowFarmerQuickView] = useState(false);
   const [showRetailerQuickView, setShowRetailerQuickView] = useState(false);
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerWithRetailer | null>(null);
-  const [selectedRetailer, setSelectedRetailer] = useState<any>(null);
+  const [selectedRetailer, setSelectedRetailer] = useState<RetailerWithFarmers | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Handle search changes when debounced value updates
@@ -142,9 +140,22 @@ export function FarmerList({
     setShowFarmerQuickView(true);
   };
 
-  const handleRetailerQuickView = async (retailer: any) => {
-    setSelectedRetailer(retailer);
-    setShowRetailerQuickView(true);
+  // Get retailer store methods
+  const { getRetailerById } = useRetailerStore();
+
+  const handleRetailerQuickView = async (retailerId: string) => {
+    setLoadingDetails(true);
+    try {
+      const retailerData = await getRetailerById(retailerId);
+      if (retailerData) {
+        setSelectedRetailer(retailerData);
+        setShowRetailerQuickView(true);
+      }
+    } catch (error) {
+      console.error('Error fetching retailer details:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
   };
 
   // Generate pagination items
@@ -290,9 +301,9 @@ export function FarmerList({
                       )}
                     </div>
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">Retailer</TableHead>
+                  <TableHead >Retailer</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead className="hidden xl:table-cell">Address</TableHead>
+                  <TableHead >Address</TableHead>
                   <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
                     <div className="flex items-center">
                       Created By
@@ -330,11 +341,11 @@ export function FarmerList({
                   [...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded" />
@@ -358,7 +369,7 @@ export function FarmerList({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm max-w-xs">
                         {farmer.retailer ? (
                           <div>
@@ -366,7 +377,7 @@ export function FarmerList({
                               className="font-medium cursor-pointer"
                               onClick={() => {
                                 // Open retailer quick view
-                                handleRetailerQuickView(farmer.retailer);
+                                handleRetailerQuickView(farmer.retailer!.id);
                               }}
                             >
                               {farmer.retailer.name}
@@ -392,12 +403,12 @@ export function FarmerList({
                         {!farmer.phone && !farmer.email && '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell >
                       <div className="text-sm max-w-xs truncate">
                         {farmer.address || '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {farmer.created_by_employee ? (
                           <div>
@@ -409,7 +420,7 @@ export function FarmerList({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {farmer.updated_by_employee ? (
                           <div>
@@ -426,7 +437,7 @@ export function FarmerList({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onFarmerSelect?.(farmer)}
+                          onClick={() => handleFarmerQuickView(farmer)}
                           className="cursor-pointer"
                         >
                           <Eye className="h-4 w-4" />
@@ -502,10 +513,7 @@ export function FarmerList({
           open={showRetailerQuickView}
           onOpenChange={setShowRetailerQuickView}
           retailer={selectedRetailer}
-          onEdit={(retailer) => {
-            // Navigate to retailer edit page
-            window.location.href = `/dashboard/retailers/form?id=${retailer.id}&mode=edit`;
-          }}
+          hideEditButtons={true}
         />
       )}
 

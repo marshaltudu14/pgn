@@ -28,7 +28,7 @@ const statusHandler = async (req: NextRequest): Promise<NextResponse> => {
     // Get attendance status from service
     const status = await attendanceService.getAttendanceStatus(user.employeeId);
 
-    // Return success response following the schema format
+    // Build response following the schema structure
     const response = NextResponse.json({
       success: true,
       data: {

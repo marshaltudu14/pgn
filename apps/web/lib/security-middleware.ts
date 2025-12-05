@@ -23,6 +23,7 @@ const MOBILE_CLIENT_PATTERNS = [
   /ReactNative/i,
 ];
 
+
 // Suspicious user agent patterns to block
 const SUSPICIOUS_PATTERNS = [
   /curl/i,
@@ -58,6 +59,7 @@ export function validateRequestSecurity(request: NextRequest): SecurityValidatio
   const host = request.headers.get('host');
 
   
+
   // Check for same-origin requests (allow web app access)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const siteOrigin = new URL(siteUrl).origin;
@@ -80,6 +82,7 @@ export function validateRequestSecurity(request: NextRequest): SecurityValidatio
   // Check for suspicious user agents
   const isSuspicious = SUSPICIOUS_PATTERNS.some(pattern => pattern.test(userAgent));
 
+  
   // Block suspicious requests unless they're from legitimate mobile client
   if (isSuspicious && !isMobileClient) {
     return {
@@ -123,6 +126,7 @@ export async function validateMobileToken(request: NextRequest): Promise<{
   try {
     const authHeader = request.headers.get('authorization');
 
+    
     if (!authHeader) {
       return {
         valid: false,
@@ -315,6 +319,7 @@ export function withSecurity<T extends unknown[]>(
   const { requireAuth = true } = options;
 
   return async (req: NextRequest, ...args: T): Promise<NextResponse> => {
+    
     // Skip security for OPTIONS requests
     if (req.method === 'OPTIONS') {
       return new NextResponse(null, {

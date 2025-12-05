@@ -64,12 +64,12 @@ export function AttendanceTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
-                  <TableHead className="hidden md:table-cell">Employee</TableHead>
+                  <TableHead >Employee</TableHead>
                   <TableHead>Check In</TableHead>
-                  <TableHead className="hidden sm:table-cell">Check Out</TableHead>
-                  <TableHead className="hidden lg:table-cell">Work Hours</TableHead>
-                  <TableHead className="hidden xl:table-cell">Distance</TableHead>
-                  <TableHead className="hidden lg:table-cell">Device</TableHead>
+                  <TableHead >Check Out</TableHead>
+                  <TableHead >Work Hours</TableHead>
+                  <TableHead >Distance</TableHead>
+                  <TableHead >Device</TableHead>
                   <TableHead>Verification</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -80,12 +80,12 @@ export function AttendanceTable({
                   [...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-24" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-16" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-24" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-16" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-20 rounded" /></TableCell>
                       <TableCell className="text-right">
                         <Skeleton className="h-8 w-8 rounded ml-auto cursor-pointer" />
@@ -113,7 +113,7 @@ export function AttendanceTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell >
                       <div>
                         {record.employeeName && (
                           <div className="font-medium">{record.employeeName}</div>
@@ -132,7 +132,7 @@ export function AttendanceTable({
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell >
                       {record.checkOutTime ? (
                         <div className="text-sm font-medium">
                           {format(new Date(record.checkOutTime), 'hh:mm a')}
@@ -141,12 +141,12 @@ export function AttendanceTable({
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {record.workHours ? `${record.workHours.toFixed(1)}h` : '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {record.locationPath && record.locationPath.length > 0 ? (
                           <span>Path data</span>
@@ -155,7 +155,7 @@ export function AttendanceTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm text-muted-foreground">
                         {record.device || '-'}
                       </div>

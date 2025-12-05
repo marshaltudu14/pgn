@@ -20,7 +20,7 @@ const LocationUpdateCompatSchema = z.object({
   longitude: z.number().min(-180).max(180),
   accuracy: z.number().min(0).optional(),
   batteryLevel: z.number().min(0).max(1).optional(),
-  timestamp: z.number(), // Unix timestamp from mobile
+  timestamp: z.union([z.number(), z.string()]), // Accept both Unix timestamp (number) and ISO string
 });
 
 const locationUpdateHandler = async (
@@ -32,15 +32,26 @@ const locationUpdateHandler = async (
     const { id: attendanceId } = (req as unknown as { validatedParams: { id: string } }).validatedParams;
     const body = (req as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
+    // Handle timestamp - can be either Unix timestamp (number) or ISO string
+    let timestampMs: number;
+    if (typeof body.timestamp === 'number') {
+      // Unix timestamp in milliseconds or seconds?
+      // If it's too small to be milliseconds, assume it's seconds
+      timestampMs = body.timestamp < 10000000000 ? body.timestamp * 1000 : body.timestamp;
+    } else {
+      // ISO string
+      timestampMs = new Date(body.timestamp).getTime();
+    }
+
     const updateRequest: LocationUpdateRequest = {
       location: {
         latitude: body.latitude as number,
         longitude: body.longitude as number,
         accuracy: (body.accuracy as number | undefined) || 0,
-        timestamp: new Date(body.timestamp as number),
+        timestamp: new Date(timestampMs),
       },
       batteryLevel: body.batteryLevel as number | undefined,
-      timestamp: new Date(body.timestamp as number),
+      timestamp: new Date(timestampMs),
     };
 
     const success = await attendanceService.updateLocationTracking(attendanceId, updateRequest);

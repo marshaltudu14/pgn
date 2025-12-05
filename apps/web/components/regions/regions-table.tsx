@@ -12,13 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -45,7 +38,7 @@ interface RegionsTableProps {
   onEdit: (region: Region) => void;
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (size: number) => void;
+  _onPageSizeChange?: (size: number) => void;
   onSortChange: (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => void;
 }
 
@@ -57,7 +50,7 @@ export function RegionsTable({
   onEdit,
   onDelete,
   onPageChange,
-  onPageSizeChange,
+  _onPageSizeChange,
   onSortChange,
 }: RegionsTableProps) {
 
@@ -69,10 +62,6 @@ export function RegionsTable({
 
   const handlePageChange = (page: number) => {
     onPageChange(page);
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    onPageSizeChange(size);
   };
 
   // Generate pagination items
@@ -145,8 +134,6 @@ export function RegionsTable({
         <h3 className="text-lg font-semibold">
           {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} total
         </h3>
-      </div>
-        </div>
       </div>
 
       <Table>

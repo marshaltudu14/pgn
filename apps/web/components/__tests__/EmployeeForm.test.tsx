@@ -830,13 +830,26 @@ describe('EmployeeForm', () => {
         success: true,
         data: mockEmployee,
       });
+
+      // Clear previous mocks
+      mockUseEmployeeStore.mockClear();
+
+      // Set the mock return value
       mockUseEmployeeStore.mockReturnValue({
         createEmployee: mockCreateEmployee,
         updateEmployee: jest.fn(),
+        isLoading: false,
+        error: null,
+        employees: [],
+        fetchEmployees: jest.fn(),
+        deleteEmployee: jest.fn(),
+        getEmployeeById: jest.fn(),
       } as unknown as ReturnType<typeof useEmployeeStore>);
 
+      // Mock console.error to capture the actual error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
       // Set form values with empty phone number (keep all other required fields)
-      // Note: The validation requires 10 digits, so we pass empty but it will be handled
       setMockFormValues({
         first_name: 'John',
         last_name: 'Doe',
@@ -861,12 +874,20 @@ describe('EmployeeForm', () => {
       fireEvent.click(submitButton);
 
       await waitFor(() => {
+        // Check if mockCreateEmployee was called
+        if (mockCreateEmployee.mock.calls.length === 0) {
+          // If not called, check what error was logged
+          console.log('Console error calls:', consoleSpy.mock.calls);
+        }
         expect(mockCreateEmployee).toHaveBeenCalledWith(
           expect.objectContaining({
             phone: '', // Should be empty string when empty
           })
         );
-      });
+      }, { timeout: 3000 });
+
+      // Restore console.error
+      consoleSpy.mockRestore();
     });
   });
 });

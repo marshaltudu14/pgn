@@ -120,7 +120,8 @@
       "Bash(npm run validate-api:*)",
       "Bash(npm run test:web:*)",
       "Bash(git reset:*)",
-      "mcp__playwright__browser_hover"
+      "mcp__playwright__browser_hover",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []

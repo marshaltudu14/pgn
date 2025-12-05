@@ -10,13 +10,27 @@ import notifee, {
 } from '@notifee/react-native';
 import * as Battery from 'expo-battery';
 import { permissionService } from '@/services/permissions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface LocationTrackingState {
   isTracking: boolean;
   employeeId?: string;
   employeeName?: string;
+  attendanceId?: string;
   channelId?: string;
   notificationId?: string;
+}
+
+interface EmergencyAttendanceData {
+  attendanceId?: string;
+  employeeId?: string;
+  lastLocationUpdate: {
+    timestamp: number;
+    coordinates: [number, number];
+    batteryLevel: number;
+  };
+  trackingActive: boolean;
+  lastKnownTime: number;
 }
 
 type LocationUpdateCallback = (location: LocationData, batteryLevel: number) => Promise<void>;
@@ -30,10 +44,15 @@ class LocationTrackingServiceNotifee {
   private trackingInterval: ReturnType<typeof setInterval> | null = null;
   private notificationUpdateInterval: ReturnType<typeof setInterval> | null = null;
   private permissionMonitoringInterval: ReturnType<typeof setInterval> | null = null;
+  private batteryMonitoringInterval: ReturnType<typeof setInterval> | null = null;
   private locationUpdateCallback?: LocationUpdateCallback;
   private countdownUpdateCallback?: CountdownUpdateCallback;
+  private emergencyDataCallback?: (data: EmergencyAttendanceData) => void;
   private isInitialized = false;
   private nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
+  private lastEmergencyUpdate = 0;
+
+  private static readonly EMERGENCY_STORAGE_KEY = 'emergency_attendance_data';
 
   // Setup background event handler to suppress warning
   private setupBackgroundEventHandler(): void {
@@ -66,6 +85,59 @@ class LocationTrackingServiceNotifee {
   // Set the countdown update callback for UI synchronization
   setCountdownUpdateCallback(callback: CountdownUpdateCallback): void {
     this.countdownUpdateCallback = callback;
+  }
+
+  // Set the emergency data callback for handling emergency check-outs
+  setEmergencyDataCallback(callback: (data: EmergencyAttendanceData) => void): void {
+    this.emergencyDataCallback = callback;
+  }
+
+  // Store emergency attendance data for recovery scenarios
+  private async storeEmergencyData(location: LocationData, batteryLevel: number, attendanceId?: string): Promise<void> {
+    try {
+      const emergencyData: EmergencyAttendanceData = {
+        attendanceId,
+        employeeId: this.state.employeeId,
+        lastLocationUpdate: {
+          timestamp: location.timestamp.getTime(),
+          coordinates: [location.latitude, location.longitude],
+          batteryLevel
+        },
+        trackingActive: this.state.isTracking,
+        lastKnownTime: Date.now()
+      };
+
+      await AsyncStorage.setItem(
+        LocationTrackingServiceNotifee.EMERGENCY_STORAGE_KEY,
+        JSON.stringify(emergencyData)
+      );
+
+      this.lastEmergencyUpdate = Date.now();
+      console.log('[LocationTrackingServiceNotifee] Emergency data stored');
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Failed to store emergency data:', error);
+    }
+  }
+
+  // Clear emergency data after successful check-out
+  async clearEmergencyData(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(LocationTrackingServiceNotifee.EMERGENCY_STORAGE_KEY);
+      console.log('[LocationTrackingServiceNotifee] Emergency data cleared');
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Failed to clear emergency data:', error);
+    }
+  }
+
+  // Get stored emergency data
+  async getEmergencyData(): Promise<EmergencyAttendanceData | null> {
+    try {
+      const storedData = await AsyncStorage.getItem(LocationTrackingServiceNotifee.EMERGENCY_STORAGE_KEY);
+      return storedData ? JSON.parse(storedData) : null;
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Failed to get emergency data:', error);
+      return null;
+    }
   }
 
   // Initialize the service
@@ -159,7 +231,7 @@ class LocationTrackingServiceNotifee {
 
   
   // Start location tracking with foreground notification
-  async startTracking(employeeId: string, employeeName: string): Promise<boolean> {
+  async startTracking(employeeId: string, employeeName: string, attendanceId?: string): Promise<boolean> {
     try {
       if (!this.isInitialized) {
         const initialized = await this.initialize();
@@ -201,10 +273,14 @@ class LocationTrackingServiceNotifee {
         isTracking: true,
         employeeId,
         employeeName,
+        attendanceId,
       };
 
       // Start permission monitoring to stop service if permissions are revoked
       this.startPermissionMonitoring();
+
+      // Start battery monitoring for automatic check-out at 5%
+      this.startBatteryMonitoring();
 
       // Create foreground notification to start tracking - this is required for the service to work
       try {
@@ -286,6 +362,10 @@ class LocationTrackingServiceNotifee {
       clearInterval(this.permissionMonitoringInterval);
       this.permissionMonitoringInterval = null;
     }
+    if (this.batteryMonitoringInterval) {
+      clearInterval(this.batteryMonitoringInterval);
+      this.batteryMonitoringInterval = null;
+    }
   }
 
   // Start monitoring permissions and stop service if any get revoked
@@ -303,14 +383,128 @@ class LocationTrackingServiceNotifee {
           permissionService.checkNotificationPermission(),
         ]);
 
-        // If any permission is no longer granted, stop tracking
+        // If any permission is no longer granted, handle appropriately
         if (cameraStatus !== 'granted' || locationStatus !== 'granted' || notificationStatus !== 'granted') {
+          // If location permission is specifically revoked, trigger emergency check-out
+          if (locationStatus !== 'granted' && this.state.isTracking) {
+            await this.handleLocationPermissionRevoked();
+          }
           await this.stopTracking('Permission revoked');
         }
       } catch (error) {
         console.error('[LocationTrackingServiceNotifee] Error checking permissions during monitoring:', error);
       }
     }, 30000); // Check every 30 seconds
+  }
+
+  // Start battery monitoring for automatic check-out at 5%
+  private startBatteryMonitoring(): void {
+    // Check battery every 30 seconds while tracking
+    this.batteryMonitoringInterval = setInterval(async () => {
+      if (!this.state.isTracking) {
+        return;
+      }
+
+      try {
+        const batteryLevel = await Battery.getBatteryLevelAsync();
+        const batteryPercentage = Math.round(batteryLevel * 100);
+
+        if (batteryPercentage <= 5) {
+          const location = await getCurrentLocation();
+          await this.handleLowBatteryCheckOut(location, batteryPercentage);
+        }
+      } catch (error) {
+        console.error('[LocationTrackingServiceNotifee] Error checking battery level:', error);
+      }
+    }, 30000); // Check every 30 seconds
+  }
+
+  // Handle low battery emergency check-out
+  private async handleLowBatteryCheckOut(location: LocationData, batteryLevel: number): Promise<void> {
+    try {
+      console.warn('[LocationTrackingServiceNotifee] Low battery detected, initiating emergency check-out');
+
+      // Store final emergency data
+      await this.storeEmergencyData(location, batteryLevel, this.state.attendanceId);
+
+      // Trigger emergency check-out callback
+      if (this.emergencyDataCallback) {
+        const emergencyData = await this.getEmergencyData();
+        if (emergencyData) {
+          this.emergencyDataCallback(emergencyData);
+        }
+      }
+
+      // Stop tracking to save power
+      await this.stopTracking('Low battery - automatic check-out');
+
+      // Show low battery notification
+      await notifee.displayNotification({
+        id: 'low-battery-checkout-' + Date.now(),
+        title: 'PGN - Low Battery Check-Out',
+        body: 'Phone battery is critically low. You have been automatically checked out to preserve battery.',
+        android: {
+          channelId: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
+          importance: AndroidImportance.HIGH,
+          autoCancel: true,
+          smallIcon: 'ic_launcher_foreground',
+          color: '#FF5722',
+          colorized: true,
+          pressAction: {
+            id: 'open-app',
+            launchActivity: 'default',
+            launchActivityFlags: [AndroidLaunchActivityFlag.SINGLE_TOP],
+          },
+        },
+      });
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Error handling low battery check-out:', error);
+    }
+  }
+
+  // Handle location permission revocation emergency check-out
+  private async handleLocationPermissionRevoked(): Promise<void> {
+    try {
+      console.warn('[LocationTrackingServiceNotifee] Location permission revoked, initiating emergency check-out');
+
+      // Get current location for emergency check-out
+      const location = await getCurrentLocation();
+      const batteryLevel = await Battery.getBatteryLevelAsync();
+      const batteryPercentage = Math.round(batteryLevel * 100);
+
+      // Store final emergency data
+      await this.storeEmergencyData(location, batteryPercentage, this.state.attendanceId);
+
+      // Trigger emergency check-out callback
+      if (this.emergencyDataCallback) {
+        const emergencyData = await this.getEmergencyData();
+        if (emergencyData) {
+          this.emergencyDataCallback(emergencyData);
+        }
+      }
+
+      // Show notification
+      await notifee.displayNotification({
+        id: 'permission-revoked-checkout-' + Date.now(),
+        title: 'PGN - Permission Revoked',
+        body: 'Location permission was revoked. You have been automatically checked out.',
+        android: {
+          channelId: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
+          importance: AndroidImportance.HIGH,
+          autoCancel: true,
+          smallIcon: 'ic_launcher_foreground',
+          color: '#FF9800',
+          colorized: true,
+          pressAction: {
+            id: 'open-app',
+            launchActivity: 'default',
+            launchActivityFlags: [AndroidLaunchActivityFlag.SINGLE_TOP],
+          },
+        },
+      });
+    } catch (error) {
+      console.error('[LocationTrackingServiceNotifee] Error handling permission revocation:', error);
+    }
   }
 
   // Send location and battery update
@@ -326,6 +520,18 @@ class LocationTrackingServiceNotifee {
       // Get battery level
       const batteryLevel = await Battery.getBatteryLevelAsync();
       const batteryPercentage = Math.round(batteryLevel * 100);
+
+      // Store emergency data every 30 seconds (but not on every update)
+      const now = Date.now();
+      if (now - this.lastEmergencyUpdate > 30000) {
+        await this.storeEmergencyData(location, batteryPercentage, this.state.attendanceId);
+      }
+
+      // Check for low battery and trigger emergency check-out if needed
+      if (batteryPercentage <= 5) {
+        await this.handleLowBatteryCheckOut(location, batteryPercentage);
+        return;
+      }
 
       // Send update via callback if available
       if (this.locationUpdateCallback) {
@@ -476,6 +682,11 @@ class LocationTrackingServiceNotifee {
         } catch (displayError) {
           console.error('[LocationTrackingServiceNotifee] Failed to display stop notification:', displayError);
         }
+      }
+
+      // Clear emergency data if normal check-out
+      if (checkOutData && checkOutData !== 'Low battery - automatic check-out' && checkOutData !== 'Permission revoked') {
+        await this.clearEmergencyData();
       }
 
       // Clear state

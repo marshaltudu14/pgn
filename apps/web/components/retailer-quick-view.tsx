@@ -7,9 +7,8 @@
 
 import { RetailerWithFarmers } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { FullScreenModal } from '@/components/ui/full-screen-modal';
-import { Edit, Mail, Phone, MapPin, Calendar, User, Building2, Clock, UserCheck, AlertCircle } from 'lucide-react';
+import { Edit, Mail, Phone, MapPin, User, Building2, Clock, UserCheck } from 'lucide-react';
 
 interface RetailerQuickViewProps {
   open: boolean;

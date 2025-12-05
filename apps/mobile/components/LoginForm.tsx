@@ -161,6 +161,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
             onPress={() => setShowPassword(!showPassword)}
             disabled={isLoggingIn}
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            activeOpacity={0.6}
           >
             {showPassword ? (
               <EyeOff size={18} color={iconColor} />
@@ -196,7 +197,7 @@ export default function LoginForm({ onSubmit, isLoggingIn = false, error }: Logi
           disabled={isLoggingIn || !email.trim() || !password.trim()}
           accessibilityLabel="Sign in"
           accessibilityRole="button"
-          activeOpacity={0.8}
+          activeOpacity={0.7}
         >
           {isLoggingIn ? (
             <View style={styles.loadingContainer}>

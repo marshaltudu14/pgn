@@ -275,7 +275,15 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Call logout API
-            await api.post(API_ENDPOINTS.LOGOUT, { token: authToken });
+            const response = await api.post(API_ENDPOINTS.LOGOUT, { token: authToken });
+
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Logout failed');
+
+            if (!handledResponse.success) {
+              const errorMessage = handledResponse.error || 'Logout failed';
+              throw new Error(errorMessage);
+            }
 
             // Clear local tokens
             await get().clearLocalTokens();
@@ -331,21 +339,33 @@ export const useAuth = create<AuthStoreState>()(
           try {
             const response = await api.post(API_ENDPOINTS.REFRESH_TOKEN, { token: refreshToken });
 
-            if (!response.success) {
-              throw new Error(response.error || 'Token refresh failed');
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Token refresh failed');
+
+            if (!handledResponse.success) {
+              const errorMessage = handledResponse.error || 'Token refresh failed';
+              throw new Error(errorMessage);
             }
 
             // Check response structure - the data is in response.data (single nested)
-            const responseData = response.data;
-            if (!responseData?.token) {
-              throw new Error('Invalid refresh response structure');
+            const responseData = handledResponse.data;
+            if (!responseData || typeof responseData !== 'object') {
+              throw new Error('Invalid refresh response: missing data');
+            }
+
+            // Type the response data to allow property access
+            const data = responseData as Record<string, unknown>;
+
+            // Validate required fields
+            if (!('token' in data)) {
+              throw new Error('API response missing required field: token');
             }
 
             // Update session with new token and new refresh token
             await SessionManager.saveSession({
-              accessToken: responseData.token,
-              refreshToken: responseData.refreshToken || refreshToken, // Use new refresh token if provided
-              expiresIn: responseData.expiresIn || 900,
+              accessToken: data.token as string,
+              refreshToken: (data.refreshToken as string) || refreshToken, // Use new refresh token if provided
+              expiresIn: (data.expiresIn as number) || 900,
             });
 
             // Update current session state
@@ -354,10 +374,10 @@ export const useAuth = create<AuthStoreState>()(
               get().setSession(currentSession);
             }
 
-            return responseData;
+            return data;
           } catch (error) {
             console.error('❌ Token refresh failed:', error);
-            throw new Error('Failed to refresh token');
+            throw new Error(transformApiErrorMessage(error) || 'Failed to refresh token');
           }
         },
 

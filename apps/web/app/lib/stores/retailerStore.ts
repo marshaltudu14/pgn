@@ -24,6 +24,7 @@ interface RetailerState {
   createRetailer: (retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   updateRetailer: (id: string, retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   deleteRetailer: (id: string) => Promise<{ success: boolean; error?: string }>;
+  getRetailerById: (id: string) => Promise<RetailerWithFarmers | null>;
   setFilters: (filters: Partial<RetailerFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearError: () => void;
@@ -246,6 +247,26 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   setError: (error) => set({ error }),
+
+  getRetailerById: async (id: string): Promise<RetailerWithFarmers | null> => {
+    try {
+      const token = useAuthStore.getState().token;
+      const response = await fetch(`/api/retailers/${id}`, {
+        headers: getAuthHeaders(token),
+      });
+
+      const result = await handleApiResponse(response, 'Failed to fetch retailer');
+
+      if (result.success) {
+        return result.data as RetailerWithFarmers;
+      } else {
+        throw new Error(result.error || 'Failed to fetch retailer');
+      }
+    } catch (error) {
+      console.error('Error fetching retailer:', error);
+      throw error;
+    }
+  },
 
   refetch: async () => {
     await get().fetchRetailers();

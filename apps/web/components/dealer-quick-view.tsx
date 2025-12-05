@@ -7,9 +7,8 @@
 
 import { DealerWithRetailers } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { FullScreenModal } from '@/components/ui/full-screen-modal';
-import { Edit, Mail, Phone, MapPin, Calendar, User, Clock, UserCheck, AlertCircle, Briefcase } from 'lucide-react';
+import { Edit, Mail, Phone, MapPin, User, Clock, UserCheck, Briefcase } from 'lucide-react';
 
 interface DealerQuickViewProps {
   open: boolean;

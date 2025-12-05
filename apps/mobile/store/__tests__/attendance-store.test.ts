@@ -492,6 +492,9 @@ describe('Attendance Store', () => {
         verificationStatus: 'VERIFIED' as const,
       };
 
+      // Mock isTrackingActive to return false (service not running)
+      mockLocationTrackingService.isTrackingActive.mockReturnValue(false);
+
       mockApi.get.mockResolvedValue({
         success: true,
         data: mockStatusResponse,
@@ -503,7 +506,7 @@ describe('Attendance Store', () => {
         await result.current.getAttendanceStatus('employee-123');
       });
 
-      expect(mockLocationTrackingService.startTracking).toHaveBeenCalledWith('employee-123', 'Test');
+      expect(mockLocationTrackingService.startTracking).toHaveBeenCalledWith('employee-123', 'Test', 'attendance-123');
     });
   });
 
@@ -517,6 +520,8 @@ describe('Attendance Store', () => {
           timestamp: new Date().toISOString(),
           checkInTime: new Date().toISOString(),
           verificationStatus: 'PENDING',
+          message: 'Check-in successful',
+          status: 'CHECKED_IN',
         },
       };
 
@@ -536,7 +541,7 @@ describe('Attendance Store', () => {
       expect(result.current.isCheckingIn).toBe(false);
       expect(result.current.verificationStatus).toBe('PENDING');
       expect(result.current.requiresVerification).toBe(true);
-      expect(mockLocationTrackingService.startTracking).toHaveBeenCalledWith('employee-123', 'Test');
+      expect(mockLocationTrackingService.startTracking).toHaveBeenCalledWith('employee-123', 'Test', 'attendance-123');
     });
 
     it('should get current location if not provided in check-in request', async () => {
@@ -695,6 +700,8 @@ describe('Attendance Store', () => {
           checkOutTime: new Date().toISOString(),
           workHours: 9,
           verificationStatus: 'VERIFIED',
+          message: 'Check-out successful',
+          status: 'CHECKED_OUT',
         },
       };
 
@@ -838,7 +845,7 @@ describe('Attendance Store', () => {
 
       let checkOutResult: AttendanceResponse | undefined;
       await act(async () => {
-        checkOutResult = await result.current.emergencyCheckOut(mockRequest);
+        checkOutResult = await result.current.emergencyCheckOutManual(mockRequest);
       });
 
       expect(checkOutResult?.success).toBe(true);
@@ -864,13 +871,16 @@ describe('Attendance Store', () => {
           timestamp: new Date().toISOString(),
           checkOutTime: new Date().toISOString(),
           verificationStatus: 'FLAGGED',
+          message: 'Check-out successful',
+          status: 'CHECKED_OUT',
+          workHours: 8,
         },
       });
 
       const { result } = renderHook(() => useAttendance());
 
       await act(async () => {
-        await result.current.emergencyCheckOut(mockRequest);
+        await result.current.emergencyCheckOutManual(mockRequest);
       });
 
       expect(mockApi.post).toHaveBeenCalledWith(
@@ -898,7 +908,7 @@ describe('Attendance Store', () => {
 
       let checkOutResult: AttendanceResponse | undefined;
       await act(async () => {
-        checkOutResult = await result.current.emergencyCheckOut(mockRequest);
+        checkOutResult = await result.current.emergencyCheckOutManual(mockRequest);
       });
 
       expect(checkOutResult?.success).toBe(false);
@@ -1863,7 +1873,7 @@ describe('Attendance Store', () => {
       });
 
       expect(checkInResult?.success).toBe(false);
-      expect(result.current.error).toBe('Invalid check-in response');
+      expect(result.current.error).toBe('Invalid check-in response: missing data');
       expect(result.current.isCheckingIn).toBe(false);
     });
 
@@ -1881,6 +1891,9 @@ describe('Attendance Store', () => {
           timestamp: new Date().toISOString(),
           checkOutTime: new Date().toISOString(),
           verificationStatus: 'VERIFIED',
+          message: 'Check-out successful',
+          status: 'CHECKED_OUT',
+          workHours: 7.5,
         },
       });
 
@@ -2043,6 +2056,8 @@ describe('Attendance Store', () => {
           timestamp: new Date().toISOString(),
           checkInTime: new Date().toISOString(),
           verificationStatus: 'PENDING',
+          message: 'Check-in successful',
+          status: 'CHECKED_IN',
         },
       });
 
@@ -2059,7 +2074,7 @@ describe('Attendance Store', () => {
             latitude: 14.5995,
             longitude: 120.9842,
             accuracy: 10,
-            timestamp: expect.any(String),
+            timestamp: expect.any(Number),
           }),
           selfieData: 'data:image/jpeg;base64,audit-trail-photo',
           deviceInfo: expect.objectContaining({
@@ -2070,6 +2085,154 @@ describe('Attendance Store', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('Emergency Check-out', () => {
+    it('should handle battery drain emergency check-out', async () => {
+      mockApi.post.mockResolvedValue({
+        success: true,
+        message: 'Emergency check-out successful',
+        data: {
+          attendanceId: 'test-attendance-id',
+          checkOutTime: '2024-01-01T18:00:00Z',
+          workHours: 8.5,
+          verificationStatus: 'FLAGGED'
+        }
+      });
+
+      const { result } = renderHook(() => useAttendance());
+
+      await act(async () => {
+        await result.current.emergencyCheckOut({
+          attendanceId: 'test-attendance-id',
+          reason: 'Low battery - automatic check-out',
+          lastLocation: {
+            timestamp: 1704110400000, // 2024-01-01 17:00:00
+            coordinates: [12.9716, 77.5946],
+            batteryLevel: 5
+          },
+          lastKnownTime: Date.now()
+        });
+      });
+
+      expect(mockApi.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          method: 'BATTERY_DRAIN',
+          reason: 'Low battery - automatic check-out',
+          location: {
+            latitude: 12.9716,
+            longitude: 77.5946,
+            timestamp: 1704110400000,
+            accuracy: 0,
+            address: undefined
+          },
+          deviceInfo: expect.objectContaining({
+            batteryLevel: 5,
+            platform: expect.any(String),
+            version: expect.any(String),
+            model: expect.any(String)
+          })
+        })
+      );
+
+      expect(result.current.currentStatus).toBe('CHECKED_OUT');
+      expect(result.current.isCheckingOut).toBe(false);
+    });
+
+    it('should handle app crash emergency check-out', async () => {
+      mockApi.post.mockResolvedValue({
+        success: true,
+        message: 'Emergency check-out successful',
+        data: {
+          attendanceId: 'test-attendance-id',
+          checkOutTime: '2024-01-01T18:00:00Z',
+          workHours: 8.0,
+          verificationStatus: 'FLAGGED'
+        }
+      });
+
+      const { result } = renderHook(() => useAttendance());
+
+      await act(async () => {
+        await result.current.emergencyCheckOut({
+          attendanceId: 'test-attendance-id',
+          reason: 'App restart - tracking interrupted',
+          lastLocation: {
+            timestamp: 1704110400000,
+            coordinates: [12.9716, 77.5946],
+            batteryLevel: 50
+          },
+          lastKnownTime: Date.now()
+        });
+      });
+
+      expect(mockApi.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          method: 'APP_CLOSED',
+          reason: 'App restart - tracking interrupted'
+        })
+      );
+    });
+
+    it('should handle permission revocation emergency check-out', async () => {
+      mockApi.post.mockResolvedValue({
+        success: true,
+        message: 'Emergency check-out successful',
+        data: {
+          attendanceId: 'test-attendance-id',
+          checkOutTime: '2024-01-01T18:00:00Z',
+          workHours: 4.5,
+          verificationStatus: 'FLAGGED'
+        }
+      });
+
+      const { result } = renderHook(() => useAttendance());
+
+      await act(async () => {
+        await result.current.emergencyCheckOut({
+          attendanceId: 'test-attendance-id',
+          reason: 'Permission revoked - location access denied',
+          lastLocation: {
+            timestamp: 1704096000000, // 2024-01-01 13:00:00
+            coordinates: [12.9716, 77.5946],
+            batteryLevel: 75
+          },
+          lastKnownTime: Date.now()
+        });
+      });
+
+      expect(mockApi.post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          method: 'FORCE_CLOSE',
+          reason: 'Permission revoked - location access denied'
+        })
+      );
+    });
+
+    it('should NOT clear emergency data on API failure', async () => {
+      mockApi.post.mockRejectedValue(new Error('Network error'));
+
+      const { result } = renderHook(() => useAttendance());
+
+      await act(async () => {
+        await result.current.emergencyCheckOut({
+          attendanceId: 'test-attendance-id',
+          reason: 'Low battery - automatic check-out',
+          lastLocation: {
+            timestamp: 1704110400000,
+            coordinates: [12.9716, 77.5946],
+            batteryLevel: 5
+          },
+          lastKnownTime: Date.now()
+        });
+      });
+
+      expect(result.current.error).toBeTruthy();
+      expect(result.current.isCheckingOut).toBe(false);
     });
   });
 });

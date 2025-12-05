@@ -125,12 +125,7 @@ export function EmployeeList({
     setPagination(page);
   };
 
-  const handlePageSizeChange = (size: number) => {
-    setPagination(1, size); // Reset to first page with new page size
-  };
-
-  
-  return (
+    return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
@@ -249,10 +244,10 @@ export function EmployeeList({
                 <TableRow>
                   <TableHead>User ID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden lg:table-cell">Phone</TableHead>
+                  <TableHead >Email</TableHead>
+                  <TableHead >Phone</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden xl:table-cell">Primary Region</TableHead>
+                  <TableHead >Primary Region</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -263,10 +258,10 @@ export function EmployeeList({
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-24 rounded" /></TableCell>
-                      <TableCell className="hidden xl:table-cell"><Skeleton className="h-8 w-40" /></TableCell>
+                      <TableCell ><Skeleton className="h-8 w-40" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Skeleton className="h-8 w-8 rounded cursor-pointer" />
@@ -299,10 +294,10 @@ export function EmployeeList({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell >
                       <div className="text-sm">{employee.email}</div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell >
                       <div className="text-sm">{employee.phone || '-'}</div>
                     </TableCell>
                     <TableCell>
@@ -310,7 +305,7 @@ export function EmployeeList({
                         {employee.employment_status.replace('_', ' ')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell >
                       <div className="text-sm">
                         {(() => {
                           const cities = (employee.assigned_cities as unknown as CityAssignment[]) || [];

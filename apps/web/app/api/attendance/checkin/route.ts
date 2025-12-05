@@ -86,18 +86,19 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
         {
           success: false,
           error: 'Check-in failed',
-          message: result.message
+          message: result.message || 'Failed to check in. Please try again.',
+          code: 'CHECKIN_FAILED'
         },
         { status: 400 }
       );
       return addSecurityHeaders(response);
     }
 
-    // Return success response following the schema format
+    // Build response following the schema structure
     const response = NextResponse.json({
       success: true,
-      message: result.message,
       data: {
+        message: result.message || 'Check-in successful',
         attendanceId: result.attendanceId!,
         checkInTime: result.checkInTime!.toISOString(),
         status: result.status!,
@@ -106,7 +107,6 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       }
     });
 
-    // Add security headers
     return addSecurityHeaders(response);
 
   } catch (error) {

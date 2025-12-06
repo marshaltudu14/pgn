@@ -35,15 +35,23 @@ export default function TrackingView() {
     fetchAttendanceRecords({ date: today, limit: 100 }); // Fetch attendance for today
   }, [fetchEmployees, fetchAttendanceRecords]);
 
-  // Polling for updates every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const today = new Date().toISOString().split('T')[0];
-      fetchAttendanceRecords({ date: today, limit: 100 });
-      console.log('Refreshing tracking data...');
-    }, 35000);
+  // Polling for updates with countdown
+  const [timeUntilRefresh, setTimeUntilRefresh] = useState(35);
 
-    return () => clearInterval(interval);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeUntilRefresh((prev) => {
+        if (prev <= 1) {
+          // Trigger refresh
+          const today = new Date().toISOString().split('T')[0];
+          fetchAttendanceRecords({ date: today, limit: 100 });
+          return 35;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [fetchAttendanceRecords]);
 
   // Merge Data: Create a map of Employee ID -> Attendance Record
@@ -79,6 +87,7 @@ export default function TrackingView() {
   const handleRefresh = () => {
     const today = new Date().toISOString().split('T')[0];
     fetchAttendanceRecords({ date: today, limit: 100 });
+    setTimeUntilRefresh(35);
   };
 
   const selectedRecord = selectedEmployee ? attendanceMap[selectedEmployee.id] : null;
@@ -96,6 +105,10 @@ export default function TrackingView() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono bg-muted px-2 py-1 rounded">
+             <RefreshCw className={loadingAttendance ? "h-3 w-3 animate-spin" : "h-3 w-3"} />
+             <span>{timeUntilRefresh}s</span>
           </div>
           <Button variant="outline" size="icon" onClick={handleRefresh} title="Refresh Data">
             <RefreshCw className="h-4 w-4" />

@@ -4,18 +4,18 @@ import { useAuthStore } from '@/app/lib/stores/authStore';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import {
-    Sidebar,
-    SidebarContent,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarInset,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarProvider,
-    SidebarTrigger,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
 import { cn } from '@/lib/utils';
@@ -185,23 +185,23 @@ function DashboardLayoutContent({
               <div className="flex-1 overflow-x-auto">
                 {pathname === '/dashboard' ? (
                    <div className="flex items-center gap-6">
-                      <button
+                      <button 
                         onClick={() => handleTabChange('overview')}
                         className={cn(
-                          "relative text-sm font-medium transition-colors hover:text-primary py-2",
-                          currentView === 'overview'
-                            ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                          "relative text-sm font-medium transition-colors hover:text-primary py-2 cursor-pointer",
+                          currentView === 'overview' 
+                            ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" 
                             : "text-muted-foreground"
                         )}
                       >
                         Overview
                       </button>
-                      <button
+                      <button 
                          onClick={() => handleTabChange('tracking')}
                          className={cn(
-                            "relative text-sm font-medium transition-colors hover:text-primary py-2",
-                            currentView === 'tracking'
-                              ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                            "relative text-sm font-medium transition-colors hover:text-primary py-2 cursor-pointer",
+                            currentView === 'tracking' 
+                              ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" 
                               : "text-muted-foreground"
                          )}
                       >

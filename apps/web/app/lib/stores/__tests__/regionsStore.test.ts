@@ -168,10 +168,10 @@ describe('Regions Store', () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.regions).toEqual(mockRegionsResponse);
       expect(result.current.filters).toEqual({
-        page: 1,
-        limit: 10,
         sort_by: 'city',
         sort_order: 'asc',
+        page: 1,
+        limit: 10,
       });
       expect(result.current.error).toBe(null);
 
@@ -209,7 +209,7 @@ describe('Regions Store', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/regions?page=1&limit=10&state=California&city=Los+Angeles&sort_by=city&sort_order=asc',
+        '/api/regions?state=California&city=Los+Angeles&sort_by=city&sort_order=asc',
         {
           method: 'GET',
           headers: mockGetAuthHeaders(),
@@ -569,7 +569,16 @@ describe('Regions Store', () => {
 
   describe('searchRegions', () => {
     it('should search regions successfully with default parameters', async () => {
-      const mockResponse = createMockRegions();
+      const mockRegions = createMockRegions();
+      const mockResponse = {
+        regions: mockRegions,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      };
       (fetch as jest.MockedFunction<typeof fetch>).mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockResponse),
@@ -582,10 +591,10 @@ describe('Regions Store', () => {
       });
 
       expect(result.current.isLoading).toBe(false);
-      expect(result.current.regions).toEqual(mockResponse);
+      expect(result.current.regions).toEqual(mockRegions);
       expect(result.current.error).toBe(null);
 
-      expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California&sort_by=city&sort_order=asc', {
+      expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California&page=1&limit=10&sort_by=city&sort_order=asc', {
         headers: mockGetAuthHeaders(),
       });
     });
@@ -719,6 +728,8 @@ describe('Regions Store', () => {
       expect(result.current.error).toBe(null);
       expect(result.current.createError).toBe(null);
       expect(result.current.filters).toEqual({
+        page: 1,
+        limit: 10,
         sort_by: 'city',
         sort_order: 'asc',
       });

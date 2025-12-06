@@ -34,21 +34,25 @@ const createMockSupabaseClient = () => {
   };
 
   // Setup chainable methods
-  const createQueryChain = () => ({
-    select: jest.fn().mockReturnThis(),
-    insert: jest.fn().mockReturnThis(),
-    update: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    neq: jest.fn().mockReturnThis(),
-    in: jest.fn().mockReturnThis(),
-    like: jest.fn().mockReturnThis(),
-    or: jest.fn().mockReturnThis(),
-    contains: jest.fn().mockReturnThis(),
-    order: jest.fn().mockReturnThis(),
-    range: jest.fn().mockReturnThis(),
-    limit: jest.fn().mockReturnThis(),
-    single: jest.fn(),
-  });
+  const createQueryChain = (customResolve?: any) => {
+    const chain: any = {
+      select: jest.fn().mockReturnThis(),
+      insert: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      neq: jest.fn().mockReturnThis(),
+      in: jest.fn().mockReturnThis(),
+      like: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
+      contains: jest.fn().mockReturnThis(),
+      order: jest.fn().mockReturnThis(),
+      range: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockResolvedValue(customResolve || { data: [], error: null }),
+      single: jest.fn().mockResolvedValue(customResolve || { data: null, error: null }),
+    };
+
+    return chain;
+  };
 
   mockClient.from.mockReturnValue(createQueryChain());
 
@@ -73,10 +77,32 @@ import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordBy
 
 describe('Employee Service', () => {
   let mockSupabaseClient: ReturnType<typeof createMockSupabaseClient>;
+  let createQueryChain: (customResolve?: any) => any;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockSupabaseClient = createMockSupabaseClient();
+
+    // Extract createQueryChain function for use in tests
+    createQueryChain = (customResolve?: any) => {
+      const chain: any = {
+        select: jest.fn().mockReturnThis(),
+        insert: jest.fn().mockReturnThis(),
+        update: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        neq: jest.fn().mockReturnThis(),
+        in: jest.fn().mockReturnThis(),
+        like: jest.fn().mockReturnThis(),
+        or: jest.fn().mockReturnThis(),
+        contains: jest.fn().mockReturnThis(),
+        order: jest.fn().mockReturnThis(),
+        range: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockResolvedValue(customResolve || { data: [], error: null }),
+        single: jest.fn().mockResolvedValue(customResolve || { data: null, error: null }),
+      };
+      return chain;
+    };
+
     (createClient as jest.MockedFunction<typeof createClient>).mockResolvedValue(mockSupabaseClient as any);
   });
 
@@ -248,9 +274,7 @@ describe('Employee Service', () => {
         data: null
       } as any);
 
-      // Mock getEmployeeByEmail to return null (no existing employee)
-      const getEmployeeByEmailSpy = jest.spyOn({ getEmployeeByEmail }, 'getEmployeeByEmail');
-      getEmployeeByEmailSpy.mockResolvedValue(null);
+      // getEmployeeByEmail will be handled by the mockSupabaseClient setup below
 
       // Mock auth user creation success
       (createAuthUser as jest.MockedFunction<typeof createAuthUser>).mockResolvedValue({
@@ -261,32 +285,59 @@ describe('Employee Service', () => {
 
       // Setup mock that handles multiple calls differently
       let callCount = 0;
-      mockSupabaseClient.from.mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          // First call for generateHumanReadableUserId
-          return {
-            select: jest.fn().mockReturnValue({
-              like: jest.fn().mockReturnValue({
-                order: jest.fn().mockReturnValue({
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'employees') {
+          callCount++;
+          if (callCount === 1) {
+            // First call for getEmployeeByEmail (should return null)
+            return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({
+                    data: null,
+                    error: { code: 'PGRST116' }
+                  })
+                })
+              })
+            };
+          } else if (callCount === 2) {
+            // Second call for isPhoneTaken (if phone is provided)
+            return {
+              select: jest.fn().mockReturnValue({
+                eq: jest.fn().mockReturnValue({
                   limit: jest.fn().mockResolvedValue({ data: [], error: null })
                 })
               })
-            })
-          };
-        } else {
-          // Second call for employee insertion
-          return {
-            insert: jest.fn().mockReturnValue({
+            };
+          } else if (callCount === 3) {
+            // Third call for generateHumanReadableUserId
+            return {
               select: jest.fn().mockReturnValue({
-                single: jest.fn().mockResolvedValue({
-                  data: mockEmployeeData,
-                  error: null
+                like: jest.fn().mockReturnValue({
+                  order: jest.fn().mockReturnValue({
+                    limit: jest.fn().mockResolvedValue({ data: [], error: null })
+                  })
                 })
               })
-            })
-          };
+            };
+          } else if (callCount === 4) {
+            // Fourth call for employee insertion
+            return {
+              insert: jest.fn().mockReturnValue({
+                select: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({
+                    data: mockEmployeeData,
+                    error: null
+                  })
+                })
+              })
+            };
+          } else {
+            // Any other calls to employees table
+            return createQueryChain({ data: null, error: { code: 'PGRST116' } });
+          }
         }
+        return createQueryChain();
       });
 
       const result = await createEmployee(validCreateRequest);
@@ -296,11 +347,7 @@ describe('Employee Service', () => {
         validCreateRequest.email,
         validCreateRequest.password
       );
-      expect(callCount).toBe(2); // Should be called twice (userId check, insert)
-      expect(getEmployeeByEmailSpy).toHaveBeenCalledWith(validCreateRequest.email);
-
-      // Cleanup spy
-      getEmployeeByEmailSpy.mockRestore();
+      expect(callCount).toBe(4); // Should be called four times (getEmployeeByEmail, isPhoneTaken, generateUserId, insert)
     });
 
     it('should create employee with optional fields as null when not provided', async () => {

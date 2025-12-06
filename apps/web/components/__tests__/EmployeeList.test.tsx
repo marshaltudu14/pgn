@@ -645,7 +645,8 @@ describe('EmployeeList Component', () => {
       expect(screen.getByText('Previous')).toBeInTheDocument();
       expect(screen.getByText('Next')).toBeInTheDocument();
       expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
-      expect(screen.getByText('Showing 1 to 20 of 50 results')).toBeInTheDocument();
+      // The component now shows total count in the header instead of pagination footer
+      expect(screen.getByText('50 employees found')).toBeInTheDocument();
     });
 
     it('should handle page navigation', async () => {

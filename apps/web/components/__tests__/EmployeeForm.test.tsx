@@ -52,6 +52,8 @@ jest.mock('react-hook-form', () => ({
     formState: { errors: {} },
     reset: jest.fn(),
     trigger: jest.fn().mockResolvedValue(true),
+    setError: jest.fn(),
+    clearErrors: jest.fn(),
   }),
 }));
 
@@ -834,7 +836,7 @@ describe('EmployeeForm', () => {
       // Clear previous mocks
       mockUseEmployeeStore.mockClear();
 
-      // Set the mock return value
+      // Set the mock return value BEFORE calling setMockFormValues
       mockUseEmployeeStore.mockReturnValue({
         createEmployee: mockCreateEmployee,
         updateEmployee: jest.fn(),
@@ -845,9 +847,6 @@ describe('EmployeeForm', () => {
         deleteEmployee: jest.fn(),
         getEmployeeById: jest.fn(),
       } as unknown as ReturnType<typeof useEmployeeStore>);
-
-      // Mock console.error to capture the actual error
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       // Set form values with empty phone number (keep all other required fields)
       setMockFormValues({
@@ -861,6 +860,9 @@ describe('EmployeeForm', () => {
         can_login: true,
         assigned_cities: [{ city: 'Mumbai', state: 'Maharashtra' }],
       });
+
+      // Mock console.error to capture the actual error
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       render(
         <EmployeeForm

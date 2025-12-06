@@ -76,22 +76,33 @@ export const useRegionsStore = create<RegionsStore>()(
           set({ isLoading: true, error: null });
 
           const store = get();
-          const requestParams = {
-            page: params.page || store.filters.page,
-            limit: params.limit || store.filters.limit,
-            search: params.search || store.filters.search,
-            state: params.state || store.filters.state,
-            city: params.city || store.filters.city,
-            sort_by: params.sort_by || store.filters.sort_by,
-            sort_order: params.sort_order || store.filters.sort_order,
-          };
-
+          // Build query params, only including defined values
           const queryParams = new URLSearchParams();
-          Object.entries(requestParams).forEach(([key, value]) => {
+
+          const addParam = (key: string, value: string | number | undefined | null) => {
             if (value !== undefined && value !== null) {
               queryParams.append(key, value.toString());
             }
-          });
+          };
+
+          addParam('page', params.page ?? store.filters.page);
+          addParam('limit', params.limit ?? store.filters.limit);
+          addParam('search', params.search ?? store.filters.search);
+          addParam('state', params.state ?? store.filters.state);
+          addParam('city', params.city ?? store.filters.city);
+          addParam('sort_by', params.sort_by ?? store.filters.sort_by);
+          addParam('sort_order', params.sort_order ?? store.filters.sort_order);
+
+          // Update filters with only the params that were passed
+          // If no params passed, keep the existing filters
+          const updatedFilters = Object.keys(params).length > 0
+            ? {
+                ...store.filters,
+                ...Object.fromEntries(
+                  Object.entries(params).filter(([_, value]) => value !== undefined)
+                ),
+              }
+            : store.filters;
 
           const response = await fetch(`/api/regions?${queryParams.toString()}`, {
             method: 'GET',
@@ -107,7 +118,7 @@ export const useRegionsStore = create<RegionsStore>()(
           set({
             regions: data.regions,
             pagination: data.pagination,
-            filters: requestParams,
+            filters: updatedFilters,
             isLoading: false,
           });
         } catch (error) {

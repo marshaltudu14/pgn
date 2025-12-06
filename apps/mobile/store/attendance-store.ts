@@ -347,6 +347,39 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingOut: true, error: null });
 
           try {
+            // First, check if already checked out
+            const statusResponse = await api.get(`${API_ENDPOINTS.ATTENDANCE}/${data.attendanceId}`);
+
+            if (statusResponse.success && statusResponse.data) {
+              const attendanceRecord = statusResponse.data;
+
+              // If already checked out, don't perform emergency checkout
+              if (attendanceRecord.check_out_timestamp && attendanceRecord.check_out_timestamp !== null) {
+                set({
+                  isCheckingOut: false,
+                  error: null
+                });
+
+                // Clear emergency data and stop tracking since already checked out
+                await locationTrackingServiceNotifee.clearEmergencyData();
+                await locationTrackingServiceNotifee.stopTracking('Already checked out');
+
+                // Clear local checkout time for next check-in
+                set({
+                  checkOutTime: null,
+                  requiresCheckOut: false,
+                  currentStatus: 'CHECKED_OUT'
+                });
+
+                return {
+                  success: true,
+                  message: 'Already checked out'
+                };
+              }
+            }
+
+            // Not checked out, proceed with emergency checkout
+
             // Determine method based on reason
             let method: 'APP_CLOSED' | 'BATTERY_DRAIN' | 'FORCE_CLOSE';
             const reasonLower = data.reason.toLowerCase();
@@ -405,8 +438,6 @@ export const useAttendance = create<AttendanceStoreState>()(
 
             // Stop location tracking service since check-out is complete
             await locationTrackingServiceNotifee.stopTracking('Emergency check-out completed');
-
-            console.log('[AttendanceStore] Emergency check-out completed successfully');
           } catch (error) {
             const errorMessage = transformApiErrorMessage(error);
             console.error('[AttendanceStore] Emergency check-out failed:', errorMessage);

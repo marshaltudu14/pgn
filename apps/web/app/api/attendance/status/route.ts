@@ -3,7 +3,6 @@ import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/se
 import { attendanceService } from '@/services/attendance.service';
 import { withApiValidation } from '@/lib/api-validation';
 import {
-  AttendanceStatusResponseSchema,
   apiContract,
 } from '@pgn/shared';
 
@@ -31,6 +30,7 @@ const statusHandler = async (req: NextRequest): Promise<NextResponse> => {
     // Build response following the schema structure
     const response = NextResponse.json({
       success: true,
+      message: 'Attendance status retrieved successfully',
       data: {
         status: status.status,
         checkInTime: status.checkInTime?.toISOString(),
@@ -82,17 +82,12 @@ export async function POST(): Promise<NextResponse> {
 
 // Apply Zod validation middleware and wrap with security
 export const GET = withSecurity(
-  withApiValidation(statusHandler, {
-    response: AttendanceStatusResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
-  })
+  withApiValidation(statusHandler, {})
 );
 
 // Add route to API contract
 apiContract.addRoute({
   path: '/api/attendance/status',
   method: 'GET',
-  inputSchema: undefined, // No input schema for GET status
-  outputSchema: AttendanceStatusResponseSchema,
   description: 'Get current attendance status for authenticated employee'
 });

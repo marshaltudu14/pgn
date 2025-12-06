@@ -46,7 +46,7 @@ export default function CheckInOutModal({ visible, onClose, mode }: CheckInOutMo
   const checkOut = useAttendance((state) => state.checkOut);
   const clearError = useAttendance((state) => state.clearError);
 
-  
+
   // Camera methods from attendance store
   const capturePhoto = useAttendance((state) => state.capturePhoto);
   const validateCapturedPhoto = useAttendance((state) => state.validateCapturedPhoto);

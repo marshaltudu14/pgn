@@ -167,20 +167,41 @@ export class AttendanceService {
   async checkOut(employeeId: string, request: CheckOutRequest): Promise<AttendanceResponse> {
     try {
       const supabase = await createClient();
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
-      // Find today's attendance record
-      const { data: attendanceRecord, error: fetchError } = await supabase
-        .from('daily_attendance')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .eq('attendance_date', today)
-        .single();
+      let attendanceRecord: DatabaseAttendanceRecord | null;
+      let fetchError: { message: string; details?: unknown } | null;
+
+      if (request.attendanceId) {
+        // Get the specific attendance record by ID
+        const { data, error } = await supabase
+          .from('daily_attendance')
+          .select('*')
+          .eq('id', request.attendanceId)
+          .eq('employee_id', employeeId) // Ensure the employee owns this record
+          .single();
+
+        attendanceRecord = data;
+        fetchError = error;
+      } else {
+        // Fallback: Find today's attendance record
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+        const { data, error } = await supabase
+          .from('daily_attendance')
+          .select('*')
+          .eq('employee_id', employeeId)
+          .eq('attendance_date', today)
+          .single();
+
+        attendanceRecord = data;
+        fetchError = error;
+      }
 
       if (fetchError || !attendanceRecord) {
         return {
           success: false,
-          message: 'No check-in record found for today'
+          message: request.attendanceId
+            ? 'No attendance record found with the provided ID'
+            : 'No check-in record found for today'
         };
       }
 
@@ -195,7 +216,7 @@ export class AttendanceService {
       const photoUrl = await this.uploadSelfieToStorage(
         employeeId,
         request.selfie || '',
-        today,
+        attendanceRecord.attendance_date,
         'checkout'
       );
 
@@ -599,23 +620,62 @@ export class AttendanceService {
   /**
    * Handle emergency check-out
    */
-  async emergencyCheckOut(employeeId: string, request: EmergencyCheckOutRequest): Promise<AttendanceResponse> {
+  async emergencyCheckOut(employeeId: string, request: EmergencyCheckOutRequest, attendanceId?: string): Promise<AttendanceResponse> {
     try {
       const supabase = await createClient();
-      const today = new Date().toISOString().split('T')[0];
 
-      // Get today's attendance record
-      const { data: attendanceRecord, error } = await supabase
-        .from('daily_attendance')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .eq('attendance_date', today)
-        .maybeSingle();
+      let attendanceRecord: DatabaseAttendanceRecord | null;
+      let error: { message: string; details?: unknown } | null;
+
+      // First check if attendanceId is in the request object (from shared types)
+      const targetAttendanceId = request.attendanceId || attendanceId;
+
+      if (targetAttendanceId) {
+        // Get the specific attendance record by ID
+        const { data, error: fetchError } = await supabase
+          .from('daily_attendance')
+          .select('*')
+          .eq('id', targetAttendanceId)
+          .eq('employee_id', employeeId) // Ensure the employee owns this record
+          .maybeSingle();
+
+        attendanceRecord = data;
+        error = fetchError;
+      } else {
+        // Fallback: Get today's attendance record
+        const today = new Date().toISOString().split('T')[0];
+        const { data, error: fetchError } = await supabase
+          .from('daily_attendance')
+          .select('*')
+          .eq('employee_id', employeeId)
+          .eq('attendance_date', today)
+          .maybeSingle();
+
+        attendanceRecord = data;
+        error = fetchError;
+      }
 
       if (error || !attendanceRecord || !attendanceRecord.check_in_timestamp) {
         return {
           success: false,
-          message: 'No active check-in found for emergency check-out'
+          message: targetAttendanceId
+            ? 'No check-in record found with the provided ID'
+            : 'No active check-in found for emergency check-out'
+        };
+      }
+
+      // Check if already checked out
+      if (attendanceRecord.check_out_timestamp) {
+        return {
+          success: true,
+          message: 'Already checked out',
+          attendanceId: attendanceRecord.id,
+          timestamp: new Date(attendanceRecord.check_out_timestamp),
+          status: 'CHECKED_OUT',
+          checkInTime: new Date(attendanceRecord.check_in_timestamp),
+          checkOutTime: new Date(attendanceRecord.check_out_timestamp),
+          workHours: attendanceRecord.total_work_hours || 0,
+          verificationStatus: attendanceRecord.verification_status || 'PENDING'
         };
       }
 

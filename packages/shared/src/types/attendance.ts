@@ -80,6 +80,7 @@ export interface CheckInRequest {
 
 export interface CheckOutRequest {
   employeeId: string;
+  attendanceId?: string; // Optional attendanceId for specific record checkout
   location: LocationData;
   timestamp: Date;
   selfie?: string; // Base64 encoded image
@@ -162,6 +163,7 @@ export interface CheckInMobileRequest {
 }
 
 export interface CheckOutMobileRequest {
+  attendanceId?: string; // Optional attendanceId for specific record checkout
   location?: {
     latitude: number;
     longitude: number;
@@ -192,6 +194,7 @@ export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED'
 
 export interface EmergencyCheckOutRequest {
   employeeId: string;
+  attendanceId?: string; // Optional attendanceId for specific record checkout
   timestamp: Date;
   reason?: string;
   location?: LocationData;
@@ -262,7 +265,7 @@ export const LocationDataSchema = z.object({
 });
 
 export const DeviceInfoSchema = z.object({
-  batteryLevel: z.number().min(0).max(1).optional(),
+  batteryLevel: z.number().min(0).max(100).optional(),
   platform: z.string().optional(),
   version: z.string().optional(),
   model: z.string().optional(),
@@ -281,6 +284,7 @@ export const CheckInMobileRequestSchema = z.object({
 });
 
 export const CheckOutMobileRequestSchema = z.object({
+  attendanceId: z.string().optional(),
   location: z.object({
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
@@ -303,7 +307,7 @@ export const CheckOutMobileRequestSchema = z.object({
 
 export const LocationUpdateRequestSchema = z.object({
   location: LocationDataSchema,
-  batteryLevel: z.number().min(0).max(1).optional(),
+  batteryLevel: z.number().min(0).max(100).optional(),
 });
 
 export const AttendanceListParamsSchema = z.object({
@@ -365,7 +369,7 @@ export const AttendanceStatusResponseSchema = BaseApiResponseSchema.extend({
     employeeId: z.string().optional(),
     totalDistance: z.number().optional(),
     lastLocationUpdate: z.string().optional(),
-    batteryLevel: z.number().min(0).max(1).optional(),
+    batteryLevel: z.number().min(0).max(100).optional(),
     verificationStatus: VerificationStatusSchema.optional(),
     requiresCheckOut: z.boolean(),
     date: z.string().optional(),

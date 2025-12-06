@@ -3,7 +3,7 @@
 import { DailyAttendanceRecord } from '@pgn/shared';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
 
 // Fix for Leaflet default icon issues in Webpack/Next.js
@@ -55,18 +55,39 @@ const CurrentIcon = L.icon({
 interface MapInnerProps {
   selectedRecord: DailyAttendanceRecord | null;
   employeeName?: string;
+  shouldCenter?: boolean;
 }
 
 // Component to handle map centering
-function MapUpdater({ center }: { center: [number, number] }) {
+function MapUpdater({ center, shouldCenter }: { center: [number, number]; shouldCenter: boolean }) {
   const map = useMap();
+  const [hasInteracted, setHasInteracted] = useState(false);
+
   useEffect(() => {
-    map.flyTo(center, 15);
-  }, [center, map]);
+    if (!hasInteracted && shouldCenter) {
+      map.setView(center, 15, { animate: true });
+    }
+  }, [center, map, shouldCenter, hasInteracted]);
+
+  useEffect(() => {
+    // Detect user interaction with the map
+    const handleInteraction = () => {
+      setHasInteracted(true);
+    };
+
+    map.on('dragstart', handleInteraction);
+    map.on('zoomstart', handleInteraction);
+
+    return () => {
+      map.off('dragstart', handleInteraction);
+      map.off('zoomstart', handleInteraction);
+    };
+  }, [map]);
+
   return null;
 }
 
-export default function MapInner({ selectedRecord, employeeName }: MapInnerProps) {
+export default function MapInner({ selectedRecord, employeeName, shouldCenter = true }: MapInnerProps) {
   // Default center (e.g., India or a neutral location if no data)
   const defaultCenter: [number, number] = [20.5937, 78.9629]; 
   
@@ -102,11 +123,11 @@ export default function MapInner({ selectedRecord, employeeName }: MapInnerProps
   const polylinePositions: [number, number][] = pathData.map(p => [p.latitude, p.longitude]);
 
   return (
-    <div className="h-full w-full rounded-lg overflow-hidden border shadow-sm">
-      <MapContainer 
-        center={viewCenter} 
-        zoom={15} 
-        style={{ height: '100%', width: '100%' }}
+    <div className="h-full w-full rounded-lg overflow-hidden border shadow-sm relative z-0">
+      <MapContainer
+        center={viewCenter}
+        zoom={15}
+        style={{ height: '100%', width: '100%', zIndex: 1 }}
         scrollWheelZoom={true}
       >
         <TileLayer
@@ -114,7 +135,7 @@ export default function MapInner({ selectedRecord, employeeName }: MapInnerProps
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <MapUpdater center={viewCenter} />
+        <MapUpdater center={viewCenter} shouldCenter={shouldCenter} />
 
         {/* Start Marker (Check In) */}
         {checkInLoc && (

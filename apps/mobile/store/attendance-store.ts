@@ -347,8 +347,24 @@ export const useAttendance = create<AttendanceStoreState>()(
           set({ isCheckingOut: true, error: null });
 
           try {
-            // First, check if already checked out
-            const statusResponse = await api.get(`${API_ENDPOINTS.ATTENDANCE}/${data.attendanceId}`);
+            // First check local status
+            const { currentStatus, checkOutTime } = get();
+
+            if (currentStatus === 'CHECKED_OUT') {
+              set({
+                isCheckingOut: false,
+                error: null
+              });
+
+              // Clear emergency data and stop tracking
+              await locationTrackingServiceNotifee.clearEmergencyData();
+              await locationTrackingServiceNotifee.stopTracking('Already checked out');
+
+              return;
+            }
+
+            // Then check with server
+            const statusResponse = await api.get(`${API_ENDPOINTS.ATTENDANCE_LIST}/${data.attendanceId}`);
 
             if (statusResponse.success && statusResponse.data) {
               const attendanceRecord = statusResponse.data;
@@ -366,15 +382,12 @@ export const useAttendance = create<AttendanceStoreState>()(
 
                 // Clear local checkout time for next check-in
                 set({
-                  checkOutTime: null,
+                  checkOutTime: undefined,
                   requiresCheckOut: false,
                   currentStatus: 'CHECKED_OUT'
                 });
 
-                return {
-                  success: true,
-                  message: 'Already checked out'
-                };
+                                return;
               }
             }
 
@@ -411,6 +424,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               method: method
             };
 
+            
             // Call existing checkout API with emergency parameters
             const response = await api.post(API_ENDPOINTS.ATTENDANCE_CHECKOUT, checkoutRequest);
 
@@ -693,9 +707,48 @@ export const useAttendance = create<AttendanceStoreState>()(
 
             const deviceInfo = request.deviceInfo || await get().getDeviceInfo();
 
+            // Get current attendance ID from store
+            const { currentAttendanceId, currentStatus } = get();
+
+            // Check if already checked out
+            if (currentStatus === 'CHECKED_OUT' || !currentAttendanceId) {
+              set({
+                isCheckingOut: false,
+                error: currentStatus === 'CHECKED_OUT' ? 'Already checked out' : 'No active check-in found'
+              });
+              return {
+                success: false,
+                message: currentStatus === 'CHECKED_OUT' ? 'Already checked out' : 'No active check-in found'
+              };
+            }
+
+            // Optional: Double-check with server by fetching the attendance record
+            try {
+              const statusResponse = await api.get(`${API_ENDPOINTS.ATTENDANCE_LIST}/${currentAttendanceId}`);
+              if (statusResponse.success && statusResponse.data) {
+                const attendanceRecord = statusResponse.data;
+                if (attendanceRecord.check_out_timestamp && attendanceRecord.check_out_timestamp !== null) {
+                  // Already checked out on server, update local state
+                  set({
+                    isCheckingOut: false,
+                    error: null,
+                    checkOutTime: new Date(attendanceRecord.check_out_timestamp),
+                    requiresCheckOut: false,
+                    currentStatus: 'CHECKED_OUT'
+                  });
+                  return {
+                    success: false,
+                    message: 'Already checked out'
+                  };
+                }
+              }
+            } catch (error) {
+            }
+
             // Build API request (handle both old and new interface)
             const checkoutRequest = request as any; // Use type assertion to handle both interfaces
             const apiRequest: CheckOutMobileRequest = {
+              attendanceId: currentAttendanceId || undefined, // Include attendanceId if available
               location: {
                 latitude: request.location.latitude,
                 longitude: request.location.longitude,
@@ -1185,7 +1238,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                 locationTrackingServiceNotifee.setEmergencyDataCallback(
                   async (emergencyData) => {
                     if (emergencyData.trackingActive && emergencyData.attendanceId) {
-                      await get().emergencyCheckOut({
+                      const result = await get().emergencyCheckOut({
                         attendanceId: emergencyData.attendanceId,
                         reason: 'Low battery - automatic check-out',
                         lastLocation: emergencyData.lastLocationUpdate,

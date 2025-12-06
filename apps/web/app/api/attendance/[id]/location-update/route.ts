@@ -4,14 +4,10 @@ import { attendanceService } from '@/services/attendance.service';
 import {
     LocationUpdateRequest, LocationUpdateResponseSchema,
     apiContract,
+    RouteParamsSchema,
     z
 } from '@pgn/shared';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Schema for route parameters
-const LocationUpdateRouteParamsSchema = z.object({
-  id: z.string().min(1, 'Attendance record ID is required'),
-});
 
 // Custom schema that matches the current API format
 const LocationUpdateCompatSchema = z.object({
@@ -84,7 +80,7 @@ const locationUpdateHandler = async (
 export const POST = withSecurity(
   withApiValidation(locationUpdateHandler, {
     body: LocationUpdateCompatSchema,
-    params: LocationUpdateRouteParamsSchema,
+    params: RouteParamsSchema,
     response: LocationUpdateResponseSchema,
     validateResponse: process.env.NODE_ENV === 'development'
   })

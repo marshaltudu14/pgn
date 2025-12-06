@@ -6,35 +6,9 @@ import { addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
 import {
   CheckInResponseSchema,
-  DeviceInfoSchema,
+  CheckInMobileRequestSchema,
   apiContract,
-  z,
 } from '@pgn/shared';
-
-// Custom schema that accepts both 'selfie' and 'selfieData' field names for backward compatibility
-const CheckInMobileRequestCompatSchema = z.object({
-  location: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    accuracy: z.number().min(0).optional(),
-    timestamp: z.number().optional(),
-    address: z.string().optional(),
-  }),
-  selfie: z.string().min(1, 'Selfie is required').optional(),
-  selfieData: z.string().min(1, 'Selfie data is required').optional(),
-  deviceInfo: DeviceInfoSchema.optional(),
-}).refine(
-  (data: { selfie?: string; selfieData?: string }) => data.selfie || data.selfieData,
-  {
-    message: "Either 'selfie' or 'selfieData' field is required",
-    path: ['selfie']
-  }
-).transform(
-  (data: { selfie?: string; selfieData?: string }) => ({
-    ...data,
-    selfie: data.selfie || data.selfieData // Normalize to 'selfie' field
-  })
-);
 
 /**
  * POST /api/attendance/checkin
@@ -55,6 +29,19 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
+    // Check if employee is active
+    if (user.employmentStatus !== 'ACTIVE') {
+      const response = NextResponse.json(
+        {
+          error: 'Forbidden',
+          message: 'Check-in not allowed. Only active employees can check in.',
+          employmentStatus: user.employmentStatus
+        },
+        { status: 403 }
+      );
+      return addSecurityHeaders(response);
+    }
+
     // Use validated body from middleware
     const body = (req as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
@@ -69,7 +56,7 @@ const checkinHandler = async (req: NextRequest): Promise<NextResponse> => {
         address: (body.location as { address?: string }).address
       },
       timestamp: new Date(),
-      selfie: body.selfie as string, // Note: schema uses 'selfie', but original used 'selfieData'
+      selfie: body.selfie as string,
       deviceInfo: body.deviceInfo as {
         batteryLevel?: number;
         platform?: string;
@@ -153,7 +140,7 @@ export async function GET(): Promise<NextResponse> {
 // Apply Zod validation middleware and wrap with security
 export const POST = withSecurity(
   withApiValidation(checkinHandler, {
-    body: CheckInMobileRequestCompatSchema,
+    body: CheckInMobileRequestSchema,
     response: CheckInResponseSchema,
     validateResponse: process.env.NODE_ENV === 'development'
   })
@@ -163,7 +150,7 @@ export const POST = withSecurity(
 apiContract.addRoute({
   path: '/api/attendance/checkin',
   method: 'POST',
-  inputSchema: CheckInMobileRequestCompatSchema,
+  inputSchema: CheckInMobileRequestSchema,
   outputSchema: CheckInResponseSchema,
   description: 'Check in user for attendance with location and selfie'
 });

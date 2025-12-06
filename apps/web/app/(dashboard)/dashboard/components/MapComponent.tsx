@@ -24,6 +24,7 @@ const MapInner = dynamic(
 interface MapComponentProps {
   selectedRecord: DailyAttendanceRecord | null;
   employeeName?: string;
+  shouldCenter?: boolean;
 }
 
 export default function MapComponent(props: MapComponentProps) {

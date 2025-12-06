@@ -5,6 +5,8 @@ import { useThemeColors } from '@/hooks/use-theme-colors';
 import { Home, ClipboardList, User, Calendar, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
 import { COLORS } from '@/constants';
 import { useAttendance } from '@/store/attendance-store';
+import { useAuth } from '@/store/auth-store';
+import { showToast } from '@/utils/toast';
 import { LOCATION_TRACKING_CONFIG } from '@/constants/location-tracking';
 import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
 
@@ -30,7 +32,8 @@ const AnimatedCheckInOutButton: React.FC<{
   onCheckInOut: () => void;
   isLocationTracking: boolean;
   isLoading?: boolean;
-}> = ({ isCheckedIn, onCheckInOut, isLocationTracking, isLoading = false }) => {
+  isEmployeeActive?: boolean;
+}> = ({ isCheckedIn, onCheckInOut, isLocationTracking, isLoading = false, isEmployeeActive = true }) => {
   const showTimer = isCheckedIn && isLocationTracking && !isLoading;
   const [timeRemaining, setTimeRemaining] = useState(LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS);
   const fillAnimation = React.useRef(new Animated.Value(0)).current;
@@ -73,6 +76,18 @@ const AnimatedCheckInOutButton: React.FC<{
     return seconds.toString().padStart(2, '0');
   };
 
+  const handleCheckInOut = () => {
+    // Check if trying to check-in and employee is not active
+    if (!isCheckedIn && !isEmployeeActive) {
+      showToast.error(
+        'Access Denied',
+        'Check-in is only allowed for active employees. Please contact HR if you believe this is an error.'
+      );
+      return;
+    }
+    onCheckInOut();
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -81,7 +96,7 @@ const AnimatedCheckInOutButton: React.FC<{
           backgroundColor: isCheckedIn ? '#ef4444' : '#10b981',
         },
       ]}
-      onPress={onCheckInOut}
+      onPress={handleCheckInOut}
     >
       
       {/* Background fluid fill - only show when checked in with timer */}
@@ -178,6 +193,8 @@ export default function UnifiedBottomNavigation({
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { isLocationTracking } = useAttendance();
+  const user = useAuth((state) => state.user);
+  const isEmployeeActive = user?.employmentStatus === 'ACTIVE';
 
   
   const handleHomePress = () => {
@@ -249,6 +266,7 @@ export default function UnifiedBottomNavigation({
         onCheckInOut={() => onCheckInOut?.()}
         isLocationTracking={isLocationTracking}
         isLoading={isLoading}
+        isEmployeeActive={isEmployeeActive}
       />
 
       {tabs.slice(2).map((tab) => (

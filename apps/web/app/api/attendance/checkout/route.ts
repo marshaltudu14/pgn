@@ -1,42 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/security-middleware';
 import { attendanceService } from '@/services/attendance.service';
-import { CheckOutRequest, CheckOutMethod, EmergencyCheckOutRequest } from '@pgn/shared';
+import { CheckOutRequest, CheckOutMethod, EmergencyCheckOutRequest, CheckOutMobileRequestSchema } from '@pgn/shared';
 import { withApiValidation } from '@/lib/api-validation';
 import {
-  CheckOutResponseSchema,
-  DeviceInfoSchema,
   apiContract,
-  z,
 } from '@pgn/shared';
-
-// Custom schema that accepts both 'selfie' and 'selfieData' field names for backward compatibility
-const CheckOutMobileRequestCompatSchema = z.object({
-  location: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    accuracy: z.number().min(0).optional(),
-    timestamp: z.number().optional(),
-    address: z.string().optional(),
-  }).optional(),
-  lastLocationData: z.object({
-    latitude: z.number().min(-90).max(90),
-    longitude: z.number().min(-180).max(180),
-    accuracy: z.number().min(0).optional(),
-    timestamp: z.number().optional(),
-    address: z.string().optional(),
-  }).optional(),
-  selfie: z.string().optional(),
-  selfieData: z.string().optional(),
-  deviceInfo: DeviceInfoSchema.optional(),
-  method: z.enum(['MANUAL', 'AUTOMATIC', 'APP_CLOSED', 'BATTERY_DRAIN', 'FORCE_CLOSE']).default('MANUAL'),
-  reason: z.string().optional(),
-}).transform(
-  (data: { selfie?: string; selfieData?: string }) => ({
-    ...data,
-    selfie: data.selfie || data.selfieData // Normalize to 'selfie' field
-  })
-);
 
 /**
  * POST /api/attendance/checkout
@@ -57,14 +26,29 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
+    // Check if employee is active
+    if (user.employmentStatus !== 'ACTIVE') {
+      const response = NextResponse.json(
+        {
+          error: 'Forbidden',
+          message: 'Check-out not allowed. Only active employees can check out.',
+          employmentStatus: user.employmentStatus
+        },
+        { status: 403 }
+      );
+      return addSecurityHeaders(response);
+    }
+
     // Use validated body from middleware
     const body = (req as unknown as { validatedBody: Record<string, unknown> }).validatedBody;
 
     // Check if this is an emergency check-out (only reason and method are required)
     if (body.method && body.method !== 'MANUAL' && body.reason) {
-      // Handle emergency check-out
+      // Process emergency check-out through service with attendanceId
+      const attendanceId = body.attendanceId as string;
       const emergencyRequest: EmergencyCheckOutRequest = {
         employeeId: user.employeeId,
+        attendanceId: attendanceId, // Pass attendanceId in the request
         timestamp: new Date(),
         reason: body.reason as string,
         method: body.method as CheckOutMethod,
@@ -84,7 +68,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
         } | undefined
       };
 
-      // Process emergency check-out through service
+  
       const result = await attendanceService.emergencyCheckOut(user.employeeId, emergencyRequest);
 
       if (!result.success) {
@@ -104,14 +88,14 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
         success: true,
         message: result.message,
         data: {
+          message: result.message,
           attendanceId: result.attendanceId,
-          timestamp: result.timestamp,
-          status: result.status,
-          checkInTime: result.checkInTime,
-          checkOutTime: result.checkOutTime,
-          workHours: result.workHours,
-          verificationStatus: result.verificationStatus,
-          emergencyCheckout: true
+          checkOutTime: result.checkOutTime
+            ? (typeof result.checkOutTime === 'string' ? result.checkOutTime : result.checkOutTime.toISOString())
+            : new Date().toISOString(),
+          status: result.status || 'CHECKED_OUT',
+          workHours: result.workHours || 0,
+          verificationStatus: result.verificationStatus || 'FLAGGED',
         }
       });
 
@@ -135,6 +119,7 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
     const locationObj = body.location as { latitude: number; longitude: number; accuracy?: number; timestamp?: number; address?: string; };
     const checkOutRequest: CheckOutRequest = {
       employeeId: user.employeeId,
+      attendanceId: body.attendanceId as string, // Pass attendanceId from request
       location: {
         latitude: locationObj.latitude,
         longitude: locationObj.longitude,
@@ -175,7 +160,9 @@ const checkoutHandler = async (req: NextRequest): Promise<NextResponse> => {
       data: {
         message: result.message || 'Check-out successful',
         attendanceId: result.attendanceId!,
-        checkOutTime: result.checkOutTime!.toISOString(),
+        checkOutTime: typeof result.checkOutTime === 'string'
+          ? result.checkOutTime
+          : result.checkOutTime!.toISOString(),
         status: result.status!,
         workHours: result.workHours!,
         verificationStatus: result.verificationStatus!,
@@ -228,9 +215,7 @@ export async function GET(): Promise<NextResponse> {
 // Apply Zod validation middleware and wrap with security
 export const POST = withSecurity(
   withApiValidation(checkoutHandler, {
-    body: CheckOutMobileRequestCompatSchema,
-    response: CheckOutResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
+    body: CheckOutMobileRequestSchema
   })
 );
 
@@ -238,7 +223,6 @@ export const POST = withSecurity(
 apiContract.addRoute({
   path: '/api/attendance/checkout',
   method: 'POST',
-  inputSchema: CheckOutMobileRequestCompatSchema,
-  outputSchema: CheckOutResponseSchema,
+  inputSchema: CheckOutMobileRequestSchema,
   description: 'Check out user for attendance with location and selfie'
 });

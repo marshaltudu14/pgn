@@ -78,7 +78,7 @@ export function EmployeeList({
   }
 
   return (
-    <div className="flex flex-col gap-2 p-2">
+    <div className="flex flex-col">
       {employees.map((employee) => {
         const attendance = attendanceMap[employee.id];
         const status = getStatusInfo(employee, attendance);
@@ -91,16 +91,16 @@ export function EmployeeList({
             key={employee.id}
             onClick={() => onSelectEmployee(employee)}
             className={cn(
-              "relative flex flex-col gap-2 p-3 rounded-lg border transition-all cursor-pointer hover:shadow-md",
-              selectedEmployeeId === employee.id 
-                ? "bg-primary/5 border-primary shadow-sm ring-1 ring-primary/20" 
-                : "bg-card border-border hover:border-primary/50"
+              "relative flex flex-col gap-1.5 p-2 border-b transition-all cursor-pointer hover:bg-muted/30",
+              selectedEmployeeId === employee.id
+                ? "bg-primary/5 border-primary border-l-2 border-l-primary"
+                : "border-transparent hover:border-border"
             )}
           >
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {/* Avatar / Initials */}
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                   {employee.first_name[0]}{employee.last_name[0]}
                 </div>
                 
@@ -124,8 +124,8 @@ export function EmployeeList({
             </div>
 
             {/* Meta Info Row */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 pl-13">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mt-0.5 pl-10">
+              <div className="flex items-center gap-2">
                  <div className="flex items-center gap-1" title="Battery Level">
                     {getBatteryIcon(batteryLevel ? batteryLevel / 100 : undefined)}
                     <span>{batteryLevel !== undefined ? `${Math.round(batteryLevel)}%` : '--'}</span>

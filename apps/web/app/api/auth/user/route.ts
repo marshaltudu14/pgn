@@ -24,19 +24,19 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-      // Get current employment status from database to ensure it's up-to-date
-    const currentEmploymentStatus = await authService.getCurrentEmploymentStatus(user.employeeId);
+      // Get complete user data from database to ensure it's up-to-date
+    const currentUserData = await authService.getCurrentUserById(user.employeeId);
 
-    if (!currentEmploymentStatus) {
+    if (!currentUserData) {
       const response = AuthErrorService.authError('User not found in system');
       return addSecurityHeaders(response);
     }
 
     // Check if user can still login based on current employment status
-    if (!authService.canLoginWithStatus(currentEmploymentStatus)) {
+    if (!authService.canLoginWithStatus(currentUserData.employment_status)) {
       // Get the appropriate employment status message
       let message = 'Account access denied';
-      switch (currentEmploymentStatus) {
+      switch (currentUserData.employment_status) {
         case 'SUSPENDED':
           message = 'Account suspended - contact administrator';
           break;
@@ -56,12 +56,23 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-    // Return user profile information
+    // Return complete user profile information
     const userProfile = {
-      id: user.employeeId,
-      humanReadableId: user.sub,
-      employmentStatus: currentEmploymentStatus,
-      canLogin: authService.canLoginWithStatus(currentEmploymentStatus),
+      id: currentUserData.id,
+      humanReadableId: currentUserData.human_readable_user_id,
+      firstName: currentUserData.first_name,
+      lastName: currentUserData.last_name,
+      email: currentUserData.email,
+      phone: currentUserData.phone,
+      employmentStatus: currentUserData.employment_status,
+      canLogin: authService.canLoginWithStatus(currentUserData.employment_status),
+      department: currentUserData.department,
+      region: currentUserData.region,
+      profilePhotoUrl: currentUserData.profile_photo_url,
+      primaryRegion: currentUserData.primary_region,
+      regionCode: currentUserData.region_code,
+      assignedRegions: currentUserData.assigned_regions || [],
+      startDate: currentUserData.start_date
     };
 
     // Return success response wrapped in API response structure

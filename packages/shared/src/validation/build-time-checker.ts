@@ -246,8 +246,6 @@ export function runBuildTimeValidation(): boolean {
     return false;
   }
 
-  console.log('✅ API build-time validation passed');
-
   // Generate client interface (optional)
   if (process.env.GENERATE_CLIENT_TYPES === 'true') {
     const clientInterface = apiContract.generateClientInterface();

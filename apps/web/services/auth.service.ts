@@ -335,6 +335,30 @@ export class AuthService {
   }
 
   /**
+   * Get current user data by ID from employees table
+   */
+  async getCurrentUserById(employeeId: string): Promise<any | null> {
+    try {
+      const supabase = await createClient();
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', employeeId)
+        .single();
+
+      if (error || !data) {
+        console.error('User lookup error:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Database query error:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get employment status message
    */
   private getEmploymentStatusMessage(status: EmploymentStatus): string {

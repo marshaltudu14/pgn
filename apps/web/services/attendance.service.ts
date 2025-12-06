@@ -364,10 +364,13 @@ export class AttendanceService {
       status: this.mapAttendanceStatus(record),
       verificationStatus: record.verification_status as VerificationStatus,
       workHours: record.total_work_hours ? Number(record.total_work_hours) : undefined,
-      notes: record.verification_notes || undefined,
-      device: record.device || undefined,
-      createdAt: new Date(record.created_at),
-      updatedAt: new Date(record.updated_at),
+    notes: record.verification_notes || undefined,
+    device: record.device || undefined,
+    lastLocationUpdate: record.last_location_update ? new Date(record.last_location_update) : undefined,
+    batteryLevelAtCheckIn: record.battery_level_at_check_in !== null ? Number(record.battery_level_at_check_in) : undefined,
+    batteryLevelAtCheckOut: record.battery_level_at_check_out !== null ? Number(record.battery_level_at_check_out) : undefined,
+    createdAt: new Date(record.created_at),
+    updatedAt: new Date(record.updated_at),
       };
     });
 

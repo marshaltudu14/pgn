@@ -2,27 +2,28 @@
 
 import { useAuthStore } from '@/app/lib/stores/authStore';
 import { ThemeToggle } from '@/components/theme-toggle';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
+import {
+    Sidebar,
+    SidebarContent,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarInset,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
+    SidebarTrigger,
+} from '@/components/ui/sidebar';
 import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
-import { Calendar, CheckSquare, Home, LogOut, Map, Settings, Users, Building2, Store, Tractor } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Building2, Calendar, CheckSquare, Home, LogOut, Map, Settings, Store, Tractor, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import React from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import React, { Suspense } from 'react';
 import ErrorBoundary from './dashboard/components/ui/error-boundary';
 
 const navigationSections = [
@@ -103,17 +104,26 @@ function SidebarSwipeWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function DashboardLayoutClient({
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { logout, isLoading } = useAuthStore();
+    const { logout, isLoading } = useAuthStore();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentView = searchParams.get('view') || 'overview';
+  const router = useRouter();
 
   // Create logout handler - redirect is handled by authStore
   const handleLogout = () => {
     logout();
+  };
+
+  const handleTabChange = (view: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', view);
+    router.push(`/dashboard?${params.toString()}`);
   };
 
   return (
@@ -172,11 +182,37 @@ export default function DashboardLayoutClient({
           <SidebarInset className="md:rounded-xl md:shadow-sm ml-0 md:ml-2 border border-transparent md:border md:border-sidebar-border">
             <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-2 lg:px-4">
               <SidebarTrigger className="-ml-1" />
-              <div className="flex-1">
-                <h1 className="text-lg font-semibold text-foreground">
-                  {navigationItems.find(item => item.url === pathname)?.title ||
-                    'Dashboard'}
-                </h1>
+              <div className="flex-1 overflow-x-auto">
+                {pathname === '/dashboard' ? (
+                   <div className="flex items-center gap-6">
+                      <button
+                        onClick={() => handleTabChange('overview')}
+                        className={cn(
+                          "relative text-sm font-medium transition-colors hover:text-primary py-2",
+                          currentView === 'overview'
+                            ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        Overview
+                      </button>
+                      <button
+                         onClick={() => handleTabChange('tracking')}
+                         className={cn(
+                            "relative text-sm font-medium transition-colors hover:text-primary py-2",
+                            currentView === 'tracking'
+                              ? "text-primary after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary"
+                              : "text-muted-foreground"
+                         )}
+                      >
+                        Real-time Tracking
+                      </button>
+                   </div>
+                ) : (
+                  <h1 className="text-lg font-semibold text-foreground">
+                    {pathname === '/dashboard' ? '' : (navigationItems.find(item => item.url === pathname)?.title || 'Dashboard')}
+                  </h1>
+                )}
               </div>
               <div className="flex items-center gap-4">
                 <ThemeToggle />
@@ -205,4 +241,16 @@ export default function DashboardLayoutClient({
       </ErrorBoundary>
     </SidebarProvider>
   );
+}
+
+export default function DashboardLayoutClient({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+            <DashboardLayoutContent>{children}</DashboardLayoutContent>
+        </Suspense>
+    );
 }

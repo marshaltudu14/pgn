@@ -48,6 +48,9 @@ export interface DailyAttendanceRecord {
   workHours?: number;
   notes?: string;
   device?: string; // Device model used for check-in (e.g., Samsung Galaxy S23)
+  lastLocationUpdate?: Date;
+  batteryLevelAtCheckIn?: number;
+  batteryLevelAtCheckOut?: number;
   createdAt: Date;
   updatedAt: Date;
 }

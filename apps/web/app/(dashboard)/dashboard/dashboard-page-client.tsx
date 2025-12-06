@@ -1,137 +1,151 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useAuthStore } from '../../lib/stores/authStore';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { useAuthStore } from '../../lib/stores/authStore';
+import TrackingView from './components/TrackingView';
 
-export default function DashboardPageClient() {
+function DashboardPageContent() {
   const { user, isAdmin, initialize } = useAuthStore();
+  const searchParams = useSearchParams();
+  const currentView = searchParams.get('view') || 'overview';
   const router = useRouter();
 
   useEffect(() => {
     initialize();
-    // Note: Authentication is handled by proxy middleware
   }, [initialize]);
 
-  const handleEmployeesClick = () => {
-    router.push('/dashboard/employees');
-  };
+  const handleEmployeesClick = () => router.push('/dashboard/employees');
+  const handleCreateEmployeeClick = () => router.push('/dashboard/employees/create');
 
-  const handleCreateEmployeeClick = () => {
-    router.push('/dashboard/employees/create');
-  };
+  if (currentView === 'tracking') {
+    return (
+      <div className="h-full w-full bg-muted/5 flex flex-col overflow-hidden">
+        <TrackingView />
+      </div>
+    );
+  }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="px-4 py-6"
-    >
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-foreground">
-          Welcome back, {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.email}!
-        </h2>
-        <p className="text-muted-foreground">
-          {isAdmin ? 'You have administrator access' : 'You have regular user access'}
-        </p>
-      </div>
+    <div className="h-full w-full flex flex-col bg-muted/5 p-6 overflow-auto">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+      >
+          {/* Welcome Banner - now more subtle and integrated */}
+          <div className="flex flex-col gap-1 mb-8">
+            <h2 className="text-3xl font-bold tracking-tight">
+              Welcome back, {user?.firstName || 'User'}
+            </h2>
+            <p className="text-muted-foreground">
+              {isAdmin ? 'Administrator Panel' : 'Employee Portal'}
+            </p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="bg-background border overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
-          onClick={handleEmployeesClick}
-        >
-          <div className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div
+              whileHover={{ y: -2 }}
+              onClick={handleEmployeesClick}
+              className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow hover:shadow-lg transition-all cursor-pointer"
+            >
+              <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="tracking-tight text-sm font-medium">Total Employees</h3>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-foreground">Employee Management</h3>
-                <p className="mt-1 text-sm text-muted-foreground">View and manage employee records</p>
+              <div className="p-6 pt-0">
+                <div className="text-2xl font-bold">Manage</div>
+                <p className="text-xs text-muted-foreground">View and edit records</p>
               </div>
-            </div>
-          </div>
-        </motion.div>
+            </motion.div>
 
-        {isAdmin && (
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="bg-background border overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={handleCreateEmployeeClick}
-          >
-            <div className="p-6">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            {isAdmin && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                whileHover={{ y: -2 }}
+                onClick={handleCreateEmployeeClick}
+                className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow hover:shadow-lg transition-all cursor-pointer"
+              >
+                <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                  <h3 className="tracking-tight text-sm font-medium">Onboard</h3>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <line x1="19" x2="19" y1="8" y2="14" />
+                    <line x1="22" x2="16" y1="11" y2="11" />
                   </svg>
                 </div>
-                <div className="ml-4">
-                  <h3 className="text-lg font-medium text-foreground">Create Employee</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Add new employee accounts</p>
+                <div className="p-6 pt-0">
+                  <div className="text-2xl font-bold">Add New</div>
+                  <p className="text-xs text-muted-foreground">Register new employee</p>
                 </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
+              </motion.div>
+            )}
 
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="bg-background border overflow-hidden shadow rounded-lg cursor-pointer hover:shadow-lg transition-shadow"
-        >
-          <div className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              whileHover={{ y: -2 }}
+              className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow hover:shadow-lg transition-all"
+            >
+              <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+                <h3 className="tracking-tight text-sm font-medium">System Status</h3>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  className="h-4 w-4 text-green-500"
+                >
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-foreground">Attendance Tracking</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Monitor employee attendance</p>
+              <div className="p-6 pt-0">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">Stable</div>
+                <p className="text-xs text-muted-foreground">All systems operational</p>
               </div>
-            </div>
+            </motion.div>
           </div>
-        </motion.div>
-      </div>
+      </motion.div>
+    </div>
+  );
+}
 
-      <div className="mt-8">
-        <div className="bg-background border overflow-hidden shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-foreground">
-              System Status
-            </h3>
-            <div className="mt-5">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
-                      All systems operational
-                    </h3>
-                    <div className="mt-2 text-sm text-green-700 dark:text-green-300">
-                      <p>Authentication and database services are running normally.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+export default function DashboardPageClient() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

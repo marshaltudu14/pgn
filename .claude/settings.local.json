@@ -121,7 +121,9 @@
       "Bash(npm run test:web:*)",
       "Bash(git reset:*)",
       "mcp__playwright__browser_hover",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(tail:*)",
+      "Bash(head:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,13 +1,12 @@
-import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
-import { attendanceService } from '@/services/attendance.service';
-import { LocationUpdateRequest } from '@pgn/shared';
-import { NextRequest, NextResponse } from 'next/server';
 import { withApiValidation } from '@/lib/api-validation';
+import { addSecurityHeaders, withSecurity } from '@/lib/security-middleware';
+import { attendanceService } from '@/services/attendance.service';
 import {
-  LocationUpdateResponseSchema,
-  apiContract,
-  z,
+    LocationUpdateRequest, LocationUpdateResponseSchema,
+    apiContract,
+    z
 } from '@pgn/shared';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Schema for route parameters
 const LocationUpdateRouteParamsSchema = z.object({
@@ -40,7 +39,7 @@ const locationUpdateHandler = async (
       timestampMs = body.timestamp < 10000000000 ? body.timestamp * 1000 : body.timestamp;
     } else {
       // ISO string
-      timestampMs = new Date(body.timestamp).getTime();
+      timestampMs = new Date(body.timestamp as string).getTime();
     }
 
     const updateRequest: LocationUpdateRequest = {

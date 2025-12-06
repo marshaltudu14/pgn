@@ -93,7 +93,7 @@ export type FileUpload = z.infer<typeof FileUploadSchema>;
  * Device info schema for mobile requests
  */
 export const DeviceInfoSchema = z.object({
-  batteryLevel: z.number().min(0).max(1).optional(),
+  batteryLevel: z.number().min(0).max(100).optional(),
   platform: z.string().optional(),
   version: z.string().optional(),
   model: z.string().optional(),

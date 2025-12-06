@@ -1396,7 +1396,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             let batteryLevel: number | undefined;
             try {
               const level = await Battery.getBatteryLevelAsync();
-              batteryLevel = level > 0 ? Math.round(level * 100) : undefined;
+              batteryLevel = level > 0 ? Math.round(level * 100) : undefined; // Convert to 0-100 percentage
             } catch (_batteryError) {
               const state = get();
               batteryLevel = state.batteryLevel || undefined;

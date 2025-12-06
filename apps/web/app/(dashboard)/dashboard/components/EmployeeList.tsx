@@ -127,8 +127,8 @@ export function EmployeeList({
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-1 pl-13">
               <div className="flex items-center gap-3">
                  <div className="flex items-center gap-1" title="Battery Level">
-                    {getBatteryIcon(batteryLevel)}
-                    <span>{batteryLevel !== undefined ? `${Math.round(batteryLevel * 100)}%` : '--'}</span>
+                    {getBatteryIcon(batteryLevel ? batteryLevel / 100 : undefined)}
+                    <span>{batteryLevel !== undefined ? `${Math.round(batteryLevel)}%` : '--'}</span>
                  </div>
                  
                  {attendance?.checkInTime && (

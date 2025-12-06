@@ -92,7 +92,9 @@ export const useAuth = create<AuthStoreState>()(
               user: authState.user,
               error: null,
               lastActivity: Date.now(),
+              session: authState.session || null,
             });
+
           } catch (error) {
             console.error('❌ Auth Store: Initialization failed', error);
             set({
@@ -101,6 +103,7 @@ export const useAuth = create<AuthStoreState>()(
               user: null,
               error: 'Failed to initialize authentication',
               lastActivity: Date.now(),
+              session: null,
             });
           }
         },
@@ -362,16 +365,18 @@ export const useAuth = create<AuthStoreState>()(
             }
 
             // Update session with new token and new refresh token
-            await SessionManager.saveSession({
+            const newSessionData = {
               accessToken: data.token as string,
               refreshToken: (data.refreshToken as string) || refreshToken, // Use new refresh token if provided
               expiresIn: (data.expiresIn as number) || 900,
-            });
+            };
+
+            await SessionManager.saveSession(newSessionData);
 
             // Update current session state
-            const currentSession = await SessionManager.loadSession();
-            if (currentSession) {
-              get().setSession(currentSession);
+            const updatedSession = await SessionManager.loadSession();
+            if (updatedSession) {
+              get().setSession(updatedSession);
             }
 
             return data;
@@ -591,32 +596,38 @@ export const useAuth = create<AuthStoreState>()(
               };
             }
 
-            // Check if access token is expired but refresh token is available
-            if (SessionManager.isSessionExpired(session) && session.refreshToken) {
-              try {
-                // Attempt to refresh the token
-                const refreshSuccess = await get().refreshToken(session.refreshToken);
+            // Check if session is expired
+            if (SessionManager.isSessionExpired(session)) {
+              // If refresh token is available, try to refresh
+              if (session.refreshToken && session.refreshToken.trim() !== '') {
+                try {
+                  // Attempt to refresh the token
+                  const refreshResult = await get().refreshToken(session.refreshToken);
 
-                if (refreshSuccess) {
-                  // Token refreshed successfully, load new session
-                  const newSession = await SessionManager.loadSession();
-                  if (newSession && !SessionManager.isSessionExpired(newSession)) {
-                    return {
-                      isAuthenticated: true,
-                      isLoading: false,
-                      user: userData as AuthenticatedUser,
-                      error: null,
-                      lastActivity: Date.now(),
-                      session: newSession,
-                    };
+                  if (refreshResult && refreshResult.token) {
+                    // Token refreshed successfully, load new session
+                    const newSession = await SessionManager.loadSession();
+                    if (newSession && !SessionManager.isSessionExpired(newSession)) {
+                      // Store the new session in state
+                      get().setSession(newSession);
+                      return {
+                        isAuthenticated: true,
+                        isLoading: false,
+                        user: userData as AuthenticatedUser,
+                        error: null,
+                        lastActivity: Date.now(),
+                        session: newSession,
+                      };
+                    }
                   }
+                } catch (refreshError) {
+                  console.error('❌ Automatic token refresh failed:', refreshError);
                 }
-              } catch (refreshError) {
-                console.warn('❌ Automatic token refresh failed:', refreshError);
               }
 
-              // Clear expired session if refresh failed
+              // Clear expired session if no refresh token or refresh failed
               await SessionManager.clearSession();
+              get().setSession(null);
               return {
                 isAuthenticated: false,
                 isLoading: false,
@@ -625,20 +636,6 @@ export const useAuth = create<AuthStoreState>()(
                 lastActivity: Date.now(),
               };
             }
-
-            // Validate the token by checking if session is expired
-            if (SessionManager.isSessionExpired(session)) {
-              // Clear expired session (no refresh token available)
-              await SessionManager.clearSession();
-              return {
-                isAuthenticated: false,
-                isLoading: false,
-                user: null,
-                error: null,
-                lastActivity: Date.now(),
-              };
-            }
-
             return {
               isAuthenticated: true,
               isLoading: false,

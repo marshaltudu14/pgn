@@ -231,7 +231,9 @@ export async function apiCall<T = any>(
     const authHeaders: Record<string, string> = {};
     if (!isPublicEndpoint(endpoint)) {
       const session = await SessionManager.loadSession();
-      if (session?.accessToken && !SessionManager.isSessionExpired(session)) {
+      if (session?.accessToken) {
+        // Don't check expiration here - let the API handle expired tokens
+        // The 401 handler will take care of refreshing
         authHeaders.Authorization = `Bearer ${session.accessToken}`;
       }
     }

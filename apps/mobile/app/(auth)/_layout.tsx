@@ -1,5 +1,6 @@
 import { Slot, Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from '@/store/auth-store';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,6 +16,20 @@ export default function AuthLayout() {
 
     init();
   }, [initializeAuth, isAuthenticated]);
+
+  // Listen for app state changes to check token validity when app comes to foreground
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'active') {
+        // App came to foreground, check if token needs refresh
+        await initializeAuth();
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [initializeAuth]);
 
   // Don't show loading screen - let redirect happen in background
   if (!isInitialized || isLoading) {

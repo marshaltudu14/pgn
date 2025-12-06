@@ -49,12 +49,8 @@ export default function EmployeeFormClient() {
   }, [isEditMode, employeeId]);
 
   const handleFormSuccess = () => {
-    // Navigate back to employee list or to detail view
-    if (isEditMode) {
-      router.push(`/dashboard/employees/${employeeId}`);
-    } else {
-      router.push('/dashboard/employees');
-    }
+    // Navigate back to employee list
+    router.push('/dashboard/employees');
   };
 
   const handleFormCancel = () => {

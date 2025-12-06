@@ -320,7 +320,6 @@ export const useAttendance = create<AttendanceStoreState>()(
                 });
               } else {
                 // Try to resume normal tracking
-                console.log('[AttendanceStore] Resuming tracking after short interruption');
                 const authStore = useAuth.getState();
                 if (authStore.user) {
                   // Check if still checked in on server
@@ -523,7 +522,6 @@ export const useAttendance = create<AttendanceStoreState>()(
                 // Check if tracking service is actually running, not just the store state
                 const isTrackingRunning = locationTrackingServiceNotifee.isTrackingActive();
                 if (!isTrackingRunning) {
-                  console.log('[AttendanceStore] Starting tracking for already checked-in user');
                   await locationTrackingServiceNotifee.startTracking(
                     authStore.user.id,
                     authStore.user.firstName,

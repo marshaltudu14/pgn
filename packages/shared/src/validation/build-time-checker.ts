@@ -233,8 +233,6 @@ export function DefineRoute(route: RouteDefinition) {
  * Function to run build-time validation
  */
 export function runBuildTimeValidation(): boolean {
-  console.log('🔍 Running API build-time validation...');
-
   const errors = apiContract.validateContract();
 
   if (errors.length > 0) {
@@ -253,8 +251,6 @@ export function runBuildTimeValidation(): boolean {
   // Generate client interface (optional)
   if (process.env.GENERATE_CLIENT_TYPES === 'true') {
     const clientInterface = apiContract.generateClientInterface();
-    console.log('📝 Generated client interface:');
-    console.log(clientInterface);
   }
 
   return true;

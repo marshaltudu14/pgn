@@ -113,7 +113,6 @@ class LocationTrackingServiceNotifee {
       );
 
       this.lastEmergencyUpdate = Date.now();
-      console.log('[LocationTrackingServiceNotifee] Emergency data stored');
     } catch (error) {
       console.error('[LocationTrackingServiceNotifee] Failed to store emergency data:', error);
     }
@@ -123,7 +122,6 @@ class LocationTrackingServiceNotifee {
   async clearEmergencyData(): Promise<void> {
     try {
       await AsyncStorage.removeItem(LocationTrackingServiceNotifee.EMERGENCY_STORAGE_KEY);
-      console.log('[LocationTrackingServiceNotifee] Emergency data cleared');
     } catch (error) {
       console.error('[LocationTrackingServiceNotifee] Failed to clear emergency data:', error);
     }

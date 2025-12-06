@@ -86,6 +86,16 @@ export const useAuth = create<AuthStoreState>()(
           try {
             const authState = await get().getCurrentAuthState();
 
+            // If authenticated, refresh user data from server
+            if (authState.isAuthenticated) {
+              try {
+                await get().refreshUserData();
+              } catch (error) {
+                console.warn('⚠️ Failed to refresh user data, using stored data:', error);
+                // Continue with stored data if refresh fails
+              }
+            }
+
             set({
               isAuthenticated: authState.isAuthenticated,
               isLoading: false,
@@ -398,10 +408,23 @@ export const useAuth = create<AuthStoreState>()(
             const userResponse = await api.get(API_ENDPOINTS.GET_AUTH_USER);
 
             if (userResponse.success && userResponse.data) {
-              set({ user: userResponse.data });
+              const { user } = get();
+              if (user) {
+                // Update only the user data, keeping other state intact
+                set({
+                  user: {
+                    ...user,
+                    ...userResponse.data,
+                    // Ensure critical fields are updated from fresh data
+                    employmentStatus: userResponse.data.employmentStatus || user.employmentStatus,
+                    canLogin: userResponse.data.canLogin ?? user.canLogin
+                  }
+                });
+              }
             }
           } catch (error) {
             console.error('❌ Failed to refresh user data:', error);
+            throw error; // Re-throw so caller can handle
           }
         },
 

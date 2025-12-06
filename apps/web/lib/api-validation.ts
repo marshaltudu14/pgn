@@ -54,18 +54,13 @@ export function withApiValidation<T extends NextResponse>(
           return errorResponse as T;
         }
 
-      // DEBUG: Log the body being validated
-        console.log('DEBUG: Validating body:', JSON.stringify(body, null, 2));
         const validationResult = options.body.safeParse(body);
 
         if (!validationResult.success) {
-          // DEBUG: Log validation error details
           console.error('DEBUG: Validation failed:', validationResult.error.issues);
           const errorMessage = validationResult.error.issues.map(err =>
             `${err.path.join('.')}: ${err.message}`
           ).join(', ');
-
-          console.error('DEBUG: Validation error message:', errorMessage);
 
           const errorResponse = NextResponse.json(
             {

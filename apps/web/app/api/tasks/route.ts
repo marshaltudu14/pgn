@@ -116,11 +116,9 @@ apiContract.addRoute({
 export const GET = withSecurity(withApiValidation(getTasksHandler, {
   query: TaskListParamsSchema,
   response: TaskListResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));
 
 export const POST = withSecurity(withApiValidation(createTaskHandler, {
   body: CreateTaskRequestSchema,
   response: TaskResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));

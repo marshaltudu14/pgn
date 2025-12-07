@@ -62,7 +62,6 @@ const getFarmerHandler = withApiValidation(
   {
     params: RouteParamsSchema,
     response: FarmerResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 
@@ -101,7 +100,6 @@ const updateFarmerHandler = withApiValidation(
     params: RouteParamsSchema,
     body: FarmerFormDataSchema,
     response: FarmerUpdatedResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 
@@ -136,7 +134,6 @@ const deleteFarmerHandler = withApiValidation(
   {
     params: RouteParamsSchema,
     response: FarmerDeletedResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 

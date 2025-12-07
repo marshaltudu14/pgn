@@ -54,7 +54,6 @@ apiContract.addRoute({
 const refreshWithValidation = withApiValidation(refreshHandler, {
   body: RefreshRequestSchema,
   response: RefreshResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development',
 });
 
 // Export with security middleware (no auth required) and rate limiting

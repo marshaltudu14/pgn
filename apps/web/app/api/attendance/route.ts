@@ -48,7 +48,6 @@ export const GET = withSecurity(
   withApiValidation(getAttendanceHandler, {
     query: AttendanceListParamsSchema,
     response: AttendanceListResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 

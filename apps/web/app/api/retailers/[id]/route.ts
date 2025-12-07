@@ -128,7 +128,6 @@ export const GET = withSecurity(
   withApiValidation(getRetailerHandler, {
     params: RouteParamsSchema,
     response: RetailerResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 
@@ -137,7 +136,6 @@ export const PUT = withSecurity(
     params: RouteParamsSchema,
     body: RetailerFormDataSchema,
     response: RetailerUpdatedResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 
@@ -145,6 +143,5 @@ export const DELETE = withSecurity(
   withApiValidation(deleteRetailerHandler, {
     params: RouteParamsSchema,
     response: RetailerDeletedResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );

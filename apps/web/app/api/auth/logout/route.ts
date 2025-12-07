@@ -79,7 +79,6 @@ apiContract.addRoute({
 const logoutWithValidation = withApiValidation(logoutHandler, {
   body: LogoutRequestSchema,
   response: LogoutResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development',
 });
 
 // Logout requires authentication (default behavior)

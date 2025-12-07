@@ -63,10 +63,7 @@ export async function getRegions(
 
   let query = supabase
     .from('regions')
-    .select(`
-      *,
-      employee_count:employee_regions(count)
-    `, { count: 'exact' });
+    .select('*', { count: 'exact' });
 
   // Apply search filter (searches both state and city)
   if (search) {
@@ -81,8 +78,13 @@ export async function getRegions(
     query = query.ilike('city', `%${city}%`);
   }
 
-  // Apply sorting
-  query = query.order(sort_by, { ascending: sort_order === 'asc' });
+  // Apply sorting (employee_count sorting not supported at database level)
+  if (sort_by !== 'employee_count') {
+    query = query.order(sort_by, { ascending: sort_order === 'asc' });
+  } else {
+    // Default to city sorting if employee_count is requested
+    query = query.order('city', { ascending: sort_order === 'asc' });
+  }
 
   // Apply pagination
   query = query.range(offset, offset + limit - 1);
@@ -94,10 +96,27 @@ export async function getRegions(
     throw new Error('Failed to fetch regions');
   }
 
+  // Get employee counts for all regions
+  const regionIds = (data || []).map(region => region.id);
+  let employeeCounts: Record<string, number> = {};
+
+  if (regionIds.length > 0) {
+    const { data: counts } = await supabase
+      .from('employee_regions')
+      .select('region_id')
+      .in('region_id', regionIds);
+
+    // Count employees per region
+    employeeCounts = (counts || []).reduce((acc, { region_id }) => {
+      acc[region_id] = (acc[region_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
   // Transform the data to include employee_count as a flat property
   const regions = (data || []).map(region => ({
     ...region,
-    employee_count: region.employee_count ? Number(region.employee_count) : 0
+    employee_count: employeeCounts[region.id] || 0
   }));
 
   const totalItems = count || 0;
@@ -123,10 +142,7 @@ export async function getRegionById(id: string): Promise<Region | null> {
 
   const { data, error } = await supabase
     .from('regions')
-    .select(`
-      *,
-      employee_count:employee_regions(count)
-    `)
+    .select('*')
     .eq('id', id)
     .single();
 
@@ -139,10 +155,21 @@ export async function getRegionById(id: string): Promise<Region | null> {
     return null;
   }
 
+  // Get employee count for this region
+  let employeeCount = 0;
+  if (data) {
+    const { data: counts } = await supabase
+      .from('employee_regions')
+      .select('region_id')
+      .eq('region_id', id);
+
+    employeeCount = (counts || []).length;
+  }
+
   // Transform the data to include employee_count as a flat property
   return {
     ...data,
-    employee_count: data.employee_count ? Number(data.employee_count) : 0
+    employee_count: employeeCount
   };
 }
 
@@ -223,7 +250,10 @@ export async function getStates(): Promise<StateOption[]> {
     const fs = await import('fs');
     const statesData = JSON.parse(fs.readFileSync(statesPath, 'utf8'));
 
-    return statesData.map((state: string) => ({
+    // Sort states alphabetically A-Z
+    const sortedStates = statesData.sort((a: string, b: string) => a.localeCompare(b));
+
+    return sortedStates.map((state: string) => ({
       state: state,
       state_slug: state.toLowerCase().replace(/\s+/g, '-')
     }));
@@ -270,10 +300,27 @@ export async function searchRegions(
     throw new Error('Failed to search regions');
   }
 
+  // Get employee counts for all regions
+  const regionIds = (data || []).map(region => region.id);
+  let employeeCounts: Record<string, number> = {};
+
+  if (regionIds.length > 0) {
+    const { data: counts } = await supabase
+      .from('employee_regions')
+      .select('region_id')
+      .in('region_id', regionIds);
+
+    // Count employees per region
+    employeeCounts = (counts || []).reduce((acc, { region_id }) => {
+      acc[region_id] = (acc[region_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
   // Transform the data to include employee_count as a flat property
   const regions = (data || []).map(region => ({
     ...region,
-    employee_count: region.employee_count ? Number(region.employee_count) : 0
+    employee_count: employeeCounts[region.id] || 0
   }));
 
   const totalItems = count || 0;

@@ -128,18 +128,15 @@ buildTimeApiContract.addRoute({
 export const GET = withSecurity(withApiValidation(getDealerHandler, {
   params: DealerRouteParamsSchema,
   response: BaseApiResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));
 
 export const PUT = withSecurity(withApiValidation(updateDealerHandler, {
   params: DealerRouteParamsSchema,
   body: DealerFormDataSchema,
   response: BaseApiResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));
 
 export const DELETE = withSecurity(withApiValidation(deleteDealerHandler, {
   params: DealerRouteParamsSchema,
   response: BaseApiResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));

@@ -50,7 +50,6 @@ export const POST = withSecurity(
     body: LocationUpdateRequestSchema,
     params: RouteParamsSchema,
     response: LocationUpdateResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 

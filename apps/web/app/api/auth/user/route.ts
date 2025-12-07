@@ -100,7 +100,6 @@ apiContract.addRoute({
 // Apply validation middleware for response only, then security and rate limiting
 const userWithValidation = withApiValidation(userHandler, {
   response: UserResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development',
 });
 
 export const GET = withRateLimit(withSecurity(userWithValidation), apiRateLimit);

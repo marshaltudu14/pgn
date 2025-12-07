@@ -25,7 +25,6 @@ const getStatesHandler = withApiValidation(
   },
   {
     response: StatesListResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 

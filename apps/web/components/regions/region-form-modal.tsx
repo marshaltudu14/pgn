@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { CreateRegionRequest, UpdateRegionRequest, StateOption } from '@pgn/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,12 +44,32 @@ export function RegionFormModal({
   title,
   submitError,
 }: RegionFormModalProps) {
-  // Derive form data directly from props to avoid setState in effects
+  // For create mode, start with empty form. For edit mode, use controlled state.
   const [formData, setFormData] = useState<CreateRegionRequest>({ state: '', city: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Use derived state instead of setState in effects
-  const derivedFormData = open && initialData ? initialData : (open ? { state: '', city: '' } : formData);
+  // Use memo to determine current form values
+  const currentFormValues = useMemo(() => {
+    if (initialData) {
+      // Edit mode: use form data (controlled by user changes)
+      return formData;
+    } else {
+      // Create mode: use form data
+      return formData;
+    }
+  }, [formData, initialData]);
+
+  // Sync form when initialData changes (edit mode)
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (prevInitialData !== initialData) {
+    setPrevInitialData(initialData);
+    if (initialData) {
+      setFormData({ state: initialData.state, city: initialData.city });
+    } else {
+      setFormData({ state: '', city: '' });
+    }
+    setErrors({});
+  }
 
   // Handle state change
   const handleStateChange = useCallback((state: string) => {
@@ -67,10 +87,10 @@ export function RegionFormModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!derivedFormData.state.trim()) {
+    if (!currentFormValues.state.trim()) {
       newErrors.state = 'State is required';
     }
-    if (!derivedFormData.city.trim()) {
+    if (!currentFormValues.city.trim()) {
       newErrors.city = 'City is required';
     }
 
@@ -86,7 +106,18 @@ export function RegionFormModal({
       return;
     }
 
-    onSubmit(derivedFormData);
+    onSubmit(currentFormValues);
+  };
+
+  // Check if error is a duplicate key error for user-friendly message
+  const getDuplicateErrorMessage = (error: string | null): string | null => {
+    if (!error) return null;
+
+    if (error.includes('state and city combination already exists')) {
+      return 'This region already exists. Please choose a different state and city combination.';
+    }
+
+    return error;
   };
 
   // Handle dialog close
@@ -112,7 +143,7 @@ export function RegionFormModal({
         {/* Display submit error if any */}
         {submitError && (
           <Alert variant="destructive">
-            <AlertDescription>{submitError}</AlertDescription>
+            <AlertDescription>{getDuplicateErrorMessage(submitError) || submitError}</AlertDescription>
           </Alert>
         )}
 
@@ -120,7 +151,7 @@ export function RegionFormModal({
           <div className="space-y-2">
             <Label htmlFor="state">State *</Label>
             <Select
-              value={derivedFormData.state}
+              value={currentFormValues.state}
               onValueChange={handleStateChange}
               disabled={isSubmitting}
             >
@@ -144,7 +175,7 @@ export function RegionFormModal({
             <Label htmlFor="city">City *</Label>
             <Input
               id="city"
-              value={derivedFormData.city}
+              value={currentFormValues.city}
               onChange={(e) => handleCityChange(e.target.value)}
               placeholder="Enter city name"
               disabled={isSubmitting}
@@ -170,8 +201,11 @@ export function RegionFormModal({
               disabled={isSubmitting}
               className="cursor-pointer hover:bg-primary/90 transition-colors"
             >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {initialData ? 'Update' : 'Create'}
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                initialData ? 'Update' : 'Create'
+              )}
             </Button>
           </DialogFooter>
         </form>

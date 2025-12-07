@@ -142,7 +142,6 @@ export const POST = withSecurity(
   withApiValidation(checkinHandler, {
     body: CheckInMobileRequestSchema,
     response: CheckInResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 

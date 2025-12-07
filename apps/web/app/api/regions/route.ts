@@ -60,7 +60,6 @@ const getRegionsHandler = withApiValidation(
   {
     query: regionsQuerySchema,
     response: RegionListResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 
@@ -98,7 +97,6 @@ const createRegionHandler = withApiValidation(
   {
     body: createRegionSchema,
     response: RegionResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 

@@ -156,12 +156,10 @@ apiContract.addRoute({
 export const GET = withSecurity(withApiValidation(getTaskHandler, {
   params: TaskIdParamsSchema,
   response: TaskResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));
 
 export const PUT = withSecurity(withApiValidation(updateTaskHandler, {
   params: TaskIdParamsSchema,
   body: UpdateTaskRequestSchema,
   response: TaskResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));

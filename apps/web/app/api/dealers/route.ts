@@ -145,11 +145,9 @@ buildTimeApiContract.addRoute({
 export const GET = withSecurity(withApiValidation(getDealersHandler, {
   query: DealerListParamsSchema,
   response: DealerListResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));
 
 export const POST = withSecurity(withApiValidation(createDealerHandler, {
   body: DealerFormDataSchema,
   response: BaseApiResponseSchema,
-  validateResponse: process.env.NODE_ENV === 'development'
 }));

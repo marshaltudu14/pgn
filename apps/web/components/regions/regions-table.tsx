@@ -20,7 +20,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from '@/components/ui/pagination';
-import { Edit, Trash2, MapPin, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
+import { Edit, Trash2, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface PaginationState {
@@ -39,9 +39,7 @@ interface RegionsTableProps {
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
   _onPageSizeChange?: (size: number) => void;
-  onSortChange: (sortBy: 'state' | 'city' | 'employee_count', sortOrder: 'asc' | 'desc') => void;
-  onRefreshStats?: () => void;
-  isRefreshing?: boolean;
+  onSortChange: (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => void;
 }
 
 export function RegionsTable({
@@ -54,11 +52,9 @@ export function RegionsTable({
   onPageChange,
   _onPageSizeChange,
   onSortChange,
-  onRefreshStats,
-  isRefreshing = false,
 }: RegionsTableProps) {
 
-  const handleSort = (sortBy: 'state' | 'city' | 'employee_count') => {
+  const handleSort = (sortBy: 'state' | 'city') => {
     const newSortOrder =
       filters.sort_by === sortBy && filters.sort_order === 'asc' ? 'desc' : 'asc';
     onSortChange(sortBy, newSortOrder);
@@ -134,23 +130,6 @@ export function RegionsTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
-          {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} total
-        </h3>
-        {onRefreshStats && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onRefreshStats}
-            disabled={isRefreshing}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh Employee Counts'}
-          </Button>
-        )}
-      </div>
 
       <Table>
         <TableHeader>
@@ -159,7 +138,7 @@ export function RegionsTable({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-8 px-2 cursor-pointer hover:bg-accent"
                 onClick={() => handleSort('state')}
               >
                 State
@@ -176,7 +155,7 @@ export function RegionsTable({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 px-2"
+                className="h-8 px-2 cursor-pointer hover:bg-accent"
                 onClick={() => handleSort('city')}
               >
                 City
@@ -191,23 +170,7 @@ export function RegionsTable({
             </TableHead>
             <TableHead className="w-[200px]">State Slug</TableHead>
             <TableHead className="w-[200px]">City Slug</TableHead>
-            <TableHead className="w-[120px]">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => handleSort('employee_count')}
-              >
-                Employees
-                {filters.sort_by === 'employee_count' && (
-                  filters.sort_order === 'asc' ? (
-                    <ChevronUp className="ml-1 h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  )
-                )}
-              </Button>
-            </TableHead>
+            <TableHead className="w-[120px]">Employees</TableHead>
             <TableHead className="w-[120px] text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>

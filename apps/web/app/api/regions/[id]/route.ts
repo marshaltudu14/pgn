@@ -47,7 +47,6 @@ const getRegionByIdHandler = withApiValidation(
   {
     params: RegionIdParamSchema,
     response: RegionResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 
@@ -93,7 +92,6 @@ const updateRegionHandler = withApiValidation(
     params: RegionIdParamSchema,
     body: updateRegionSchema,
     response: RegionResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 
@@ -132,7 +130,6 @@ const deleteRegionHandler = withApiValidation(
   {
     params: RegionIdParamSchema,
     response: RegionDeleteResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 

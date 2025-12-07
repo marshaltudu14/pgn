@@ -50,7 +50,6 @@ const searchRegionsHandler = withApiValidation(
   {
     query: searchWithPaginationSchema,
     response: RegionListResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 

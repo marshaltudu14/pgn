@@ -124,7 +124,8 @@
       "Bash(grep:*)",
       "Bash(tail:*)",
       "Bash(head:*)",
-      "Bash(npm list:*)"
+      "Bash(npm list:*)",
+      "Bash(npm run dev:web:*)"
     ],
     "deny": [],
     "ask": []

@@ -102,7 +102,6 @@ export const PUT = withSecurity(
     body: UpdateVerificationRequestSchema,
     params: VerifyRouteParamsSchema,
     response: UpdateVerificationResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 

@@ -90,7 +90,6 @@ export const GET = withSecurity(
   withApiValidation(getRetailersHandler, {
     query: RetailerListParamsSchema,
     response: RetailerListResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );
 
@@ -98,6 +97,5 @@ export const POST = withSecurity(
   withApiValidation(createRetailerHandler, {
     body: RetailerFormDataSchema,
     response: RetailerCreatedResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development'
   })
 );

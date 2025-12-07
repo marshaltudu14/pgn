@@ -54,7 +54,6 @@ const getFarmersHandler = withApiValidation(
   {
     query: FarmerListParamsSchema,
     response: FarmerListResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 
@@ -88,7 +87,6 @@ const createFarmerHandler = withApiValidation(
   {
     body: FarmerFormDataSchema,
     response: FarmerCreatedResponseSchema,
-    validateResponse: process.env.NODE_ENV === 'development',
   }
 );
 

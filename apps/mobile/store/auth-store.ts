@@ -98,20 +98,37 @@ export const useAuth = create<AuthStoreState>()(
             if (authState.isAuthenticated) {
               try {
                 await get().refreshUserData();
+                // After refresh, set the auth state (user will be set by refreshUserData)
+                set({
+                  isAuthenticated: authState.isAuthenticated,
+                  isLoading: false,
+                  error: null,
+                  lastActivity: Date.now(),
+                  session: authState.session || null,
+                });
               } catch (error) {
                 console.warn('⚠️ Failed to refresh user data, using stored data:', error);
                 // Continue with stored data if refresh fails
+                set({
+                  isAuthenticated: authState.isAuthenticated,
+                  isLoading: false,
+                  user: authState.user,
+                  error: null,
+                  lastActivity: Date.now(),
+                  session: authState.session || null,
+                });
               }
+            } else {
+              // Not authenticated
+              set({
+                isAuthenticated: authState.isAuthenticated,
+                isLoading: false,
+                user: null,
+                error: null,
+                lastActivity: Date.now(),
+                session: authState.session || null,
+              });
             }
-
-            set({
-              isAuthenticated: authState.isAuthenticated,
-              isLoading: false,
-              user: authState.user,
-              error: null,
-              lastActivity: Date.now(),
-              session: authState.session || null,
-            });
 
           } catch (error) {
             console.error('❌ Auth Store: Initialization failed', error);
@@ -417,14 +434,17 @@ export const useAuth = create<AuthStoreState>()(
             // Get updated user data from API
             const userResponse = await api.get(API_ENDPOINTS.GET_AUTH_USER);
 
+  
             if (userResponse.success && userResponse.data) {
               const { user } = get();
 
               // Transform assignedCities from array of objects to array of strings for mobile app
-              const assignedCities = (userResponse.data.assignedCities || []).map((city: { city?: string; state?: string } | string) => {
+              const rawAssignedCities = userResponse.data.assignedCities || [];
+
+              const assignedCities = rawAssignedCities.map((city: any) => {
                 // If it's an object with city property, extract the city name
-                if (city && typeof city === 'object' && (city as any).city) {
-                  return (city as any).city;
+                if (city && typeof city === 'object' && city.city) {
+                  return city.city;
                 }
                 // If it's already a string, return as is
                 if (typeof city === 'string') {

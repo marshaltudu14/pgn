@@ -20,10 +20,15 @@ export function ThemeWrapper({ children }: ThemeWrapperProps) {
   // Update Android navigation bar when theme changes
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync(colors.background);
-      NavigationBar.setButtonStyleAsync(resolvedTheme === 'dark' ? 'light' : 'dark');
+      // Use setStyle for edge-to-edge compatibility
+      // setBackgroundColorAsync and setButtonStyleAsync are deprecated with edge-to-edge enabled
+      try {
+        NavigationBar.setStyle(resolvedTheme === 'dark' ? 'dark' : 'light');
+      } catch (error) {
+        console.warn('Failed to update navigation bar style:', error);
+      }
     }
-  }, [resolvedTheme, colors.background]);
+  }, [resolvedTheme]);
 
   return (
     <ThemeProvider value={navigationTheme}>

@@ -578,7 +578,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                 timestamp: request.location.timestamp || Date.now(),
                 address: request.location.address
               },
-              selfieData: request.selfie,
+              selfie: request.selfie,
               deviceInfo
             };
 
@@ -757,6 +757,7 @@ export const useAttendance = create<AttendanceStoreState>()(
               selfie: checkoutRequest.selfieImage || checkoutRequest.selfie,
               deviceInfo: deviceInfo,
               reason: checkoutRequest.checkoutNotes || checkoutRequest.reason,
+              method: checkoutRequest.method || 'MANUAL',
             };
 
             // Call check-out API - security middleware will attach the user info
@@ -871,7 +872,7 @@ export const useAttendance = create<AttendanceStoreState>()(
                 timestamp: request.location?.timestamp || Date.now(),
                 address: request.location?.address
               },
-              selfieData: request.selfie,
+              selfie: request.selfie,
               deviceInfo,
               method: request.method || 'APP_CLOSED',
               reason: request.reason || 'Emergency check-out'
@@ -1355,19 +1356,35 @@ export const useAttendance = create<AttendanceStoreState>()(
             get().setBatteryLevel(batteryLevel);
 
             if (!currentAttendanceId) {
+              console.warn('[AttendanceStore] No attendance ID, skipping location update');
               return;
             }
 
-            // Call API with attendance ID
-            await api.post(`/attendance/${currentAttendanceId}/location-update`, {
-              latitude: location.latitude,
-              longitude: location.longitude,
-              accuracy: location.accuracy,
-              batteryLevel,
-              timestamp: location.timestamp.toISOString(),
+            // Debug: Check if user is authenticated
+            const authStore = useAuth.getState();
+            console.log('[AttendanceStore] Auth state before location update:', {
+              isAuthenticated: authStore.isAuthenticated,
+              hasToken: !!authStore.token,
+              hasUser: !!authStore.user,
+              attendanceId: currentAttendanceId
             });
 
-          } catch (_error) {
+            // Call API with attendance ID
+            console.log(`[AttendanceStore] Sending location update to: /attendance/${currentAttendanceId}/location-update`);
+            const response = await api.post(`/attendance/${currentAttendanceId}/location-update`, {
+              location: {
+                latitude: location.latitude,
+                longitude: location.longitude,
+                accuracy: location.accuracy,
+                timestamp: location.timestamp.toISOString(),
+              },
+              batteryLevel,
+            });
+
+            console.log('[AttendanceStore] Location update successful:', response);
+
+          } catch (error) {
+            console.error('[AttendanceStore] Location update failed:', error);
             // We don't set global error here to avoid disrupting the UI for background tasks
           }
         },

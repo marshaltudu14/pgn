@@ -3,6 +3,7 @@ import { Database } from './supabase';
 import { z } from 'zod';
 import { BaseApiResponseSchema, RouteParamsSchema } from '../schemas/base';
 
+
 // Base types from Supabase
 export type Dealer = Database['public']['Tables']['dealers']['Row'];
 export type DealerInsert = Database['public']['Tables']['dealers']['Insert'];
@@ -40,6 +41,7 @@ export interface DealerWithRetailers extends Dealer {
   retailers_count?: number;
   created_by_employee?: EmployeeInfo | null;
   updated_by_employee?: EmployeeInfo | null;
+  region?: Database['public']['Tables']['regions']['Row'] | null;
 }
 
 export interface RetailerWithFarmers extends Retailer {
@@ -48,6 +50,7 @@ export interface RetailerWithFarmers extends Retailer {
   farmers_count?: number;
   created_by_employee?: EmployeeInfo | null;
   updated_by_employee?: EmployeeInfo | null;
+  region?: Database['public']['Tables']['regions']['Row'] | null;
 }
 
 export interface FarmerWithRetailer extends Farmer {
@@ -55,6 +58,7 @@ export interface FarmerWithRetailer extends Farmer {
   retailer_dealer?: Dealer;
   created_by_employee?: EmployeeInfo | null;
   updated_by_employee?: EmployeeInfo | null;
+  region?: Database['public']['Tables']['regions']['Row'] | null;
 }
 
 // Form types
@@ -64,6 +68,7 @@ export interface DealerFormData {
   address: string;
   shop_name?: string;
   email?: string;
+  region_id: string; // Required
 }
 
 export interface RetailerFormData {
@@ -73,6 +78,7 @@ export interface RetailerFormData {
   shop_name?: string;
   email?: string;
   dealer_id?: string;
+  region_id: string; // Required
 }
 
 export interface FarmerFormData {
@@ -82,6 +88,7 @@ export interface FarmerFormData {
   farm_name?: string;
   email?: string;
   retailer_id?: string;
+  region_id: string; // Required
 }
 
 // API Response types
@@ -123,6 +130,7 @@ export interface DealerListParams {
   shop_name?: string;
   email?: string;
   phone?: string;
+  region_id?: string;
   sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
@@ -135,6 +143,7 @@ export interface RetailerListParams {
   email?: string;
   phone?: string;
   dealer_id?: string;
+  region_id?: string;
   sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
@@ -148,6 +157,7 @@ export interface FarmerListParams {
   phone?: string;
   retailer_id?: string;
   dealer_id?: string;
+  region_id?: string;
   sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
@@ -190,6 +200,7 @@ export const DealerFormDataSchema = z.object({
   address: z.string().min(1, 'Address is required'),
   shop_name: z.string().optional(),
   email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  region_id: z.string().uuid('Region is required'),
 });
 
 export const RetailerFormDataSchema = z.object({
@@ -199,6 +210,7 @@ export const RetailerFormDataSchema = z.object({
   shop_name: z.string().optional(),
   email: z.string().email('Invalid email format').optional().or(z.literal('')),
   dealer_id: z.string().optional().or(z.literal('')),
+  region_id: z.string().uuid('Region is required'),
 });
 
 export const FarmerFormDataSchema = z.object({
@@ -208,6 +220,7 @@ export const FarmerFormDataSchema = z.object({
   farm_name: z.string().optional(),
   email: z.string().email('Invalid email format').optional().or(z.literal('')),
   retailer_id: z.string().optional().or(z.literal('')),
+  region_id: z.string().uuid('Region is required'),
 });
 
 export const DealerListParamsSchema = z.object({

@@ -42,6 +42,8 @@ import {
 } from 'lucide-react';
 import { Retailer, RetailerFormData, RetailerFormDataSchema } from '@pgn/shared';
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
+import { useRegionsStore } from '@/app/lib/stores/regionsStore';
+import { RegionSelector } from './RegionSelector';
 
 interface RetailerFormProps {
   retailer?: Retailer | null;
@@ -60,6 +62,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
     fetchDealers,
     clearError
   } = useRetailerStore();
+  const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
   const isEditing = !!retailer;
 
   const [openDealer, setOpenDealer] = useState(false);
@@ -73,9 +76,15 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
       shop_name: '',
       email: '',
       dealer_id: 'none',
+      region_id: '',
     },
     mode: 'onBlur',
   });
+
+  // Load regions data
+  useEffect(() => {
+    fetchRegions();
+  }, [fetchRegions]);
 
   // Load dealers for dropdown with search functionality
   useEffect(() => {
@@ -106,6 +115,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
         shop_name: retailer.shop_name || '',
         email: retailer.email || '',
         dealer_id: retailer.dealer_id || 'none',
+        region_id: retailer.region_id || '',
       });
     } else {
       form.reset({
@@ -115,6 +125,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
         shop_name: '',
         email: '',
         dealer_id: 'none',
+        region_id: '',
       });
     }
   }, [retailer, form]);
@@ -168,6 +179,13 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
     clearError();
     onCancel?.();
   };
+
+  // Transform regions data for RegionSelector
+  const transformedRegions = regions.map(region => ({
+    id: region.id,
+    city: region.city,
+    state: region.state
+  }));
 
   return (
     <div className="w-full space-y-6">
@@ -429,6 +447,15 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+
+                <RegionSelector
+                  value={form.watch('region_id')}
+                  onValueChange={(value) => form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true })}
+                  regions={transformedRegions}
+                  isLoading={regionsLoading}
+                  onSearch={searchRegions}
+                  disabled={loading}
                 />
               </CardContent>
             </Card>

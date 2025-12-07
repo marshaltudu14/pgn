@@ -118,6 +118,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          region_id: string | null
           shop_name: string | null
           updated_at: string
           updated_by: string | null
@@ -130,6 +131,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          region_id?: string | null
           shop_name?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -142,11 +144,20 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          region_id?: string | null
           shop_name?: string | null
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dealers_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       employee_edit_tracking: {
         Row: {
@@ -236,6 +247,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          region_id: string | null
           retailer_id: string | null
           updated_at: string
           updated_by: string | null
@@ -249,6 +261,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          region_id?: string | null
           retailer_id?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -262,6 +275,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          region_id?: string | null
           retailer_id?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -274,6 +288,13 @@ export type Database = {
             referencedRelation: "retailers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "farmers_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          }
         ]
       }
       regions: {
@@ -316,6 +337,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          region_id: string | null
           shop_name: string | null
           updated_at: string
           updated_by: string | null
@@ -329,6 +351,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          region_id?: string | null
           shop_name?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -342,6 +365,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          region_id?: string | null
           shop_name?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -354,6 +378,13 @@ export type Database = {
             referencedRelation: "dealers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "retailers_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          }
         ]
       }
       tasks: {

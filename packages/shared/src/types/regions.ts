@@ -1,6 +1,10 @@
 // Region-related types for PGN system
 import { z } from 'zod';
 import { BaseApiResponseSchema } from '../schemas/base';
+import { Database } from './supabase';
+
+// Re-export Region type from supabase
+export type Region = Database['public']['Tables']['regions']['Row'];
 
 export interface State {
   name: string;

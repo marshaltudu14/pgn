@@ -7,7 +7,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { useAuth } from '@/store/auth-store';
+import { useAuth, useUser } from '@/store/auth-store';
 import { useTheme } from '@/contexts/theme-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import {
@@ -23,13 +23,15 @@ import { showToast } from '@/utils/toast';
 import { newProfileStyles } from '@/styles/profile/profile-styles';
 
 export default function ProfileScreen() {
-  // Subscribe to user with a selector to ensure re-render
-  const user = useAuth((state) => state.user);
-  const { logout, refreshUserData } = useAuth();
+  // Use the dedicated useUser hook for better reactivity
+  const user = useUser();
+  const logout = useAuth((state) => state.logout);
+  const refreshUserData = useAuth((state) => state.refreshUserData);
   const { theme, toggleTheme } = useTheme();
   const colors = useThemeColors();
   const [refreshing, setRefreshing] = useState(false);
 
+  
   // Get employee status info
   const getEmployeeStatusInfo = () => {
     const status = user?.employmentStatus || 'ACTIVE';
@@ -101,6 +103,7 @@ export default function ProfileScreen() {
 
   const employeeStatusInfo = getEmployeeStatusInfo();
 
+  
   const profileItems = [
     {
       icon: User,

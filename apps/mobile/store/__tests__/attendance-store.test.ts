@@ -187,6 +187,7 @@ const createMockCheckOutRequest = (overrides: Partial<CheckOutMobileRequest> = {
     model: 'Test Device',
   },
   reason: 'End of shift',
+  method: 'MANUAL' as const,
   ...overrides,
 });
 

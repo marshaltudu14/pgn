@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { Dealer, DealerFormData, DealerFormDataSchema } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
+import { useRegionsStore } from '@/app/lib/stores/regionsStore';
+import { RegionSelector } from './RegionSelector';
 
 interface DealerFormProps {
   dealer?: Dealer | null;
@@ -37,6 +39,7 @@ interface DealerFormProps {
 
 export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
   const { loading, error, createDealer, updateDealer, clearError } = useDealerStore();
+  const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
   const isEditing = !!dealer;
 
   const form = useForm<DealerFormData>({
@@ -46,11 +49,15 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
       address: '',
       shop_name: '',
       email: '',
+      region_id: '',
     },
     mode: 'onBlur',
   });
 
   useEffect(() => {
+    // Load regions data
+    fetchRegions();
+
     if (dealer) {
       form.reset({
         name: dealer.name,
@@ -58,6 +65,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
         address: dealer.address || '',
         shop_name: dealer.shop_name || '',
         email: dealer.email || '',
+        region_id: dealer.region_id || '',
       });
     } else {
       form.reset({
@@ -66,9 +74,10 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
         address: '',
         shop_name: '',
         email: '',
+        region_id: '',
       });
     }
-  }, [dealer, form]);
+  }, [dealer, form, fetchRegions]);
 
   const onSubmit = async (data: DealerFormData) => {
     clearError();
@@ -123,6 +132,13 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
     clearError();
     onCancel?.();
   };
+
+  // Transform regions data for RegionSelector
+  const transformedRegions = regions.map(region => ({
+    id: region.id,
+    city: region.city,
+    state: region.state
+  }));
 
   return (
     <div className="w-full space-y-6">
@@ -257,6 +273,15 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                     <FormMessage />
                   </FormItem>
                 )}
+              />
+
+              <RegionSelector
+                value={form.watch('region_id')}
+                onValueChange={(value) => form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true })}
+                regions={transformedRegions}
+                isLoading={regionsLoading}
+                onSearch={searchRegions}
+                disabled={loading}
               />
             </CardContent>
           </Card>

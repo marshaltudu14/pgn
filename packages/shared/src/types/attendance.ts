@@ -145,49 +145,9 @@ export interface AttendanceStatusResponse {
   currentAttendanceId?: string;
 }
 
-export interface CheckInMobileRequest {
-  location: {
-    latitude: number;
-    longitude: number;
-    accuracy?: number;
-    timestamp?: number; // Unix timestamp in milliseconds
-    address?: string;
-  };
-  selfie: string; // Base64 encoded image
-  deviceInfo?: {
-    batteryLevel?: number;
-    platform?: string;
-    version?: string;
-    model?: string;
-  };
-}
-
-export interface CheckOutMobileRequest {
-  attendanceId?: string; // Optional attendanceId for specific record checkout
-  location?: {
-    latitude: number;
-    longitude: number;
-    accuracy?: number;
-    timestamp?: number;
-    address?: string;
-  };
-  lastLocationData?: {
-    latitude: number;
-    longitude: number;
-    accuracy?: number;
-    timestamp?: number;
-    address?: string;
-  };
-  selfie?: string; // Optional for emergency check-out
-  deviceInfo?: {
-    batteryLevel?: number;
-    platform?: string;
-    version?: string;
-    model?: string;
-  };
-  method?: CheckOutMethod;
-  reason?: string;
-}
+// Export inferred types for compile-time type checking from Zod schemas
+export type CheckInMobileRequest = z.infer<typeof CheckInMobileRequestSchema>;
+export type CheckOutMobileRequest = z.infer<typeof CheckOutMobileRequestSchema>;
 
 // Additional types needed by the services
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED';
@@ -301,7 +261,7 @@ export const CheckOutMobileRequestSchema = z.object({
   }).optional(),
   selfie: z.string().optional(),
   deviceInfo: DeviceInfoSchema.optional(),
-  method: CheckOutMethodSchema.default('MANUAL'),
+  method: CheckOutMethodSchema.optional(),
   reason: z.string().optional(),
 });
 

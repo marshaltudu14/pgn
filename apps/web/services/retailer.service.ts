@@ -15,7 +15,10 @@ import { createClient } from '../utils/supabase/server';
 /**
  * List retailers with pagination and filtering
  */
-export async function listRetailers(params: RetailerListParams = {}): Promise<RetailerListResponse> {
+export async function listRetailers(
+  params: RetailerListParams = {},
+  regionFilter?: string[] // Array of region IDs the employee has access to
+): Promise<RetailerListResponse> {
   const supabase = await createClient();
 
   const {
@@ -26,6 +29,7 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
     email,
     phone,
     dealer_id,
+    region_id,
     sort_by = 'updated_at',
     sort_order = 'desc'
   } = params;
@@ -36,7 +40,11 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
 
   let query = supabase
     .from('retailers')
-    .select('*', { count: 'exact' });
+    .select(`
+      *,
+      dealer:dealers(id, name, shop_name),
+      region:regions(*)
+    `, { count: 'exact' });
 
   // Apply search and filters
   if (search) {
@@ -57,6 +65,13 @@ export async function listRetailers(params: RetailerListParams = {}): Promise<Re
 
   if (dealer_id) {
     query = query.eq('dealer_id', dealer_id);
+  }
+
+  // Apply region filter
+  if (region_id) {
+    query = query.eq('region_id', region_id);
+  } else if (regionFilter && regionFilter.length > 0) {
+    query = query.in('region_id', regionFilter);
   }
 
   // Apply sorting

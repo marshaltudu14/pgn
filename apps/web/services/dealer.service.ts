@@ -9,13 +9,17 @@ import {
   DealerUpdate,
   DealerListParams,
   DealerListResponse,
+  Region,
 } from '@pgn/shared';
 import { createClient } from '../utils/supabase/server';
 
 /**
  * List dealers with pagination and filtering
  */
-export async function listDealers(params: DealerListParams = {}): Promise<DealerListResponse> {
+export async function listDealers(
+  params: DealerListParams = {},
+  regionFilter?: string[] // Array of region IDs the employee has access to
+): Promise<DealerListResponse> {
   const supabase = await createClient();
 
   const {
@@ -25,6 +29,7 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
     shop_name,
     email,
     phone,
+    region_id,
     sort_by = 'updated_at',
     sort_order = 'desc'
   } = params;
@@ -35,7 +40,10 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
 
   let query = supabase
     .from('dealers')
-    .select('*', { count: 'exact' });
+    .select(`
+      *,
+      region:regions(*)
+    `, { count: 'exact' });
 
   // Apply search and filters
   if (search) {
@@ -52,6 +60,13 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
 
   if (phone) {
     query = query.ilike('phone', `%${phone}%`);
+  }
+
+  // Apply region filter
+  if (region_id) {
+    query = query.eq('region_id', region_id);
+  } else if (regionFilter && regionFilter.length > 0) {
+    query = query.in('region_id', regionFilter);
   }
 
   // Apply sorting
@@ -111,12 +126,15 @@ export async function listDealers(params: DealerListParams = {}): Promise<Dealer
 /**
  * Get a single dealer by ID
  */
-export async function getDealerById(id: string): Promise<Dealer> {
+export async function getDealerById(id: string): Promise<Dealer & { region?: Region | null }> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('dealers')
-    .select('*')
+    .select(`
+      *,
+      region:regions(*)
+    `)
     .eq('id', id)
     .single();
 

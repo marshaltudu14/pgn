@@ -9,6 +9,7 @@ import { useAuth } from '@/store/auth-store';
 import { showToast } from '@/utils/toast';
 import { LOCATION_TRACKING_CONFIG } from '@/constants/location-tracking';
 import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
+import { useNetworkMonitor } from '@/hooks/use-network-monitor';
 
 interface TabItem {
   key: string;
@@ -33,7 +34,8 @@ const AnimatedCheckInOutButton: React.FC<{
   isLocationTracking: boolean;
   isLoading?: boolean;
   isEmployeeActive?: boolean;
-}> = ({ isCheckedIn, onCheckInOut, isLocationTracking, isLoading = false, isEmployeeActive = true }) => {
+  isConnected?: boolean;
+}> = ({ isCheckedIn, onCheckInOut, isLocationTracking, isLoading = false, isEmployeeActive = true, isConnected = true }) => {
   const showTimer = isCheckedIn && isLocationTracking && !isLoading;
   const [timeRemaining, setTimeRemaining] = useState(LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS);
   const fillAnimation = React.useRef(new Animated.Value(0)).current;
@@ -85,6 +87,16 @@ const AnimatedCheckInOutButton: React.FC<{
       );
       return;
     }
+
+    // Check if internet is available (only for check-in)
+    if (!isCheckedIn && !isConnected) {
+      showToast.error(
+        'No Internet Connection',
+        'Check-in requires an active internet connection. Please check your network settings and try again.'
+      );
+      return;
+    }
+
     onCheckInOut();
   };
 
@@ -195,6 +207,7 @@ export default function UnifiedBottomNavigation({
   const { isLocationTracking } = useAttendance();
   const user = useAuth((state) => state.user);
   const isEmployeeActive = user?.employmentStatus === 'ACTIVE';
+  const { connectionDisplayInfo } = useNetworkMonitor();
 
   
   const handleHomePress = () => {
@@ -267,6 +280,7 @@ export default function UnifiedBottomNavigation({
         isLocationTracking={isLocationTracking}
         isLoading={isLoading}
         isEmployeeActive={isEmployeeActive}
+        isConnected={connectionDisplayInfo.isConnected ?? false}
       />
 
       {tabs.slice(2).map((tab) => (

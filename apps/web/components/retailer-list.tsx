@@ -34,7 +34,7 @@ import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
 import { RetailerQuickView } from '@/components/retailer-quick-view';
 import { DealerQuickView } from '@/components/dealer-quick-view';
-import { Search, Plus, Edit, Eye, Store, Mail, Phone, X, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Store, Mail, Phone, X, ChevronUp, ChevronDown, Loader2, MapPin } from 'lucide-react';
 
 interface RetailerListProps {
   onRetailerEdit?: (retailer: RetailerWithFarmers) => void;
@@ -309,6 +309,7 @@ export function RetailerList({
                   <TableHead >Dealer</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead >Address</TableHead>
+                  <TableHead>Region</TableHead>
                   <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
                     <div className="flex items-center">
                       Created By
@@ -411,6 +412,18 @@ export function RetailerList({
                     <TableCell >
                       <div className="text-sm max-w-xs truncate">
                         {retailer.address || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {retailer.region ? (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {retailer.region.city}, {retailer.region.state}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell >

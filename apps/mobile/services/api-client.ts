@@ -230,11 +230,52 @@ export async function apiCall<T = any>(
     // Add authorization header for private endpoints
     const authHeaders: Record<string, string> = {};
     if (!isPublicEndpoint(endpoint)) {
-      const session = await SessionManager.loadSession();
+      let session = await SessionManager.loadSession();
+
+      console.log('[API Client] Session for', endpoint, ':', {
+        hasSession: !!session,
+        hasAccessToken: !!session?.accessToken,
+        isExpired: session ? SessionManager.isSessionExpired(session) : false,
+        endpoint: endpoint
+      });
+
+      // Check if session exists and token is not expired
+      if (!session || SessionManager.isSessionExpired(session)) {
+        // Try to refresh token if we have a refresh token
+        if (session?.refreshToken) {
+          console.log('[API Client] Token expired, refreshing for:', endpoint);
+          const refreshSuccess = await refreshTokenAPI(session.refreshToken);
+
+          if (refreshSuccess) {
+            session = await SessionManager.loadSession();
+            console.log('[API Client] Token refreshed successfully for:', endpoint);
+          } else {
+            console.error('[API Client] Token refresh failed for:', endpoint);
+            await SessionManager.clearSession();
+            return {
+              success: false,
+              error: "Session expired. Please login again.",
+            };
+          }
+        } else {
+          console.error('[API Client] No session or refresh token for:', endpoint);
+          return {
+            success: false,
+            error: "No active session. Please login again.",
+          };
+        }
+      }
+
+      // Add authorization header with current token
       if (session?.accessToken) {
-        // Don't check expiration here - let the API handle expired tokens
-        // The 401 handler will take care of refreshing
         authHeaders.Authorization = `Bearer ${session.accessToken}`;
+        console.log('[API Client] Authorization header added for:', endpoint);
+      } else {
+        console.error('[API Client] No access token after refresh for:', endpoint);
+        return {
+          success: false,
+          error: "No access token available. Please login again.",
+        };
       }
     }
 
@@ -251,56 +292,9 @@ export async function apiCall<T = any>(
       headers,
     });
 
-    // Handle 401 with automatic token refresh and retry
+    // Handle 401 as a fallback (should rarely happen with proactive refresh)
     if (response.status === 401 && !isPublicEndpoint(endpoint)) {
-      try {
-        const session = await SessionManager.loadSession();
-        if (session?.refreshToken) {
-          // Try to refresh token
-          const refreshSuccess = await refreshTokenAPI(session.refreshToken);
-
-          if (refreshSuccess) {
-            // Retry the original request with new token
-            const newSession = await SessionManager.loadSession();
-            const retryHeaders = {
-              ...baseHeaders,
-              Authorization: `Bearer ${newSession?.accessToken}`,
-              ...options.headers,
-            };
-
-            const retryResponse = await fetch(url, {
-              ...options,
-              headers: retryHeaders,
-            });
-
-            if (retryResponse.ok) {
-              let retryData;
-              try {
-                retryData = await retryResponse.json();
-              } catch (retryParseError) {
-                console.error('JSON Parse Error on retry:', {
-                  endpoint,
-                  status: retryResponse.status,
-                  error: retryParseError instanceof Error ? retryParseError.message : 'Unknown retry parse error',
-                });
-                return {
-                  success: false,
-                  error: 'Invalid response format from server',
-                };
-              }
-
-              return {
-                success: true,
-                data: retryData,
-              };
-            }
-          }
-        }
-      } catch (refreshError) {
-        console.error('Automatic token refresh failed:', refreshError);
-      }
-
-      // Refresh failed or retry failed, clear session
+      console.error('[API Client] Received 401 after proactive refresh check for:', endpoint);
       await SessionManager.clearSession();
       return {
         success: false,

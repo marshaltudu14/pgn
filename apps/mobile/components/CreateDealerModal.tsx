@@ -10,9 +10,10 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Store } from 'lucide-react-native';
+import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Store, ChevronDown } from 'lucide-react-native';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useDealerStore } from '@/store/dealer-store';
+import { useAuth } from '@/store/auth-store';
 import { DealerFormData } from '@pgn/shared';
 import { COLORS } from '@/constants';
 import Spinner from '@/components/Spinner';
@@ -28,11 +29,13 @@ interface FormErrors {
   email?: string;
   address?: string;
   shop_name?: string;
+  region_id?: string;
 }
 
 export default function CreateDealerModal({ visible, onClose }: CreateDealerModalProps) {
   const colors = useThemeColors();
   const { createDealer, isCreating } = useDealerStore();
+  const { user } = useAuth();
 
   const [formData, setFormData] = useState<DealerFormData>({
     name: '',
@@ -40,9 +43,11 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
     email: '',
     address: '',
     shop_name: '',
+    region_id: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -54,6 +59,11 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
       newErrors.name = 'Name must be at least 2 characters';
     } else if (formData.name.trim().length > 100) {
       newErrors.name = 'Name must not exceed 100 characters';
+    }
+
+    // Region validation
+    if (!formData.region_id.trim()) {
+      newErrors.region_id = 'Region is required';
     }
 
     // Phone validation
@@ -112,6 +122,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           email: '',
           address: '',
           shop_name: '',
+          region_id: '',
         });
       } else {
         Alert.alert('Error', response.error || 'Failed to create dealer');
@@ -134,6 +145,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
       email: '',
       address: '',
       shop_name: '',
+      region_id: '',
     });
     setErrors({});
     onClose();
@@ -259,6 +271,92 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           {/* Address Field */}
           {renderInput('address', 'Address', 'Enter complete address', MapPin, 'default', true)}
 
+          {/* Region Field */}
+          <View style={styles.inputContainer}>
+            <View style={styles.inputLabelContainer}>
+              <MapPin size={20} color={errors.region_id ? colors.error : colors.primary} />
+              <Text style={[styles.inputLabel, { color: errors.region_id ? colors.error : colors.text }]}>
+                Region *
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.regionSelector,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: errors.region_id ? colors.error : colors.border,
+                }
+              ]}
+              onPress={() => setShowRegionPicker(true)}
+            >
+              <Text
+                style={[
+                  styles.regionSelectorText,
+                  {
+                    color: formData.region_id ? colors.text : colors.textSecondary,
+                  }
+                ]}
+              >
+                {formData.region_id
+                  ? user?.assignedCities.find(city => city === formData.region_id) || formData.region_id
+                  : 'Select region'
+                }
+              </Text>
+              <ChevronDown size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {errors.region_id && (
+              <Text style={[styles.errorText, { color: colors.error }]}>
+                {errors.region_id}
+              </Text>
+            )}
+          </View>
+
+          {/* Region Picker Modal */}
+          <Modal
+            visible={showRegionPicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowRegionPicker(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setShowRegionPicker(false)}
+            >
+              <View style={[styles.regionPickerModal, { backgroundColor: colors.background }]}>
+                <Text style={[styles.regionPickerTitle, { color: colors.text }]}>
+                  Select Region
+                </Text>
+                {user?.assignedCities.map((city, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.regionOption,
+                      {
+                        backgroundColor: colors.listBg,
+                        borderBottomColor: colors.border,
+                      }
+                    ]}
+                    onPress={() => {
+                      setFormData(prev => ({ ...prev, region_id: city }));
+                      setShowRegionPicker(false);
+                      if (errors.region_id) {
+                        setErrors(prev => ({ ...prev, region_id: undefined }));
+                      }
+                    }}
+                  >
+                    <Text style={[styles.regionOptionText, { color: colors.text }]}>
+                      {city}
+                    </Text>
+                    {formData.region_id === city && (
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+
           {/* Info Box */}
           <View style={[styles.infoBox, { backgroundColor: colors.listBg }]}>
             <Text style={[styles.infoText, { color: colors.textSecondary }]}>
@@ -371,5 +469,48 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  regionSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    height: 50,
+  },
+  regionSelectorText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  regionPickerModal: {
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxHeight: '80%',
+  },
+  regionPickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  regionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  regionOptionText: {
+    fontSize: 16,
   },
 });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export interface Region {
+export interface RegionSchema {
   id: string;
   state: string;
   city: string;
@@ -37,7 +37,7 @@ export interface RegionListParams {
 }
 
 export interface RegionListResponse {
-  regions: Region[];
+  regions: RegionSchema[];
   pagination: {
     currentPage: number;
     totalPages: number;

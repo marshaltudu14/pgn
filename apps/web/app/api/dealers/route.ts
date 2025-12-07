@@ -4,6 +4,10 @@ import {
   createDealer
 } from '@/services/dealer.service';
 import {
+  getEmployeeRegions,
+  canEmployeeAccessRegion
+} from '@/services/regions.service';
+import {
   DealerInsert,
   DealerListParamsSchema,
   DealerFormDataSchema,
@@ -14,13 +18,31 @@ import {
 import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
 import { buildTimeApiContract } from '@pgn/shared';
+import { createClient } from '@/utils/supabase/server';
 
 const getDealersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Get validated query parameters from the middleware
     const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery;
 
-    const result = await listDealers(params as DealerListParams);
+    // Get employee ID from JWT token
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let regionFilter: string[] | undefined;
+
+    if (user) {
+      // Get employee's assigned regions
+      try {
+        regionFilter = await getEmployeeRegions(user.id);
+      } catch (error) {
+        console.error('Error getting employee regions:', error);
+        // If we can't get regions, return empty result
+        regionFilter = [];
+      }
+    }
+
+    const result = await listDealers(params as DealerListParams, regionFilter);
 
     const response = NextResponse.json({
       success: true,
@@ -46,6 +68,39 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
   try {
     // Get validated body from the middleware
     const dealerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as DealerInsert;
+
+    // Get employee ID from JWT token
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      const response = NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+          message: 'No valid user token found'
+        },
+        { status: 401 }
+      );
+      return addSecurityHeaders(response);
+    }
+
+    // Validate region access if region_id is provided
+    if (dealerData.region_id) {
+      const hasAccess = await canEmployeeAccessRegion(user.id, dealerData.region_id);
+
+      if (!hasAccess) {
+        const response = NextResponse.json(
+          {
+            success: false,
+            error: 'Forbidden',
+            message: 'You do not have access to this region'
+          },
+          { status: 403 }
+        );
+        return addSecurityHeaders(response);
+      }
+    }
 
     const result = await createDealer(dealerData);
 

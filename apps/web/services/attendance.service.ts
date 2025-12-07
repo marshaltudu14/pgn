@@ -759,7 +759,9 @@ export class AttendanceService {
       const newPathPoint = {
         lat: request.location.latitude,
         lng: request.location.longitude,
-        timestamp: request.location.timestamp.toISOString(),
+        timestamp: typeof request.location.timestamp === 'string'
+          ? request.location.timestamp
+          : request.location.timestamp.toISOString(),
         accuracy: request.location.accuracy,
         batteryLevel: request.batteryLevel || 0
       };

@@ -262,3 +262,74 @@ export async function searchRegions(
     },
   };
 }
+
+// Get regions that an employee has access to based on assigned_cities
+export async function getEmployeeRegions(employeeId: string): Promise<string[]> {
+  const supabase = await createClient();
+
+  const { data: employee, error } = await supabase
+    .from('employees')
+    .select('assigned_cities')
+    .eq('id', employeeId)
+    .single();
+
+  if (error || !employee) {
+    throw new Error('Employee not found');
+  }
+
+  const assignedCities = employee.assigned_cities as { city: string; state: string }[] || [];
+
+  // Get region IDs for assigned cities
+  const cityNames = assignedCities.map(ac => ac.city);
+
+  if (cityNames.length === 0) {
+    return [];
+  }
+
+  const { data: regions, error: regionError } = await supabase
+    .from('regions')
+    .select('id')
+    .in('city', cityNames);
+
+  if (regionError) {
+    console.error('Error fetching employee regions:', regionError);
+    throw new Error('Failed to fetch employee regions');
+  }
+
+  return regions?.map(r => r.id) || [];
+}
+
+// Check if an employee has access to a specific region
+export async function canEmployeeAccessRegion(employeeId: string, regionId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { data: employee, error } = await supabase
+    .from('employees')
+    .select('assigned_cities')
+    .eq('id', employeeId)
+    .single();
+
+  if (error || !employee) {
+    return false;
+  }
+
+  const assignedCities = employee.assigned_cities as { city: string; state: string }[] || [];
+
+  if (assignedCities.length === 0) {
+    return false;
+  }
+
+  // Get the city for the region
+  const { data: region, error: regionError } = await supabase
+    .from('regions')
+    .select('city')
+    .eq('id', regionId)
+    .single();
+
+  if (regionError || !region) {
+    return false;
+  }
+
+  // Check if the region's city is in the employee's assigned cities
+  return assignedCities.some(ac => ac.city === region.city);
+}

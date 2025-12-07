@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/pagination';
 import { DealerWithRetailers } from '@pgn/shared';
 import { useDealerStore } from '@/app/lib/stores/dealerStore';
-import { Search, Plus, Edit, Eye, Building, Mail, Phone, X, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Building, Mail, Phone, X, ChevronUp, ChevronDown, MapPin } from 'lucide-react';
 
 interface DealerListProps {
   onDealerSelect?: (dealer: DealerWithRetailers) => void;
@@ -223,6 +223,7 @@ export function DealerList({
                     </TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead >Address</TableHead>
+                    <TableHead>Region</TableHead>
                     <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
                       <div className="flex items-center">
                         Created By
@@ -260,6 +261,7 @@ export function DealerList({
                       <TableCell><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                       <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
@@ -372,6 +374,7 @@ export function DealerList({
                   </TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Address</TableHead>
+                  <TableHead>Region</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>
                     <div className="flex items-center">
                       Created By
@@ -437,6 +440,18 @@ export function DealerList({
                     <TableCell >
                       <div className="text-sm max-w-xs truncate">
                         {dealer.address || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {dealer.region ? (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {dealer.region.city}, {dealer.region.state}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell >

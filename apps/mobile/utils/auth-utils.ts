@@ -111,7 +111,9 @@ export class SessionManager {
       // This is a fallback - ideally we always have expiresAt
       return false;
     }
-    return Date.now() >= session.expiresAt;
+    // Add a 30-second buffer to refresh before actual expiry
+    const EXPIRY_BUFFER_MS = 30 * 1000;
+    return Date.now() >= (session.expiresAt - EXPIRY_BUFFER_MS);
   }
 
   /**

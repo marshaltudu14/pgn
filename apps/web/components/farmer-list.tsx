@@ -33,7 +33,7 @@ import { useFarmerStore } from '@/app/lib/stores/farmerStore';
 import { useRetailerStore } from '@/app/lib/stores/retailerStore';
 import { FarmerQuickView } from '@/components/farmer-quick-view';
 import { RetailerQuickView } from '@/components/retailer-quick-view';
-import { Search, Plus, Edit, Eye, Mail, Phone, User, X, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import { Search, Plus, Edit, Eye, Mail, Phone, User, X, ChevronUp, ChevronDown, Loader2, MapPin } from 'lucide-react';
 
 interface FarmerListProps {
   onFarmerEdit?: (farmer: FarmerWithRetailer) => void;
@@ -301,9 +301,10 @@ export function FarmerList({
                       )}
                     </div>
                   </TableHead>
-                  <TableHead >Retailer</TableHead>
+                  <TableHead>Retailer</TableHead>
                   <TableHead>Contact</TableHead>
-                  <TableHead >Address</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Region</TableHead>
                   <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
                     <div className="flex items-center">
                       Created By
@@ -344,7 +345,7 @@ export function FarmerList({
                       <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-48" /></TableCell>
                       <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -406,6 +407,18 @@ export function FarmerList({
                     <TableCell >
                       <div className="text-sm max-w-xs truncate">
                         {farmer.address || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {farmer.region ? (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {farmer.region.city}, {farmer.region.state}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell >

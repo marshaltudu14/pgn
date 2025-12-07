@@ -15,7 +15,10 @@ import { createClient } from '../utils/supabase/server';
 /**
  * List farmers with pagination and filtering
  */
-export async function listFarmers(params: FarmerListParams = {}): Promise<FarmerListResponse> {
+export async function listFarmers(
+  params: FarmerListParams = {},
+  regionFilter?: string[] // Array of region IDs the employee has access to
+): Promise<FarmerListResponse> {
   const supabase = await createClient();
 
   const {
@@ -26,6 +29,7 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
     email,
     phone,
     retailer_id,
+    region_id,
     sort_by = 'updated_at',
     sort_order = 'desc'
   } = params;
@@ -36,7 +40,12 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
 
   let query = supabase
     .from('farmers')
-    .select('*', { count: 'exact' });
+    .select(`
+      *,
+      retailer:retailers(id, name, shop_name),
+      retailer_dealer:retailers!inner(dealer:dealers(id, name, shop_name)),
+      region:regions(*)
+    `, { count: 'exact' });
 
   // Apply search and filters
   if (search) {
@@ -57,6 +66,13 @@ export async function listFarmers(params: FarmerListParams = {}): Promise<Farmer
 
   if (retailer_id) {
     query = query.eq('retailer_id', retailer_id);
+  }
+
+  // Apply region filter
+  if (region_id) {
+    query = query.eq('region_id', region_id);
+  } else if (regionFilter && regionFilter.length > 0) {
+    query = query.in('region_id', regionFilter);
   }
 
   // Apply sorting

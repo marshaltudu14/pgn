@@ -42,6 +42,8 @@ import {
 } from 'lucide-react';
 import { Farmer, FarmerFormData, FarmerFormDataSchema } from '@pgn/shared';
 import { useFarmerStore } from '@/app/lib/stores/farmerStore';
+import { useRegionsStore } from '@/app/lib/stores/regionsStore';
+import { RegionSelector } from './RegionSelector';
 
 interface FarmerFormProps {
   farmer?: Farmer | null;
@@ -60,6 +62,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
     fetchRetailers,
     clearError
   } = useFarmerStore();
+  const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
   const isEditing = !!farmer;
 
   const [openRetailer, setOpenRetailer] = useState(false);
@@ -73,9 +76,15 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
       farm_name: '',
       email: '',
       retailer_id: '',
+      region_id: '',
     },
     mode: 'onBlur',
   });
+
+  // Load regions data
+  useEffect(() => {
+    fetchRegions();
+  }, [fetchRegions]);
 
   // Load retailers for dropdown with search functionality
   useEffect(() => {
@@ -106,6 +115,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
         farm_name: farmer.farm_name || '',
         email: farmer.email || '',
         retailer_id: farmer.retailer_id || '',
+        region_id: farmer.region_id || '',
       });
     } else {
       form.reset({
@@ -115,6 +125,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
         farm_name: '',
         email: '',
         retailer_id: '',
+        region_id: '',
       });
     }
   }, [farmer, form]);
@@ -168,6 +179,13 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
     clearError();
     onCancel?.();
   };
+
+  // Transform regions data for RegionSelector
+  const transformedRegions = regions.map(region => ({
+    id: region.id,
+    city: region.city,
+    state: region.state
+  }));
 
   return (
     <div className="w-full space-y-6">
@@ -429,6 +447,15 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
                       <FormMessage />
                     </FormItem>
                   )}
+                />
+
+                <RegionSelector
+                  value={form.watch('region_id')}
+                  onValueChange={(value) => form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true })}
+                  regions={transformedRegions}
+                  isLoading={regionsLoading}
+                  onSearch={searchRegions}
+                  disabled={loading}
                 />
               </CardContent>
             </Card>

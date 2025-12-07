@@ -19,11 +19,13 @@ import { EmploymentStatus } from '@pgn/shared';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  // Subscribe to user with a selector to ensure re-render
+  const user = useAuth((state) => state.user);
   const { fetchAttendanceHistory, attendanceHistory, getAttendanceStatus } =
     useAttendance();
   const colors = useThemeColors();
-  const [todayStats, setTodayStats] = useState({
+
+    const [todayStats, setTodayStats] = useState({
     daysPresent: 0,
     totalHours: 0,
     avgHours: 0,

@@ -48,12 +48,12 @@ describe('useAuthStore', () => {
     firstName: 'Test',
     lastName: 'User',
     email: 'test@example.com',
-    department: 'Engineering',
-    region: 'North',
     employmentStatus: 'ACTIVE',
     canLogin: true,
-    profilePhotoUrl: undefined,
-    startDate: new Date().toISOString()
+    phone: '+1234567890',
+    assignedCities: ['New York', 'Los Angeles'],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 
   const mockAdminUser: AuthenticatedUser = {

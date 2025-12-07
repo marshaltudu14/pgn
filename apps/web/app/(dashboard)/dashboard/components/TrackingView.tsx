@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { DailyAttendanceRecord, Employee } from '@pgn/shared';
 import { Battery, BatteryFull, BatteryLow, BatteryMedium, RefreshCw, Search, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAttendanceStore } from '../../../lib/stores/attendanceStore';
 import { useEmployeeStore } from '../../../lib/stores/employeeStore';
 import { EmployeeList } from './EmployeeList';
@@ -33,13 +33,17 @@ export default function TrackingView() {
   const [previousEmployeeId, setPreviousEmployeeId] = useState<string | null>(null);
   const [shouldCenterMap, setShouldCenterMap] = useState(false);
 
+  // Memoize the fetch function to prevent unnecessary re-renders
+  const memoizedFetchAttendanceRecords = useCallback(() => {
+    const today = new Date().toISOString().split('T')[0];
+    fetchAttendanceRecords({ date: today, limit: 50 });
+  }, [fetchAttendanceRecords]);
+
   // Initial Fetch
   useEffect(() => {
     fetchEmployees({ limit: 30 }); // Reduced from 50 to 30 employees for better performance
-
-    const today = new Date().toISOString().split('T')[0];
-    fetchAttendanceRecords({ date: today, limit: 50 }); // Reduced from 100 to 50 records for better performance
-  }, [fetchEmployees, fetchAttendanceRecords]);
+    memoizedFetchAttendanceRecords();
+  }, [fetchEmployees, memoizedFetchAttendanceRecords]);
 
   // Polling for updates with countdown
   const [timeUntilRefresh, setTimeUntilRefresh] = useState(35);
@@ -48,9 +52,8 @@ export default function TrackingView() {
     const timer = setInterval(() => {
       setTimeUntilRefresh((prev) => {
         if (prev <= 1) {
-          // Trigger refresh
-          const today = new Date().toISOString().split('T')[0];
-          fetchAttendanceRecords({ date: today, limit: 50 });
+          // Use setTimeout to defer the fetch call until after the current render
+          setTimeout(memoizedFetchAttendanceRecords, 0);
           return 35;
         }
         return prev - 1;
@@ -58,7 +61,7 @@ export default function TrackingView() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [fetchAttendanceRecords]);
+  }, [memoizedFetchAttendanceRecords]);
 
   // Merge Data: Create a map of Employee ID -> Attendance Record
   const attendanceMap = useMemo(() => {
@@ -101,11 +104,10 @@ export default function TrackingView() {
   }, [selectedEmployee, previousEmployeeId]);
 
   // Handle Refresh Manually
-  const handleRefresh = () => {
-    const today = new Date().toISOString().split('T')[0];
-    fetchAttendanceRecords({ date: today, limit: 50 });
+  const handleRefresh = useCallback(() => {
+    memoizedFetchAttendanceRecords();
     setTimeUntilRefresh(35);
-  };
+  }, [memoizedFetchAttendanceRecords]);
 
   const selectedRecord = selectedEmployee ? attendanceMap[selectedEmployee.id] : null;
 

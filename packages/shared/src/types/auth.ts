@@ -86,14 +86,11 @@ export interface AuthenticatedUser {
   email: string;
   employmentStatus: EmploymentStatus;
   canLogin: boolean;
-  department?: string;
-  region?: string;
-  startDate?: string;
-  profilePhotoUrl?: string;
   phone?: string;
-  primaryRegion?: string;
-  regionCode?: string;
-  assignedRegions?: string[];
+  assignedCities?: string[];
+  employmentStatusChangedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AuthenticationResult {
@@ -273,14 +270,11 @@ export const LoginResponseSchema = BaseApiResponseSchema.extend({
       email: z.string(),
       employmentStatus: EmploymentStatusSchema,
       canLogin: z.boolean(),
-      department: z.string().optional(),
-      region: z.string().optional(),
-      startDate: z.string().optional(),
-      profilePhotoUrl: z.string().optional(),
       phone: z.string().optional(),
-      primaryRegion: z.string().optional(),
-      regionCode: z.string().optional(),
-      assignedRegions: z.array(z.string()).optional(),
+      assignedCities: z.array(z.string()).optional(),
+      employmentStatusChangedAt: z.string().optional(),
+      createdAt: z.string().optional(),
+      updatedAt: z.string().optional(),
     }),
   }),
 });
@@ -306,8 +300,16 @@ export const UserResponseSchema = BaseApiResponseSchema.extend({
   data: z.object({
     id: z.string(),
     humanReadableId: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string(),
+    phone: z.string().optional(),
     employmentStatus: EmploymentStatusSchema,
     canLogin: z.boolean(),
+    assignedCities: z.array(z.any()).optional(), // Allow any format since backend returns objects
+    employmentStatusChangedAt: z.string().nullable().optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
   }),
 });
 

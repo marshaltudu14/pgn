@@ -5,10 +5,15 @@ import {
   ReanimatedLogLevel,
 } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { ToastProvider } from '@/components/Toast';
-import { ThemeProvider as AppThemeProvider } from '@/contexts/theme-context';
+import { ThemeProvider as AppThemeProvider, useTheme } from '@/contexts/theme-context';
+import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useEffect, useState } from 'react';
-import { RootThemeWrapper } from '@/components/RootThemeWrapper';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Platform } from 'react-native';
 
 // Configure Reanimated logger to reduce warnings
 configureReanimatedLogger({
@@ -27,8 +32,31 @@ export default function RootLayout() {
   return <RootLayoutContent />;
 }
 
+function ThemeAwareSystemBars() {
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
+
+  // Update Android navigation bar when theme changes
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync(colors.background);
+      NavigationBar.setButtonStyleAsync(resolvedTheme === 'dark' ? 'light' : 'dark');
+    }
+  }, [resolvedTheme, colors.background]);
+
+  return (
+    <StatusBar
+      style={resolvedTheme === 'dark' ? 'light' : 'dark'}
+    />
+  );
+}
+
 function RootLayoutContent() {
   const [appIsReady, setAppIsReady] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const colors = useThemeColors();
+
+  const navigationTheme = resolvedTheme === 'dark' ? DarkTheme : DefaultTheme;
 
   // Initialize app and hide splash screen when ready
   useEffect(() => {
@@ -60,7 +88,12 @@ function RootLayoutContent() {
   return (
     <SafeAreaProvider>
       <AppThemeProvider>
-        <RootContent />
+        <ThemeProvider value={navigationTheme}>
+          <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
+            <RootContent />
+            <ThemeAwareSystemBars />
+          </GestureHandlerRootView>
+        </ThemeProvider>
       </AppThemeProvider>
     </SafeAreaProvider>
   );
@@ -68,15 +101,13 @@ function RootLayoutContent() {
 
 function RootContent() {
     return (
-      <RootThemeWrapper>
-        <ToastProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          </Stack>
-        </ToastProvider>
-      </RootThemeWrapper>
+      <ToastProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(dashboard)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+      </ToastProvider>
     );
 }

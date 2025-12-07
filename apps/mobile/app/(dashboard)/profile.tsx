@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -17,16 +16,43 @@ import {
   MapPin,
   Moon,
   Sun,
-  LogOut
+  LogOut,
+  UserCheck
 } from 'lucide-react-native';
 import { showToast } from '@/utils/toast';
 import { newProfileStyles } from '@/styles/profile/profile-styles';
 
 export default function ProfileScreen() {
-  const { user, logout, refreshUserData } = useAuth();
+  // Subscribe to user with a selector to ensure re-render
+  const user = useAuth((state) => state.user);
+  const { logout, refreshUserData } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const colors = useThemeColors();
   const [refreshing, setRefreshing] = useState(false);
+
+  // Get employee status info
+  const getEmployeeStatusInfo = () => {
+    const status = user?.employmentStatus || 'ACTIVE';
+    const statusColors = {
+      ACTIVE: colors.success,
+      SUSPENDED: colors.warning,
+      RESIGNED: colors.error,
+      TERMINATED: colors.error,
+      ON_LEAVE: colors.textSecondary,
+    };
+    const statusLabels = {
+      ACTIVE: 'Active',
+      SUSPENDED: 'Suspended',
+      RESIGNED: 'Resigned',
+      TERMINATED: 'Terminated',
+      ON_LEAVE: 'On Leave',
+    };
+
+    return {
+      text: statusLabels[status as keyof typeof statusLabels],
+      color: statusColors[status as keyof typeof statusColors] || colors.textSecondary,
+    };
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -73,6 +99,8 @@ export default function ProfileScreen() {
     return theme === 'light' ? 'Light Mode' : 'Dark Mode';
   };
 
+  const employeeStatusInfo = getEmployeeStatusInfo();
+
   const profileItems = [
     {
       icon: User,
@@ -93,6 +121,19 @@ export default function ProfileScreen() {
       icon: User,
       label: 'Phone',
       value: user?.phone || '-',
+    },
+    {
+      icon: UserCheck,
+      label: 'Employment Status',
+      value: employeeStatusInfo.text,
+      valueColor: employeeStatusInfo.color,
+    },
+    {
+      icon: MapPin,
+      label: 'Assigned Regions',
+      value: user?.assignedCities && user.assignedCities.length > 0
+        ? user.assignedCities.join(', ')
+        : 'Not assigned',
     },
   ];
 
@@ -129,16 +170,9 @@ export default function ProfileScreen() {
       {/* Profile Info */}
       <View style={newProfileStyles.profileSection}>
         <View style={[newProfileStyles.avatarContainer, { backgroundColor: colors.profileBg }]}>
-          {user?.profilePhotoUrl ? (
-            <Image
-              source={{ uri: user.profilePhotoUrl }}
-              style={newProfileStyles.avatar}
-            />
-          ) : (
-            <Text style={newProfileStyles.avatarText}>
-              {user?.firstName?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          )}
+          <Text style={newProfileStyles.avatarText}>
+            {user?.firstName?.charAt(0).toUpperCase() || 'U'}
+          </Text>
         </View>
         <Text style={[newProfileStyles.profileName, { color: colors.text }]}>
           {(user?.firstName && user?.lastName) ? `${user.firstName} ${user.lastName}` : 'User'}
@@ -169,7 +203,10 @@ export default function ProfileScreen() {
               <Text style={[newProfileStyles.itemLabel, { color: colors.textSecondary }]}>
                 {item.label}
               </Text>
-              <Text style={[newProfileStyles.itemValue, { color: colors.text }]}>
+              <Text style={[
+                newProfileStyles.itemValue,
+                { color: item.valueColor || colors.text }
+              ]}>
                 {item.value}
               </Text>
             </View>

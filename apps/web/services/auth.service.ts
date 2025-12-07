@@ -2,6 +2,7 @@ import { jwtService } from '@/lib/jwt';
 import { createClient } from '@/utils/supabase/server';
 import {
   AuthenticatedUser,
+  Database,
   EmploymentStatus,
   LoginRequest,
   LoginResponse,
@@ -337,7 +338,7 @@ export class AuthService {
   /**
    * Get current user data by ID from employees table
    */
-  async getCurrentUserById(employeeId: string): Promise<any | null> {
+  async getCurrentUserById(employeeId: string): Promise<Database['public']['Tables']['employees']['Row'] | null> {
     try {
       const supabase = await createClient();
       const { data, error } = await supabase

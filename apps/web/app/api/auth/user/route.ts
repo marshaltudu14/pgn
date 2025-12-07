@@ -6,7 +6,8 @@ import { withSecurity, addSecurityHeaders, AuthenticatedRequest } from '@/lib/se
 import { withApiValidation } from '@/lib/api-validation';
 import {
   UserResponseSchema,
-  apiContract
+  apiContract,
+  EmploymentStatus
 } from '@pgn/shared';
 
 /**
@@ -33,7 +34,7 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
     }
 
     // Check if user can still login based on current employment status
-    if (!authService.canLoginWithStatus(currentUserData.employment_status)) {
+    if (!authService.canLoginWithStatus(currentUserData.employment_status as EmploymentStatus)) {
       // Get the appropriate employment status message
       let message = 'Account access denied';
       switch (currentUserData.employment_status) {
@@ -56,7 +57,7 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-    // Return complete user profile information
+      // Return complete user profile information
     const userProfile = {
       id: currentUserData.id,
       humanReadableId: currentUserData.human_readable_user_id,
@@ -64,15 +65,12 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       lastName: currentUserData.last_name,
       email: currentUserData.email,
       phone: currentUserData.phone,
-      employmentStatus: currentUserData.employment_status,
-      canLogin: authService.canLoginWithStatus(currentUserData.employment_status),
-      department: currentUserData.department,
-      region: currentUserData.region,
-      profilePhotoUrl: currentUserData.profile_photo_url,
-      primaryRegion: currentUserData.primary_region,
-      regionCode: currentUserData.region_code,
-      assignedRegions: currentUserData.assigned_regions || [],
-      startDate: currentUserData.start_date
+      employmentStatus: currentUserData.employment_status as EmploymentStatus,
+      canLogin: authService.canLoginWithStatus(currentUserData.employment_status as EmploymentStatus),
+      assignedCities: currentUserData.assigned_cities || [],
+      employmentStatusChangedAt: currentUserData.employment_status_changed_at,
+      createdAt: currentUserData.created_at,
+      updatedAt: currentUserData.updated_at
     };
 
     // Return success response wrapped in API response structure

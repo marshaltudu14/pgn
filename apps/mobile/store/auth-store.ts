@@ -27,6 +27,7 @@ interface AuthStoreState {
 
   // UI state
   isLoggingIn: boolean;
+  needsRefresh?: boolean;
 
   // Token refresh state
   tokenRefreshPromise: Promise<string> | null;
@@ -82,6 +83,13 @@ export const useAuth = create<AuthStoreState>()(
         // Initialize authentication state on app start
         initializeAuth: async () => {
           set({ isLoading: true, error: null });
+
+          // One-time cleanup: remove stale user data
+          try {
+            await AsyncStorage.removeItem('pgn_employee_data');
+          } catch (error) {
+            // Ignore cleanup errors
+          }
 
           try {
             const authState = await get().getCurrentAuthState();
@@ -298,8 +306,10 @@ export const useAuth = create<AuthStoreState>()(
               throw new Error(errorMessage);
             }
 
-            // Clear local tokens
+            // Clear local tokens and persist storage to force fresh fetch
             await get().clearLocalTokens();
+            // Clear old persisted auth-store to ensure fresh data
+            await AsyncStorage.removeItem('auth-store');
 
             // Clear session and local auth state
             get().clearSession();
@@ -409,21 +419,63 @@ export const useAuth = create<AuthStoreState>()(
 
             if (userResponse.success && userResponse.data) {
               const { user } = get();
+
               if (user) {
-                // Update only the user data, keeping other state intact
-                set({
-                  user: {
-                    ...user,
-                    ...userResponse.data,
-                    // Ensure critical fields are updated from fresh data
-                    employmentStatus: userResponse.data.employmentStatus || user.employmentStatus,
-                    canLogin: userResponse.data.canLogin ?? user.canLogin
+                // Transform assignedCities from array of objects to array of strings for mobile app
+                const assignedCities = (userResponse.data.assignedCities || []).map((city: { city?: string; state?: string } | string) => {
+                  // If it's an object with city property, extract the city name
+                  if (city && typeof city === 'object' && (city as any).city) {
+                    return (city as any).city;
                   }
+                  // If it's already a string, return as is
+                  if (typeof city === 'string') {
+                    return city;
+                  }
+                  // Fallback: convert to string
+                  return String(city);
+                });
+
+                // Update only the user data, keeping other state intact
+                // Explicitly prioritize API response data over stored data
+                const updatedUser = {
+                  id: userResponse.data.id || user.id,
+                  humanReadableId: userResponse.data.humanReadableId || user.humanReadableId,
+                  firstName: userResponse.data.firstName || user.firstName,
+                  lastName: userResponse.data.lastName || user.lastName,
+                  email: userResponse.data.email || user.email,
+                  phone: userResponse.data.phone || user.phone,
+                  employmentStatus: userResponse.data.employmentStatus || user.employmentStatus,
+                  canLogin: userResponse.data.canLogin ?? user.canLogin,
+                  assignedCities: assignedCities,
+                  employmentStatusChangedAt: userResponse.data.employmentStatusChangedAt || user.employmentStatusChangedAt,
+                  createdAt: userResponse.data.createdAt || user.createdAt,
+                  updatedAt: userResponse.data.updatedAt || user.updatedAt,
+                };
+
+                // Force update with a new object reference to ensure React re-renders
+                set({
+                  user: { ...updatedUser },
+                  lastActivity: Date.now() // Update timestamp to trigger reactivity
                 });
               }
+            } else {
+              console.error('❌ API returned error:', userResponse);
             }
-          } catch (error) {
+          } catch (error: unknown) {
+            const err = error as {
+              message?: string;
+              status?: number;
+              response?: {
+                data?: unknown;
+              };
+            };
+
             console.error('❌ Failed to refresh user data:', error);
+            console.error('❌ Error details:', {
+              message: err.message || 'Unknown error',
+              status: err.status,
+              response: err.response?.data
+            });
             throw error; // Re-throw so caller can handle
           }
         },
@@ -593,7 +645,10 @@ export const useAuth = create<AuthStoreState>()(
         clearLocalTokens: async (): Promise<void> => {
           try {
             await SessionManager.clearSession();
+            // Clear old storage location
             await AsyncStorage.removeItem('pgn_employee_data');
+            // Clear the persist storage
+            await AsyncStorage.removeItem('auth-store');
           } catch (error) {
             console.error('❌ Failed to clear local tokens:', error);
           }
@@ -602,14 +657,11 @@ export const useAuth = create<AuthStoreState>()(
         // Get current authentication state
         getCurrentAuthState: async (): Promise<any> => {
           try {
-            const userDataStr = await AsyncStorage.getItem('pgn_employee_data');
-            const userData = userDataStr ? JSON.parse(userDataStr) : null;
-
             // Try to get session from SessionManager (single source of truth)
             const session = await SessionManager.loadSession();
 
-            // If no session or user data, not authenticated
-            if (!session || !userData) {
+            // If no session, not authenticated
+            if (!session) {
               return {
                 isAuthenticated: false,
                 isLoading: false,
@@ -636,7 +688,7 @@ export const useAuth = create<AuthStoreState>()(
                       return {
                         isAuthenticated: true,
                         isLoading: false,
-                        user: userData as AuthenticatedUser,
+                        user: null, // User data will be fetched fresh in initializeAuth
                         error: null,
                         lastActivity: Date.now(),
                         session: newSession,
@@ -662,7 +714,7 @@ export const useAuth = create<AuthStoreState>()(
             return {
               isAuthenticated: true,
               isLoading: false,
-              user: userData as AuthenticatedUser,
+              user: null, // User data will be fetched fresh in initializeAuth
               error: null,
               lastActivity: Date.now(),
               session: session,
@@ -699,17 +751,25 @@ export const useAuth = create<AuthStoreState>()(
       {
         name: 'auth-store',
         storage: createJSONStorage(() => AsyncStorage),
+        version: 1,
         partialize: (state) => ({
-          user: state.user,
+          // Don't persist user data - we fetch it fresh every time
           isAuthenticated: state.isAuthenticated,
           session: state.session,
           // Don't persist error or loading states
         }),
+        migrate: (persistedState: any, version: number) => {
+          // Reset user data on migration to force fresh fetch
+          if (version === 0) {
+            persistedState.user = null;
+          }
+          return persistedState as any;
+        },
+        onRehydrateStorage: () => (state) => {
+          // User will be null and will be fetched fresh in initializeAuth
+        },
       }
-    ),
-    {
-      name: 'auth-store',
-    }
+    )
   )
 );
 

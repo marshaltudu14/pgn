@@ -123,6 +123,13 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   },
 
   fetchAttendanceRecords: async (params) => {
+    const state = get();
+
+    // Prevent duplicate calls when already loading
+    if (state.isLoading) {
+      return;
+    }
+
     set({ isLoading: true, error: null });
     try {
       const { filter, pagination } = get();

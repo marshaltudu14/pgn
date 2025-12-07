@@ -50,13 +50,9 @@ const createMockUser = (overrides: Partial<AuthenticatedUser> = {}): Authenticat
   employmentStatus: 'ACTIVE',
   canLogin: true,
   phone: '+1234567890',
-  department: 'IT',
-  region: 'Test Region',
-  startDate: '2024-01-01',
-  profilePhotoUrl: 'https://example.com/profile.jpg',
-  primaryRegion: 'Test Region',
-  regionCode: 'TR',
-  assignedRegions: ['Test Region'],
+  assignedCities: ['New York', 'Boston'],
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
   ...overrides,
 });
 

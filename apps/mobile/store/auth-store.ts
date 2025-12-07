@@ -420,44 +420,41 @@ export const useAuth = create<AuthStoreState>()(
             if (userResponse.success && userResponse.data) {
               const { user } = get();
 
-              if (user) {
-                // Transform assignedCities from array of objects to array of strings for mobile app
-                const assignedCities = (userResponse.data.assignedCities || []).map((city: { city?: string; state?: string } | string) => {
-                  // If it's an object with city property, extract the city name
-                  if (city && typeof city === 'object' && (city as any).city) {
-                    return (city as any).city;
-                  }
-                  // If it's already a string, return as is
-                  if (typeof city === 'string') {
-                    return city;
-                  }
-                  // Fallback: convert to string
-                  return String(city);
-                });
+              // Transform assignedCities from array of objects to array of strings for mobile app
+              const assignedCities = (userResponse.data.assignedCities || []).map((city: { city?: string; state?: string } | string) => {
+                // If it's an object with city property, extract the city name
+                if (city && typeof city === 'object' && (city as any).city) {
+                  return (city as any).city;
+                }
+                // If it's already a string, return as is
+                if (typeof city === 'string') {
+                  return city;
+                }
+                // Fallback: convert to string
+                return String(city);
+              });
 
-                // Update only the user data, keeping other state intact
-                // Explicitly prioritize API response data over stored data
-                const updatedUser = {
-                  id: userResponse.data.id || user.id,
-                  humanReadableId: userResponse.data.humanReadableId || user.humanReadableId,
-                  firstName: userResponse.data.firstName || user.firstName,
-                  lastName: userResponse.data.lastName || user.lastName,
-                  email: userResponse.data.email || user.email,
-                  phone: userResponse.data.phone || user.phone,
-                  employmentStatus: userResponse.data.employmentStatus || user.employmentStatus,
-                  canLogin: userResponse.data.canLogin ?? user.canLogin,
-                  assignedCities: assignedCities,
-                  employmentStatusChangedAt: userResponse.data.employmentStatusChangedAt || user.employmentStatusChangedAt,
-                  createdAt: userResponse.data.createdAt || user.createdAt,
-                  updatedAt: userResponse.data.updatedAt || user.updatedAt,
-                };
+              // Update user data with API response, even if user is null (fresh login/load)
+              const updatedUser = {
+                id: userResponse.data.id || user?.id,
+                humanReadableId: userResponse.data.humanReadableId || user?.humanReadableId,
+                firstName: userResponse.data.firstName || user?.firstName,
+                lastName: userResponse.data.lastName || user?.lastName,
+                email: userResponse.data.email || user?.email,
+                phone: userResponse.data.phone || user?.phone,
+                employmentStatus: userResponse.data.employmentStatus || user?.employmentStatus,
+                canLogin: userResponse.data.canLogin ?? user?.canLogin,
+                assignedCities: assignedCities,
+                employmentStatusChangedAt: userResponse.data.employmentStatusChangedAt || user?.employmentStatusChangedAt,
+                createdAt: userResponse.data.createdAt || user?.createdAt,
+                updatedAt: userResponse.data.updatedAt || user?.updatedAt,
+              };
 
-                // Force update with a new object reference to ensure React re-renders
-                set({
-                  user: { ...updatedUser },
-                  lastActivity: Date.now() // Update timestamp to trigger reactivity
-                });
-              }
+              // Force update with a new object reference to ensure React re-renders
+              set({
+                user: { ...updatedUser },
+                lastActivity: Date.now() // Update timestamp to trigger reactivity
+              });
             } else {
               console.error('❌ API returned error:', userResponse);
             }

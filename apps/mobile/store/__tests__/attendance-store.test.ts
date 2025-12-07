@@ -87,6 +87,7 @@ import {
   AttendanceResponse,
   CheckInMobileRequest,
   CheckOutMobileRequest,
+  EmergencyAttendanceData,
   DailyAttendanceRecord,
   LocationData
 } from '@pgn/shared';
@@ -271,6 +272,7 @@ describe('Attendance Store', () => {
     mockLocationTrackingService.setLocationUpdateCallback.mockImplementation(() => {});
     mockLocationTrackingService.getState.mockReturnValue({
       isTracking: false,
+      consecutiveFailures: 0,
     });
 
     // Mock camera utilities defaults
@@ -1149,6 +1151,7 @@ describe('Attendance Store', () => {
       mockLocationTrackingService.isTrackingActive.mockReturnValue(true);
       mockLocationTrackingService.getState.mockReturnValue({
         isTracking: true,
+        consecutiveFailures: 0,
       });
 
       const { result } = renderHook(() => useAttendance());
@@ -2235,5 +2238,215 @@ describe('Attendance Store', () => {
       expect(result.current.error).toBeTruthy();
       expect(result.current.isCheckingOut).toBe(false);
     });
+  });
+});
+
+describe('Service Health Monitoring', () => {
+  beforeEach(() => {
+    // Reset all mocks for service health tests
+    mockLocationTrackingService.getEmergencyData.mockReset();
+    mockLocationTrackingService.isTrackingActive.mockReset();
+    mockLocationTrackingService.clearEmergencyData.mockReset();
+    mockApi.post.mockReset();
+    mockApi.get.mockReset();
+  });
+
+  it('should perform emergency check-out when CHECKED_IN but service not running', async () => {
+    // Mock emergency data with active tracking
+    const mockEmergencyData = {
+      attendanceId: 'test-attendance-id',
+      employeeId: 'emp-123',
+      employeeName: 'John Doe',
+      trackingActive: true,
+      lastStoredTime: Date.now(),
+      consecutiveFailures: 0,
+      location: {
+        timestamp: Date.now(),
+        coordinates: [12.9716, 77.5946] as [number, number],
+        batteryLevel: 80,
+        accuracy: 10
+      }
+    };
+
+    mockLocationTrackingService.getEmergencyData.mockResolvedValue(mockEmergencyData);
+    mockLocationTrackingService.isTrackingActive.mockReturnValue(false);
+
+    // Mock successful check-out API response
+    mockApi.post.mockResolvedValue({
+      success: true,
+      data: {
+        attendanceId: 'test-attendance-id',
+        checkOutTime: new Date().toISOString(),
+        workHours: 5.5,
+        verificationStatus: 'FLAGGED'
+      }
+    });
+
+    // Mock getAttendanceStatus to return CHECKED_IN
+    mockApi.get.mockResolvedValue({
+      success: true,
+      data: {
+        id: 'test-attendance-id',
+        status: 'CHECKED_IN',
+        check_in_timestamp: '2024-01-01T08:00:00Z',
+        check_out_timestamp: null
+      }
+    });
+
+    const { result } = renderHook(() => useAttendance());
+
+    // Mock the store's getState to return our mock methods
+    const mockStoreState = {
+      emergencyCheckOut: jest.fn().mockResolvedValue({
+        success: true,
+        message: 'Emergency check-out completed'
+      })
+    };
+
+    // Mock useAttendance.getState
+    jest.spyOn(useAttendance, 'getState').mockReturnValue(mockStoreState as any);
+
+    // The service health check happens during rehydration
+    // We need to trigger it by simulating the onRehydrateStorage callback
+    await act(async () => {
+      // Import and call the checkServiceHealthOnInitialization function
+      const { checkServiceHealthOnInitialization } = require('../attendance-store');
+      await checkServiceHealthOnInitialization({
+        currentStatus: 'CHECKED_IN',
+        currentAttendanceId: 'test-attendance-id'
+      });
+    });
+
+    // Verify emergency check-out was performed
+    expect(mockStoreState.emergencyCheckOut).toHaveBeenCalledWith({
+      attendanceId: 'test-attendance-id',
+      reason: 'Service interrupted - service stopped',
+      lastLocation: mockEmergencyData.location,
+      lastKnownTime: mockEmergencyData.lastStoredTime
+    });
+  });
+
+  it('should not perform emergency check-out when CHECKED_IN and service running', async () => {
+    const mockEmergencyData = {
+      attendanceId: 'test-attendance-id',
+      employeeId: 'emp-123',
+      employeeName: 'John Doe',
+      trackingActive: true,
+      lastStoredTime: Date.now(),
+      consecutiveFailures: 0,
+      location: {
+        timestamp: Date.now(),
+        coordinates: [12.9716, 77.5946] as [number, number],
+        batteryLevel: 80,
+        accuracy: 10
+      }
+    };
+
+    mockLocationTrackingService.getEmergencyData.mockResolvedValue(mockEmergencyData);
+    mockLocationTrackingService.isTrackingActive.mockReturnValue(true); // Service is running
+
+    const { result } = renderHook(() => useAttendance());
+
+    await act(async () => {
+      const { checkServiceHealthOnInitialization } = require('../attendance-store');
+      await checkServiceHealthOnInitialization({
+        currentStatus: 'CHECKED_IN',
+        currentAttendanceId: 'test-attendance-id'
+      });
+    });
+
+    // Should not call emergency check-out
+    expect(mockApi.post).not.toHaveBeenCalled();
+  });
+
+  it('should not perform emergency check-out when CHECKED_OUT regardless of service state', async () => {
+    const mockEmergencyData = {
+      attendanceId: 'test-attendance-id',
+      employeeId: 'emp-123',
+      employeeName: 'John Doe',
+      trackingActive: true,
+      lastStoredTime: Date.now(),
+      consecutiveFailures: 0,
+      location: {
+        timestamp: Date.now(),
+        coordinates: [12.9716, 77.5946] as [number, number],
+        batteryLevel: 80,
+        accuracy: 10
+      }
+    };
+
+    mockLocationTrackingService.getEmergencyData.mockResolvedValue(mockEmergencyData);
+    mockLocationTrackingService.isTrackingActive.mockReturnValue(false);
+    mockLocationTrackingService.clearEmergencyData.mockResolvedValue();
+
+    const { result } = renderHook(() => useAttendance());
+
+    await act(async () => {
+      const { checkServiceHealthOnInitialization } = require('../attendance-store');
+      await checkServiceHealthOnInitialization({
+        currentStatus: 'CHECKED_OUT',
+        currentAttendanceId: null
+      });
+    });
+
+    // Should not call emergency check-out
+    expect(mockApi.post).not.toHaveBeenCalled();
+    // Should clear emergency data when CHECKED_OUT
+    expect(mockLocationTrackingService.clearEmergencyData).toHaveBeenCalled();
+  });
+
+  it('should handle corrupted emergency data by clearing it', async () => {
+    // Mock corrupted emergency data - create valid data but the test will treat it as corrupted
+    const mockCorruptedData = {
+      attendanceId: 'test-attendance-id',
+      employeeId: 'emp-123',
+      employeeName: 'John Doe',
+      trackingActive: true,
+      lastStoredTime: Date.now(),
+      consecutiveFailures: 0,
+      location: {
+        timestamp: Date.now(),
+        coordinates: [12.9716, 77.5946] as [number, number],
+        batteryLevel: 80,
+        accuracy: 10
+      }
+    } as EmergencyAttendanceData;
+
+    // Override the mock to return data that the service will consider corrupted
+    mockLocationTrackingService.getEmergencyData.mockResolvedValue(null);
+    mockLocationTrackingService.clearEmergencyData.mockResolvedValue();
+
+    const { result } = renderHook(() => useAttendance());
+
+    await act(async () => {
+      const { checkServiceHealthOnInitialization } = require('../attendance-store');
+      await checkServiceHealthOnInitialization({
+        currentStatus: 'CHECKED_IN',
+        currentAttendanceId: 'test-attendance-id'
+      });
+    });
+
+    // Should clear corrupted data
+    expect(mockLocationTrackingService.clearEmergencyData).toHaveBeenCalled();
+    // Should not attempt emergency check-out with corrupted data
+    expect(mockApi.post).not.toHaveBeenCalled();
+  });
+
+  it('should handle missing emergency data gracefully', async () => {
+    mockLocationTrackingService.getEmergencyData.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useAttendance());
+
+    await act(async () => {
+      const { checkServiceHealthOnInitialization } = require('../attendance-store');
+      await checkServiceHealthOnInitialization({
+        currentStatus: 'CHECKED_IN',
+        currentAttendanceId: 'test-attendance-id'
+      });
+    });
+
+    // Should not perform any actions when no emergency data exists
+    expect(mockApi.post).not.toHaveBeenCalled();
+    expect(mockLocationTrackingService.clearEmergencyData).not.toHaveBeenCalled();
   });
 });

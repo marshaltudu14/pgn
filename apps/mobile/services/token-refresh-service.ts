@@ -6,7 +6,7 @@
 import { SessionManager } from '@/utils/auth-utils';
 
 class TokenRefreshService {
-  private refreshInterval: NodeJS.Timeout | null = null;
+  private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private readonly REFRESH_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
   private readonly TOKEN_EXPIRY_BUFFER = 2 * 60 * 1000; // Refresh 2 minutes before expiry
 
@@ -54,8 +54,8 @@ class TokenRefreshService {
         console.log('[TokenRefreshService] Token expiring soon, refreshing...');
 
         // Import api client here to avoid circular dependency
-        const { refreshTokenAPI } = await import('./api-client');
-        const refreshSuccess = await refreshTokenAPI(session.refreshToken);
+        const { api } = await import('./api-client');
+        const refreshSuccess = await api.post('/auth/refresh', { token: session.refreshToken });
 
         if (refreshSuccess) {
           console.log('[TokenRefreshService] Token refreshed successfully');

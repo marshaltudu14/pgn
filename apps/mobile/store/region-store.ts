@@ -57,8 +57,9 @@ export const useRegionStore = create<RegionStoreState>()(
             const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to fetch regions');
 
             if (handledResponse.success && handledResponse.data) {
+              const responseData = handledResponse.data as { regions?: Region[] };
               set({
-                regions: handledResponse.data.regions || [],
+                regions: responseData.regions || [],
                 loading: false,
                 lastFetched: Date.now(),
               });
@@ -90,7 +91,11 @@ export const useRegionStore = create<RegionStoreState>()(
             );
 
             if (response.success && response.data) {
-              return response;
+              const searchResponse = response.data as { regions: Region[] };
+              return {
+                success: true,
+                data: searchResponse.regions,
+              };
             } else {
               return {
                 success: false,

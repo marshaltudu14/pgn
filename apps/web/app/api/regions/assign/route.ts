@@ -11,16 +11,12 @@ const AssignRegionsSchema = z.object({
   region_ids: z.array(z.string().uuid()).min(1, 'At least one region ID is required'),
 });
 
-// Schema for getting regions with employee counts
-const RegionStatsSchema = z.object({
-  region_ids: z.array(z.string().uuid()).optional(),
-});
 
 const assignRegionsHandler = withApiValidation(
   async (req: NextRequest): Promise<NextResponse> => {
     try {
-      const body = (req as any).validatedBody;
-      const { employee_ids, region_ids } = body;
+      const body = req as NextRequest & { validatedBody: { employee_ids: string[]; region_ids: string[] } };
+      const { employee_ids, region_ids } = body.validatedBody;
 
       const supabase = await createClient();
 
@@ -103,7 +99,7 @@ const getRegionStatsHandler = withApiValidation(
       if (region_ids) {
         try {
           regionIds = JSON.parse(region_ids);
-        } catch (e) {
+        } catch {
           const response = NextResponse.json(
             { error: 'Invalid region_ids format' },
             { status: 400 }

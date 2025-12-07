@@ -312,7 +312,7 @@ export const useRegionsStore = create<RegionsStore>()(
             set(state => {
               // Update employee counts for the affected regions
               const updatedRegions = state.regions.map(region => {
-                const updatedStats = result.data.find((stats: any) => stats.id === region.id);
+                const updatedStats = result.data.find((stats: { id: string; employee_count: number }) => stats.id === region.id);
                 if (updatedStats) {
                   return {
                     ...region,

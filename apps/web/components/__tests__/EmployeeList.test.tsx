@@ -156,11 +156,7 @@ const createMockEmployee = (id: string, overrides: Partial<Employee> = {}): Empl
   phone: `987654321${id}`,
   employment_status: 'ACTIVE' as EmploymentStatus,
   can_login: true,
-  assigned_cities: [
-    { city: 'Mumbai', state: 'Maharashtra' },
-    { city: 'Pune', state: 'Maharashtra' },
-  ],
-  created_at: '2024-01-01T00:00:00Z',
+    created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   employment_status_changed_at: '2024-01-01T00:00:00Z',
   employment_status_changed_by: 'admin',
@@ -324,7 +320,6 @@ describe('EmployeeList Component', () => {
       const mockEmployees = [
         createMockEmployee('1', {
           employment_status: 'ACTIVE',
-          assigned_cities: [{ city: 'Mumbai', state: 'Maharashtra' }],
         }),
       ];
 
@@ -390,11 +385,9 @@ describe('EmployeeList Component', () => {
       expect(badges[4]).toHaveTextContent('ON LEAVE');
     });
 
-    it('should handle empty assigned cities', () => {
+    it('should render employee list', () => {
       const mockEmployees = [
-        createMockEmployee('1', {
-          assigned_cities: null,
-        }),
+        createMockEmployee('1'),
       ];
 
       mockUseEmployeeStore.mockReturnValue({
@@ -869,62 +862,7 @@ describe('EmployeeList Component', () => {
       expect(screen.queryByText('PGN-2024-0001')).not.toBeInTheDocument();
     });
 
-    it('should handle employees with null assigned_cities', () => {
-      const mockEmployees = [
-        createMockEmployee('1', {
-          assigned_cities: null,
-        }),
-      ];
-
-      mockUseEmployeeStore.mockReturnValue({
-        ...defaultMockStore,
-        employees: mockEmployees,
-        pagination: {
-          ...defaultMockStore.pagination,
-          totalItems: 1,
-        },
-      } as unknown);
-
-      render(
-        <EmployeeList
-          onEmployeeSelect={mockOnEmployeeSelect}
-          onEmployeeEdit={mockOnEmployeeEdit}
-          onEmployeeCreate={mockOnEmployeeCreate}
-        />
-      );
-
-      // Should not crash when assigned_cities is null
-      expect(screen.getByText('-')).toBeInTheDocument();
-    });
-
-    it('should handle malformed assigned_cities data', () => {
-      const mockEmployees = [
-        createMockEmployee('1', {
-          assigned_cities: null, // Change to null which should be handled
-        }),
-      ];
-
-      mockUseEmployeeStore.mockReturnValue({
-        ...defaultMockStore,
-        employees: mockEmployees,
-        pagination: {
-          ...defaultMockStore.pagination,
-          totalItems: 1,
-        },
-      } as unknown);
-
-      // Test that the component renders with null assigned_cities
-      expect(() => {
-        render(
-          <EmployeeList
-            onEmployeeSelect={mockOnEmployeeSelect}
-            onEmployeeEdit={mockOnEmployeeEdit}
-            onEmployeeCreate={mockOnEmployeeCreate}
-          />
-        );
-      }).not.toThrow();
-    });
-
+    
     it('should handle employees without optional callbacks', () => {
       render(<EmployeeList />);
 

@@ -182,47 +182,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
         </div>
 
         {/* Assigned Cities - Full Width Section */}
-        <div className="pt-4 border-t border-border">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Assigned Cities
-          </h3>
-          <div className="space-y-2">
-            {(() => {
-              if (!employee.assigned_cities) {
-                return (
-                  <div className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
-                    -
-                  </div>
-                );
-              }
-
-              let cities: (string | { city: string; [key: string]: unknown })[] = [];
-              try {
-                cities = typeof employee.assigned_cities === 'string'
-                  ? JSON.parse(employee.assigned_cities)
-                  : Array.isArray(employee.assigned_cities)
-                    ? employee.assigned_cities
-                    : [];
-              } catch {
-                // If parsing fails, treat as single string
-                cities = [employee.assigned_cities as string];
-              }
-
-              return cities.length > 0 ? (
-                cities.map((city: string | { city: string; [key: string]: unknown }, index: number) => (
-                  <div key={index} className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
-                    {typeof city === 'string' ? city : city.city || JSON.stringify(city)}
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-foreground py-1 px-2 bg-muted/50 rounded">
-                  -
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
+  
         {/* Footer */}
         <div className="pt-4 border-t border-border">
           <div className="flex justify-end">

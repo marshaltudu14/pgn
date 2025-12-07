@@ -15,7 +15,6 @@ import {
   Database,
   TablesInsert,
   TablesUpdate,
-  Json,
 } from '@pgn/shared';
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
@@ -174,7 +173,6 @@ export async function createEmployee(
       phone: cleanPhone, // Use cleaned phone number
       employment_status: createData.employment_status || 'ACTIVE',
       can_login: createData.can_login ?? true,
-      assigned_cities: (createData.assigned_cities as unknown as Json) || [],
       };
 
     const { data, error } = await supabase
@@ -456,10 +454,7 @@ export async function updateEmployee(
       employeeData.employment_status = updateData.employment_status;
     if (updateData.can_login !== undefined)
       employeeData.can_login = updateData.can_login;
-    if (updateData.assigned_cities !== undefined)
-      employeeData.assigned_cities =
-        updateData.assigned_cities as unknown as Json;
-
+  
     const { data, error } = await supabase
       .from('employees')
       .update(employeeData)
@@ -546,21 +541,6 @@ export async function updateRegionalAssignments(
       }
     }
 
-    // Also update the assigned_cities JSONB for backward compatibility
-    const { error: updateError } = await supabase
-      .from('employees')
-      .update({
-        assigned_cities: regionalAssignment.assigned_cities as unknown as Json,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (updateError) {
-      throw new Error(`Failed to update employee assigned_cities: ${updateError.message}`);
-    }
-
     // Return the updated employee
     const { data: employee, error: fetchError } = await supabase
       .from('employees')
@@ -591,8 +571,7 @@ export async function getEmployeeRegions(
     const { data, error } = await supabase
       .from('employee_regions')
       .select(`
-        region_id,
-        regions (
+        regions!inner (
           id,
           city,
           state
@@ -604,14 +583,11 @@ export async function getEmployeeRegions(
       throw new Error(`Failed to fetch employee regions: ${error.message}`);
     }
 
+    // The regions field comes back as an array with one object
     return data?.map(item => {
-      const region = item.regions as { id: string; city: string; state: string };
-      return {
-        id: region.id,
-        city: region.city,
-        state: region.state
-      };
-    }) || [];
+      const regions = item.regions as unknown as { id: string; city: string; state: string }[];
+      return regions[0]; // Take the first (and only) region object
+    }).filter(Boolean) || [];
   } catch (error) {
     console.error('Error in getEmployeeRegions:', error);
     throw error;

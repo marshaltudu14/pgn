@@ -168,6 +168,7 @@ export interface DealerFilters {
   shop_name?: string;
   email?: string;
   phone?: string;
+  region_id?: string;
   sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
@@ -178,6 +179,7 @@ export interface RetailerFilters {
   email?: string;
   phone?: string;
   dealer_id?: string;
+  region_id?: string;
   sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
@@ -189,6 +191,7 @@ export interface FarmerFilters {
   phone?: string;
   retailer_id?: string;
   dealer_id?: string;
+  region_id?: string;
   sort_by?: 'name' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }

@@ -602,8 +602,8 @@ export const useAuth = create<AuthStoreState>()(
                 await attendanceStore.emergencyCheckOut({
                   attendanceId: emergencyData.attendanceId,
                   reason: 'User logged out during active session',
-                  lastLocation: emergencyData.lastLocationUpdate,
-                  lastKnownTime: emergencyData.lastKnownTime
+                  lastLocation: emergencyData.location,
+                  lastKnownTime: emergencyData.lastStoredTime
                 });
               }
 

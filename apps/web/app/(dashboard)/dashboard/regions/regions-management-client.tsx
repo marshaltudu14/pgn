@@ -211,7 +211,11 @@ export default function RegionsManagementClient() {
 
       {/* Regions Table */}
       <RegionsTable
-        regions={regions}
+        regions={regions.map(r => ({
+          ...r,
+          created_at: r.created_at || '',
+          updated_at: r.updated_at || ''
+        }))}
         isLoading={isLoading}
         pagination={pagination}
         filters={filters}

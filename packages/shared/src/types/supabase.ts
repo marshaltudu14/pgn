@@ -227,7 +227,6 @@ export type Database = {
       }
       employees: {
         Row: {
-          assigned_cities: Json | null
           can_login: boolean | null
           created_at: string | null
           email: string
@@ -242,7 +241,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          assigned_cities?: Json | null
           can_login?: boolean | null
           created_at?: string | null
           email: string
@@ -257,7 +255,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          assigned_cities?: Json | null
           can_login?: boolean | null
           created_at?: string | null
           email?: string

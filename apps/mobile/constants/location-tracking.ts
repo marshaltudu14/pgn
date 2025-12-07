@@ -7,8 +7,11 @@
  */
 
 export const LOCATION_TRACKING_CONFIG = {
-  // Time interval between location updates in seconds
-  UPDATE_INTERVAL_SECONDS: 30,
+  // Time interval between location updates in seconds (5 minutes = 300 seconds)
+  UPDATE_INTERVAL_SECONDS: 300,
+
+  // Time interval for emergency data updates in seconds (60 seconds when offline)
+  EMERGENCY_UPDATE_INTERVAL_SECONDS: 60,
 
   // Notification settings
   NOTIFICATION: {

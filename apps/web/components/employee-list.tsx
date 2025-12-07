@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Employee, EmploymentStatus, CityAssignment, EmployeeListParams } from '@pgn/shared';
+import { Employee, EmploymentStatus, EmployeeListParams } from '@pgn/shared';
 
 type SearchFieldType = EmployeeListParams['search_field'];
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
@@ -305,26 +305,9 @@ export function EmployeeList({
                         {employee.employment_status.replace('_', ' ')}
                       </Badge>
                     </TableCell>
-                    <TableCell >
+                    <TableCell>
                       <div className="text-sm">
-                        {(() => {
-                          const cities = (employee.assigned_cities as unknown as CityAssignment[]) || [];
-                          if (cities.length === 0) return '-';
-
-                          const displayCities = cities.slice(0, 2);
-                          const remainingCount = cities.length - displayCities.length;
-
-                          return (
-                            <>
-                              {displayCities.map((city: CityAssignment) => city.city).join(', ')}
-                              {remainingCount > 0 && (
-                                <span className="text-muted-foreground">
-                                  {' '}+{remainingCount} more
-                                </span>
-                              )}
-                            </>
-                          );
-                        })()}
+                        -
                       </div>
                     </TableCell>
                     <TableCell>

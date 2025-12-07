@@ -14,7 +14,6 @@ import { ChevronLeft, Plus, Phone, Mail, MapPin, Store, User, ChevronDown } from
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRetailerStore } from '@/store/retailer-store';
-import { useAuth } from '@/store/auth-store';
 import { useRegionStore } from '@/store/region-store';
 import { RetailerFormData, Dealer } from '@pgn/shared';
 import { COLORS } from '@/constants';
@@ -40,7 +39,6 @@ interface FormErrors {
 export default function CreateRetailerModal({ visible, onClose, dealerId }: CreateRetailerModalProps) {
   const colors = useThemeColors();
   const { createRetailer, isCreating } = useRetailerStore();
-  const { user } = useAuth();
   const { regions, fetchRegions } = useRegionStore();
 
   const [formData, setFormData] = useState<RetailerFormData>({

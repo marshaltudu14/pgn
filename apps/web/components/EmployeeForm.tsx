@@ -96,8 +96,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           phone: employee.phone || '',
           employment_status: employee.employment_status as EmploymentStatus,
           can_login: employee.can_login ?? true,
-          assigned_cities: (employee.assigned_cities as unknown as CityAssignment[]) || [],
-          password: '', // Don't pre-fill password
+                password: '', // Don't pre-fill password
           confirm_password: '', // Don't pre-fill confirm password
         });
       });

@@ -1,5 +1,6 @@
 import { api } from '@/services/api-client';
 import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
+import { permissionService } from '@/services/permissions';
 import { API_ENDPOINTS } from '@/constants/api';
 import {
   AttendanceListParams,
@@ -188,6 +189,9 @@ interface AttendanceStoreState {
   setBatteryLevel: (level: number) => void;
   setIsOnline: (online: boolean) => void;
 
+  // Permission helpers
+  checkPermissionsBeforeCheckIn: () => Promise<{ canCheckIn: boolean; message?: string }>;
+
   // Reset
   reset: () => void;
 
@@ -306,7 +310,7 @@ export const useAttendance = create<AttendanceStoreState>()(
             const emergencyData = await locationTrackingServiceNotifee.getEmergencyData();
 
             if (emergencyData && emergencyData.trackingActive && emergencyData.attendanceId) {
-              const timeSinceLastUpdate = Date.now() - emergencyData.lastKnownTime;
+              const timeSinceLastUpdate = Date.now() - emergencyData.lastStoredTime;
 
               // If it's been more than 10 minutes, force emergency check-out
               if (timeSinceLastUpdate > 10 * 60 * 1000) {
@@ -315,8 +319,8 @@ export const useAttendance = create<AttendanceStoreState>()(
                 await get().emergencyCheckOut({
                   attendanceId: emergencyData.attendanceId,
                   reason: 'App restart - tracking interrupted',
-                  lastLocation: emergencyData.lastLocationUpdate,
-                  lastKnownTime: emergencyData.lastKnownTime
+                  lastLocation: emergencyData.location,
+                  lastKnownTime: emergencyData.lastStoredTime
                 });
               } else {
                 // Try to resume normal tracking
@@ -542,6 +546,33 @@ export const useAttendance = create<AttendanceStoreState>()(
         // Check in with location and selfie
         checkIn: async (request: CheckInMobileRequest): Promise<AttendanceResponse> => {
           set({ isCheckingIn: true, error: null });
+
+          // Check all required permissions before allowing check-in
+          const permissionResult = await permissionService.checkAllPermissions();
+          if (!permissionResult.allGranted) {
+            const missingPermissions = permissionResult.deniedPermissions;
+            let errorMessage = 'Cannot check in. Missing required permissions: ';
+
+            if (missingPermissions.includes('location')) {
+              errorMessage += 'Location (Allow all the time) required for tracking. ';
+            }
+            if (missingPermissions.includes('camera')) {
+              errorMessage += 'Camera required for check-in selfie. ';
+            }
+            if (missingPermissions.includes('notifications')) {
+              errorMessage += 'Notifications required for foreground service. ';
+            }
+
+            set({
+              isCheckingIn: false,
+              error: errorMessage.trim(),
+            });
+
+            return {
+              success: false,
+              message: errorMessage.trim()
+            };
+          }
 
           try {
             // Get current location if not provided
@@ -1237,11 +1268,13 @@ export const useAttendance = create<AttendanceStoreState>()(
                 locationTrackingServiceNotifee.setEmergencyDataCallback(
                   async (emergencyData) => {
                     if (emergencyData.trackingActive && emergencyData.attendanceId) {
+                      // Check if there's a custom reason attached to the emergency data
+                      const customReason = (emergencyData as any).reason || 'Low battery - automatic check-out';
                       const result = await get().emergencyCheckOut({
                         attendanceId: emergencyData.attendanceId,
-                        reason: 'Low battery - automatic check-out',
-                        lastLocation: emergencyData.lastLocationUpdate,
-                        lastKnownTime: emergencyData.lastKnownTime
+                        reason: customReason,
+                        lastLocation: emergencyData.location,
+                        lastKnownTime: emergencyData.lastStoredTime
                       });
                     }
                   }
@@ -1633,7 +1666,38 @@ export const useAttendance = create<AttendanceStoreState>()(
           return await compressPhoto(uri, targetSize);
         },
 
-        
+  // Check permissions and guide user if needed
+  checkPermissionsBeforeCheckIn: async (): Promise<{ canCheckIn: boolean; message?: string }> => {
+    const permissionResult = await permissionService.checkAllPermissions();
+
+    if (!permissionResult.allGranted) {
+      const missingPermissions = permissionResult.deniedPermissions;
+      let message = 'Cannot check in. Missing required permissions:\n\n';
+
+      if (missingPermissions.includes('location')) {
+        message += '• Location: "Allow all the time" access required for tracking\n';
+      }
+      if (missingPermissions.includes('camera')) {
+        message += '• Camera: Required for check-in selfie\n';
+      }
+      if (missingPermissions.includes('notifications')) {
+        message += '• Notifications: Required for foreground service\n';
+      }
+
+      message += '\nPlease enable these permissions in your device settings to continue.';
+
+      // Open app settings if permissions are denied
+      if (permissionService.requiresSettingsIntervention(permissionResult.permissions)) {
+        await permissionService.openAppSettings();
+      }
+
+      return { canCheckIn: false, message };
+    }
+
+    return { canCheckIn: true };
+  },
+
+
         // Reset store
         reset: () => {
           set({
@@ -1683,6 +1747,12 @@ export const useAttendance = create<AttendanceStoreState>()(
           isCheckingOut: false,
           error: null,
         }),
+        onRehydrateStorage: () => (state) => {
+          // Check service health after store is rehydrated
+          if (state) {
+            checkServiceHealthOnInitialization(state);
+          }
+        },
       }
     ),
     {
@@ -1690,6 +1760,114 @@ export const useAttendance = create<AttendanceStoreState>()(
     }
   )
 );
+
+// Service health check function to be called on app initialization
+async function checkServiceHealthOnInitialization(state: Partial<AttendanceStoreState>) {
+  try {
+    // AC 2: If already checked out, no action is taken
+    if (state.currentStatus === 'CHECKED_OUT') {
+      // AC 5: Clear emergency data if user is CHECKED_OUT (edge case)
+      await locationTrackingServiceNotifee.clearEmergencyData();
+      return;
+    }
+
+    // AC 1: Check for active tracking in emergency data
+    const emergencyData = await locationTrackingServiceNotifee.getEmergencyData();
+
+    // AC 3.1: Handle corrupted or missing emergency data
+    if (!emergencyData) {
+      return;
+    }
+
+    // Validate emergency data structure
+    if (!emergencyData.location || !Array.isArray(emergencyData.location.coordinates)) {
+      console.error('[AttendanceStore] Emergency data is corrupted, clearing it');
+      await locationTrackingServiceNotifee.clearEmergencyData();
+      return;
+    }
+
+    // AC 3.2: Handle cases where emergency data exists but user is CHECKED_OUT
+    // This is handled at the beginning of the function
+
+    // Calculate elapsed time since last stored data
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - emergencyData.lastStoredTime;
+    const ONE_HOUR = 3600000; // 1 hour in milliseconds
+
+    // Check if service was running (wasOnline = true) and has been offline for more than 1 hour
+    const wasServiceRunning = emergencyData.wasOnline !== false; // Default to true if undefined
+    const wasOfflineForTooLong = emergencyData.offlineStartTime
+      ? (currentTime - emergencyData.offlineStartTime) > ONE_HOUR
+      : false;
+
+    // AC 7 & 8: Check elapsed time and conditions for emergency check-out
+    if (emergencyData.trackingActive && !locationTrackingServiceNotifee.isTrackingActive()) {
+      console.warn('[AttendanceStore] Service health check failed: Emergency data indicates active tracking but service is not running');
+
+      // Use the attendanceId from the emergency data if not in state
+      const attendanceId = state.currentAttendanceId || emergencyData.attendanceId;
+
+      if (attendanceId) {
+        // For testing, we'll directly use the store to check out
+        // In production, the store state will be available
+        const store = useAttendance.getState();
+
+        // Check if we have the emergencyCheckOut method
+        if (store && store.emergencyCheckOut) {
+          // AC 4: Mark attendance with reason "Service interrupted - service stopped"
+          // Use existing emergencyCheckOut method
+          await store.emergencyCheckOut({
+            attendanceId: attendanceId,
+            reason: 'Service interrupted - service stopped',
+            lastLocation: emergencyData.location,
+            lastKnownTime: emergencyData.lastStoredTime
+          });
+        }
+      }
+    }
+    // AC 7 & 8: Handle offline timeout scenario
+    else if (emergencyData.trackingActive && wasServiceRunning && wasOfflineForTooLong) {
+      console.warn('[AttendanceStore] Service health check failed: Service was running but offline for over 1 hour');
+
+      const attendanceId = state.currentAttendanceId || emergencyData.attendanceId;
+
+      if (attendanceId) {
+        const store = useAttendance.getState();
+
+        if (store && store.emergencyCheckOut) {
+          // AC 4 & 5: Emergency check-out with offline timeout reason
+          await store.emergencyCheckOut({
+            attendanceId: attendanceId,
+            reason: 'Emergency - No internet for 1+ hours',
+            lastLocation: emergencyData.location,
+            lastKnownTime: emergencyData.lastStoredTime
+          });
+        }
+      }
+    }
+    // AC 9: If elapsed time <= 1 hour OR service was crashed, resume tracking if still CHECKED_IN
+    else if (emergencyData.trackingActive && state.currentStatus === 'CHECKED_IN' &&
+             (!wasOfflineForTooLong || !wasServiceRunning)) {
+      console.log('[AttendanceStore] Service health check passed: Resuming normal tracking');
+      // Service will be restarted by the normal app flow - no action needed here
+    }
+
+    // AC 6: If the service is still running when app opens, tracking continues without interruption
+    // This is handled by the conditions above - no action needed if service is running
+  } catch (error) {
+    console.error('[AttendanceStore] Error during service health check:', error);
+    // AC 3.3: Log all service health checks for debugging
+    // Try to clear potentially corrupted emergency data on error
+    try {
+      await locationTrackingServiceNotifee.clearEmergencyData();
+    } catch (clearError) {
+      console.error('[AttendanceStore] Failed to clear emergency data:', clearError);
+    }
+  }
+}
+
+// Export the service health check function for testing
+export { checkServiceHealthOnInitialization };
 
 // Export hooks for easier usage
 export const useAttendanceStore = () => useAttendance();

@@ -1,6 +1,6 @@
 'use client';
 
-import { Region, RegionListParams } from '@pgn/shared';
+import { RegionListParams, RegionSchema } from '@pgn/shared';
 import {
   Table,
   TableBody,
@@ -31,11 +31,11 @@ interface PaginationState {
 }
 
 interface RegionsTableProps {
-  regions: Region[];
+  regions: RegionSchema[];
   isLoading: boolean;
   pagination: PaginationState;
   filters: RegionListParams;
-  onEdit: (region: Region) => void;
+  onEdit: (region: RegionSchema) => void;
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
   _onPageSizeChange?: (size: number) => void;
@@ -254,7 +254,7 @@ export function RegionsTable({
               </TableCell>
             </TableRow>
           ) : (
-            regions.map((region: Region) => (
+            regions.map((region) => (
               <TableRow key={region.id}>
                 <TableCell className="font-medium">{region.state}</TableCell>
                 <TableCell>{region.city}</TableCell>

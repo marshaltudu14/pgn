@@ -108,10 +108,7 @@ const createMockEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   phone: '9876543210',
   employment_status: 'ACTIVE' as EmploymentStatus,
   can_login: true,
-  assigned_cities: JSON.stringify([
-    { city: 'Mumbai', state: 'Maharashtra' },
-  ]),
-  created_at: '2024-01-01T00:00:00Z',
+    created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
   employment_status_changed_at: '2024-01-01T00:00:00Z',
   employment_status_changed_by: 'admin',

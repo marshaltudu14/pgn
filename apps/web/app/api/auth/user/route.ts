@@ -67,8 +67,7 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       phone: currentUserData.phone,
       employmentStatus: currentUserData.employment_status as EmploymentStatus,
       canLogin: authService.canLoginWithStatus(currentUserData.employment_status as EmploymentStatus),
-      assignedCities: currentUserData.assigned_cities || [],
-      employmentStatusChangedAt: currentUserData.employment_status_changed_at,
+        employmentStatusChangedAt: currentUserData.employment_status_changed_at,
       createdAt: currentUserData.created_at,
       updatedAt: currentUserData.updated_at
     };

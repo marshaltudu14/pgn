@@ -14,7 +14,6 @@ import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Sprout, Users, ChevronDow
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFarmerStore } from '@/store/farmer-store';
-import { useAuth } from '@/store/auth-store';
 import { useRegionStore } from '@/store/region-store';
 import { FarmerFormData, Retailer } from '@pgn/shared';
 import { COLORS } from '@/constants';
@@ -40,7 +39,6 @@ interface FormErrors {
 export default function CreateFarmerModal({ visible, onClose, retailerId }: CreateFarmerModalProps) {
   const colors = useThemeColors();
   const { createFarmer, isCreating } = useFarmerStore();
-  const { user } = useAuth();
   const { regions, fetchRegions } = useRegionStore();
 
   const [formData, setFormData] = useState<FarmerFormData>({

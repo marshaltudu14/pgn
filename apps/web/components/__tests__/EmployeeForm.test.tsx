@@ -217,10 +217,6 @@ describe('EmployeeForm', () => {
     phone: '9876543210',
     employment_status: 'ACTIVE' as EmploymentStatus,
     can_login: true,
-    assigned_cities: JSON.stringify([
-      { city: 'Mumbai', state: 'Maharashtra' },
-      { city: 'Pune', state: 'Maharashtra' },
-    ]),
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z',
     employment_status_changed_at: '2023-01-01T00:00:00Z',

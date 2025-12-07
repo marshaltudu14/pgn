@@ -152,6 +152,23 @@ export type CheckOutMobileRequest = z.infer<typeof CheckOutMobileRequestSchema>;
 // Additional types needed by the services
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'FLAGGED';
 
+export interface EmergencyAttendanceData {
+  attendanceId?: string;
+  employeeId?: string;
+  employeeName?: string;
+  trackingActive: boolean;
+  lastStoredTime: number; // Timestamp of last storage
+  consecutiveFailures: number;
+  wasOnline?: boolean; // Track if service was online when stored (for crash vs outage detection)
+  offlineStartTime?: number; // Timestamp when internet connection was lost
+  location: {
+    timestamp: number;
+    coordinates: [number, number]; // [latitude, longitude]
+    batteryLevel: number;
+    accuracy: number;
+  }
+}
+
 export interface EmergencyCheckOutRequest {
   employeeId: string;
   attendanceId?: string; // Optional attendanceId for specific record checkout

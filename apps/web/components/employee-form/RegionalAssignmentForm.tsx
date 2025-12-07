@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { MapPin, X, ChevronDown, Check, Loader2 } from 'lucide-react';
-import { type EmployeeFormData } from '@pgn/shared';
+import { type EmployeeFormData, CityAssignment } from '@pgn/shared';
 import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { cn } from '@/lib/utils';
 
@@ -62,7 +62,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   }, [searchQuery, fetchRegions, searchRegions]);
 
   // Get form values
-  const selectedCities = form.watch('assigned_cities') || [];
+  const selectedCities = (form.watch('assigned_cities') as CityAssignment[]) || [];
 
   // Create flat list of city pairs for combobox
   const allCityPairs = useMemo(() => {
@@ -70,9 +70,9 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
 
     const pairs: Array<{id: string, city: string, state: string, display: string}> = [];
 
-    regions.forEach((region, index) => {
+    regions.forEach((region) => {
       pairs.push({
-        id: `${region.id}-${index}`, // Use region.id + index for uniqueness
+        id: region.id, // Use region.id directly
         city: region.city,
         state: region.state,
         display: `${region.city}, ${region.state}`
@@ -88,7 +88,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
   }, [allCityPairs]);
 
   // Handle city selection
-  const handleCitySelect = (city: string, state: string) => {
+  const handleCitySelect = (city: string, state: string, regionId?: string) => {
     const currentCities = [...selectedCities];
     const existingIndex = currentCities.findIndex(
       c => c.city === city && c.state === state
@@ -98,8 +98,18 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       // Remove if already selected
       currentCities.splice(existingIndex, 1);
     } else {
-      // Add if not selected
-      currentCities.push({ city, state });
+      // Add if not selected - ensure we always have a region ID
+      if (regionId) {
+        currentCities.push({ id: regionId, city, state });
+      } else {
+        // Find the region ID from the regions data
+        const region = regions.find(r => r.city === city && r.state === state);
+        if (!region) {
+          console.error(`Region not found for ${city}, ${state}`);
+          return;
+        }
+        currentCities.push({ id: region.id, city, state });
+      }
     }
 
     form.setValue('assigned_cities', currentCities, { shouldValidate: true, shouldDirty: true });
@@ -215,7 +225,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                               <CommandItem
                                 key={pair.id}
                                 value={pair.display}
-                                onSelect={() => handleCitySelect(pair.city, pair.state)}
+                                onSelect={() => handleCitySelect(pair.city, pair.state, pair.id)}
                               >
                                 <div className={cn(
                                   "mr-2 h-4 w-4 rounded-sm border border-primary",

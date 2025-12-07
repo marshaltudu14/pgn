@@ -63,7 +63,10 @@ export async function getRegions(
 
   let query = supabase
     .from('regions')
-    .select('*', { count: 'exact' });
+    .select(`
+      *,
+      employee_count:employee_regions(count)
+    `, { count: 'exact' });
 
   // Apply search filter (searches both state and city)
   if (search) {
@@ -91,7 +94,12 @@ export async function getRegions(
     throw new Error('Failed to fetch regions');
   }
 
-  const regions = data || [];
+  // Transform the data to include employee_count as a flat property
+  const regions = (data || []).map(region => ({
+    ...region,
+    employee_count: region.employee_count ? Number(region.employee_count) : 0
+  }));
+
   const totalItems = count || 0;
   const totalPages = Math.ceil(totalItems / limit);
 
@@ -115,7 +123,10 @@ export async function getRegionById(id: string): Promise<Region | null> {
 
   const { data, error } = await supabase
     .from('regions')
-    .select('*')
+    .select(`
+      *,
+      employee_count:employee_regions(count)
+    `)
     .eq('id', id)
     .single();
 
@@ -124,7 +135,15 @@ export async function getRegionById(id: string): Promise<Region | null> {
     throw new Error('Failed to fetch region');
   }
 
-  return data;
+  if (!data) {
+    return null;
+  }
+
+  // Transform the data to include employee_count as a flat property
+  return {
+    ...data,
+    employee_count: data.employee_count ? Number(data.employee_count) : 0
+  };
 }
 
 /**
@@ -236,7 +255,10 @@ export async function searchRegions(
 
   const query = supabase
     .from('regions')
-    .select('*', { count: 'exact' })
+    .select(`
+      *,
+      employee_count:employee_regions(count)
+    `, { count: 'exact' })
     .ilike('city', `%${searchTerm}%`)
     .order(sort_by, { ascending: sort_order === 'asc' })
     .range(offset, offset + limit - 1);
@@ -248,7 +270,12 @@ export async function searchRegions(
     throw new Error('Failed to search regions');
   }
 
-  const regions = data || [];
+  // Transform the data to include employee_count as a flat property
+  const regions = (data || []).map(region => ({
+    ...region,
+    employee_count: region.employee_count ? Number(region.employee_count) : 0
+  }));
+
   const totalItems = count || 0;
   const totalPages = Math.ceil(totalItems / limit);
 

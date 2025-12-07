@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
   const { loading, error, createDealer, updateDealer, clearError } = useDealerStore();
   const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
   const isEditing = !!dealer;
+  const [selectedRegion, setSelectedRegion] = useState(dealer?.region_id || '');
 
   const form = useForm<DealerFormData>({
     defaultValues: {
@@ -276,8 +277,11 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
               />
 
               <RegionSelector
-                value={form.watch('region_id')}
-                onValueChange={(value) => form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true })}
+                value={selectedRegion}
+                onValueChange={(value) => {
+                  setSelectedRegion(value);
+                  form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true });
+                }}
                 regions={transformedRegions}
                 isLoading={regionsLoading}
                 onSearch={searchRegions}

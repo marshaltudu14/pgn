@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useFarmerStore } from '@/store/farmer-store';
 import { useAuth } from '@/store/auth-store';
+import { useRegionStore } from '@/store/region-store';
 import { FarmerFormData, Retailer } from '@pgn/shared';
 import { COLORS } from '@/constants';
 import Spinner from '@/components/Spinner';
@@ -40,6 +41,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
   const colors = useThemeColors();
   const { createFarmer, isCreating } = useFarmerStore();
   const { user } = useAuth();
+  const { regions, fetchRegions } = useRegionStore();
 
   const [formData, setFormData] = useState<FarmerFormData>({
     name: '',
@@ -55,6 +57,13 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
   const [showRetailerSearch, setShowRetailerSearch] = useState(false);
   const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
   const [showRegionPicker, setShowRegionPicker] = useState(false);
+
+  // Fetch regions when modal opens
+  useEffect(() => {
+    if (visible && regions.length === 0) {
+      fetchRegions();
+    }
+  }, [visible, regions.length, fetchRegions]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -322,10 +331,12 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
                   }
                 ]}
               >
-                {formData.region_id
-                  ? user?.assignedCities.find(city => city === formData.region_id) || formData.region_id
-                  : 'Select region'
-                }
+                {(() => {
+                  const selectedRegion = regions.find(r => r.id === formData.region_id);
+                  return formData.region_id
+                    ? selectedRegion ? `${selectedRegion.city}, ${selectedRegion.state}` : formData.region_id
+                    : 'Select region';
+                })()}
               </Text>
               <ChevronDown size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -352,32 +363,34 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
                 <Text style={[styles.regionPickerTitle, { color: colors.text }]}>
                   Select Region
                 </Text>
-                {user?.assignedCities.map((city, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.regionOption,
-                      {
-                        backgroundColor: colors.listBg,
-                        borderBottomColor: colors.border,
-                      }
-                    ]}
-                    onPress={() => {
-                      setFormData(prev => ({ ...prev, region_id: city }));
-                      setShowRegionPicker(false);
-                      if (errors.region_id) {
-                        setErrors(prev => ({ ...prev, region_id: undefined }));
-                      }
-                    }}
-                  >
-                    <Text style={[styles.regionOptionText, { color: colors.text }]}>
-                      {city}
-                    </Text>
-                    {formData.region_id === city && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+                  {regions.map((region) => (
+                    <TouchableOpacity
+                      key={region.id}
+                      style={[
+                        styles.regionOption,
+                        {
+                          backgroundColor: colors.listBg,
+                          borderBottomColor: colors.border,
+                        }
+                      ]}
+                      onPress={() => {
+                        setFormData(prev => ({ ...prev, region_id: region.id }));
+                        setShowRegionPicker(false);
+                        if (errors.region_id) {
+                          setErrors(prev => ({ ...prev, region_id: undefined }));
+                        }
+                      }}
+                    >
+                      <Text style={[styles.regionOptionText, { color: colors.text }]}>
+                        {region.city}, {region.state}
+                      </Text>
+                      {formData.region_id === region.id && (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             </TouchableOpacity>
           </Modal>

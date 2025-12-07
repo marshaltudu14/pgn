@@ -8,6 +8,7 @@ export interface RegionSchema {
   city_slug: string;
   created_at: string;
   updated_at: string;
+  employee_count?: number;
 }
 
 export interface CreateRegionRequest {
@@ -22,7 +23,7 @@ export interface UpdateRegionRequest {
 export interface RegionFilter {
   state?: string;
   city?: string;
-  sort_by?: 'state' | 'city';
+  sort_by?: 'state' | 'city' | 'employee_count';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -32,7 +33,7 @@ export interface RegionListParams {
   search?: string;
   state?: string;
   city?: string;
-  sort_by?: 'state' | 'city';
+  sort_by?: 'state' | 'city' | 'employee_count';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -78,13 +79,13 @@ export const regionsQuerySchema = z.object({
   search: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
-  sort_by: z.enum(['state', 'city']).optional().default('city'),
+  sort_by: z.enum(['state', 'city', 'employee_count']).optional().default('city'),
   sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
 export const searchRegionsSchema = z.object({
   q: z.string().min(1, 'Search query is required'),
-  sort_by: z.enum(['state', 'city']).optional().default('city'),
+  sort_by: z.enum(['state', 'city', 'employee_count']).optional().default('city'),
   sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
 });
 
@@ -97,6 +98,7 @@ export const RegionSchema = z.object({
   city_slug: z.string(),
   created_at: z.string(), // Accept any datetime format from database
   updated_at: z.string(), // Accept any datetime format from database
+  employee_count: z.number().optional(),
 });
 
 export const RegionResponseSchema = z.object({
@@ -107,6 +109,7 @@ export const RegionResponseSchema = z.object({
   city_slug: z.string(),
   created_at: z.string(), // Accept any datetime format from database
   updated_at: z.string(), // Accept any datetime format from database
+  employee_count: z.number().optional(),
 });
 
 export const StateOptionSchema = z.object({

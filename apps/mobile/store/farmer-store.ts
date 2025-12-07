@@ -5,6 +5,7 @@ import { Farmer, FarmerFilters, FarmerInsert, FarmerUpdate, FarmerListResponse }
 import { api, ApiResponse } from '@/services/api-client';
 import { API_ENDPOINTS } from '@/constants/api';
 import { handleMobileApiResponse, transformApiErrorMessage } from './utils/errorHandling';
+import { useRegionStore } from './region-store';
 
 interface FarmerStoreState {
   // Data state
@@ -98,6 +99,9 @@ export const useFarmerStore = create<FarmerStoreState>()(
               ...(currentFilters.farm_name && { farm_name: currentFilters.farm_name }),
               ...(currentFilters.email && { email: currentFilters.email }),
               ...(currentFilters.phone && { phone: currentFilters.phone }),
+              ...(currentFilters.region_id && { region_id: currentFilters.region_id }),
+              ...(currentFilters.retailer_id && { retailer_id: currentFilters.retailer_id }),
+              ...(currentFilters.dealer_id && { dealer_id: currentFilters.dealer_id }),
             });
 
             const response = await api.get<FarmerListResponse>(

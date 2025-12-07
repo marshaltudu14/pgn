@@ -225,13 +225,13 @@ describe('useEmployeeStore', () => {
       store.setPagination(2, 10);
 
       await store.fetchEmployees({
-        primary_region: 'North',
+        assigned_regions: ['region-1', 'region-2'],
         sort_by: 'first_name',
         sort_order: 'asc'
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/employees?page=2&limit=10&search=John&search_field=human_readable_user_id&employment_status%5B%5D=ACTIVE&primary_region=North&sort_by=first_name&sort_order=asc',
+        '/api/employees?page=2&limit=10&search=John&search_field=human_readable_user_id&employment_status%5B%5D=ACTIVE&assigned_regions%5B%5D=region-1&assigned_regions%5B%5D=region-2&sort_by=first_name&sort_order=asc',
         {
           headers: {
             'Content-Type': 'application/json',
@@ -579,7 +579,7 @@ describe('useEmployeeStore', () => {
       store.setFilters({
         search: 'test',
         status: 'ACTIVE',
-        primaryRegion: 'North',
+        assigned_regions: ['region-1'],
         sortBy: 'first_name',
         sortOrder: 'asc'
       });

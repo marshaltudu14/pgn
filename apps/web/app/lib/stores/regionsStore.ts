@@ -36,6 +36,7 @@ interface RegionsStore {
   deleteRegion: (id: string) => Promise<void>;
   fetchStates: () => Promise<void>;
   searchRegions: (searchTerm: string, params?: Omit<RegionListParams, 'search'>) => Promise<void>;
+  refreshRegionStats: (regionIds?: string[]) => Promise<void>;
   setFilters: (filters: Partial<RegionListParams>) => void;
   setPagination: (page?: number, itemsPerPage?: number) => void;
   clearError: () => void;
@@ -65,7 +66,7 @@ export const useRegionsStore = create<RegionsStore>()(
       },
       filters: {
         page: 1,
-        limit: 10,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
       },
@@ -285,6 +286,49 @@ export const useRegionsStore = create<RegionsStore>()(
             error: error instanceof Error ? error.message : 'Failed to search regions',
             isLoading: false,
           });
+        }
+      },
+
+      // Refresh region statistics for real-time updates
+      refreshRegionStats: async (regionIds?: string[]) => {
+        try {
+          const queryParams = new URLSearchParams();
+          if (regionIds && regionIds.length > 0) {
+            queryParams.append('region_ids', JSON.stringify(regionIds));
+          }
+
+          const response = await fetch(`/api/regions/assign?${queryParams.toString()}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to refresh region statistics');
+          }
+
+          const result = await response.json();
+
+          if (result.success && result.data) {
+            set(state => {
+              // Update employee counts for the affected regions
+              const updatedRegions = state.regions.map(region => {
+                const updatedStats = result.data.find((stats: any) => stats.id === region.id);
+                if (updatedStats) {
+                  return {
+                    ...region,
+                    employee_count: updatedStats.employee_count,
+                  };
+                }
+                return region;
+              });
+
+              return {
+                regions: updatedRegions,
+              };
+            });
+          }
+        } catch (error) {
+          console.error('Error refreshing region stats:', error);
         }
       },
 

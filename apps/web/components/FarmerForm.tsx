@@ -67,6 +67,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
 
   const [openRetailer, setOpenRetailer] = useState(false);
   const [retailerSearchQuery, setRetailerSearchQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState(farmer?.region_id || '');
 
   const form = useForm<FarmerFormData>({
     defaultValues: {
@@ -450,8 +451,11 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
                 />
 
                 <RegionSelector
-                  value={form.watch('region_id')}
-                  onValueChange={(value) => form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true })}
+                  value={selectedRegion}
+                  onValueChange={(value) => {
+                    setSelectedRegion(value);
+                    form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true });
+                  }}
                   regions={transformedRegions}
                   isLoading={regionsLoading}
                   onSearch={searchRegions}

@@ -5,6 +5,7 @@ import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders } from './utils/errorHandling';
 
 
+
 interface EmployeeState {
   employees: Employee[];
   selectedEmployee: Employee | null;
@@ -22,7 +23,7 @@ interface EmployeeState {
     search: string;
     searchField: SearchFieldType;
     status: EmploymentStatus | 'all';
-    primaryRegion?: string;
+    assigned_regions?: string[];
     sortBy: string;
     sortOrder: 'asc' | 'desc';
   };
@@ -53,7 +54,7 @@ interface EmployeeFilters {
   search?: string;
   searchField?: SearchFieldType;
   status?: EmploymentStatus | 'all';
-  primaryRegion?: string;
+  assigned_regions?: string[];
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -74,10 +75,10 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   },
   filters: {
     search: '',
-    searchField: 'human_readable_user_id',
+    searchField: 'first_name',
     status: 'all',
-    sortBy: 'created_at',
-    sortOrder: 'desc',
+    sortBy: 'first_name',
+    sortOrder: 'asc',
   },
 
   fetchEmployees: async (params?: EmployeeListParams) => {
@@ -90,7 +91,7 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
         search: params?.search || filters.search || undefined,
         search_field: params?.search_field || filters.searchField,
         employment_status: params?.employment_status || (filters.status !== 'all' ? [filters.status as EmploymentStatus] : undefined),
-        primary_region: params?.primary_region || filters.primaryRegion,
+        assigned_regions: params?.assigned_regions || filters.assigned_regions,
         sort_by: params?.sort_by || filters.sortBy,
         sort_order: params?.sort_order || filters.sortOrder,
       };
@@ -106,7 +107,12 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
           queryString.append('employment_status[]', status);
         });
       }
-      if (queryParams.primary_region) queryString.set('primary_region', queryParams.primary_region);
+      if (queryParams.assigned_regions && queryParams.assigned_regions.length > 0) {
+        // Add each region as separate array parameter for proper API validation
+        queryParams.assigned_regions.forEach(regionId => {
+          queryString.append('assigned_regions[]', regionId);
+        });
+      }
       if (queryParams.sort_by) queryString.set('sort_by', queryParams.sort_by);
       if (queryParams.sort_order) queryString.set('sort_order', queryParams.sort_order);
 
@@ -375,14 +381,15 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   },
 
   clearFilters: () => {
+    const currentFilters = get().filters;
     set({
       filters: {
         search: '',
-        searchField: 'human_readable_user_id',
+        searchField: 'first_name',
         status: 'all',
-        primaryRegion: undefined,
-        sortBy: 'created_at',
-        sortOrder: 'desc',
+        assigned_regions: currentFilters.assigned_regions, // Preserve the selected regions
+        sortBy: 'first_name',
+        sortOrder: 'asc',
       },
     });
   },

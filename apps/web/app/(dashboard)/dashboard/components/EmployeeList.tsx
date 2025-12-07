@@ -54,6 +54,7 @@ export function EmployeeList({
 
   const getBatteryIcon = (level?: number) => {
     if (level === undefined || level === null) return <Battery className="h-4 w-4 text-gray-300" />;
+    // Level is already a percentage (0-100), no need to divide
     if (level > 80) return <BatteryFull className="h-4 w-4 text-green-500" />;
     if (level > 40) return <BatteryMedium className="h-4 w-4 text-yellow-500" />;
     return <BatteryLow className="h-4 w-4 text-red-500" />;
@@ -127,14 +128,14 @@ export function EmployeeList({
             <div className="flex items-center justify-between text-xs text-muted-foreground mt-0.5 pl-10">
               <div className="flex items-center gap-2">
                  <div className="flex items-center gap-1" title="Battery Level">
-                    {getBatteryIcon(batteryLevel ? batteryLevel / 100 : undefined)}
+                    {getBatteryIcon(batteryLevel)}
                     <span>{batteryLevel !== undefined ? `${Math.round(batteryLevel)}%` : '--'}</span>
                  </div>
                  
-                 {attendance?.checkInTime && (
-                   <div className="flex items-center gap-1" title="Check In Time">
+                 {attendance?.lastLocationUpdate && (
+                   <div className="flex items-center gap-1" title="Last Location Update Time">
                      <Clock className="h-3.5 w-3.5" />
-                     <span>{new Date(attendance.checkInTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                     <span>{new Date(attendance.lastLocationUpdate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                    </div>
                  )}
               </div>

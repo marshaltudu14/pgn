@@ -67,6 +67,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
 
   const [openDealer, setOpenDealer] = useState(false);
   const [dealerSearchQuery, setDealerSearchQuery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState(retailer?.region_id || '');
 
   const form = useForm<RetailerFormData>({
     defaultValues: {
@@ -450,8 +451,11 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                 />
 
                 <RegionSelector
-                  value={form.watch('region_id')}
-                  onValueChange={(value) => form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true })}
+                  value={selectedRegion}
+                  onValueChange={(value) => {
+                    setSelectedRegion(value);
+                    form.setValue('region_id', value, { shouldValidate: true, shouldDirty: true });
+                  }}
                   regions={transformedRegions}
                   isLoading={regionsLoading}
                   onSearch={searchRegions}

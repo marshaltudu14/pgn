@@ -5,6 +5,7 @@ import { Dealer, DealerFilters, DealerInsert, DealerUpdate, DealerListResponse }
 import { api, ApiResponse } from '@/services/api-client';
 import { API_ENDPOINTS } from '@/constants/api';
 import { handleMobileApiResponse, transformApiErrorMessage } from './utils/errorHandling';
+import { useRegionStore } from './region-store';
 
 interface DealerStoreState {
   // Data state
@@ -100,6 +101,7 @@ export const useDealerStore = create<DealerStoreState>()(
               ...(currentFilters.shop_name && { shop_name: currentFilters.shop_name }),
               ...(currentFilters.email && { email: currentFilters.email }),
               ...(currentFilters.phone && { phone: currentFilters.phone }),
+              ...(currentFilters.region_id && { region_id: currentFilters.region_id }),
             });
 
             const response = await api.get<DealerListResponse>(

@@ -1356,21 +1356,10 @@ export const useAttendance = create<AttendanceStoreState>()(
             get().setBatteryLevel(batteryLevel);
 
             if (!currentAttendanceId) {
-              console.warn('[AttendanceStore] No attendance ID, skipping location update');
               return;
             }
 
-            // Debug: Check if user is authenticated
-            const authStore = useAuth.getState();
-            console.log('[AttendanceStore] Auth state before location update:', {
-              isAuthenticated: authStore.isAuthenticated,
-              hasToken: !!authStore.token,
-              hasUser: !!authStore.user,
-              attendanceId: currentAttendanceId
-            });
-
             // Call API with attendance ID
-            console.log(`[AttendanceStore] Sending location update to: /attendance/${currentAttendanceId}/location-update`);
             const response = await api.post(`/attendance/${currentAttendanceId}/location-update`, {
               location: {
                 latitude: location.latitude,
@@ -1381,11 +1370,9 @@ export const useAttendance = create<AttendanceStoreState>()(
               batteryLevel,
             });
 
-            console.log('[AttendanceStore] Location update successful:', response);
-
           } catch (error) {
-            console.error('[AttendanceStore] Location update failed:', error);
-            // We don't set global error here to avoid disrupting the UI for background tasks
+            // Let the offline queue handle network errors
+            // Don't set global error here to avoid disrupting the UI for background tasks
           }
         },
 

@@ -25,6 +25,7 @@ export default function RegionsManagementClient() {
     deleteRegion,
     fetchRegions,
     searchRegions,
+    refreshRegionStats,
     setFilters,
     setPagination,
     clearError,
@@ -34,6 +35,7 @@ export default function RegionsManagementClient() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
 
   // Load initial data only once
   useEffect(() => {
@@ -65,7 +67,7 @@ export default function RegionsManagementClient() {
 
   
   // Handle sort changes
-  const handleSortChange = (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => {
+  const handleSortChange = (sortBy: 'state' | 'city' | 'employee_count', sortOrder: 'asc' | 'desc') => {
     setFilters({ sort_by: sortBy, sort_order: sortOrder, page: 1 });
     if (searchTerm.trim()) {
       searchRegions(searchTerm.trim(), { ...filters, sort_by: sortBy, sort_order: sortOrder, page: 1 });
@@ -77,6 +79,20 @@ export default function RegionsManagementClient() {
   // Handle clear search
   const handleClearSearch = () => {
     setSearchTerm('');
+  };
+
+  // Handle refresh stats
+  const handleRefreshStats = async () => {
+    setIsRefreshingStats(true);
+    try {
+      await refreshRegionStats();
+      toast.success('Employee counts refreshed successfully');
+    } catch (error) {
+      console.error('Failed to refresh stats:', error);
+      toast.error('Failed to refresh employee counts');
+    } finally {
+      setIsRefreshingStats(false);
+    }
   };
 
   // Handle region creation
@@ -203,6 +219,8 @@ export default function RegionsManagementClient() {
         onDelete={handleDeleteRegion}
         onPageChange={handlePageChange}
         onSortChange={handleSortChange}
+        onRefreshStats={handleRefreshStats}
+        isRefreshing={isRefreshingStats}
       />
 
       {/* Create Region Modal */}

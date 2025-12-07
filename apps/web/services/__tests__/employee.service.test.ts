@@ -249,7 +249,7 @@ describe('Employee Service', () => {
       phone: '+1234567890',
       employment_status: 'ACTIVE' as EmploymentStatus,
       can_login: true,
-      assigned_cities: [{ city: 'Test City', state: 'Test State' }],
+      assigned_cities: [{ id: 'test-region-1', city: 'Test City', state: 'Test State' }],
       password: 'securePassword123',
     };
 
@@ -1889,14 +1889,14 @@ describe('Employee Service', () => {
 
   describe('updateRegionalAssignments', () => {
     const regionalAssignment = {
-      assigned_cities: [{ city: 'North City', district: 'North District', state: 'North State' }],
+      assigned_cities: [{ city: 'North City', id: 'north-region-1', state: 'North State' }],
     };
 
     it('should update assigned_regions field', async () => {
       // Mock the database response for updateEmployee called within updateRegionalAssignments
       const mockUpdatedEmployee = {
         id: 'emp-123',
-        assigned_cities: [{ city: 'North City', district: 'North District', state: 'North State' }],
+        assigned_cities: [{ city: 'North City', id: 'north-region-1', state: 'North State' }],
         updated_at: new Date().toISOString()
       };
 
@@ -1921,7 +1921,7 @@ describe('Employee Service', () => {
       const updateCall = mockSupabaseClient.from().update;
       expect(updateCall).toHaveBeenCalledWith(
         expect.objectContaining({
-          assigned_cities: [{ city: 'North City', district: 'North District', state: 'North State' }],
+          assigned_cities: [{ city: 'North City', id: 'north-region-1', state: 'North State' }],
           updated_at: expect.any(String)
         })
       );
@@ -1929,13 +1929,13 @@ describe('Employee Service', () => {
 
     it('should handle partial regional assignment updates', async () => {
       const partialAssignment = {
-        assigned_cities: [{ city: 'East City', district: 'East District', state: 'East State' }]
+        assigned_cities: [{ city: 'East City', id: 'east-region-1', state: 'East State' }]
       };
 
       // Mock the database response
       const mockUpdatedEmployee = {
         id: 'emp-123',
-        assigned_cities: [{ city: 'East City', district: 'East District', state: 'East State' }],
+        assigned_cities: [{ city: 'East City', id: 'east-region-1', state: 'East State' }],
         updated_at: new Date().toISOString()
       };
 
@@ -1960,7 +1960,7 @@ describe('Employee Service', () => {
       const updateCall = mockSupabaseClient.from().update;
       expect(updateCall).toHaveBeenCalledWith(
         expect.objectContaining({
-          assigned_cities: [{ city: 'East City', district: 'East District', state: 'East State' }],
+          assigned_cities: [{ city: 'East City', id: 'east-region-1', state: 'East State' }],
           updated_at: expect.any(String)
         })
       );

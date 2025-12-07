@@ -15,6 +15,8 @@ import {
   handleMobileApiResponse,
   parseAuthErrorCode
 } from './utils/errorHandling';
+import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
+import { useAttendance } from './attendance-store';
 
 interface AuthStoreState {
   // Authentication state
@@ -38,6 +40,9 @@ interface AuthStoreState {
   logout: () => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
   setLoading: (loading: boolean) => void;
+
+  // Emergency checkout
+  handleEmergencyCheckoutOnLogout: () => Promise<void>;
 
   // Token management
   initializeAuth: () => Promise<void>;
@@ -312,6 +317,10 @@ export const useAuth = create<AuthStoreState>()(
               throw new Error('No authentication token found');
             }
 
+            // Handle emergency checkout if user is checked in
+            // This must be done BEFORE calling the logout API to ensure we have valid token
+            await get().handleEmergencyCheckoutOnLogout();
+
             // Call logout API
             const response = await api.post(API_ENDPOINTS.LOGOUT, { token: authToken });
 
@@ -342,6 +351,9 @@ export const useAuth = create<AuthStoreState>()(
             return { success: true };
           } catch (error) {
             console.error('❌ Logout failed:', error);
+
+            // Still perform emergency checkout even if logout API fails
+            await get().handleEmergencyCheckoutOnLogout();
 
             // Still clear local tokens on error
             await get().clearLocalTokens();
@@ -557,6 +569,9 @@ export const useAuth = create<AuthStoreState>()(
 
         // Handle session expiration
         handleSessionExpiration: async (): Promise<void> => {
+          // Handle emergency checkout if user is checked in
+          await get().handleEmergencyCheckoutOnLogout();
+
           // Clear all auth state
           set({
             isAuthenticated: false,
@@ -569,6 +584,36 @@ export const useAuth = create<AuthStoreState>()(
 
           // Also clear stored tokens
           await get().clearLocalTokens();
+        },
+
+        // Handle emergency checkout on logout
+        handleEmergencyCheckoutOnLogout: async (): Promise<void> => {
+          try {
+            // Check if location tracking is active (user is checked in)
+            const isTracking = locationTrackingServiceNotifee.isTrackingActive();
+
+            if (isTracking) {
+              // Get emergency data from location service
+              const emergencyData = await locationTrackingServiceNotifee.getEmergencyData();
+
+              if (emergencyData && emergencyData.trackingActive && emergencyData.attendanceId) {
+                // Use the attendance store's emergency checkout function
+                const attendanceStore = useAttendance.getState();
+                await attendanceStore.emergencyCheckOut({
+                  attendanceId: emergencyData.attendanceId,
+                  reason: 'User logged out during active session',
+                  lastLocation: emergencyData.lastLocationUpdate,
+                  lastKnownTime: emergencyData.lastKnownTime
+                });
+              }
+
+              // Stop location tracking
+              await locationTrackingServiceNotifee.stopTracking('User logged out');
+            }
+          } catch (error) {
+            console.error('[AuthStore] Error during emergency checkout on logout:', error);
+            // Don't fail the logout if emergency checkout fails
+          }
         },
 
         // Reset store

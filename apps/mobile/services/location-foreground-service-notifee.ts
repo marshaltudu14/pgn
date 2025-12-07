@@ -331,9 +331,10 @@ class LocationTrackingServiceNotifee {
         }
       }, UPDATE_INTERVAL_MS);
 
-      // Set interval for 1 second notification updates (countdown) - only if notification exists
+      // Set interval for 1 second notification updates (countdown) - continue even if location pauses
+      // This ensures the timer keeps showing as long as we have a notification
       this.notificationUpdateInterval = setInterval(() => {
-        if (this.state.isTracking && this.state.notificationId) {
+        if (this.state.notificationId && this.state.employeeName) {
           this.updateNotificationCountdown().catch(error => {
             console.error('[LocationTrackingServiceNotifee] Notification update failed:', error);
           });
@@ -546,13 +547,18 @@ class LocationTrackingServiceNotifee {
   // Update notification with countdown
   private async updateNotificationCountdown(): Promise<void> {
     try {
-      if (!this.state.isTracking || !this.state.notificationId) {
+      // Keep updating countdown even if location service temporarily stops
+      // as long as we have a notificationId and employeeName
+      if (!this.state.notificationId || !this.state.employeeName) {
         return;
       }
 
       // Decrement countdown
       if (this.nextSyncCountdown > 0) {
         this.nextSyncCountdown--;
+      } else {
+        // Reset countdown when it reaches 0
+        this.nextSyncCountdown = LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS;
       }
 
       // Notify UI components of countdown change
@@ -561,18 +567,19 @@ class LocationTrackingServiceNotifee {
       }
 
       // Update notification with new countdown
+      // Use simplified title and body as requested
       await notifee.displayNotification({
         id: this.state.notificationId,
-        title: `PGN Location Tracking - ${this.state.employeeName}`,
-        body: `Tracking location every ${LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS} seconds. Next sync in ${this.nextSyncCountdown}s`,
+        title: `PGN - ${this.state.employeeName}`,
+        body: `Next sync in ${this.nextSyncCountdown}s`,
         android: {
           channelId: LOCATION_TRACKING_CONFIG.NOTIFICATION.CHANNEL_ID,
-          asForegroundService: true,
-          ongoing: true,
-          foregroundServiceTypes: [
+          asForegroundService: this.state.isTracking, // Only as foreground service if actively tracking
+          ongoing: this.state.isTracking, // Only ongoing if actively tracking
+          foregroundServiceTypes: this.state.isTracking ? [
             AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION,
             AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
-          ],
+          ] : undefined,
         },
       });
     } catch (error) {
@@ -597,8 +604,8 @@ class LocationTrackingServiceNotifee {
       const notificationId = `location-tracking-${employeeName}-${Date.now()}`;
       await notifee.displayNotification({
         id: notificationId,
-        title: `PGN Location Tracking - ${employeeName}`,
-        body: `Tracking location every ${LOCATION_TRACKING_CONFIG.UPDATE_INTERVAL_SECONDS} seconds during work hours`,
+        title: `PGN - ${employeeName}`,
+        body: `Next sync in ${this.nextSyncCountdown}s`,
         android: {
           channelId,
           asForegroundService: true,
@@ -630,8 +637,19 @@ class LocationTrackingServiceNotifee {
       // Update state first to prevent further operations
       this.state.isTracking = false;
 
-      // Clear tracking intervals using helper method
-      this.cleanupIntervals();
+      // Clear only tracking intervals, keep notification interval for countdown display
+      if (this.trackingInterval) {
+        clearInterval(this.trackingInterval);
+        this.trackingInterval = null;
+      }
+      if (this.permissionMonitoringInterval) {
+        clearInterval(this.permissionMonitoringInterval);
+        this.permissionMonitoringInterval = null;
+      }
+      if (this.batteryMonitoringInterval) {
+        clearInterval(this.batteryMonitoringInterval);
+        this.batteryMonitoringInterval = null;
+      }
 
       // Stop the foreground service (with error handling)
       try {

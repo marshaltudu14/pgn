@@ -766,7 +766,7 @@ export class AttendanceService {
         batteryLevel: request.batteryLevel || 0
       };
 
-      // Only add if movement exceeds threshold (50 meters) or it's the first point
+      // Only add if movement exceeds threshold (0 meters = add all points) or it's the first point
       let shouldAddPoint = currentPath.length === 0;
 
       if (currentPath.length > 0) {
@@ -775,7 +775,7 @@ export class AttendanceService {
           lastPoint.lat, lastPoint.lng,
           request.location.latitude, request.location.longitude
         );
-        shouldAddPoint = distance > 50; // 50 meter threshold
+        shouldAddPoint = distance > 0; // 0 meter threshold - adds all points
       }
 
       let updatedPath: PathData[] = currentPath;

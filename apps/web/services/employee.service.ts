@@ -217,6 +217,19 @@ export async function createEmployee(
       throw new Error(errorMessage);
     }
 
+    // Step 5: Create region assignments if provided
+    if (createData.assigned_cities && createData.assigned_cities.length > 0) {
+      // Use the updateRegionalAssignments function to handle junction table
+      try {
+        await updateRegionalAssignments(authUserId!, {
+          assigned_cities: createData.assigned_cities as CityAssignment[]
+        });
+      } catch (regionError) {
+        // Log error but don't fail the entire operation
+        console.error(`Failed to create region assignments for employee ${authUserId}:`, regionError);
+      }
+    }
+
     return data; // Return the database row directly
   } catch (error) {
     console.error('Error in createEmployee:', error);
@@ -327,13 +340,32 @@ export async function listEmployees(
       search,
       search_field = 'human_readable_user_id',
       employment_status,
-      primary_region,
       assigned_regions,
       sort_by = 'created_at',
       sort_order = 'desc',
     } = params;
 
-    let query = supabase.from('employees').select('*', { count: 'exact' });
+    // If no regions are selected, return empty list as per requirement
+    if (!assigned_regions || assigned_regions.length === 0) {
+      return {
+        employees: [],
+        total: 0,
+        page: 1,
+        limit,
+        hasMore: false,
+      };
+    }
+
+    // Build query with INNER JOIN to employee_regions
+    // This ensures we only return employees who are assigned to the selected regions
+    let query = supabase
+      .from('employees')
+      .select(`
+        *,
+        employee_regions!inner (
+          region_id
+        )
+      `, { count: 'exact' });
 
     // Apply search filter based on specific field using case-insensitive search
     if (search) {
@@ -362,14 +394,9 @@ export async function listEmployees(
       query = query.in('employment_status', employment_status);
     }
 
-    // Apply primary region filter
-    if (primary_region) {
-      query = query.eq('primary_region', primary_region);
-    }
-
-    // Apply assigned regions filter
+    // Apply assigned regions filter using junction table
     if (assigned_regions && assigned_regions.length > 0) {
-      query = query.contains('assigned_regions', assigned_regions);
+      query = query.in('employee_regions.region_id', assigned_regions);
     }
 
     // Apply sorting
@@ -445,6 +472,9 @@ export async function updateEmployee(
       throw new Error(`Failed to update employee: ${error.message}`);
     }
 
+    // Note: Region assignments are handled separately via updateRegionalAssignments function
+    // This allows for more flexible updates without affecting junction table unnecessarily
+
     return data; // Return the database row directly
   } catch (error) {
     console.error('Error in updateEmployee:', error);
@@ -480,20 +510,110 @@ export async function changeEmploymentStatus(
 }
 
 /**
- * Update regional assignments
+ * Update regional assignments using junction table
  */
 export async function updateRegionalAssignments(
   id: string,
   regionalAssignment: { assigned_cities?: CityAssignment[] }
 ): Promise<Employee> {
-  try {
-    const updateData: UpdateEmployeeRequest = {
-      assigned_cities: regionalAssignment.assigned_cities,
-    };
+  const supabase = await createClient();
 
-    return await updateEmployee(id, updateData);
+  try {
+    // Start a transaction
+    const { error: deleteError } = await supabase
+      .from('employee_regions')
+      .delete()
+      .eq('employee_id', id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete existing region assignments: ${deleteError.message}`);
+    }
+
+    // Insert new assignments if provided
+    if (regionalAssignment.assigned_cities && regionalAssignment.assigned_cities.length > 0) {
+      const newAssignments = regionalAssignment.assigned_cities.map(city => ({
+        employee_id: id,
+        region_id: city.id,
+        assigned_at: new Date().toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from('employee_regions')
+        .insert(newAssignments);
+
+      if (insertError) {
+        throw new Error(`Failed to insert new region assignments: ${insertError.message}`);
+      }
+    }
+
+    // Also update the assigned_cities JSONB for backward compatibility
+    const { error: updateError } = await supabase
+      .from('employees')
+      .update({
+        assigned_cities: regionalAssignment.assigned_cities as unknown as Json,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw new Error(`Failed to update employee assigned_cities: ${updateError.message}`);
+    }
+
+    // Return the updated employee
+    const { data: employee, error: fetchError } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch updated employee: ${fetchError.message}`);
+    }
+
+    return employee;
   } catch (error) {
     console.error('Error in updateRegionalAssignments:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get employee's assigned regions
+ */
+export async function getEmployeeRegions(
+  employeeId: string
+): Promise<{ id: string; city: string; state: string }[]> {
+  const supabase = await createClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('employee_regions')
+      .select(`
+        region_id,
+        regions (
+          id,
+          city,
+          state
+        )
+      `)
+      .eq('employee_id', employeeId);
+
+    if (error) {
+      throw new Error(`Failed to fetch employee regions: ${error.message}`);
+    }
+
+    return data?.map(item => {
+      const region = item.regions as { id: string; city: string; state: string };
+      return {
+        id: region.id,
+        city: region.city,
+        state: region.state
+      };
+    }) || [];
+  } catch (error) {
+    console.error('Error in getEmployeeRegions:', error);
     throw error;
   }
 }

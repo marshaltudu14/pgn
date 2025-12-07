@@ -52,6 +52,11 @@ export const API_ENDPOINTS = {
   FARMERS: '/farmers',
   FARMER_BY_ID: '/farmers', // Base for /farmers/[id]
 
+  // Region endpoints
+  REGIONS: '/regions',
+  REGIONS_SEARCH: '/regions/search',
+  REGIONS_STATES: '/regions/states',
+
   // Note: Face recognition endpoints will be added in Phase 4
   // GENERATE_FACE_EMBEDDING: "/face-recognition/generate-embedding", // TODO: Add in Phase 4
 } as const;

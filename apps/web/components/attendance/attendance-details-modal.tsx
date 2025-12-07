@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Battery, X, Crosshair } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -82,6 +82,7 @@ export function AttendanceDetailsModal({
   const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('PENDING');
   const [verificationNotes, setVerificationNotes] = useState('');
   const [isUpdatingVerification, setIsUpdatingVerification] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState<{ url: string; type: 'check-in' | 'check-out' } | null>(null);
   const mapRef = useRef<AttendancePathMapRef>(null);
 
   
@@ -104,6 +105,46 @@ export function AttendanceDetailsModal({
     } finally {
       setIsUpdatingVerification(false);
     }
+  };
+
+  // Function to center map on check-in location
+  const centerMapOnCheckIn = () => {
+    if (mapRef.current && attendanceRecord?.checkInLocation) {
+      // Check if the map component has a centerOnLocation method or use setView
+      const mapEl = document.querySelector('.leaflet-container');
+      if (mapEl) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const map = (mapEl as any)?._leaflet_map;
+        if (map && attendanceRecord.checkInLocation.latitude && attendanceRecord.checkInLocation.longitude) {
+          map.setView([
+            Number(attendanceRecord.checkInLocation.latitude),
+            Number(attendanceRecord.checkInLocation.longitude)
+          ], 17);
+        }
+      }
+    }
+  };
+
+  // Function to center map on check-out location
+  const centerMapOnCheckOut = () => {
+    if (mapRef.current && attendanceRecord?.checkOutLocation) {
+      const mapEl = document.querySelector('.leaflet-container');
+      if (mapEl) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const map = (mapEl as any)?._leaflet_map;
+        if (map && attendanceRecord.checkOutLocation.latitude && attendanceRecord.checkOutLocation.longitude) {
+          map.setView([
+            Number(attendanceRecord.checkOutLocation.latitude),
+            Number(attendanceRecord.checkOutLocation.longitude)
+          ], 17);
+        }
+      }
+    }
+  };
+
+  // Function to handle image click for full-screen view
+  const handleImageClick = (url: string, type: 'check-in' | 'check-out') => {
+    setFullScreenImage({ url, type });
   };
 
   if (!attendanceRecord) return null;
@@ -245,11 +286,7 @@ export function AttendanceDetailsModal({
                   </div>
                 )}
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Status</span>
-                  <StatusBadge status={attendanceRecord.status} />
-                </div>
-                <div className="flex justify-between items-center py-1">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Verification</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Verification Status</span>
                   <StatusBadge status={attendanceRecord.verificationStatus || 'PENDING'} />
                 </div>
                 {attendanceRecord.device && (
@@ -282,7 +319,8 @@ export function AttendanceDetailsModal({
                           alt="Check-in selfie"
                           width={128}
                           height={128}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => handleImageClick(attendanceRecord.checkInSelfieUrl!, 'check-in')}
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
@@ -324,6 +362,20 @@ export function AttendanceDetailsModal({
                       </div>
                     </div>
 
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Battery Level</span>
+                      <div className="flex items-center gap-2">
+                        <Battery className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {attendanceRecord.batteryLevelAtCheckIn !== undefined && attendanceRecord.batteryLevelAtCheckIn !== null
+                            ? `${attendanceRecord.batteryLevelAtCheckIn}%`
+                            : mapPathData.length > 0 && mapPathData[0]?.batteryLevel !== undefined
+                            ? `${mapPathData[0].batteryLevel}%`
+                            : '--'}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="flex justify-between items-start py-1">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Location</span>
                       <div className="text-right max-w-xs">
@@ -337,6 +389,17 @@ export function AttendanceDetailsModal({
                               <div className="text-xs text-gray-500 dark:text-gray-500">
                                 Accuracy: ±{attendanceRecord.checkInLocation.accuracy}m
                               </div>
+                            )}
+                            {hasValidCheckInLocation && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={centerMapOnCheckIn}
+                                className="mt-1 h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Center on map"
+                              >
+                                <Crosshair className="h-3 w-3" />
+                              </Button>
                             )}
                           </>
                         ) : (
@@ -368,7 +431,8 @@ export function AttendanceDetailsModal({
                           alt="Check-out selfie"
                           width={128}
                           height={128}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                          onClick={() => handleImageClick(attendanceRecord.checkOutSelfieUrl!, 'check-out')}
                           onLoad={() => {
                           }}
                           onError={(e) => {
@@ -416,6 +480,20 @@ export function AttendanceDetailsModal({
                       </div>
                     </div>
 
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Battery Level</span>
+                      <div className="flex items-center gap-2">
+                        <Battery className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {attendanceRecord.batteryLevelAtCheckOut !== undefined && attendanceRecord.batteryLevelAtCheckOut !== null
+                            ? `${attendanceRecord.batteryLevelAtCheckOut}%`
+                            : mapPathData.length > 0 && mapPathData[mapPathData.length - 1]?.batteryLevel !== undefined
+                            ? `${mapPathData[mapPathData.length - 1].batteryLevel}%`
+                            : '--'}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="flex justify-between items-start py-1">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Location</span>
                       <div className="text-right max-w-xs">
@@ -429,6 +507,17 @@ export function AttendanceDetailsModal({
                               <div className="text-xs text-gray-500 dark:text-gray-500">
                                 Accuracy: ±{attendanceRecord.checkOutLocation.accuracy}m
                               </div>
+                            )}
+                            {attendanceRecord.checkOutLocation.latitude && attendanceRecord.checkOutLocation.longitude && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={centerMapOnCheckOut}
+                                className="mt-1 h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Center on map"
+                              >
+                                <Crosshair className="h-3 w-3" />
+                              </Button>
                             )}
                           </>
                         ) : (
@@ -552,6 +641,53 @@ export function AttendanceDetailsModal({
           </div>
         </TwoColumnDialogRight>
       </TwoColumnDialogContent>
+
+      {/* Full-Screen Image Modal */}
+      {fullScreenImage && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black bg-opacity-95 flex items-center justify-center cursor-pointer"
+          onClick={() => setFullScreenImage(null)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh]">
+            {/* Close button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFullScreenImage(null);
+              }}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors p-2"
+            >
+              <X className="h-8 w-8" />
+            </button>
+
+            {/* Image title */}
+            <div className="absolute -top-12 left-0 text-white">
+              <h3 className="text-lg font-semibold capitalize">
+                {fullScreenImage.type} Selfie
+              </h3>
+              <p className="text-sm text-gray-300">
+                {attendanceRecord?.humanReadableEmployeeId || attendanceRecord?.employeeId} •
+                {format(new Date(attendanceRecord!.date), 'MMMM dd, yyyy')}
+              </p>
+            </div>
+
+            {/* Image */}
+            <Image
+              src={fullScreenImage.url}
+              alt={`${fullScreenImage.type} selfie full screen`}
+              width={1920}
+              height={1080}
+              className="max-w-full max-h-full object-contain cursor-default"
+              onClick={(e) => e.stopPropagation()}
+              onError={() => {
+                console.error('Full-screen image failed to load');
+                setFullScreenImage(null);
+              }}
+              unoptimized
+            />
+          </div>
+        </div>
+      )}
     </TwoColumnDialog>
   );
 }

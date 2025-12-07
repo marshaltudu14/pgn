@@ -101,6 +101,7 @@ export interface AuthenticationResult {
 
 // City-State assignment for regional assignments
 export interface CityAssignment {
+  id: string; // Region ID
   city: string;
   state: string;
 }
@@ -143,7 +144,6 @@ export interface EmployeeListParams {
   search?: string;
   search_field?: 'human_readable_user_id' | 'first_name' | 'last_name' | 'email' | 'phone';
   employment_status?: EmploymentStatus[];
-  primary_region?: string;
   assigned_regions?: string[];
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
@@ -155,6 +155,15 @@ export interface EmployeeListResponse {
   page: number;
   limit: number;
   hasMore: boolean;
+}
+
+export interface EmployeeFilters {
+  search: string;
+  searchField: 'human_readable_user_id' | 'first_name' | 'last_name' | 'email' | 'phone';
+  status: EmploymentStatus | 'all';
+  assigned_regions?: string[];
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
 }
 
 // User ID generation types
@@ -250,7 +259,6 @@ export const EmployeeListParamsSchema = z.object({
   search: z.string().optional(),
   search_field: z.enum(['human_readable_user_id', 'first_name', 'last_name', 'email', 'phone']).optional(),
   employment_status: z.array(EmploymentStatusSchema).optional(),
-  primary_region: z.string().optional(),
   assigned_regions: z.array(z.string()).optional(),
   sort_by: z.string().default('created_at'),
   sort_order: z.enum(['asc', 'desc']).default('desc'),

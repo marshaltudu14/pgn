@@ -20,6 +20,7 @@ import {
   CityAssignment,
 } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
+import { getEmployeeRegions } from '@/services/employee.service';
 import {
   Loader2,
   Save,
@@ -72,16 +73,33 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
   useEffect(() => {
     if (employee && open) {
-      form.reset({
-        first_name: employee.first_name,
-        last_name: employee.last_name,
-        email: employee.email,
-        phone: employee.phone || '',
-        employment_status: employee.employment_status as EmploymentStatus,
-        can_login: employee.can_login ?? true,
-        assigned_cities: (employee.assigned_cities as unknown as CityAssignment[]) || [],
-        password: '', // Don't pre-fill password
-        confirm_password: '', // Don't pre-fill confirm password
+      // Fetch employee regions with IDs
+      getEmployeeRegions(employee.id).then(regions => {
+        form.reset({
+          first_name: employee.first_name,
+          last_name: employee.last_name,
+          email: employee.email,
+          phone: employee.phone || '',
+          employment_status: employee.employment_status as EmploymentStatus,
+          can_login: employee.can_login ?? true,
+          assigned_cities: regions || [],
+          password: '', // Don't pre-fill password
+          confirm_password: '', // Don't pre-fill confirm password
+        });
+      }).catch(error => {
+        console.error('Failed to fetch employee regions:', error);
+        // Fallback to old data without IDs
+        form.reset({
+          first_name: employee.first_name,
+          last_name: employee.last_name,
+          email: employee.email,
+          phone: employee.phone || '',
+          employment_status: employee.employment_status as EmploymentStatus,
+          can_login: employee.can_login ?? true,
+          assigned_cities: (employee.assigned_cities as unknown as CityAssignment[]) || [],
+          password: '', // Don't pre-fill password
+          confirm_password: '', // Don't pre-fill confirm password
+        });
       });
     } else if (!employee && open) {
       form.reset({
@@ -146,12 +164,25 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           phone: cleanPhone,
           employment_status: data.employment_status,
           can_login: data.can_login,
-          assigned_cities: data.assigned_cities,
           // Include password only if it's provided when editing
           ...(data.password && { password: data.password }),
         };
 
+        // Update employee basic info
         result = await updateEmployee(employee.id, updateData);
+
+        // If update successful and regions changed, update region assignments
+        if (result.success && data.assigned_cities) {
+          try {
+            const { updateRegionalAssignments } = await import('@/services/employee.service');
+            await updateRegionalAssignments(employee.id, {
+              assigned_cities: data.assigned_cities as CityAssignment[]
+            });
+          } catch (regionError) {
+            console.error('Failed to update region assignments:', regionError);
+            // Don't fail the entire operation if region update fails
+          }
+        }
 
         if (result.success) {
           toast.success('Employee updated successfully!');
@@ -168,7 +199,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           phone: cleanPhone,
           employment_status: data.employment_status,
           can_login: data.can_login,
-          assigned_cities: data.assigned_cities,
+          assigned_cities: data.assigned_cities as CityAssignment[],
           password: data.password!,
         };
 

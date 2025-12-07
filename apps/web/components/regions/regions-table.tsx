@@ -20,7 +20,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from '@/components/ui/pagination';
-import { Edit, Trash2, MapPin, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit, Trash2, MapPin, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface PaginationState {
@@ -39,7 +39,9 @@ interface RegionsTableProps {
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
   _onPageSizeChange?: (size: number) => void;
-  onSortChange: (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => void;
+  onSortChange: (sortBy: 'state' | 'city' | 'employee_count', sortOrder: 'asc' | 'desc') => void;
+  onRefreshStats?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function RegionsTable({
@@ -52,9 +54,11 @@ export function RegionsTable({
   onPageChange,
   _onPageSizeChange,
   onSortChange,
+  onRefreshStats,
+  isRefreshing = false,
 }: RegionsTableProps) {
 
-  const handleSort = (sortBy: 'state' | 'city') => {
+  const handleSort = (sortBy: 'state' | 'city' | 'employee_count') => {
     const newSortOrder =
       filters.sort_by === sortBy && filters.sort_order === 'asc' ? 'desc' : 'asc';
     onSortChange(sortBy, newSortOrder);
@@ -130,10 +134,22 @@ export function RegionsTable({
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">
           {pagination.totalItems} region{pagination.totalItems !== 1 ? 's' : ''} total
         </h3>
+        {onRefreshStats && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefreshStats}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh Employee Counts'}
+          </Button>
+        )}
       </div>
 
       <Table>
@@ -175,6 +191,23 @@ export function RegionsTable({
             </TableHead>
             <TableHead className="w-[200px]">State Slug</TableHead>
             <TableHead className="w-[200px]">City Slug</TableHead>
+            <TableHead className="w-[120px]">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => handleSort('employee_count')}
+              >
+                Employees
+                {filters.sort_by === 'employee_count' && (
+                  filters.sort_order === 'asc' ? (
+                    <ChevronUp className="ml-1 h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  )
+                )}
+              </Button>
+            </TableHead>
             <TableHead className="w-[120px] text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -195,6 +228,9 @@ export function RegionsTable({
                 <TableCell>
                   <Skeleton className="h-4 w-[180px]" />
                 </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[80px]" />
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Skeleton className="h-8 w-[60px]" />
@@ -205,7 +241,7 @@ export function RegionsTable({
             ))
           ) : regions.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-8">
+              <TableCell colSpan={6} className="text-center py-8">
                 <div className="flex flex-col items-center gap-2">
                   <MapPin className="h-12 w-12 text-muted-foreground" />
                   <div>
@@ -224,6 +260,16 @@ export function RegionsTable({
                 <TableCell>{region.city}</TableCell>
                 <TableCell className="text-muted-foreground">{region.state_slug}</TableCell>
                 <TableCell className="text-muted-foreground">{region.city_slug}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {region.employee_count || 0}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {region.employee_count === 1 ? 'employee' : 'employees'}
+                    </span>
+                  </div>
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button

@@ -6,6 +6,7 @@
 
 'use client';
 
+import { cn } from '@/lib/utils';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import {
   Select,
@@ -44,12 +45,14 @@ interface SearchFieldSelectorProps {
   value?: SearchFieldType;
   onValueChange?: (value: SearchFieldType) => void;
   disabled?: boolean;
+  className?: string;
 }
 
 export function SearchFieldSelector({
   value,
   onValueChange,
-  disabled = false
+  disabled = false,
+  className
 }: SearchFieldSelectorProps) {
   const store = useEmployeeStore();
   const filters = store?.filters;
@@ -73,7 +76,7 @@ export function SearchFieldSelector({
       disabled={disabled}
     >
       <SelectTrigger
-        className="w-48 cursor-pointer"
+        className={cn("cursor-pointer", className || "w-48")}
         aria-label="Select search field"
         data-testid="search-field-selector-trigger"
       >

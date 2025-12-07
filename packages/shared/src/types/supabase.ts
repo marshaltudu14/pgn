@@ -189,6 +189,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_regions: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          employee_id: string
+          region_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          employee_id: string
+          region_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          employee_id?: string
+          region_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_regions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_regions_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       employees: {
         Row: {
           assigned_cities: Json | null

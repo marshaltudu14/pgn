@@ -17,10 +17,8 @@ import {
   EmploymentStatus,
   UpdateEmployeeRequest,
   CreateEmployeeRequest,
-  CityAssignment,
 } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
-import { getEmployeeRegions } from '@/services/employee.service';
 import {
   Loader2,
   Save,
@@ -30,7 +28,6 @@ import {
 // Import sub-components
 import { PersonalInfoForm } from './employee-form/PersonalInfoForm';
 import { EmploymentDetailsForm } from './employee-form/EmploymentDetailsForm';
-import { RegionalAssignmentForm } from './employee-form/RegionalAssignmentForm';
 import { AuditInfoForm } from './employee-form/AuditInfoForm';
 
 import {
@@ -64,7 +61,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       phone: '',
       employment_status: 'ACTIVE',
       can_login: true,
-      assigned_cities: [],
       password: '',
       confirm_password: '',
     },
@@ -73,34 +69,22 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
   useEffect(() => {
     if (employee && open) {
-      // Fetch employee regions with IDs
-      getEmployeeRegions(employee.id).then(regions => {
-        form.reset({
-          first_name: employee.first_name,
-          last_name: employee.last_name,
-          email: employee.email,
-          phone: employee.phone || '',
-          employment_status: employee.employment_status as EmploymentStatus,
-          can_login: employee.can_login ?? true,
-          assigned_cities: regions || [],
-          password: '', // Don't pre-fill password
-          confirm_password: '', // Don't pre-fill confirm password
-        });
-      }).catch(error => {
-        console.error('Failed to fetch employee regions:', error);
-        // Fallback to old data without IDs
-        form.reset({
-          first_name: employee.first_name,
-          last_name: employee.last_name,
-          email: employee.email,
-          phone: employee.phone || '',
-          employment_status: employee.employment_status as EmploymentStatus,
-          can_login: employee.can_login ?? true,
-                password: '', // Don't pre-fill password
-          confirm_password: '', // Don't pre-fill confirm password
-        });
+      // Reset form with employee data
+      form.reset({
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        email: employee.email,
+        phone: employee.phone || '',
+        employment_status: employee.employment_status as EmploymentStatus,
+        can_login: employee.can_login ?? true,
+        password: '', // Don't pre-fill password
+        confirm_password: '' // Don't pre-fill confirm password
       });
-    } else if (!employee && open) {
+    }
+  }, [employee, open, form]);
+
+  useEffect(() => {
+    if (!employee && open) {
       form.reset({
         first_name: '',
         last_name: '',
@@ -108,7 +92,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         phone: '',
         employment_status: 'ACTIVE',
         can_login: true,
-        assigned_cities: [],
         password: '',
         confirm_password: '',
       });
@@ -170,19 +153,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         // Update employee basic info
         result = await updateEmployee(employee.id, updateData);
 
-        // If update successful and regions changed, update region assignments
-        if (result.success && data.assigned_cities) {
-          try {
-            const { updateRegionalAssignments } = await import('@/services/employee.service');
-            await updateRegionalAssignments(employee.id, {
-              assigned_cities: data.assigned_cities as CityAssignment[]
-            });
-          } catch (regionError) {
-            console.error('Failed to update region assignments:', regionError);
-            // Don't fail the entire operation if region update fails
-          }
-        }
-
         if (result.success) {
           toast.success('Employee updated successfully!');
           onOpenChange(false);
@@ -198,7 +168,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           phone: cleanPhone,
           employment_status: data.employment_status,
           can_login: data.can_login,
-          assigned_cities: data.assigned_cities as CityAssignment[],
           password: data.password!,
         };
 
@@ -235,7 +204,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           <div className="hidden lg:block space-y-8">
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
-            <RegionalAssignmentForm form={form} />
             {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 
@@ -243,7 +211,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           <div className="lg:hidden space-y-4">
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
-            <RegionalAssignmentForm form={form} />
             {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 

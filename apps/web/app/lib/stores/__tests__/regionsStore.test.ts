@@ -348,6 +348,7 @@ describe('Regions Store', () => {
   describe('updateRegion', () => {
     const mockUpdateRequest: UpdateRegionRequest = {
       city: 'San Diego',
+      state: 'California',
     };
 
     const mockUpdatedRegion = createMockRegion({

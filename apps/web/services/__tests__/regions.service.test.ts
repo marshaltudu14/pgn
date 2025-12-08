@@ -5,9 +5,8 @@
 import {
   CreateRegionRequest,
   Region,
-  RegionFilter,
+  RegionSchema,
   RegionListParams,
-  RegionListResponse,
   StateOption,
   UpdateRegionRequest,
 } from '@pgn/shared';
@@ -93,6 +92,7 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      employee_count: 5,
     };
 
     it('should create a new region successfully', async () => {
@@ -175,7 +175,7 @@ describe('Regions Service', () => {
   });
 
   describe('getRegions', () => {
-    const mockRegions: Region[] = [
+    const mockRegions: RegionSchema[] = [
       {
         id: 'region-1',
         state: 'California',
@@ -185,7 +185,7 @@ describe('Regions Service', () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         employee_count: 5,
-      },
+              },
       {
         id: 'region-2',
         state: 'California',
@@ -539,8 +539,7 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: { ...mockRegion, employee_count: undefined }, // Database returns without employee_count
-          error: null,
+          data: mockRegion,           error: null,
         }),
       };
 
@@ -641,6 +640,7 @@ describe('Regions Service', () => {
   describe('updateRegion', () => {
     const updateData: UpdateRegionRequest = {
       city: 'San Diego',
+      state: 'California',
     };
 
     const existingRegion: Region = {
@@ -654,21 +654,12 @@ describe('Regions Service', () => {
       employee_count: 3,
     };
 
-    const updatedRegion = {
-      ...existingRegion,
-      city: 'San Diego',
-      city_slug: 'san-diego',
-      updated_at: new Date().toISOString(),
-    };
-
     const updatedRegionFromDB = {
       ...existingRegion,
       city: 'San Diego',
       city_slug: 'san-diego',
       updated_at: new Date().toISOString(),
     };
-    // Remove employee_count since it's not returned by the database directly
-    delete (updatedRegionFromDB as any).employee_count;
 
     it('should update region with provided fields', async () => {
       // Mock the getRegionById call by setting up the mock to return the existing region
@@ -676,7 +667,7 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          data: existingRegion,
           error: null,
         }),
       };
@@ -699,8 +690,7 @@ describe('Regions Service', () => {
         eq: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: updatedRegionFromDB, // Database returns without employee_count
-          error: null,
+          data: updatedRegionFromDB,           error: null,
         }),
       };
 
@@ -746,7 +736,7 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          data: existingRegion,
           error: null,
         }),
       };
@@ -795,7 +785,7 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          data: existingRegion,
           error: null,
         }),
       };
@@ -867,7 +857,6 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      employee_count: 3,
     };
 
     it('should delete region successfully', async () => {
@@ -876,7 +865,7 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          data: existingRegion,
           error: null,
         }),
       };
@@ -938,7 +927,7 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          data: existingRegion,
           error: null,
         }),
       };
@@ -1050,7 +1039,7 @@ describe('Regions Service', () => {
   });
 
   describe('searchRegions', () => {
-    const mockRegions: Region[] = [
+    const mockRegions: RegionSchema[] = [
       {
         id: 'region-1',
         state: 'California',
@@ -1060,7 +1049,7 @@ describe('Regions Service', () => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         employee_count: 5,
-      },
+              },
       {
         id: 'region-2',
         state: 'Texas',
@@ -1069,8 +1058,8 @@ describe('Regions Service', () => {
         city_slug: 'austin',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        employee_count: 2,
-      },
+        employee_count: 3,
+              },
     ];
 
     it('should return search results with default parameters', async () => {
@@ -1079,8 +1068,7 @@ describe('Regions Service', () => {
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: [{ ...mockRegions[0], employee_count: undefined }], // Database returns without employee_count
-          error: null,
+          data: [mockRegions[0]],           error: null,
           count: 1,
         }),
       };
@@ -1126,7 +1114,7 @@ describe('Regions Service', () => {
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: [{ ...mockRegions[0], employee_count: undefined }], // Only Los Angeles matches
+          data: [mockRegions[0]], // Only Los Angeles matches
           error: null,
           count: 1,
         }),

@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Employee, EmploymentStatus, EmployeeListParams } from '@pgn/shared';
+import { EmploymentStatus, EmployeeListParams, EmployeeWithRegions } from '@pgn/shared';
 
 type SearchFieldType = EmployeeListParams['search_field'];
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
@@ -35,8 +35,8 @@ import SearchFieldSelector from '@/components/search-field-selector';
 import { Search, Filter, Plus, Edit, Eye, X } from 'lucide-react';
 
 interface EmployeeListProps {
-  onEmployeeSelect?: (employee: Employee) => void;
-  onEmployeeEdit?: (employee: Employee) => void;
+  onEmployeeSelect?: (employee: EmployeeWithRegions) => void;
+  onEmployeeEdit?: (employee: EmployeeWithRegions) => void;
   onEmployeeCreate?: () => void;
 }
 
@@ -306,8 +306,31 @@ export function EmployeeList({
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">
-                        -
+                      <div className="text-sm max-w-40">
+                        {(() => {
+                          // DEBUG: Log regions data for this employee
+                          console.log(`[DEBUG COMPONENT] Employee ${employee.id} regions in component:`, {
+                            assigned_regions: employee.assigned_regions,
+                            has_regions: (employee.assigned_regions?.regions?.length || 0) > 0
+                          });
+
+                          return employee.assigned_regions && employee.assigned_regions.regions && employee.assigned_regions.regions.length > 0 ? (
+                            <div>
+                              {employee.assigned_regions.regions.slice(0, 2).map((region) => (
+                                <div key={region.id} className="text-xs">
+                                  {region.city}, {region.state}
+                                </div>
+                              ))}
+                              {employee.assigned_regions.total_count > 2 && (
+                                <div className="text-xs text-muted-foreground">
+                                  +{employee.assigned_regions.total_count - 2} more
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">No regions</span>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest } from '@pgn/shared';
+import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest, EmployeeWithRegions } from '@pgn/shared';
 import { useUIStore } from './uiStore';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders } from './utils/errorHandling';
@@ -7,8 +7,8 @@ import { handleApiResponse, getAuthHeaders } from './utils/errorHandling';
 
 
 interface EmployeeState {
-  employees: Employee[];
-  selectedEmployee: Employee | null;
+  employees: EmployeeWithRegions[];
+  selectedEmployee: EmployeeWithRegions | null;
   loading: boolean;
   error: string | null;
   pagination: {
@@ -29,12 +29,12 @@ interface EmployeeState {
   };
 
   fetchEmployees: (params?: EmployeeListParams) => Promise<void>;
-  createEmployee: (employeeData: CreateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: Employee }>;
-  updateEmployee: (id: string, employeeData: UpdateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: Employee }>;
+  createEmployee: (employeeData: CreateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: EmployeeWithRegions }>;
+  updateEmployee: (id: string, employeeData: UpdateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: EmployeeWithRegions }>;
   deleteEmployee: (id: string) => Promise<{ success: boolean; error?: string }>;
   resetEmployeePassword: (id: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   updateEmploymentStatus: (id: string, request: ChangeEmploymentStatusRequest) => Promise<{ success: boolean; error?: string }>;
-  setSelectedEmployee: (employee: Employee | null) => void;
+  setSelectedEmployee: (employee: EmployeeWithRegions | null) => void;
   setFilters: (filters: Partial<EmployeeFilters>) => void;
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearError: () => void;
@@ -134,6 +134,20 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       }
 
       const data: EmployeeListResponse = result.data as EmployeeListResponse;
+
+      // DEBUG: Log the API response data
+      console.log('[DEBUG STORE] Raw API response data:', data);
+      console.log('[DEBUG STORE] Employees count:', data.employees?.length);
+
+      // DEBUG: Log each employee's regions data
+      data.employees?.forEach((emp, index) => {
+        console.log(`[DEBUG STORE] Employee ${index + 1} (${emp.id}):`, {
+          first_name: emp.first_name,
+          last_name: emp.last_name,
+          assigned_regions: emp.assigned_regions
+        });
+      });
+
       const totalPages = Math.ceil(data.total / data.limit);
 
       set({

@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { MapPin, X, ChevronDown, Check, Loader2 } from 'lucide-react';
-import { type EmployeeFormData, CityAssignment } from '@pgn/shared';
+import { type EmployeeFormData } from '@pgn/shared';
 import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { cn } from '@/lib/utils';
 
@@ -61,8 +61,8 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, fetchRegions, searchRegions]);
 
-  // Get form values
-  const selectedCities = (form.watch('assigned_cities') as CityAssignment[]) || [];
+  // Get form values - assigned_regions is an array of region IDs (strings)
+  const selectedRegionIds = (form.watch('assigned_regions') as string[]) || [];
 
   // Create flat list of city pairs for combobox
   const allCityPairs = useMemo(() => {
@@ -87,42 +87,40 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
     return allCityPairs;
   }, [allCityPairs]);
 
-  // Handle city selection
+  // Handle city selection - toggle region ID selection
   const handleCitySelect = (city: string, state: string, regionId?: string) => {
-    const currentCities = [...selectedCities];
-    const existingIndex = currentCities.findIndex(
-      c => c.city === city && c.state === state
-    );
+    const currentRegions = [...selectedRegionIds];
+    const targetRegionId = regionId || regions.find(r => r.city === city && r.state === state)?.id;
+
+    if (!targetRegionId) {
+      console.error(`Region ID not found for ${city}, ${state}`);
+      return;
+    }
+
+    const existingIndex = currentRegions.indexOf(targetRegionId);
 
     if (existingIndex >= 0) {
       // Remove if already selected
-      currentCities.splice(existingIndex, 1);
+      currentRegions.splice(existingIndex, 1);
     } else {
-      // Add if not selected - ensure we always have a region ID
-      if (regionId) {
-        currentCities.push({ id: regionId, city, state });
-      } else {
-        // Find the region ID from the regions data
-        const region = regions.find(r => r.city === city && r.state === state);
-        if (!region) {
-          console.error(`Region not found for ${city}, ${state}`);
-          return;
-        }
-        currentCities.push({ id: region.id, city, state });
-      }
+      // Add if not selected
+      currentRegions.push(targetRegionId);
     }
 
-    form.setValue('assigned_cities', currentCities, { shouldValidate: true, shouldDirty: true });
+    form.setValue('assigned_regions', currentRegions, { shouldValidate: true, shouldDirty: true });
 
     // Close the popover after selection
     setOpenCity(false);
   };
 
-  // Remove city
-  const removeCity = (index: number) => {
-    const currentCities = [...selectedCities];
-    currentCities.splice(index, 1);
-    form.setValue('assigned_cities', currentCities, { shouldValidate: true, shouldDirty: true });
+  // Remove region
+  const removeRegion = (regionId: string) => {
+    const currentRegions = [...selectedRegionIds];
+    const index = currentRegions.indexOf(regionId);
+    if (index >= 0) {
+      currentRegions.splice(index, 1);
+      form.setValue('assigned_regions', currentRegions, { shouldValidate: true, shouldDirty: true });
+    }
   };
 
   
@@ -159,8 +157,8 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
         {/* Cities Selection */}
         <FormField
           control={form.control}
-          name="assigned_cities"
-          render={({ field }) => (
+          name="assigned_regions"
+          render={({ field: _field }) => (
             <FormItem>
               <FormLabel>Assigned Cities</FormLabel>
               <FormControl>
@@ -174,7 +172,6 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                       role="combobox"
                       className="w-full justify-between h-12"
                       type="button"
-                      onClick={() => field.onChange(selectedCities)}
                       disabled={loading}
                     >
                       <div className="flex items-center gap-2">
@@ -183,8 +180,8 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                             <Loader2 className="h-4 w-4 animate-spin" />
                             <span>Loading cities...</span>
                           </>
-                        ) : selectedCities.length > 0 ? (
-                          `${selectedCities.length} cit${selectedCities.length > 1 ? 'ies' : 'y'} selected`
+                        ) : selectedRegionIds.length > 0 ? (
+                          `${selectedRegionIds.length} cit${selectedRegionIds.length > 1 ? 'ies' : 'y'} selected`
                         ) : (
                           "Select cities..."
                         )}
@@ -217,9 +214,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                             </CommandEmpty>
                             <CommandGroup>
                           {allAvailableCities.map((pair) => {
-                            const isSelected = selectedCities.some(
-                              (c: { city: string; state: string }) => c.city === pair.city && c.state === pair.state
-                            );
+                            const isSelected = selectedRegionIds.includes(pair.id);
 
                             return (
                               <CommandItem
@@ -247,42 +242,47 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                   </PopoverContent>
                 </Popover>
               </FormControl>
-              {selectedCities.length > 0 && (
+              {selectedRegionIds.length > 0 && (
                 <div className="mt-4">
                   <div className="text-sm font-medium text-foreground mb-2">
-                    Selected Cities ({selectedCities.length})
+                    Selected Cities ({selectedRegionIds.length})
                   </div>
                   <div className="border rounded-md p-3 bg-muted/20 max-h-40 overflow-y-auto">
                     <div className="space-y-2">
-                      {selectedCities.map((cityAssignment: { city: string; state: string }, index: number) => (
-                        <div
-                          key={`${cityAssignment.city}-${cityAssignment.state}-${index}`}
-                          className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">
-                              {cityAssignment.city}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {cityAssignment.state}
-                            </span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              removeCity(index);
-                            }}
+                      {selectedRegionIds.map((regionId) => {
+                        const region = regions.find(r => r.id === regionId);
+                        if (!region) return null;
+
+                        return (
+                          <div
+                            key={region.id}
+                            className="flex items-center justify-between p-2 rounded-md bg-background hover:bg-muted/50 transition-colors"
                           >
-                            <X className="h-3 w-3" />
-                            <span className="sr-only">Remove {cityAssignment.city}, {cityAssignment.state}</span>
-                          </Button>
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium">
+                                {region.city}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {region.state}
+                              </span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-destructive/20 hover:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                removeRegion(region.id);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                              <span className="sr-only">Remove {region.city}, {region.state}</span>
+                            </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

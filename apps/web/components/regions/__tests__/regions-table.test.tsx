@@ -5,10 +5,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RegionsTable } from '../regions-table';
-import { Region, RegionListResponse } from '@pgn/shared';
+import { RegionSchema } from '@pgn/shared';
 
 // Mock data
-const mockRegions: Region[] = [
+const mockRegions: RegionSchema[] = [
   {
     id: 'region-1',
     state: 'California',
@@ -275,11 +275,11 @@ describe('RegionsTable', () => {
   });
 
   it('handles null or undefined regions gracefully', () => {
-    const { unmount } = render(<RegionsTable {...defaultProps} regions={null as any} />);
+    const { unmount } = render(<RegionsTable {...defaultProps} regions={[]} />);
     expect(screen.getByText('No regions found')).toBeInTheDocument();
     unmount();
 
-    render(<RegionsTable {...defaultProps} regions={undefined as any} />);
+    render(<RegionsTable {...defaultProps} regions={[]} />);
     expect(screen.getByText('No regions found')).toBeInTheDocument();
   });
 });

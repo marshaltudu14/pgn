@@ -3,10 +3,10 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RegionFormModal } from '../region-form-modal';
-import { CreateRegionRequest, UpdateRegionRequest, StateOption } from '@pgn/shared';
+import { StateOption } from '@pgn/shared';
 
 // Mock data
 const mockStates: StateOption[] = [
@@ -99,7 +99,6 @@ describe('RegionFormModal', () => {
     render(<RegionFormModal {...defaultProps} />);
 
     const cityInput = screen.getByPlaceholderText('Enter city name');
-    const submitButton = screen.getByRole('button', { name: 'Create' });
 
     // Note: Due to jsdom limitations with Radix Select, we'll simulate the form submission
     // by manually calling the onSubmit handler with the expected data
@@ -117,7 +116,6 @@ describe('RegionFormModal', () => {
   });
 
   it('submits edit form correctly', async () => {
-    const user = userEvent.setup();
     render(<RegionFormModal {...defaultProps} initialData={mockInitialData} title="Edit Region" />);
 
     // Since we can't reliably test the initial data population in jsdom
@@ -192,7 +190,6 @@ describe('RegionFormModal', () => {
   });
 
   it('handles state selection correctly', async () => {
-    const user = userEvent.setup();
     render(<RegionFormModal {...defaultProps} />);
 
     // Verify the state select is rendered

@@ -29,6 +29,7 @@ const getEmployeesHandler = withApiValidation(
       const params = (request as ValidatedQueryRequest).validatedQuery;
 
       const { listEmployees } = await import('@/services/employee.service');
+
       const result = await listEmployees(params);
 
       const response = NextResponse.json({

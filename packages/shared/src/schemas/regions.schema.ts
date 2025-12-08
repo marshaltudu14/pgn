@@ -17,7 +17,8 @@ export interface CreateRegionRequest {
 }
 
 export interface UpdateRegionRequest {
-  city?: string;
+  state: string;
+  city: string;
 }
 
 export interface RegionFilter {
@@ -65,13 +66,9 @@ export const createRegionSchema = z.object({
 });
 
 export const updateRegionSchema = z.object({
-  city: z.string().min(1).max(100).optional(),
-}).refine(
-  (data) => data.city !== undefined,
-  {
-    message: "City must be provided",
-  }
-);
+  state: z.string().min(1, 'State is required').max(100),
+  city: z.string().min(1, 'City is required').max(100),
+});
 
 export const regionsQuerySchema = z.object({
   page: z.coerce.number().min(1).optional().default(1),

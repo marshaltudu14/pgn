@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import {
   type Region,
+  type RegionSchema,
   type CreateRegionRequest,
   type UpdateRegionRequest,
   type RegionListParams,
@@ -12,7 +13,7 @@ import {
 /**
  * Create a new region
  */
-export async function createRegion(data: CreateRegionRequest): Promise<Region> {
+export async function createRegion(data: CreateRegionRequest): Promise<RegionSchema> {
   const supabase = await createClient();
 
   // Create region - Supabase trigger will generate slugs automatically
@@ -37,7 +38,11 @@ export async function createRegion(data: CreateRegionRequest): Promise<Region> {
     throw new Error('Failed to create region');
   }
 
-  return region;
+  // Transform the data to include employee_count as a flat property (0 for new regions)
+  return {
+    ...region,
+    employee_count: 0
+  };
 }
 
 /**
@@ -114,7 +119,7 @@ export async function getRegions(
   }
 
   // Transform the data to include employee_count as a flat property
-  const regions = (data || []).map(region => ({
+  const regions: RegionSchema[] = (data || []).map(region => ({
     ...region,
     employee_count: employeeCounts[region.id] || 0
   }));
@@ -137,7 +142,7 @@ export async function getRegions(
 /**
  * Get region by ID
  */
-export async function getRegionById(id: string): Promise<Region | null> {
+export async function getRegionById(id: string): Promise<RegionSchema | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -179,7 +184,7 @@ export async function getRegionById(id: string): Promise<Region | null> {
 export async function updateRegion(
   id: string,
   data: UpdateRegionRequest
-): Promise<Region> {
+): Promise<RegionSchema> {
   const supabase = await createClient();
 
   // Get existing region first
@@ -189,11 +194,10 @@ export async function updateRegion(
   }
 
   // Prepare update data - Supabase trigger will update slugs automatically
-  const updateData: Partial<Region> = {};
-
-  if (data.city) {
-    updateData.city = data.city;
-  }
+  const updateData: Partial<Region> = {
+    state: data.state,
+    city: data.city,
+  };
 
   // Update region - Database unique constraint will handle duplicates
   const { data: updatedRegion, error } = await supabase
@@ -214,7 +218,20 @@ export async function updateRegion(
     throw new Error('Failed to update region');
   }
 
-  return updatedRegion;
+  // Get employee count for the updated region
+  let employeeCount = 0;
+  const { data: counts } = await supabase
+    .from('employee_regions')
+    .select('region_id')
+    .eq('region_id', id);
+
+  employeeCount = (counts || []).length;
+
+  // Transform the data to include employee_count as a flat property
+  return {
+    ...updatedRegion,
+    employee_count: employeeCount
+  };
 }
 
 /**
@@ -318,7 +335,7 @@ export async function searchRegions(
   }
 
   // Transform the data to include employee_count as a flat property
-  const regions = (data || []).map(region => ({
+  const regions: RegionSchema[] = (data || []).map(region => ({
     ...region,
     employee_count: employeeCounts[region.id] || 0
   }));

@@ -79,10 +79,9 @@ export default function RegionsManagementClient() {
   // Handle clear search
   const handleClearSearch = () => {
     setSearchTerm('');
-    // Immediately fetch all regions when search is cleared
-    setTimeout(() => {
-      fetchRegions();
-    }, 100);
+    // Clear filters and fetch all regions
+    setFilters({ page: 1 });
+    fetchRegions({ page: 1 });
   };
 
   
@@ -232,6 +231,7 @@ export default function RegionsManagementClient() {
         open={!!editingRegion}
         onOpenChange={(open) => !open && setEditingRegion(null)}
         onSubmit={(data) => editingRegion && handleUpdateRegion(editingRegion.id, {
+          state: data.state,
           city: data.city
         })}
         isSubmitting={isUpdating}

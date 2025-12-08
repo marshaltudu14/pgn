@@ -6,7 +6,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Employee } from '@pgn/shared';
+import { EmployeeWithRegions } from '@pgn/shared';
 import { EmployeeList } from '@/components/employee-list';
 import { EmployeeQuickView } from '@/components/employee-quick-view';
 import { useRouter } from 'next/navigation';
@@ -14,9 +14,9 @@ import { useRouter } from 'next/navigation';
 export default function EmployeeListClient() {
   const router = useRouter();
   const [showQuickView, setShowQuickView] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithRegions | null>(null);
 
-  const handleEmployeeSelect = (employee: Employee | null) => {
+  const handleEmployeeSelect = (employee: EmployeeWithRegions | null) => {
     if (employee) {
       setSelectedEmployee(employee);
       setShowQuickView(true);
@@ -26,7 +26,7 @@ export default function EmployeeListClient() {
     }
   };
 
-  const handleEmployeeEdit = async (employee: Employee) => {
+  const handleEmployeeEdit = async (employee: EmployeeWithRegions) => {
     try {
       // Navigate to the form page with edit mode
       await router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);
@@ -47,7 +47,7 @@ export default function EmployeeListClient() {
   };
 
 
-  const handleQuickViewEdit = async (employee: Employee) => {
+  const handleQuickViewEdit = async (employee: EmployeeWithRegions) => {
     try {
       // Navigate to the form page with edit mode
       await router.push(`/dashboard/employees/form?id=${employee.id}&mode=edit`);

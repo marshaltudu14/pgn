@@ -5,6 +5,11 @@ import { BaseApiResponseSchema } from '../schemas/base';
 
 export type EmploymentStatus = 'ACTIVE' | 'SUSPENDED' | 'RESIGNED' | 'TERMINATED' | 'ON_LEAVE';
 
+export interface CityAssignment {
+  city: string;
+  state: string;
+}
+
 export interface JWTPayload {
   sub: string; // Employee human readable ID (PGN-2024-0001)
   employeeId: string; // Internal employee UUID (now same as auth.users.id)
@@ -100,11 +105,6 @@ export interface AuthenticationResult {
 }
 
 // City-State assignment for regional assignments
-export interface CityAssignment {
-  id: string; // Region ID
-  city: string;
-  state: string;
-}
 
 // API Request/Response types (not database types)
 export interface CreateEmployeeRequest {
@@ -114,7 +114,7 @@ export interface CreateEmployeeRequest {
   phone: string;
   employment_status?: EmploymentStatus;
   can_login?: boolean;
-  assigned_cities?: CityAssignment[];
+  assigned_regions?: string[];
   password?: string;
 }
 
@@ -125,7 +125,7 @@ export interface UpdateEmployeeRequest {
   phone?: string;
   employment_status?: EmploymentStatus;
   can_login?: boolean;
-  assigned_cities?: CityAssignment[];
+  assigned_regions?: string[];
 }
 
 export interface ChangeEmploymentStatusRequest {
@@ -149,8 +149,31 @@ export interface EmployeeListParams {
   sort_order?: 'asc' | 'desc';
 }
 
+export type EmployeeRow = Database['public']['Tables']['employees']['Row'];
+
+export interface EmployeeWithRegions extends EmployeeRow {
+  assigned_regions?: {
+    regions: Array<{
+      id: string;
+      city: string;
+      state: string;
+    }>;
+    total_count: number;
+  };
+}
+
+// Type for joined employee_regions query result
+export interface EmployeeRegionWithDetails {
+  region_id: string;
+  regions: {
+    id: string;
+    city: string;
+    state: string;
+  }[];
+}
+
 export interface EmployeeListResponse {
-  employees: Database['public']['Tables']['employees']['Row'][];
+  employees: EmployeeWithRegions[];
   total: number;
   page: number;
   limit: number;
@@ -201,10 +224,7 @@ export const CreateEmployeeRequestSchema = z.object({
   phone: z.string().min(10, 'Phone number must be at least 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
   employment_status: EmploymentStatusSchema.default('ACTIVE'),
   can_login: z.boolean().default(true),
-  assigned_cities: z.array(z.object({
-    city: z.string(),
-    state: z.string(),
-  })).optional(), // Make city assignment optional
+  assigned_regions: z.array(z.string().uuid()).optional(), // Array of region IDs
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 });
 
@@ -215,12 +235,9 @@ export const EmployeeFormSchema = z.object({
   phone: z.string().min(10, 'Phone number must be exactly 10 digits').regex(/^[0-9]{10}$/, 'Phone number must be exactly 10 digits'),
   employment_status: z.enum(['ACTIVE', 'SUSPENDED', 'RESIGNED', 'TERMINATED', 'ON_LEAVE']),
   can_login: z.boolean(),
-  assigned_cities: z.array(z.object({
-    city: z.string(),
-    state: z.string(),
-  })).optional(), // Make city assignment optional
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
   confirm_password: z.string().optional(),
+  assigned_regions: z.array(z.string().uuid()).optional(), // Array of region IDs
 }).refine((data) => {
   // Custom validation for password confirmation
   if (data.password && data.password !== data.confirm_password) {
@@ -241,10 +258,6 @@ export const UpdateEmployeeRequestSchema = z.object({
   phone: z.string().optional(),
   employment_status: EmploymentStatusSchema.optional(),
   can_login: z.boolean().optional(),
-  assigned_cities: z.array(z.object({
-    city: z.string(),
-    state: z.string(),
-  })).optional(),
 });
 
 export const ChangeEmploymentStatusRequestSchema = z.object({

@@ -9,7 +9,7 @@ import {
   ChangeEmploymentStatusRequest,
   EmployeeListParams,
   EmployeeListResponse,
-  CityAssignment,
+  EmployeeRegionWithDetails,
 } from '@pgn/shared';
 import {
   Database,
@@ -20,12 +20,7 @@ type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
 import { createClient } from '../utils/supabase/server';
-import {
-  createAuthUser,
-  resetUserPassword,
-  getUserByEmail,
-  updateUserPasswordByEmail,
-} from '../utils/supabase/admin';
+import { getSupabaseAdmin, createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
 
 /**
  * Get the next user ID sequence for the current year
@@ -216,15 +211,21 @@ export async function createEmployee(
     }
 
     // Step 5: Create region assignments if provided
-    if (createData.assigned_cities && createData.assigned_cities.length > 0) {
-      // Use the updateRegionalAssignments function to handle junction table
-      try {
-        await updateRegionalAssignments(authUserId!, {
-          assigned_cities: createData.assigned_cities as CityAssignment[]
-        });
-      } catch (regionError) {
-        // Log error but don't fail the entire operation
-        console.error(`Failed to create region assignments for employee ${authUserId}:`, regionError);
+    if (createData.assigned_regions && createData.assigned_regions.length > 0) {
+      // Create region assignments in the junction table
+      const supabase = await createClient();
+
+      for (const regionId of createData.assigned_regions) {
+        const { error } = await supabase
+          .from('employee_regions')
+          .insert({
+            employee_id: authUserId!,
+            region_id: regionId,
+          });
+
+        if (error) {
+          console.error(`Failed to assign region ${regionId} to employee ${authUserId}:`, error);
+        }
       }
     }
 
@@ -343,27 +344,24 @@ export async function listEmployees(
       sort_order = 'desc',
     } = params;
 
-    // If no regions are selected, return empty list as per requirement
-    if (!assigned_regions || assigned_regions.length === 0) {
-      return {
-        employees: [],
-        total: 0,
-        page: 1,
-        limit,
-        hasMore: false,
-      };
-    }
-
-    // Build query with INNER JOIN to employee_regions
-    // This ensures we only return employees who are assigned to the selected regions
+    // Build base query - select all employees
     let query = supabase
       .from('employees')
-      .select(`
-        *,
-        employee_regions!inner (
-          region_id
-        )
-      `, { count: 'exact' });
+      .select('*', { count: 'exact' });
+
+    // If regions are specified, filter by those regions
+    if (assigned_regions && assigned_regions.length > 0) {
+      // This inner join ensures we only return employees assigned to the selected regions
+      query = supabase
+        .from('employees')
+        .select(`
+          *,
+          employee_regions!inner (
+            region_id
+          )
+        `, { count: 'exact' })
+        .in('employee_regions.region_id', assigned_regions);
+    }
 
     // Apply search filter based on specific field using case-insensitive search
     if (search) {
@@ -392,11 +390,6 @@ export async function listEmployees(
       query = query.in('employment_status', employment_status);
     }
 
-    // Apply assigned regions filter using junction table
-    if (assigned_regions && assigned_regions.length > 0) {
-      query = query.in('employee_regions.region_id', assigned_regions);
-    }
-
     // Apply sorting
     query = query.order(sort_by, { ascending: sort_order === 'asc' });
 
@@ -413,11 +406,82 @@ export async function listEmployees(
 
     const employees = data || []; // Return database rows directly
 
+    // Fetch assigned regions for each employee (limit to 3 regions + get total count)
+    const employeesWithRegions = await Promise.all(
+      employees.map(async (employee) => {
+        // DEBUG: Log employee ID for regions query
+        console.log(`[DEBUG] Fetching regions for employee: ${employee.id}`);
+
+        // Get total count of regions for this employee
+        const { count: regionCount } = await supabase
+          .from('employee_regions')
+          .select('*', { count: 'exact', head: true })
+          .eq('employee_id', employee.id);
+
+        console.log(`[DEBUG] Region count for employee ${employee.id}:`, regionCount);
+
+        
+        // Get first 3 regions with region details
+        const { data: regionData, error: regionError } = await supabase
+          .from('employee_regions')
+          .select(`
+            region_id,
+            regions (
+              id,
+              city,
+              state
+            )
+          `)
+          .eq('employee_id', employee.id)
+          .range(0, 2) // Limit to first 3 regions
+          .order('created_at', { ascending: false });
+
+        console.log(`[DEBUG] Region data for employee ${employee.id}:`, regionData);
+        console.log(`[DEBUG] Region error for employee ${employee.id}:`, {
+          message: regionError?.message,
+          details: regionError?.details,
+          hint: regionError?.hint,
+          code: regionError?.code
+        });
+
+        const mappedRegions = (regionData as EmployeeRegionWithDetails[] || []).map((er: EmployeeRegionWithDetails) => {
+          console.log(`[DEBUG] Mapping region entry:`, er);
+          // regions is now an array, take the first element
+          const region = er.regions?.[0];
+          const mapped = {
+            id: region?.id,
+            city: region?.city,
+            state: region?.state
+          };
+          console.log(`[DEBUG] Mapped region:`, mapped);
+          return mapped;
+        }).filter(r => r.id && r.city && r.state);
+
+        console.log(`[DEBUG] Final mapped regions for employee ${employee.id}:`, mappedRegions);
+
+        const result = {
+          ...employee,
+          assigned_regions: {
+            regions: mappedRegions,
+            total_count: regionCount || 0
+          }
+        };
+
+        console.log(`[DEBUG] Final employee data with regions:`, {
+          id: result.id,
+          name: result.name,
+          assigned_regions: result.assigned_regions
+        });
+
+        return result;
+      })
+    );
+
     const total = count || 0;
     const hasMore = offset + limit < total;
 
     return {
-      employees,
+      employees: employeesWithRegions,
       total,
       page,
       limit,
@@ -506,10 +570,11 @@ export async function changeEmploymentStatus(
 
 /**
  * Update regional assignments using junction table
+ * @deprecated - Region assignments are now handled differently
  */
 export async function updateRegionalAssignments(
   id: string,
-  regionalAssignment: { assigned_cities?: CityAssignment[] }
+  regionalAssignment: { assigned_regions?: string[] }
 ): Promise<Employee> {
   const supabase = await createClient();
 
@@ -525,10 +590,10 @@ export async function updateRegionalAssignments(
     }
 
     // Insert new assignments if provided
-    if (regionalAssignment.assigned_cities && regionalAssignment.assigned_cities.length > 0) {
-      const newAssignments = regionalAssignment.assigned_cities.map(city => ({
+    if (regionalAssignment.assigned_regions && regionalAssignment.assigned_regions.length > 0) {
+      const newAssignments = regionalAssignment.assigned_regions.map(regionId => ({
         employee_id: id,
-        region_id: city.id,
+        region_id: regionId,
         assigned_at: new Date().toISOString()
       }));
 

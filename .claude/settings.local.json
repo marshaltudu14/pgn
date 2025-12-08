@@ -125,7 +125,8 @@
       "Bash(tail:*)",
       "Bash(head:*)",
       "Bash(npm list:*)",
-      "Bash(npm run dev:web:*)"
+      "Bash(npm run dev:web:*)",
+      "mcp__next-devtools__nextjs_call"
     ],
     "deny": [],
     "ask": []

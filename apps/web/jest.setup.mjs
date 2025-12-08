@@ -1,5 +1,8 @@
 // Jest setup file for Node.js environment tests
 
+// Import jest-dom for custom matchers
+import '@testing-library/jest-dom';
+
 // Polyfill Web APIs for Node.js test environment
 import { TextEncoder, TextDecoder } from 'util';
 

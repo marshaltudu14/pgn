@@ -96,6 +96,8 @@ describe('Regions Store', () => {
       error: null,
       createError: null,
       filters: {
+        page: 1,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
       },
@@ -134,6 +136,8 @@ describe('Regions Store', () => {
       expect(result.current.error).toBe(null);
       expect(result.current.createError).toBe(null);
       expect(result.current.filters).toEqual({
+        page: 1,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
       });
@@ -168,14 +172,14 @@ describe('Regions Store', () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.regions).toEqual(mockRegionsResponse);
       expect(result.current.filters).toEqual({
+        page: 1,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
-        page: 1,
-        limit: 10,
       });
       expect(result.current.error).toBe(null);
 
-      expect(fetch).toHaveBeenCalledWith('/api/regions?page=1&limit=10&sort_by=city&sort_order=asc', {
+      expect(fetch).toHaveBeenCalledWith('/api/regions?page=1&limit=20&sort_by=city&sort_order=asc', {
         method: 'GET',
         headers: mockGetAuthHeaders(),
       });
@@ -209,7 +213,7 @@ describe('Regions Store', () => {
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/regions?state=California&city=Los+Angeles&sort_by=city&sort_order=asc',
+        '/api/regions?page=1&limit=20&state=California&city=Los+Angeles&sort_by=city&sort_order=asc',
         {
           method: 'GET',
           headers: mockGetAuthHeaders(),
@@ -594,7 +598,7 @@ describe('Regions Store', () => {
       expect(result.current.regions).toEqual(mockRegions);
       expect(result.current.error).toBe(null);
 
-      expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California&page=1&limit=10&sort_by=city&sort_order=asc', {
+      expect(fetch).toHaveBeenCalledWith('/api/regions/search?q=California&page=1&limit=20&sort_by=city&sort_order=asc', {
         headers: mockGetAuthHeaders(),
       });
     });
@@ -640,6 +644,8 @@ describe('Regions Store', () => {
       });
 
       expect(result.current.filters).toEqual({
+        page: 1,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
         state: 'California',
@@ -650,6 +656,8 @@ describe('Regions Store', () => {
       });
 
       expect(result.current.filters).toEqual({
+        page: 1,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
         state: 'California',
@@ -709,6 +717,8 @@ describe('Regions Store', () => {
       });
 
       expect(result.current.filters).toEqual({
+        page: 1,
+        limit: 20,
         sort_by: 'city',
         sort_order: 'asc',
         state: 'California',

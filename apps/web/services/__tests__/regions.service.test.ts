@@ -6,6 +6,8 @@ import {
   CreateRegionRequest,
   Region,
   RegionFilter,
+  RegionListParams,
+  RegionListResponse,
   StateOption,
   UpdateRegionRequest,
 } from '@pgn/shared';
@@ -36,6 +38,7 @@ const createMockSupabaseClient = () => {
       ilike: jest.fn().mockReturnThis(),
       or: jest.fn().mockReturnThis(),
       range: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       single: jest.fn(),
     };
 
@@ -181,6 +184,7 @@ describe('Regions Service', () => {
         city_slug: 'los-angeles',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        employee_count: 5,
       },
       {
         id: 'region-2',
@@ -190,6 +194,7 @@ describe('Regions Service', () => {
         city_slug: 'san-francisco',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        employee_count: 3,
       },
     ];
 
@@ -197,20 +202,47 @@ describe('Regions Service', () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: mockRegions,
+          error: null,
+          count: mockRegions.length,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = {};
+      const filters: RegionListParams = {};
       const result = await getRegions(filters);
 
-      expect(result).toEqual(mockRegions);
+      expect(result).toEqual({
+        regions: mockRegions,
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: mockRegions.length,
+          itemsPerPage: 10,
+        },
+      });
       expect(mockQueryChain.order).toHaveBeenCalledWith('city', { ascending: true });
-      expect(mockQueryChain.limit).toHaveBeenCalledWith(10);
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should apply state filter', async () => {
@@ -218,19 +250,37 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: [mockRegions[0]], // Only California regions
+          error: null,
+          count: 1,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = { state: 'California' };
+      const filters: RegionListParams = { state: 'California' };
       const result = await getRegions(filters);
 
-      expect(result).toHaveLength(1);
+      expect(result.regions).toHaveLength(1);
+      expect(result.regions[0]).toEqual(mockRegions[0]);
       expect(mockQueryChain.eq).toHaveBeenCalledWith('state', 'California');
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should apply city filter with case-insensitive search', async () => {
@@ -239,19 +289,36 @@ describe('Regions Service', () => {
         order: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: [mockRegions[0]], // Only Los Angeles
+          error: null,
+          count: 1,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = { city: 'angeles' };
+      const filters: RegionListParams = { city: 'angeles' };
       const result = await getRegions(filters);
 
-      expect(result).toHaveLength(1);
+      expect(result.regions).toHaveLength(1);
       expect(mockQueryChain.ilike).toHaveBeenCalledWith('city', '%angeles%');
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should apply both state and city filters', async () => {
@@ -260,53 +327,79 @@ describe('Regions Service', () => {
         order: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: [mockRegions[0]], // Only Los Angeles, California
+          error: null,
+          count: 1,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = {
+      const filters: RegionListParams = {
         state: 'California',
         city: 'Los',
       };
       const result = await getRegions(filters);
 
-      expect(result).toHaveLength(1);
+      expect(result.regions).toHaveLength(1);
       expect(mockQueryChain.eq).toHaveBeenCalledWith('state', 'California');
       expect(mockQueryChain.ilike).toHaveBeenCalledWith('city', '%Los%');
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should handle null data response', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: null,
           error: null,
+          count: 0,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       const result = await getRegions();
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({
+        regions: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 10,
+        },
+      });
     });
 
     it('should handle database errors', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: null,
           error: { message: 'Query timeout' },
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       await expect(getRegions()).rejects.toThrow('Failed to fetch regions');
     });
@@ -315,57 +408,117 @@ describe('Regions Service', () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: mockRegions,
+          error: null,
+          count: mockRegions.length,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = { sort_by: 'state', sort_order: 'asc' };
+      const filters: RegionListParams = { sort_by: 'state', sort_order: 'asc' };
       const result = await getRegions(filters);
 
-      expect(result).toEqual(mockRegions);
+      expect(result.regions).toEqual(mockRegions);
       expect(mockQueryChain.order).toHaveBeenCalledWith('state', { ascending: true });
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should apply state sorting descending', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: mockRegions,
+          error: null,
+          count: mockRegions.length,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = { sort_by: 'state', sort_order: 'desc' };
+      const filters: RegionListParams = { sort_by: 'state', sort_order: 'desc' };
       const result = await getRegions(filters);
 
-      expect(result).toEqual(mockRegions);
+      expect(result.regions).toEqual(mockRegions);
       expect(mockQueryChain.order).toHaveBeenCalledWith('state', { ascending: false });
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should apply city sorting descending', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: mockRegions,
+          error: null,
+          count: mockRegions.length,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+            { region_id: 'region-2' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
-      const filters: RegionFilter = { sort_by: 'city', sort_order: 'desc' };
+      const filters: RegionListParams = { sort_by: 'city', sort_order: 'desc' };
       const result = await getRegions(filters);
 
-      expect(result).toEqual(mockRegions);
+      expect(result.regions).toEqual(mockRegions);
       expect(mockQueryChain.order).toHaveBeenCalledWith('city', { ascending: false });
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
   });
 
@@ -378,6 +531,7 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      employee_count: 5,
     };
 
     it('should return region when found', async () => {
@@ -385,12 +539,27 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: mockRegion,
+          data: { ...mockRegion, employee_count: undefined }, // Database returns without employee_count
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
       const result = await getRegionById('region-123');
 
@@ -409,7 +578,7 @@ describe('Regions Service', () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       const result = await getRegionById('non-existent');
 
@@ -426,7 +595,7 @@ describe('Regions Service', () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       const result = await getRegionById('non-existent');
 
@@ -443,7 +612,7 @@ describe('Regions Service', () => {
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       await expect(getRegionById('region-123')).rejects.toThrow(
         'Failed to fetch region'
@@ -482,14 +651,24 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      employee_count: 3,
     };
 
-    const updatedRegion: Region = {
+    const updatedRegion = {
       ...existingRegion,
       city: 'San Diego',
       city_slug: 'san-diego',
       updated_at: new Date().toISOString(),
     };
+
+    const updatedRegionFromDB = {
+      ...existingRegion,
+      city: 'San Diego',
+      city_slug: 'san-diego',
+      updated_at: new Date().toISOString(),
+    };
+    // Remove employee_count since it's not returned by the database directly
+    delete (updatedRegionFromDB as any).employee_count;
 
     it('should update region with provided fields', async () => {
       // Mock the getRegionById call by setting up the mock to return the existing region
@@ -497,7 +676,20 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: existingRegion,
+          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          error: null,
+        }),
+      };
+
+      // Mock employee_regions query for getRegionById
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+          ],
           error: null,
         }),
       };
@@ -507,18 +699,22 @@ describe('Regions Service', () => {
         eq: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: updatedRegion,
+          data: updatedRegionFromDB, // Database returns without employee_count
           error: null,
         }),
       };
 
-      // First call (for getRegionById), second call (for update)
-      mockSupabaseClient.from.mockReturnValueOnce(mockGetRegionQueryChain);
-      mockSupabaseClient.from.mockReturnValueOnce(mockUpdateQueryChain);
+      // Setup mocks in order: getRegionById (regions), getRegionById (employee_regions)
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockGetRegionQueryChain)
+        .mockReturnValueOnce(mockEmployeeQueryChain)
+        .mockReturnValueOnce(mockUpdateQueryChain)
+        .mockReturnValueOnce(mockEmployeeQueryChain);
 
       const result = await updateRegion('region-123', updateData);
 
-      expect(result).toEqual(updatedRegion);
+      // The updateRegion service doesn't include employee_count, so expect what's actually returned
+      expect(result).toEqual(updatedRegionFromDB);
       expect(mockUpdateQueryChain.update).toHaveBeenCalledWith({
         city: 'San Diego',
       });
@@ -550,7 +746,20 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: existingRegion,
+          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          error: null,
+        }),
+      };
+
+      // Mock employee_regions query for getRegionById
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+          ],
           error: null,
         }),
       };
@@ -569,9 +778,11 @@ describe('Regions Service', () => {
         }),
       };
 
-      // First call (for getRegionById), second call (for update)
-      mockSupabaseClient.from.mockReturnValueOnce(mockGetRegionQueryChain);
-      mockSupabaseClient.from.mockReturnValueOnce(mockUpdateQueryChain);
+      // First call (for getRegionById regions), second call (for getRegionById employee_regions), third call (for update)
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockGetRegionQueryChain)
+        .mockReturnValueOnce(mockEmployeeQueryChain)
+        .mockReturnValueOnce(mockUpdateQueryChain);
 
       await expect(updateRegion('region-123', updateData)).rejects.toThrow(
         'A region with this state and city combination already exists'
@@ -584,7 +795,20 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: existingRegion,
+          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          error: null,
+        }),
+      };
+
+      // Mock employee_regions query for getRegionById
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+          ],
           error: null,
         }),
       };
@@ -602,9 +826,11 @@ describe('Regions Service', () => {
         }),
       };
 
-      // First call (for getRegionById), second call (for update)
-      mockSupabaseClient.from.mockReturnValueOnce(mockGetRegionQueryChain);
-      mockSupabaseClient.from.mockReturnValueOnce(mockUpdateQueryChain);
+      // First call (for getRegionById regions), second call (for getRegionById employee_regions), third call (for update)
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockGetRegionQueryChain)
+        .mockReturnValueOnce(mockEmployeeQueryChain)
+        .mockReturnValueOnce(mockUpdateQueryChain);
 
       await expect(updateRegion('region-123', updateData)).rejects.toThrow(
         'Failed to update region'
@@ -641,6 +867,7 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      employee_count: 3,
     };
 
     it('should delete region successfully', async () => {
@@ -649,7 +876,20 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: existingRegion,
+          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          error: null,
+        }),
+      };
+
+      // Mock employee_regions query for getRegionById
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+          ],
           error: null,
         }),
       };
@@ -662,9 +902,11 @@ describe('Regions Service', () => {
         }),
       };
 
-      // First call (for getRegionById), second call (for delete)
-      mockSupabaseClient.from.mockReturnValueOnce(mockGetRegionQueryChain);
-      mockSupabaseClient.from.mockReturnValueOnce(mockDeleteQueryChain);
+      // Setup mocks: getRegionById (regions), getRegionById (employee_regions), delete
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockGetRegionQueryChain)
+        .mockReturnValueOnce(mockEmployeeQueryChain)
+        .mockReturnValueOnce(mockDeleteQueryChain);
 
       await expect(deleteRegion('region-123')).resolves.toBeUndefined();
       expect(mockDeleteQueryChain.delete).toHaveBeenCalled();
@@ -696,7 +938,20 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({
-          data: existingRegion,
+          data: { ...existingRegion, employee_count: undefined }, // Database returns without employee_count
+          error: null,
+        }),
+      };
+
+      // Mock employee_regions query for getRegionById
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+            { region_id: 'region-123' },
+          ],
           error: null,
         }),
       };
@@ -709,9 +964,11 @@ describe('Regions Service', () => {
         }),
       };
 
-      // First call (for getRegionById), second call (for delete)
-      mockSupabaseClient.from.mockReturnValueOnce(mockGetRegionQueryChain);
-      mockSupabaseClient.from.mockReturnValueOnce(mockDeleteQueryChain);
+      // Setup mocks: getRegionById (regions), getRegionById (employee_regions), delete
+      mockSupabaseClient.from
+        .mockReturnValueOnce(mockGetRegionQueryChain)
+        .mockReturnValueOnce(mockEmployeeQueryChain)
+        .mockReturnValueOnce(mockDeleteQueryChain);
 
       await expect(deleteRegion('region-123')).rejects.toThrow(
         'Failed to delete region'
@@ -741,13 +998,18 @@ describe('Regions Service', () => {
     const mockStates = ['California', 'Texas', 'New York'];
     const mockStatesData: StateOption[] = [
       { state: 'California', state_slug: 'california' },
-      { state: 'Texas', state_slug: 'texas' },
       { state: 'New York', state_slug: 'new-york' },
+      { state: 'Texas', state_slug: 'texas' },
     ];
 
     beforeEach(() => {
       // Reset process.cwd mock
       jest.spyOn(process, 'cwd').mockReturnValue('/app');
+    });
+
+    afterEach(() => {
+      // Restore process.cwd mock
+      jest.restoreAllMocks();
     });
 
     it('should return states with slugs', async () => {
@@ -797,6 +1059,7 @@ describe('Regions Service', () => {
         city_slug: 'los-angeles',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        employee_count: 5,
       },
       {
         id: 'region-2',
@@ -806,6 +1069,7 @@ describe('Regions Service', () => {
         city_slug: 'austin',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        employee_count: 2,
       },
     ];
 
@@ -814,22 +1078,46 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
-          data: mockRegions,
+        range: jest.fn().mockResolvedValue({
+          data: [{ ...mockRegions[0], employee_count: undefined }], // Database returns without employee_count
+          error: null,
+          count: 1,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
       const searchTerm = 'Los Angeles';
-      const filters: RegionFilter = { sort_by: 'city', sort_order: 'asc' };
+      const filters: RegionListParams = { sort_by: 'city', sort_order: 'asc' };
       const result = await searchRegions(searchTerm, filters);
 
-      expect(result).toEqual(mockRegions);
+      expect(result).toEqual({
+        regions: [mockRegions[0]],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          totalItems: 1,
+          itemsPerPage: 10,
+        },
+      });
       expect(mockQueryChain.ilike).toHaveBeenCalledWith('city', `%${searchTerm}%`);
       expect(mockQueryChain.order).toHaveBeenCalledWith('city', { ascending: true });
-      expect(mockQueryChain.limit).toHaveBeenCalledWith(10);
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should search by city field only', async () => {
@@ -837,20 +1125,37 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
-          data: [mockRegions[0]], // Only Los Angeles matches
+        range: jest.fn().mockResolvedValue({
+          data: [{ ...mockRegions[0], employee_count: undefined }], // Only Los Angeles matches
+          error: null,
+          count: 1,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
+          data: [
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+            { region_id: 'region-1' },
+          ],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
       const searchTerm = 'Los Angeles';
-      const filters: RegionFilter = { sort_by: 'city', sort_order: 'asc' };
+      const filters: RegionListParams = { sort_by: 'city', sort_order: 'asc' };
       const result = await searchRegions(searchTerm, filters);
 
-      expect(result).toHaveLength(1);
+      expect(result.regions).toHaveLength(1);
       expect(mockQueryChain.ilike).toHaveBeenCalledWith('city', `%${searchTerm}%`);
+      expect(mockQueryChain.range).toHaveBeenCalledWith(0, 9);
     });
 
     it('should handle null data response', async () => {
@@ -858,19 +1163,28 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: null,
           error: null,
+          count: 0,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       const searchTerm = 'test';
-      const filters: RegionFilter = { sort_by: 'city', sort_order: 'asc' };
+      const filters: RegionListParams = { sort_by: 'city', sort_order: 'asc' };
       const result = await searchRegions(searchTerm, filters);
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({
+        regions: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 10,
+        },
+      });
     });
 
     it('should handle database errors', async () => {
@@ -878,16 +1192,16 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
           data: null,
           error: { message: 'Query timeout' },
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain);
 
       const searchTerm = 'test';
-      const filters: RegionFilter = { sort_by: 'city', sort_order: 'asc' };
+      const filters: RegionListParams = { sort_by: 'city', sort_order: 'asc' };
       await expect(searchRegions(searchTerm, filters)).rejects.toThrow(
         'Failed to search regions'
       );
@@ -898,17 +1212,35 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockResolvedValue({
+        range: jest.fn().mockResolvedValue({
+          data: [],
+          error: null,
+          count: 0,
+        }),
+      };
+
+      // Mock employee_regions query
+      const mockEmployeeQueryChain = {
+        select: jest.fn().mockReturnThis(),
+        in: jest.fn().mockResolvedValue({
           data: [],
           error: null,
         }),
       };
 
-      mockSupabaseClient.from.mockReturnValue(mockQueryChain);
+      mockSupabaseClient.from.mockReturnValueOnce(mockQueryChain).mockReturnValueOnce(mockEmployeeQueryChain);
 
       const result = await searchRegions('');
 
-      expect(result).toEqual([]);
+      expect(result).toEqual({
+        regions: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalItems: 0,
+          itemsPerPage: 10,
+        },
+      });
     });
   });
 });

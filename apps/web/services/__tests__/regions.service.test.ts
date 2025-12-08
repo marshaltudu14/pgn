@@ -92,8 +92,7 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      employee_count: 5,
-    };
+          };
 
     it('should create a new region successfully', async () => {
       const mockInsert = jest.fn().mockReturnValue({
@@ -184,8 +183,7 @@ describe('Regions Service', () => {
         city_slug: 'los-angeles',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        employee_count: 5,
-              },
+                      },
       {
         id: 'region-2',
         state: 'California',
@@ -194,8 +192,7 @@ describe('Regions Service', () => {
         city_slug: 'san-francisco',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        employee_count: 3,
-      },
+              },
     ];
 
     it('should return regions with default parameters and sorting', async () => {
@@ -531,8 +528,7 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      employee_count: 5,
-    };
+          };
 
     it('should return region when found', async () => {
       const mockQueryChain = {
@@ -651,8 +647,7 @@ describe('Regions Service', () => {
       city_slug: 'los-angeles',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      employee_count: 3,
-    };
+          };
 
     const updatedRegionFromDB = {
       ...existingRegion,
@@ -1048,8 +1043,7 @@ describe('Regions Service', () => {
         city_slug: 'los-angeles',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        employee_count: 5,
-              },
+                      },
       {
         id: 'region-2',
         state: 'Texas',
@@ -1058,8 +1052,7 @@ describe('Regions Service', () => {
         city_slug: 'austin',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        employee_count: 3,
-              },
+                      },
     ];
 
     it('should return search results with default parameters', async () => {

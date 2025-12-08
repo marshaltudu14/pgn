@@ -421,7 +421,7 @@ export async function listEmployees(
         console.log(`[DEBUG] Region count for employee ${employee.id}:`, regionCount);
 
         
-        // Get first 3 regions with region details
+        // Get first 3 regions with region details using proper join syntax
         const { data: regionData, error: regionError } = await supabase
           .from('employee_regions')
           .select(`
@@ -444,14 +444,14 @@ export async function listEmployees(
           code: regionError?.code
         });
 
-        const mappedRegions = (regionData as EmployeeRegionWithDetails[] || []).map((er: EmployeeRegionWithDetails) => {
+        const mappedRegions = (regionData || []).map((er: any) => {
           console.log(`[DEBUG] Mapping region entry:`, er);
-          // regions is now an array, take the first element
-          const region = er.regions?.[0];
+          // regions comes back as an object, not array
+          const region = er.regions;
           const mapped = {
-            id: region?.id,
-            city: region?.city,
-            state: region?.state
+            id: region?.id || '',
+            city: region?.city || '',
+            state: region?.state || ''
           };
           console.log(`[DEBUG] Mapped region:`, mapped);
           return mapped;
@@ -648,11 +648,18 @@ export async function getEmployeeRegions(
       throw new Error(`Failed to fetch employee regions: ${error.message}`);
     }
 
-    // The regions field comes back as an array with one object
+    // The data comes back as an array of objects with regions property
     return data?.map(item => {
-      const regions = item.regions as unknown as { id: string; city: string; state: string }[];
-      return regions[0]; // Take the first (and only) region object
-    }).filter(Boolean) || [];
+      const region = item.regions;
+      if (!region || !Array.isArray(region) || region.length === 0) {
+        return null;
+      }
+      const regionData = region[0];
+      if (!regionData || typeof regionData.id !== 'string' || typeof regionData.city !== 'string' || typeof regionData.state !== 'string') {
+        return null;
+      }
+      return { id: regionData.id, city: regionData.city, state: regionData.state };
+    }).filter(region => region !== null) || [];
   } catch (error) {
     console.error('Error in getEmployeeRegions:', error);
     throw error;

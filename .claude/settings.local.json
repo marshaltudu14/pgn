@@ -129,7 +129,8 @@
       "mcp__next-devtools__nextjs_call",
       "mcp__next-devtools__upgrade_nextjs_16",
       "Bash(npm dedupe:*)",
-      "Bash(NODE_PATH=./node_modules npm test:*)"
+      "Bash(NODE_PATH=./node_modules npm test:*)",
+      "Bash(npm run tsc:*)"
     ],
     "deny": [],
     "ask": []

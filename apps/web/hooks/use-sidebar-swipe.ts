@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useSidebar } from '@/components/ui/sidebar';
 
 export function useSidebarSwipe() {
@@ -9,6 +9,12 @@ export function useSidebarSwipe() {
   const touchStartY = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const touchEndY = useRef<number | null>(null);
+  const openMobileRef = useRef(openMobile);
+
+  // Update the ref whenever openMobile changes
+  useEffect(() => {
+    openMobileRef.current = openMobile;
+  }, [openMobile]);
 
   // Minimum swipe distance in pixels
   const MIN_SWIPE_DISTANCE = 50;
@@ -17,12 +23,17 @@ export function useSidebarSwipe() {
   // Maximum horizontal distance from left edge where swipe can start for opening
   const MAX_EDGE_DISTANCE = 30;
 
+  // Memoize the setOpenMobile callback to prevent infinite re-renders
+  const handleSetOpenMobile = useCallback((open: boolean) => {
+    setOpenMobile(open);
+  }, [setOpenMobile]);
+
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
       // Track touches based on sidebar state:
       // - If sidebar is closed: only from left edge (for opening)
       // - If sidebar is open: from anywhere (for closing)
-      if (!openMobile) {
+      if (!openMobileRef.current) {
         // Sidebar closed: only allow touches from left edge
         if (e.touches[0].clientX <= MAX_EDGE_DISTANCE) {
           touchStartX.current = e.touches[0].clientX;
@@ -58,12 +69,12 @@ export function useSidebarSwipe() {
       ) {
         // Handle swipe direction based on current sidebar state
         if (isMobile) {
-          if (horizontalDistance > 0 && !openMobile) {
+          if (horizontalDistance > 0 && !openMobileRef.current) {
             // Swipe right: Open sidebar if closed
-            setOpenMobile(true);
-          } else if (horizontalDistance < 0 && openMobile) {
+            handleSetOpenMobile(true);
+          } else if (horizontalDistance < 0 && openMobileRef.current) {
             // Swipe left: Close sidebar if open
-            setOpenMobile(false);
+            handleSetOpenMobile(false);
           }
         }
       }
@@ -89,7 +100,7 @@ export function useSidebarSwipe() {
       document.removeEventListener('touchmove', handleTouchMove);
       document.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isMobile, openMobile, setOpenMobile]);
+  }, [isMobile, handleSetOpenMobile]);
 
   return null;
 }

@@ -31,16 +31,15 @@ import {
 const createMockSupabaseClient = () => {
   const mockClient = {
     from: jest.fn(),
-  };
+    clearMocks: jest.fn(),
+  } as any;
 
   // Smart mock that tracks calls
   const createSmartChain = (tableName: string) => {
     const callLog: Array<{ method: string; args: any[] }> = [];
     const chain: any = {};
 
-    // Helper to log and return chain
-    const returnChain = () => chain;
-
+  
     // Create method that logs and chains
     const createMethod = (methodName: string, shouldResolve = false, resolveValue?: any) => {
       const fn = jest.fn().mockImplementation((...args: any[]) => {
@@ -114,9 +113,9 @@ const createMockSupabaseClient = () => {
   });
 
   // Add method to clear mocks
-  mockClient.clearMocks = () => {
+  mockClient.clearMocks.mockImplementation(() => {
     mockClient.from.mockClear();
-  };
+  });
 
   return mockClient;
 };
@@ -165,9 +164,9 @@ describe('Employee Service', () => {
       chain.contains = jest.fn().mockImplementation(returnChain);
       chain.order = jest.fn().mockImplementation(returnChain);
       chain.range = jest.fn().mockImplementation(returnChain);
+      chain.limit = jest.fn().mockImplementation(returnChain);
 
       // Methods that resolve to promises
-      chain.limit = jest.fn().mockResolvedValue(customResolve || { data: [], error: null });
       chain.single = jest.fn().mockResolvedValue(customResolve || { data: null, error: null });
 
       return chain;
@@ -376,38 +375,30 @@ describe('Employee Service', () => {
             };
           } else if (callCount === 2) {
             // Second call for isPhoneTaken (if phone is provided)
-            return {
-              select: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({
-                  neq: jest.fn().mockReturnValue({
-                    limit: jest.fn().mockResolvedValue({ data: [], error: null })
-                  })
-                })
-              })
-            };
+            const chain = createQueryChain({ data: [], error: null });
+            // Override the methods to match the expected query
+            chain.select = jest.fn().mockReturnValue(chain);
+            chain.eq = jest.fn().mockReturnValue(chain);
+            chain.neq = jest.fn().mockReturnValue(chain);
+            chain.limit = jest.fn().mockResolvedValue({ data: [], error: null });
+            return chain;
           } else if (callCount === 3) {
             // Third call for generateHumanReadableUserId
-            return {
-              select: jest.fn().mockReturnValue({
-                like: jest.fn().mockReturnValue({
-                  order: jest.fn().mockReturnValue({
-                    limit: jest.fn().mockResolvedValue({ data: [], error: null })
-                  })
-                })
-              })
-            };
+            const chain = createQueryChain({ data: [], error: null });
+            // Override the methods to match the expected query
+            chain.select = jest.fn().mockReturnValue(chain);
+            chain.like = jest.fn().mockReturnValue(chain);
+            chain.order = jest.fn().mockReturnValue(chain);
+            chain.limit = jest.fn().mockResolvedValue({ data: [], error: null });
+            return chain;
           } else if (callCount === 4) {
             // Fourth call for employee insertion
-            return {
-              insert: jest.fn().mockReturnValue({
-                select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({
-                    data: mockEmployeeData,
-                    error: null
-                  })
-                })
-              })
-            };
+            const chain = createQueryChain({ data: mockEmployeeData, error: null });
+            // Override the methods to match the expected query
+            chain.insert = jest.fn().mockReturnValue(chain);
+            chain.select = jest.fn().mockReturnValue(chain);
+            chain.single = jest.fn().mockResolvedValue({ data: mockEmployeeData, error: null });
+            return chain;
           } else {
             // Any other calls to employees table
             return createQueryChain({ data: null, error: { code: 'PGRST116' } });
@@ -1124,20 +1115,8 @@ describe('Employee Service', () => {
     });
 
     it('should handle email with only whitespace', async () => {
-      // Empty string after trim should return null
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: null,
-              error: { code: 'PGRST116', message: 'No rows returned' }
-            })
-          })
-        })
-      });
-
-      const result = await getEmployeeByEmail('   ');
-      expect(result).toBeNull();
+      // Whitespace-only email should throw an error
+      await expect(getEmployeeByEmail('   ')).rejects.toThrow('Invalid email');
     });
   });
 
@@ -1165,28 +1144,72 @@ describe('Employee Service', () => {
       },
     ];
 
-    it('should return paginated employee list with default parameters', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: mockEmployees,
-              error: null,
-              count: 25
-            })
-          })
-        })
+    // Helper function to mock listEmployees database calls
+    const mockListEmployeesCalls = (employees: any[], totalCount: number = 25) => {
+      // Track if we're in a count query
+      let isCountQuery = false;
+
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        const chain = createQueryChain();
+
+        if (table === 'employees') {
+          // Main employee list query
+          chain.select = jest.fn().mockImplementation((...args) => {
+            isCountQuery = args[1]?.count === 'exact';
+            return chain;
+          });
+          chain.order = jest.fn().mockReturnValue(chain);
+          chain.range = jest.fn().mockResolvedValue({
+            data: employees,
+            error: null,
+            count: totalCount
+          });
+        } else if (table === 'employee_regions') {
+          // Region queries - return empty regions for simplicity
+          chain.select = jest.fn().mockImplementation((...args) => {
+            isCountQuery = args[1]?.count === 'exact';
+            return chain;
+          });
+          chain.eq = jest.fn().mockReturnValue(chain);
+
+          if (isCountQuery) {
+            // Mock the count query to return count 0
+            chain.eq = jest.fn().mockImplementation(() => {
+              return Promise.resolve({ count: 0 });
+            });
+          } else {
+            // Mock the data query to return empty array
+            chain.range = jest.fn().mockReturnValue(chain);
+            chain.order = jest.fn().mockReturnValue(chain);
+            chain.range = jest.fn().mockResolvedValue({
+              data: [],
+              error: null
+            });
+          }
+        }
+
+        return chain;
       });
+    };
+
+    it('should return paginated employee list with default parameters', async () => {
+      mockListEmployeesCalls(mockEmployees, 25);
 
       const params: EmployeeListParams = {};
       const result = await listEmployees(params);
 
-      expect(result).toEqual({
-        employees: mockEmployees,
-        total: 25,
-        page: 1,
-        limit: 50,
-        hasMore: false // (1-1)*50 + 50 = 50 >= 25
+      expect(result.total).toBe(25);
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(50);
+      expect(result.hasMore).toBe(false);
+      expect(result.employees).toHaveLength(2);
+      expect(result.employees[0]).toMatchObject({
+        id: '1',
+        human_readable_user_id: 'PGN-2024-0001',
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john.doe@example.com',
+        employment_status: 'ACTIVE'
       });
     });
 

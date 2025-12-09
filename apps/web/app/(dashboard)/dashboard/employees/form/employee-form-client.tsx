@@ -112,15 +112,22 @@ export default function EmployeeFormClient() {
 
         {isEditMode && employee && (
           <div className="bg-muted/50 border rounded-lg p-4">
-            <div className="flex items-center space-x-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm font-medium">Employee ID</p>
                 <p className="text-lg">{employee.human_readable_user_id}</p>
               </div>
-              <div className="h-8 w-px bg-border"></div>
               <div>
                 <p className="text-sm font-medium">Status</p>
                 <p className="text-lg">{employee.employment_status.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Created</p>
+                <p className="text-lg">{employee.created_at ? new Date(employee.created_at).toLocaleDateString() : 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Last Updated</p>
+                <p className="text-lg">{employee.updated_at ? new Date(employee.updated_at).toLocaleDateString() : 'N/A'}</p>
               </div>
             </div>
           </div>

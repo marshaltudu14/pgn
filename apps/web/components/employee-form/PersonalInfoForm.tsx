@@ -129,20 +129,21 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
         />
       </div>
 
-      {!isEditing && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password *</FormLabel>
+                <FormLabel>
+                  Password {isEditing ? '(Leave empty to keep current)' : '*'}
+                </FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Input
                       data-testid="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter password (min 6 characters)"
+                      placeholder={isEditing ? "Enter new password (optional)" : "Enter password (min 6 characters)"}
                       value={field.value || ''}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -166,13 +167,15 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
             name="confirm_password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password *</FormLabel>
+                <FormLabel>
+                  Confirm Password {isEditing ? '(Only if changing password)' : '*'}
+                </FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Input
                       data-testid="confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm password"
+                      placeholder={isEditing ? "Confirm new password" : "Confirm password"}
                       value={field.value || ''}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -192,7 +195,15 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
             )}
           />
         </div>
-      )}
+
+        {isEditing && (
+          <div className="mb-6 p-3 bg-muted/30 rounded-md">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium">Note:</span> Password fields are optional when editing.
+              Only enter a new password if you want to change the employee&apos;s current password.
+            </p>
+          </div>
+        )}
     </div>
   );
 }

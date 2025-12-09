@@ -30,10 +30,10 @@ import {
 import { PersonalInfoForm } from './employee-form/PersonalInfoForm';
 import { EmploymentDetailsForm } from './employee-form/EmploymentDetailsForm';
 import { RegionalAssignmentForm } from './employee-form/RegionalAssignmentForm';
-import { AuditInfoForm } from './employee-form/AuditInfoForm';
 
 import {
-  EmployeeFormSchema,
+  CreateEmployeeSchema,
+  EditEmployeeSchema,
 } from '@pgn/shared';
 
 interface EmployeeFormProps {
@@ -45,7 +45,7 @@ interface EmployeeFormProps {
 }
 
 export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel }: EmployeeFormProps) {
-  const { createEmployee, updateEmployee } = useEmployeeStore();
+  const { createEmployee, updateEmployee, updateEmployeeRegions, fetchEmployeeRegions } = useEmployeeStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!employee;
@@ -80,9 +80,21 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         can_login: employee.can_login ?? true,
         password: '', // Don't pre-fill password
         confirm_password: '', // Don't pre-fill confirm password
+        assigned_regions: [], // Will be populated separately
+      });
+
+      // Fetch employee's regions
+      fetchEmployeeRegions(employee.id).then((regions) => {
+        if (regions && regions.length > 0) {
+          const regionIds = regions.map((region) => region.id);
+          form.setValue('assigned_regions', regionIds, {
+            shouldValidate: true,
+            shouldDirty: false
+          });
+        }
       });
     }
-  }, [employee, open, form]);
+  }, [employee, open, form, fetchEmployeeRegions]);
 
   useEffect(() => {
     if (!employee && open) {
@@ -116,12 +128,17 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
       };
 
       // Choose schema based on editing mode
-      const schema = isEditing ?
-        EmployeeFormSchema.omit({ password: true, confirm_password: true }) :
-        EmployeeFormSchema;
+      const schema = isEditing ? EditEmployeeSchema : CreateEmployeeSchema;
+
+      // For edit mode, remove password fields if empty to avoid validation
+      const dataToValidate = isEditing ? {
+        ...dataForValidation,
+        password: data.password || undefined,
+        confirm_password: data.confirm_password || undefined,
+      } : dataForValidation;
 
       // Validate with zod
-      const validationResult = schema.safeParse(dataForValidation);
+      const validationResult = schema.safeParse(dataToValidate);
 
       if (!validationResult.success) {
         // Set field-level errors
@@ -154,13 +171,25 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         // Update employee basic info
         result = await updateEmployee(employee.id, updateData);
 
-        if (result.success) {
-          toast.success('Employee updated successfully!');
-          onOpenChange(false);
-          onSuccess?.(result.data!);
-        } else {
+        if (!result.success) {
           toast.error(result.error || 'Failed to update employee');
+          setLoading(false);
+          return;
         }
+
+        // Update regions if any are assigned
+        if (data.assigned_regions && data.assigned_regions.length > 0) {
+          const regionsResult = await updateEmployeeRegions(employee.id, data.assigned_regions);
+
+          if (!regionsResult.success) {
+            console.error('Failed to update regions');
+            toast.error('Employee updated but failed to update regions');
+          }
+        }
+
+        toast.success('Employee updated successfully!');
+        onOpenChange(false);
+        onSuccess?.(result.data!);
       } else {
         const createData: CreateEmployeeRequest = {
           first_name: data.first_name,
@@ -174,14 +203,26 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
 
         result = await createEmployee(createData);
 
-        if (result.success) {
-          toast.success('Employee created successfully!');
-          onOpenChange(false);
-          onSuccess?.(result.data!);
-          form.reset();
-        } else {
+        if (!result.success) {
           toast.error(result.error || 'Failed to create employee');
+          setLoading(false);
+          return;
         }
+
+        // Update regions if any are assigned
+        if (data.assigned_regions && data.assigned_regions.length > 0 && result.data) {
+          const regionsResult = await updateEmployeeRegions(result.data.id, data.assigned_regions);
+
+          if (!regionsResult.success) {
+            console.error('Failed to update regions');
+            toast.error('Employee created but failed to update regions');
+          }
+        }
+
+        toast.success('Employee created successfully!');
+        onOpenChange(false);
+        onSuccess?.(result.data!);
+        form.reset();
       }
     } catch (err) {
       console.error('Error submitting form:', err);
@@ -206,7 +247,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
             <RegionalAssignmentForm form={form} />
-            {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 
           {/* Mobile View - Simplified */}
@@ -214,7 +254,6 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
             <RegionalAssignmentForm form={form} />
-            {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 
           {/* Action Buttons */}

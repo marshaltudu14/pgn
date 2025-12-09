@@ -72,7 +72,7 @@ export const updateRegionSchema = z.object({
 
 export const regionsQuerySchema = z.object({
   page: z.coerce.number().min(1).optional().default(1),
-  limit: z.coerce.number().min(1).max(100).optional().default(10),
+  limit: z.coerce.number().min(1).max(1000).optional().default(10),
   search: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),

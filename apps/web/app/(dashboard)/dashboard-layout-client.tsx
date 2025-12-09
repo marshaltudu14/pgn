@@ -234,7 +234,7 @@ function DashboardLayoutContent({
               className="flex-1 bg-white dark:bg-black px-2 py-3 lg:p-6"
               suppressHydrationWarning
             >
-              <ErrorBoundary>{children}</ErrorBoundary>
+              <ErrorBoundary key={typeof window !== 'undefined' ? window.location.pathname : 'server'}>{children}</ErrorBoundary>
             </main>
           </SidebarInset>
         </SidebarSwipeWrapper>

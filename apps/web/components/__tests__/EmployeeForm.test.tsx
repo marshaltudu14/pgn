@@ -143,13 +143,6 @@ jest.mock('../employee-form/RegionalAssignmentForm', () => ({
   ),
 }));
 
-jest.mock('../employee-form/AuditInfoForm', () => ({
-  AuditInfoForm: ({ employee }: { employee?: Employee | null }) => (
-    <div data-testid="audit-info-form">
-      {employee && <div data-testid="audit-employee-id">{employee.id}</div>}
-    </div>
-  ),
-}));
 
 // Mock toast
 jest.mock('sonner', () => ({
@@ -280,8 +273,7 @@ describe('EmployeeForm', () => {
       expect(screen.getAllByTestId('personal-info-form')).toHaveLength(2); // desktop + mobile
       expect(screen.getAllByTestId('employment-details-form')).toHaveLength(2); // desktop + mobile
       expect(screen.getAllByTestId('regional-assignment-form')).toHaveLength(2); // desktop + mobile
-      expect(screen.queryAllByTestId('audit-info-form')).toHaveLength(0);
-
+  
       // Check that it's in create mode (both desktop and mobile should show false)
       const editingStates = screen.getAllByTestId('is-editing');
       editingStates.forEach(element => {
@@ -307,7 +299,6 @@ describe('EmployeeForm', () => {
       expect(screen.getAllByTestId('personal-info-form')).toHaveLength(2); // desktop + mobile
       expect(screen.getAllByTestId('employment-details-form')).toHaveLength(2); // desktop + mobile
       expect(screen.getAllByTestId('regional-assignment-form')).toHaveLength(2); // desktop + mobile
-      expect(screen.getAllByTestId('audit-info-form')).toHaveLength(2); // desktop + mobile
 
       // Check that it's in edit mode (both desktop and mobile should show true)
       const editingStates = screen.getAllByTestId('is-editing');
@@ -320,10 +311,6 @@ describe('EmployeeForm', () => {
       // Check employee data is passed (should be present in both desktop and mobile)
       const employeeIds = screen.getAllByTestId('employee-id');
       employeeIds.forEach(element => {
-        expect(element.textContent).toBe('emp-123');
-      });
-      const auditEmployeeIds = screen.getAllByTestId('audit-employee-id');
-      auditEmployeeIds.forEach(element => {
         expect(element.textContent).toBe('emp-123');
       });
 

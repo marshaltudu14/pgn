@@ -24,13 +24,16 @@ interface RegionsStore {
   isCreating: boolean;
   isUpdating: boolean;
   isDeleting: boolean;
+  isFetchingMore: boolean;
   error: string | null;
   createError: string | null;
   pagination: PaginationState;
   filters: RegionListParams;
+  hasMore: boolean;
 
   // Actions
   fetchRegions: (params?: RegionListParams) => Promise<void>;
+  fetchMoreRegions: () => Promise<void>;
   createRegion: (data: CreateRegionRequest) => Promise<Region>;
   updateRegion: (id: string, data: UpdateRegionRequest) => Promise<Region>;
   deleteRegion: (id: string) => Promise<void>;
@@ -56,6 +59,7 @@ export const useRegionsStore = create<RegionsStore>()(
       isCreating: false,
       isUpdating: false,
       isDeleting: false,
+      isFetchingMore: false,
       error: null,
       createError: null,
       pagination: {
@@ -70,13 +74,19 @@ export const useRegionsStore = create<RegionsStore>()(
         sort_by: 'city',
         sort_order: 'asc',
       },
+      hasMore: true,
 
       // Fetch regions with pagination and filtering
       fetchRegions: async (params: RegionListParams = {}) => {
         try {
-          set({ isLoading: true, error: null });
-
           const store = get();
+          const page = params.page ?? 1;
+          const isInitialLoad = page === 1;
+
+          if (isInitialLoad) {
+            set({ isLoading: true, error: null });
+          }
+
           // Build query params, only including defined values
           const queryParams = new URLSearchParams();
 
@@ -86,11 +96,9 @@ export const useRegionsStore = create<RegionsStore>()(
             }
           };
 
-          addParam('page', params.page ?? store.filters.page);
-          addParam('limit', params.limit ?? store.filters.limit);
-
+          addParam('page', page.toString());
+          addParam('limit', (params.limit ?? store.filters.limit ?? 20).toString());
           addParam('search', params.search ?? store.filters.search);
-
           addParam('state', params.state ?? store.filters.state);
           addParam('city', params.city ?? store.filters.city);
           addParam('sort_by', params.sort_by ?? store.filters.sort_by);
@@ -118,16 +126,83 @@ export const useRegionsStore = create<RegionsStore>()(
 
           const data = await response.json();
 
+          // Determine if there are more pages
+          const hasMore = data.pagination.currentPage < data.pagination.totalPages;
+
+          // Check if this is a search request (has search parameter)
+          const isSearchRequest = params.search !== undefined && params.search !== store.filters.search;
+
+          // If page 1 AND it's a search request OR initial load, replace regions
+          // Otherwise, we let fetchMoreRegions handle appending
+          const shouldReplaceRegions = isInitialLoad && (isSearchRequest || !store.regions.length);
+          const newRegions = shouldReplaceRegions ? data.regions : store.regions;
+
           set({
-            regions: data.regions,
+            regions: newRegions,
             pagination: data.pagination,
             filters: updatedFilters,
+            hasMore,
             isLoading: false,
           });
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Failed to fetch regions',
             isLoading: false,
+          });
+        }
+      },
+
+      // Fetch more regions for infinite scroll
+      fetchMoreRegions: async () => {
+        try {
+          const store = get();
+          const nextPage = (store.pagination.currentPage || 1) + 1;
+
+          // Don't fetch if already at the last page, already fetching, or if there's an active search
+          if (!store.hasMore || store.isFetchingMore || store.filters.search) {
+            return;
+          }
+
+          set({ isFetchingMore: true });
+
+          // Fetch the next page
+          const queryParams = new URLSearchParams();
+          queryParams.append('page', nextPage.toString());
+          queryParams.append('limit', (store.filters.limit || 20).toString());
+          queryParams.append('sort_by', store.filters.sort_by || 'city');
+          queryParams.append('sort_order', store.filters.sort_order || 'asc');
+          // Preserve any existing filters except search
+          if (store.filters.state) {
+            queryParams.append('state', store.filters.state);
+          }
+          if (store.filters.city) {
+            queryParams.append('city', store.filters.city);
+          }
+
+          const response = await fetch(`/api/regions?${queryParams.toString()}`, {
+            method: 'GET',
+            headers: getAuthHeaders(),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch more regions');
+          }
+
+          const data = await response.json();
+
+          // Append new regions to existing ones
+          const allRegions = [...store.regions, ...data.regions];
+
+          set({
+            regions: allRegions,
+            pagination: data.pagination,
+            hasMore: data.pagination.currentPage < data.pagination.totalPages,
+            isFetchingMore: false,
+          });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to fetch more regions',
+            isFetchingMore: false,
           });
         }
       },
@@ -379,6 +454,7 @@ export const useRegionsStore = create<RegionsStore>()(
           isCreating: false,
           isUpdating: false,
           isDeleting: false,
+          isFetchingMore: false,
           error: null,
           createError: null,
           pagination: {
@@ -393,6 +469,7 @@ export const useRegionsStore = create<RegionsStore>()(
             sort_by: 'city',
             sort_order: 'asc',
           },
+          hasMore: true,
         });
       },
     }),

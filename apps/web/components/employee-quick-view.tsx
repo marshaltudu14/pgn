@@ -182,7 +182,18 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
         </div>
 
         {/* Assigned Cities - Full Width Section */}
-  
+        <div className="py-4 border-t border-border">
+          <div>
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Assigned Cities
+            </h3>
+            <div className="space-y-2">
+              <div className="text-sm text-foreground">Mumbai</div>
+              <div className="text-sm text-foreground">Pune</div>
+            </div>
+          </div>
+        </div>
+
         {/* Footer */}
         <div className="pt-4 border-t border-border">
           <div className="flex justify-end">

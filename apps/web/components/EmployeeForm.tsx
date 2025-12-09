@@ -17,6 +17,7 @@ import {
   EmploymentStatus,
   UpdateEmployeeRequest,
   CreateEmployeeRequest,
+  EmployeeFormData,
 } from '@pgn/shared';
 import { useEmployeeStore } from '@/app/lib/stores/employeeStore';
 import {
@@ -28,11 +29,11 @@ import {
 // Import sub-components
 import { PersonalInfoForm } from './employee-form/PersonalInfoForm';
 import { EmploymentDetailsForm } from './employee-form/EmploymentDetailsForm';
+import { RegionalAssignmentForm } from './employee-form/RegionalAssignmentForm';
 import { AuditInfoForm } from './employee-form/AuditInfoForm';
 
 import {
   EmployeeFormSchema,
-  type EmployeeFormData,
 } from '@pgn/shared';
 
 interface EmployeeFormProps {
@@ -78,7 +79,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
         employment_status: employee.employment_status as EmploymentStatus,
         can_login: employee.can_login ?? true,
         password: '', // Don't pre-fill password
-        confirm_password: '' // Don't pre-fill confirm password
+        confirm_password: '', // Don't pre-fill confirm password
       });
     }
   }, [employee, open, form]);
@@ -204,6 +205,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           <div className="hidden lg:block space-y-8">
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
+            <RegionalAssignmentForm form={form} />
             {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 
@@ -211,6 +213,7 @@ export function EmployeeForm({ open, onOpenChange, employee, onSuccess, onCancel
           <div className="lg:hidden space-y-4">
             <PersonalInfoForm form={form} isEditing={isEditing} />
             <EmploymentDetailsForm form={form} isEditing={isEditing} employee={employee} />
+            <RegionalAssignmentForm form={form} />
             {isEditing && <AuditInfoForm employee={employee} />}
           </div>
 

@@ -110,7 +110,10 @@ describe('Regions Service', () => {
 
       const result = await createRegion(validCreateRequest);
 
-      expect(result).toEqual(mockRegion);
+      expect(result).toEqual({
+        ...mockRegion,
+        employee_count: 0
+      });
       expect(mockInsert).toHaveBeenCalledWith({
         state: 'California',
         city: 'Los Angeles',
@@ -174,7 +177,7 @@ describe('Regions Service', () => {
   });
 
   describe('getRegions', () => {
-    const mockRegions: RegionSchema[] = [
+    const mockRegionsRaw: Region[] = [
       {
         id: 'region-1',
         state: 'California',
@@ -195,14 +198,29 @@ describe('Regions Service', () => {
               },
     ];
 
+    const mockRegions: RegionSchema[] = [
+      {
+        ...mockRegionsRaw[0],
+        employee_count: 5,
+        created_at: mockRegionsRaw[0].created_at || new Date().toISOString(),
+        updated_at: mockRegionsRaw[0].updated_at || new Date().toISOString(),
+      },
+      {
+        ...mockRegionsRaw[1],
+        employee_count: 3,
+        created_at: mockRegionsRaw[1].created_at || new Date().toISOString(),
+        updated_at: mockRegionsRaw[1].updated_at || new Date().toISOString(),
+      },
+    ];
+
     it('should return regions with default parameters and sorting', async () => {
       const mockQueryChain = {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: mockRegions,
+          data: mockRegionsRaw,
           error: null,
-          count: mockRegions.length,
+          count: mockRegionsRaw.length,
         }),
       };
 
@@ -406,9 +424,9 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: mockRegions,
+          data: mockRegionsRaw,
           error: null,
-          count: mockRegions.length,
+          count: mockRegionsRaw.length,
         }),
       };
 
@@ -445,9 +463,9 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: mockRegions,
+          data: mockRegionsRaw,
           error: null,
-          count: mockRegions.length,
+          count: mockRegionsRaw.length,
         }),
       };
 
@@ -484,9 +502,9 @@ describe('Regions Service', () => {
         select: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: mockRegions,
+          data: mockRegionsRaw,
           error: null,
-          count: mockRegions.length,
+          count: mockRegionsRaw.length,
         }),
       };
 
@@ -558,7 +576,10 @@ describe('Regions Service', () => {
 
       const result = await getRegionById('region-123');
 
-      expect(result).toEqual(mockRegion);
+      expect(result).toEqual({
+        ...mockRegion,
+        employee_count: 5
+      });
       expect(mockQueryChain.select).toHaveBeenCalledWith('*');
       expect(mockQueryChain.eq).toHaveBeenCalledWith('id', 'region-123');
     });
@@ -654,6 +675,7 @@ describe('Regions Service', () => {
       city: 'San Diego',
       city_slug: 'san-diego',
       updated_at: new Date().toISOString(),
+      employee_count: 3,
     };
 
     it('should update region with provided fields', async () => {
@@ -698,10 +720,11 @@ describe('Regions Service', () => {
 
       const result = await updateRegion('region-123', updateData);
 
-      // The updateRegion service doesn't include employee_count, so expect what's actually returned
+      // The updateRegion service includes employee_count
       expect(result).toEqual(updatedRegionFromDB);
       expect(mockUpdateQueryChain.update).toHaveBeenCalledWith({
         city: 'San Diego',
+        state: 'California',
       });
       expect(mockUpdateQueryChain.eq).toHaveBeenCalledWith('id', 'region-123');
     });
@@ -1043,6 +1066,7 @@ describe('Regions Service', () => {
         city_slug: 'los-angeles',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        employee_count: 5,
                       },
       {
         id: 'region-2',
@@ -1052,6 +1076,7 @@ describe('Regions Service', () => {
         city_slug: 'austin',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        employee_count: 2,
                       },
     ];
 
@@ -1061,7 +1086,15 @@ describe('Regions Service', () => {
         ilike: jest.fn().mockReturnThis(),
         order: jest.fn().mockReturnThis(),
         range: jest.fn().mockResolvedValue({
-          data: [mockRegions[0]],           error: null,
+          data: [{
+            id: 'region-1',
+            state: 'California',
+            city: 'Los Angeles',
+            state_slug: 'california',
+            city_slug: 'los-angeles',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }],           error: null,
           count: 1,
         }),
       };
@@ -1088,7 +1121,16 @@ describe('Regions Service', () => {
       const result = await searchRegions(searchTerm, filters);
 
       expect(result).toEqual({
-        regions: [mockRegions[0]],
+        regions: [{
+          id: 'region-1',
+          state: 'California',
+          city: 'Los Angeles',
+          state_slug: 'california',
+          city_slug: 'los-angeles',
+          employee_count: 5,
+          created_at: expect.any(String),
+          updated_at: expect.any(String),
+        }],
         pagination: {
           currentPage: 1,
           totalPages: 1,

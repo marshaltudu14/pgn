@@ -6,6 +6,16 @@ import { Database } from './supabase';
 // Re-export Region type from supabase
 export type Region = Database['public']['Tables']['regions']['Row'];
 
+// Type for Supabase join response when querying employee_regions with regions
+export interface EmployeeRegionJoin {
+  region_id: string;
+  regions: {
+    id: string;
+    city: string;
+    state: string;
+  };
+}
+
 export interface State {
   name: string;
   type: 'state';

@@ -587,11 +587,11 @@ describe('useEmployeeStore', () => {
       const filters = useEmployeeStore.getState().filters;
       expect(filters).toEqual({
         search: '',
-        searchField: 'human_readable_user_id',
+        searchField: 'first_name',
         status: 'all',
-        primaryRegion: undefined,
-        sortBy: 'created_at',
-        sortOrder: 'desc',
+        assigned_regions: ['region-1'], // Preserved from current filters
+        sortBy: 'first_name',
+        sortOrder: 'asc',
       });
     });
   });

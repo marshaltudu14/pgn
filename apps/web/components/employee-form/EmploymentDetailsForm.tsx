@@ -49,7 +49,7 @@ export function EmploymentDetailsForm({ form, isEditing, employee }: EmploymentD
               <FormLabel>Employment Status *</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="employment-status">
                     <SelectValue placeholder="Select employment status" />
                   </SelectTrigger>
                 </FormControl>

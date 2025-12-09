@@ -67,9 +67,7 @@ export function EmployeeList({
     clearError,
   } = useEmployeeStore();
 
-  // Local loading state for filtering operations
-  const [isFiltering, setIsFiltering] = useState(false);
-
+  
   // Initial data fetch when component mounts
   useEffect(() => {
     fetchEmployees();
@@ -100,11 +98,9 @@ export function EmployeeList({
   }, [setFilters, setPagination, fetchEmployees, filters.search]);
 
   const handleStatusChange = useCallback(async (value: EmploymentStatus | 'all') => {
-    setIsFiltering(true);
     setFilters({ status: value });
     setPagination(1); // Reset to first page
     await fetchEmployees(); // Non-search filter triggers immediate fetch
-    setIsFiltering(false);
   }, [setFilters, setPagination, fetchEmployees]);
 
   const handleSearchFieldChange = useCallback((value: SearchFieldType) => {
@@ -150,7 +146,7 @@ export function EmployeeList({
       )}
 
       {/* Search and Filter Section */}
-      <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
+      <div className="px-2 py-3 lg:p-6">
         {/* Desktop Layout - selects on sides, search in center */}
         <div className="hidden sm:flex items-center gap-4">
           {/* Left: Search Field Selector */}
@@ -236,10 +232,7 @@ export function EmployeeList({
       </div>
 
       {/* Table View - Desktop and Mobile */}
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
-            <Table>
+      <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>User ID</TableHead>
@@ -247,13 +240,13 @@ export function EmployeeList({
                   <TableHead >Email</TableHead>
                   <TableHead >Phone</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead >Primary Region</TableHead>
+                  <TableHead >Assigned Regions</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(loading && employees.length === 0) || isFiltering ? (
-                  // Show skeleton rows when loading and no data exists OR when filtering
+                {loading ? (
+                  // Show skeleton rows when loading
                   [...Array(5)].map((_, index) => (
                     <TableRow key={index}>
                       <TableCell><Skeleton className="h-8 w-20" /></TableCell>
@@ -307,18 +300,11 @@ export function EmployeeList({
                     </TableCell>
                     <TableCell>
                       <div className="text-sm max-w-40">
-                        {(() => {
-                          // DEBUG: Log regions data for this employee
-                          console.log(`[DEBUG COMPONENT] Employee ${employee.id} regions in component:`, {
-                            assigned_regions: employee.assigned_regions,
-                            has_regions: (employee.assigned_regions?.regions?.length || 0) > 0
-                          });
-
-                          return employee.assigned_regions && employee.assigned_regions.regions && employee.assigned_regions.regions.length > 0 ? (
+                        {employee.assigned_regions && employee.assigned_regions.regions && employee.assigned_regions.regions.length > 0 ? (
                             <div>
                               {employee.assigned_regions.regions.slice(0, 2).map((region) => (
                                 <div key={region.id} className="text-xs">
-                                  {region.city}, {region.state}
+                                  {region.city},
                                 </div>
                               ))}
                               {employee.assigned_regions.total_count > 2 && (
@@ -329,8 +315,7 @@ export function EmployeeList({
                             </div>
                           ) : (
                             <span className="text-muted-foreground">No regions</span>
-                          );
-                        })()}
+                          )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -368,14 +353,11 @@ export function EmployeeList({
                   </>
                 )}
               </TableBody>
-            </Table>
-          </div>
-        </div>
-      </div>
+        </Table>
 
       {/* Pagination - visible on all screen sizes */}
       {pagination.totalPages > 1 && (
-        <div className="px-2 py-3 lg:p-6 border-t border-border bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6">
           <div className="flex items-center justify-center">
             <div className="flex gap-2">
               <Button

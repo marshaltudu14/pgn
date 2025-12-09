@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest, EmployeeWithRegions } from '@pgn/shared';
+import { Employee, EmploymentStatus, EmployeeListParams, EmployeeListResponse, CreateEmployeeRequest, UpdateEmployeeRequest, ChangeEmploymentStatusRequest, EmployeeWithRegions, Database } from '@pgn/shared';
 import { useUIStore } from './uiStore';
 import { useAuthStore } from './authStore';
 import { handleApiResponse, getAuthHeaders } from './utils/errorHandling';
+
+type Region = Database['public']['Tables']['regions']['Row'];
 
 
 
@@ -31,6 +33,8 @@ interface EmployeeState {
   fetchEmployees: (params?: EmployeeListParams) => Promise<void>;
   createEmployee: (employeeData: CreateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: EmployeeWithRegions }>;
   updateEmployee: (id: string, employeeData: UpdateEmployeeRequest) => Promise<{ success: boolean; error?: string; data?: EmployeeWithRegions }>;
+  updateEmployeeRegions: (employeeId: string, regionIds: string[]) => Promise<{ success: boolean; error?: string }>;
+  fetchEmployeeRegions: (employeeId: string) => Promise<Region[]>;
   deleteEmployee: (id: string) => Promise<{ success: boolean; error?: string }>;
   resetEmployeePassword: (id: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   updateEmploymentStatus: (id: string, request: ChangeEmploymentStatusRequest) => Promise<{ success: boolean; error?: string }>;
@@ -63,7 +67,7 @@ interface EmployeeFilters {
 export const useEmployeeStore = create<EmployeeState>((set, get) => ({
   employees: [],
   selectedEmployee: null,
-  loading: false,
+  loading: true, // Start with loading true to show skeleton on initial load
   error: null,
   pagination: {
     currentPage: 1,
@@ -77,8 +81,8 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
     search: '',
     searchField: 'first_name',
     status: 'all',
-    sortBy: 'first_name',
-    sortOrder: 'asc',
+    sortBy: 'updated_at',
+    sortOrder: 'desc',
   },
 
   fetchEmployees: async (params?: EmployeeListParams) => {
@@ -134,19 +138,6 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       }
 
       const data: EmployeeListResponse = result.data as EmployeeListResponse;
-
-      // DEBUG: Log the API response data
-      console.log('[DEBUG STORE] Raw API response data:', data);
-      console.log('[DEBUG STORE] Employees count:', data.employees?.length);
-
-      // DEBUG: Log each employee's regions data
-      data.employees?.forEach((emp, index) => {
-        console.log(`[DEBUG STORE] Employee ${index + 1} (${emp.id}):`, {
-          first_name: emp.first_name,
-          last_name: emp.last_name,
-          assigned_regions: emp.assigned_regions
-        });
-      });
 
       const totalPages = Math.ceil(data.total / data.limit);
 
@@ -271,6 +262,66 @@ export const useEmployeeStore = create<EmployeeState>((set, get) => ({
       useUIStore.getState().showNotification('Failed to update employee', 'error');
 
       return { success: false, error: 'Failed to update employee' };
+    }
+  },
+
+  updateEmployeeRegions: async (employeeId: string, regionIds: string[]) => {
+    set({ loading: true, error: null });
+    try {
+      const token = useAuthStore.getState().token;
+      const response = await fetch(`/api/employees/${employeeId}/regions`, {
+        method: 'PUT',
+        headers: getAuthHeaders(token),
+        body: JSON.stringify({ region_ids: regionIds }),
+      });
+
+      const result = await handleApiResponse(response, 'Failed to update employee regions');
+
+      if (!result.success) {
+        set({
+          loading: false,
+          error: result.error || 'Failed to update employee regions',
+        });
+        useUIStore.getState().showNotification(result.error || 'Failed to update employee regions', 'error');
+        return { success: false, error: result.error };
+      }
+
+      set({ loading: false, error: null });
+      useUIStore.getState().showNotification('Employee regions updated successfully', 'success');
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating employee regions:', error);
+
+      set({
+        loading: false,
+        error: 'Failed to update employee regions',
+      });
+
+      useUIStore.getState().showNotification('Failed to update employee regions', 'error');
+
+      return { success: false, error: 'Failed to update employee regions' };
+    }
+  },
+
+  fetchEmployeeRegions: async (employeeId: string): Promise<Region[]> => {
+    try {
+      const token = useAuthStore.getState().token;
+      const response = await fetch(`/api/employees/${employeeId}/regions`, {
+        headers: getAuthHeaders(token),
+      });
+
+      const result = await handleApiResponse(response, 'Failed to fetch employee regions');
+
+      if (!result.success) {
+        console.error(result.error || 'Failed to fetch employee regions');
+        return [];
+      }
+
+      return result.data as Region[];
+    } catch (error) {
+      console.error('Error fetching employee regions:', error);
+      return [];
     }
   },
 

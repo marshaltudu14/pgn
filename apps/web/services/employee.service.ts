@@ -9,7 +9,6 @@ import {
   ChangeEmploymentStatusRequest,
   EmployeeListParams,
   EmployeeListResponse,
-  EmployeeRegionWithDetails,
 } from '@pgn/shared';
 import {
   Database,
@@ -19,8 +18,23 @@ import {
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
+
+// Type for Supabase join response structure
+type SupabaseRegionJoinResult = {
+  region_id: string;
+  regions: {
+    id: string;
+    city: string;
+    state: string;
+  } | {
+    id: string;
+    city: string;
+    state: string;
+  }[];
+};
+
 import { createClient } from '../utils/supabase/server';
-import { getSupabaseAdmin, createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
+import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
 
 /**
  * Get the next user ID sequence for the current year
@@ -240,6 +254,10 @@ export async function createEmployee(
  * Get employee by ID
  */
 export async function getEmployeeById(id: string): Promise<Employee | null> {
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    throw new Error('Invalid employee ID');
+  }
+
   try {
     const supabase = await createClient();
 
@@ -270,6 +288,10 @@ export async function getEmployeeById(id: string): Promise<Employee | null> {
 export async function getEmployeeByHumanReadableId(
   humanReadableId: string
 ): Promise<Employee | null> {
+  if (!humanReadableId || typeof humanReadableId !== 'string' || humanReadableId.trim() === '') {
+    throw new Error('Invalid human readable ID');
+  }
+
   try {
     const supabase = await createClient();
 
@@ -300,6 +322,10 @@ export async function getEmployeeByHumanReadableId(
 export async function getEmployeeByEmail(
   email: string
 ): Promise<Employee | null> {
+  if (!email || typeof email !== 'string' || email.trim() === '') {
+    throw new Error('Invalid email');
+  }
+
   try {
     const supabase = await createClient();
 
@@ -340,7 +366,7 @@ export async function listEmployees(
       search_field = 'human_readable_user_id',
       employment_status,
       assigned_regions,
-      sort_by = 'created_at',
+      sort_by = 'updated_at',
       sort_order = 'desc',
     } = params;
 
@@ -409,16 +435,11 @@ export async function listEmployees(
     // Fetch assigned regions for each employee (limit to 3 regions + get total count)
     const employeesWithRegions = await Promise.all(
       employees.map(async (employee) => {
-        // DEBUG: Log employee ID for regions query
-        console.log(`[DEBUG] Fetching regions for employee: ${employee.id}`);
-
         // Get total count of regions for this employee
         const { count: regionCount } = await supabase
           .from('employee_regions')
           .select('*', { count: 'exact', head: true })
           .eq('employee_id', employee.id);
-
-        console.log(`[DEBUG] Region count for employee ${employee.id}:`, regionCount);
 
         
         // Get first 3 regions with region details using proper join syntax
@@ -436,42 +457,29 @@ export async function listEmployees(
           .range(0, 2) // Limit to first 3 regions
           .order('created_at', { ascending: false });
 
-        console.log(`[DEBUG] Region data for employee ${employee.id}:`, regionData);
-        console.log(`[DEBUG] Region error for employee ${employee.id}:`, {
-          message: regionError?.message,
-          details: regionError?.details,
-          hint: regionError?.hint,
-          code: regionError?.code
-        });
+        if (regionError) {
+          console.error(`Error fetching regions for employee ${employee.id}:`, regionError);
+        }
 
-        const mappedRegions = (regionData || []).map((er: any) => {
-          console.log(`[DEBUG] Mapping region entry:`, er);
-          // regions comes back as an object, not array
-          const region = er.regions;
-          const mapped = {
-            id: region?.id || '',
-            city: region?.city || '',
-            state: region?.state || ''
-          };
-          console.log(`[DEBUG] Mapped region:`, mapped);
-          return mapped;
-        }).filter(r => r.id && r.city && r.state);
+        const mappedRegions = (regionData || []).map((er: SupabaseRegionJoinResult) => {
+          // Supabase returns regions as an array even for single joins
+          const regionsArray = Array.isArray(er.regions) ? er.regions : [er.regions];
+          return regionsArray
+            .filter((region) => region)
+            .map((region) => ({
+              id: region?.id || '',
+              city: region?.city || '',
+              state: region?.state || ''
+            }));
+        }).flat().filter((r) => r.id && r.city && r.state);
 
-        console.log(`[DEBUG] Final mapped regions for employee ${employee.id}:`, mappedRegions);
-
-        const result = {
+      const result = {
           ...employee,
           assigned_regions: {
             regions: mappedRegions,
             total_count: regionCount || 0
           }
         };
-
-        console.log(`[DEBUG] Final employee data with regions:`, {
-          id: result.id,
-          name: result.name,
-          assigned_regions: result.assigned_regions
-        });
 
         return result;
       })
@@ -500,6 +508,10 @@ export async function updateEmployee(
   id: string,
   updateData: UpdateEmployeeRequest
 ): Promise<Employee> {
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    throw new Error('Invalid employee ID');
+  }
+
   try {
     const supabase = await createClient();
 
@@ -809,5 +821,105 @@ export async function resetEmployeePassword(
   } catch (error) {
     console.error('Error in resetEmployeePassword:', error);
     return { success: false, error: 'An unexpected error occurred' };
+  }
+}
+
+/**
+ * Fetch employee regions
+ * Returns all regions assigned to an employee
+ */
+export async function fetchEmployeeRegions(
+  employeeId: string
+): Promise<Database['public']['Tables']['regions']['Row'][]> {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('employee_regions')
+      .select(`
+        regions (
+          id,
+          city,
+          state,
+          state_slug,
+          city_slug,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('employee_id', employeeId);
+
+    if (error) {
+      console.error('Error fetching employee regions:', error);
+      throw new Error(`Failed to fetch employee regions: ${error.message}`);
+    }
+
+    // Extract the regions from the join result
+    // The query might return either a single region object or an array
+    const regions: Database['public']['Tables']['regions']['Row'][] = [];
+
+    data.forEach(item => {
+      const region = item.regions;
+      if (region) {
+        // Check if it's an array (from aggregate) or a single object
+        if (Array.isArray(region)) {
+          regions.push(...region);
+        } else {
+          regions.push(region);
+        }
+      }
+    });
+
+    return regions;
+  } catch (error) {
+    console.error('Error in fetchEmployeeRegions:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update employee regions
+ * Replaces all existing region assignments with the provided ones
+ */
+export async function updateEmployeeRegions(
+  employeeId: string,
+  regionIds: string[]
+): Promise<{ success: boolean; data?: null }> {
+  try {
+    const supabase = await createClient();
+
+    // First, delete all existing region assignments for this employee
+    const { error: deleteError } = await supabase
+      .from('employee_regions')
+      .delete()
+      .eq('employee_id', employeeId);
+
+    if (deleteError) {
+      console.error('Error deleting existing region assignments:', deleteError);
+      throw new Error(`Failed to delete existing region assignments: ${deleteError.message}`);
+    }
+
+    // Then, insert the new region assignments
+    if (regionIds.length > 0) {
+      const assignments = regionIds.map(regionId => ({
+        employee_id: employeeId,
+        region_id: regionId,
+        assigned_at: new Date().toISOString()
+      }));
+
+      const { error: insertError } = await supabase
+        .from('employee_regions')
+        .insert(assignments);
+
+      if (insertError) {
+        console.error('Error inserting new region assignments:', insertError);
+        throw new Error(`Failed to insert new region assignments: ${insertError.message}`);
+      }
+    }
+
+    return { success: true, data: null };
+  } catch (error) {
+    console.error('Error in updateEmployeeRegions:', error);
+    throw new Error(`Failed to update employee regions: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

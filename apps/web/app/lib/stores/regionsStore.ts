@@ -88,7 +88,9 @@ export const useRegionsStore = create<RegionsStore>()(
 
           addParam('page', params.page ?? store.filters.page);
           addParam('limit', params.limit ?? store.filters.limit);
+
           addParam('search', params.search ?? store.filters.search);
+
           addParam('state', params.state ?? store.filters.state);
           addParam('city', params.city ?? store.filters.city);
           addParam('sort_by', params.sort_by ?? store.filters.sort_by);

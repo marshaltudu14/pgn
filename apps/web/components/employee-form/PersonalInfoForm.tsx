@@ -43,7 +43,11 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
             <FormItem>
               <FormLabel>First Name *</FormLabel>
               <FormControl>
-                <Input placeholder="Enter first name" {...field} />
+                <Input
+                  data-testid="first-name"
+                  placeholder="Enter first name"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -56,7 +60,11 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
             <FormItem>
               <FormLabel>Last Name *</FormLabel>
               <FormControl>
-                <Input placeholder="Enter last name" {...field} />
+                <Input
+                  data-testid="last-name"
+                  placeholder="Enter last name"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -72,7 +80,12 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
             <FormItem>
               <FormLabel>Email Address *</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="Enter email address" {...field} />
+                <Input
+                  data-testid="email"
+                  type="email"
+                  placeholder="Enter email address"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -90,6 +103,7 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
                     +91
                   </span>
                   <Input
+                    data-testid="phone"
                     type="tel"
                     placeholder="9876543210"
                     className="pl-10"
@@ -126,6 +140,7 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
                 <FormControl>
                   <div className="relative">
                     <Input
+                      data-testid="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter password (min 6 characters)"
                       value={field.value || ''}
@@ -155,6 +170,7 @@ export function PersonalInfoForm({ form, isEditing }: PersonalInfoFormProps) {
                 <FormControl>
                   <div className="relative">
                     <Input
+                      data-testid="confirm-password"
                       type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm password"
                       value={field.value || ''}

@@ -53,6 +53,8 @@ interface AttendanceFilters {
   status?: string;
   verificationStatus?: VerificationStatus;
   employeeId?: string;
+  search?: string;
+  searchField?: 'first_name' | 'last_name' | 'employee_id';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -125,11 +127,7 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   fetchAttendanceRecords: async (params) => {
     const state = get();
 
-    // Prevent duplicate calls when already loading
-    if (state.isLoading) {
-      return;
-    }
-
+    // Don't prevent duplicate calls for filters/search to show loading state
     set({ isLoading: true, error: null });
     try {
       const { filter, pagination } = get();
@@ -142,6 +140,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
         status: params?.status || filter.status || undefined,
         verificationStatus: params?.verificationStatus || filter.verificationStatus || undefined,
         employeeId: params?.employeeId || filter.employeeId || undefined,
+        search: params?.search || filter.search || undefined,
+        search_field: params?.search_field || filter.searchField || undefined,
         sortBy: params?.sortBy || filter.sortBy || 'attendance_date',
         sortOrder: params?.sortOrder || filter.sortOrder || 'desc',
       };
@@ -155,6 +155,8 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
       if (queryParams.status) queryString.set('status', queryParams.status);
       if (queryParams.verificationStatus) queryString.set('verificationStatus', queryParams.verificationStatus);
       if (queryParams.employeeId) queryString.set('employeeId', queryParams.employeeId);
+      if (queryParams.search) queryString.set('search', queryParams.search);
+      if (queryParams.search_field) queryString.set('search_field', queryParams.search_field);
       if (queryParams.sortBy) queryString.set('sortBy', queryParams.sortBy);
       if (queryParams.sortOrder) queryString.set('sortOrder', queryParams.sortOrder);
 

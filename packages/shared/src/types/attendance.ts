@@ -51,6 +51,7 @@ export interface DailyAttendanceRecord {
   lastLocationUpdate?: Date;
   batteryLevelAtCheckIn?: number;
   batteryLevelAtCheckOut?: number;
+  totalDistance?: number; // Total distance in meters
   createdAt: Date;
   updatedAt: Date;
 }
@@ -204,6 +205,8 @@ export interface AttendanceListParams {
   status?: string;
   verificationStatus?: VerificationStatus;
   employeeId?: string;
+  search?: string;
+  search_field?: 'first_name' | 'last_name' | 'employee_id';
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -296,6 +299,8 @@ export const AttendanceListParamsSchema = z.object({
   status: AttendanceStatusSchema.optional(),
   verificationStatus: VerificationStatusSchema.optional(),
   employeeId: z.string().optional(),
+  search: z.string().optional(),
+  search_field: z.enum(['first_name', 'last_name', 'employee_id']).optional(),
   sortBy: z.string().default('created_at'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });

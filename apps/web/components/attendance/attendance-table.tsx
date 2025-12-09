@@ -58,8 +58,7 @@ export function AttendanceTable({
     <div className="space-y-4">
       {/* Table View - Desktop and Mobile */}
       <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
+        <div className="w-full overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -148,10 +147,10 @@ export function AttendanceTable({
                     </TableCell>
                     <TableCell >
                       <div className="text-sm">
-                        {record.locationPath && record.locationPath.length > 0 ? (
-                          <span>Path data</span>
+                        {record.totalDistance !== undefined && record.totalDistance > 0 ? (
+                          <span>{(record.totalDistance / 1000).toFixed(1)}km</span>
                         ) : (
-                          '-'
+                          <span>-</span>
                         )}
                       </div>
                     </TableCell>
@@ -194,13 +193,12 @@ export function AttendanceTable({
                 )}
               </TableBody>
             </Table>
-          </div>
         </div>
       </div>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
+        <div className="p-4 lg:p-6 bg-white dark:bg-black">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 sm:space-x-2">
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600 dark:text-gray-400">

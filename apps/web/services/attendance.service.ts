@@ -61,6 +61,42 @@ interface PathPoint {
 
 export class AttendanceService {
   /**
+   * Calculate total distance from path data in meters
+   */
+  private calculateDistanceFromPath(pathData: PathPoint[]): number {
+    if (!pathData || pathData.length < 2) {
+      return 0;
+    }
+
+    let totalDistance = 0;
+    for (let i = 1; i < pathData.length; i++) {
+      const prev = pathData[i - 1];
+      const curr = pathData[i];
+
+      // Calculate distance between two points using Haversine formula
+      const R = 6371000; // Earth's radius in meters
+      const dLat = this.toRadians(curr.lat - prev.lat);
+      const dLng = this.toRadians(curr.lng - prev.lng);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(this.toRadians(prev.lat)) * Math.cos(this.toRadians(curr.lat)) *
+                Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c;
+
+      totalDistance += distance;
+    }
+
+    return totalDistance;
+  }
+
+  /**
+   * Convert degrees to radians
+   */
+  private toRadians(degrees: number): number {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
    * Check in an employee with location and selfie
    */
   async checkIn(employeeId: string, request: CheckInRequest): Promise<AttendanceResponse> {
@@ -385,13 +421,14 @@ export class AttendanceService {
       status: this.mapAttendanceStatus(record),
       verificationStatus: record.verification_status as VerificationStatus,
       workHours: record.total_work_hours ? Number(record.total_work_hours) : undefined,
-    notes: record.verification_notes || undefined,
-    device: record.device || undefined,
-    lastLocationUpdate: record.last_location_update ? new Date(record.last_location_update) : undefined,
-    batteryLevelAtCheckIn: record.battery_level_at_check_in !== null ? Number(record.battery_level_at_check_in) : undefined,
-    batteryLevelAtCheckOut: record.battery_level_at_check_out !== null ? Number(record.battery_level_at_check_out) : undefined,
-    createdAt: new Date(record.created_at),
-    updatedAt: new Date(record.updated_at),
+      notes: record.verification_notes || undefined,
+      device: record.device || undefined,
+      lastLocationUpdate: record.last_location_update ? new Date(record.last_location_update) : undefined,
+      batteryLevelAtCheckIn: record.battery_level_at_check_in !== null ? Number(record.battery_level_at_check_in) : undefined,
+      batteryLevelAtCheckOut: record.battery_level_at_check_out !== null ? Number(record.battery_level_at_check_out) : undefined,
+      createdAt: new Date(record.created_at),
+      updatedAt: new Date(record.updated_at),
+      totalDistance: record.total_distance_meters || (record.path_data ? this.calculateDistanceFromPath(record.path_data) : 0),
       };
     });
 
@@ -415,7 +452,7 @@ export class AttendanceService {
             last_name,
             email
           )
-        `)
+        `, { count: 'exact' })
         .order(params.sortBy || 'attendance_date', { ascending: params.sortOrder === 'asc' });
 
       // Apply filters
@@ -432,6 +469,24 @@ export class AttendanceService {
           query = query.is('check_in_timestamp', 'not null').is('check_out_timestamp', 'not null');
         } else if (params.status === 'ABSENT') {
           query = query.is('check_in_timestamp', 'null');
+        }
+      }
+      if (params.verificationStatus) {
+        query = query.eq('verification_status', params.verificationStatus);
+      }
+
+      // Apply search filters
+      if (params.search && params.search_field) {
+        switch (params.search_field) {
+          case 'first_name':
+            query = query.ilike('employee.first_name', `%${params.search}%`);
+            break;
+          case 'last_name':
+            query = query.ilike('employee.last_name', `%${params.search}%`);
+            break;
+          case 'employee_id':
+            query = query.ilike('employee.human_readable_user_id', `%${params.search}%`);
+            break;
         }
       }
 

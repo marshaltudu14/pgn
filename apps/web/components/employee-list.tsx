@@ -27,6 +27,15 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 import { EmploymentStatus, EmployeeListParams, EmployeeWithRegions } from '@pgn/shared';
 
 type SearchFieldType = EmployeeListParams['search_field'];
@@ -103,22 +112,87 @@ export function EmployeeList({
     await fetchEmployees(); // Non-search filter triggers immediate fetch
   }, [setFilters, setPagination, fetchEmployees]);
 
-  const handleSearchFieldChange = useCallback((value: SearchFieldType) => {
+  const handleSearchFieldChange = useCallback(async (value: SearchFieldType) => {
     setFilters({ searchField: value });
     setPagination(1); // Reset to first page
-    fetchEmployees(); // Non-search filter triggers immediate fetch
+    await fetchEmployees(); // Non-search filter triggers immediate fetch
   }, [setFilters, setPagination, fetchEmployees]);
 
-  const handleClearSearch = useCallback(() => {
+  const handleClearSearch = useCallback(async () => {
     setSearchInput('');
     setFilters({ search: '' });
     setPagination(1);
-    fetchEmployees();
+    await fetchEmployees();
   }, [setFilters, setPagination, fetchEmployees]);
 
   
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setPagination(page);
+    await fetchEmployees();
+  };
+
+  // Generate pagination items similar to regions table
+  const generatePaginationItems = () => {
+    const items = [];
+    const { currentPage, totalPages } = pagination;
+
+    // Always show first page
+    if (currentPage > 3) {
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink href="#" onClick={() => handlePageChange(1)}>
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+
+      if (currentPage > 4) {
+        items.push(
+          <PaginationItem key="ellipsis-start">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+    }
+
+    // Show pages around current page
+    const startPage = Math.max(1, currentPage - 1);
+    const endPage = Math.min(totalPages, currentPage + 1);
+
+    for (let i = startPage; i <= endPage; i++) {
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink
+            href="#"
+            isActive={i === currentPage}
+            onClick={() => handlePageChange(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    // Always show last page
+    if (currentPage < totalPages - 2) {
+      if (currentPage < totalPages - 3) {
+        items.push(
+          <PaginationItem key="ellipsis-end">
+            <PaginationEllipsis />
+          </PaginationItem>
+        );
+      }
+
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink href="#" onClick={() => handlePageChange(totalPages)}>
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
   };
 
     return (
@@ -301,21 +375,21 @@ export function EmployeeList({
                     <TableCell>
                       <div className="text-sm max-w-40">
                         {employee.assigned_regions && employee.assigned_regions.regions && employee.assigned_regions.regions.length > 0 ? (
-                            <div>
-                              {employee.assigned_regions.regions.slice(0, 2).map((region) => (
-                                <div key={region.id} className="text-xs">
-                                  {region.city},
-                                </div>
-                              ))}
-                              {employee.assigned_regions.total_count > 2 && (
-                                <div className="text-xs text-muted-foreground">
-                                  +{employee.assigned_regions.total_count - 2} more
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">No regions</span>
-                          )}
+                          <div>
+                            {employee.assigned_regions.regions.slice(0, 2).map((region) => (
+                              <div key={region.id} className="text-xs">
+                                {region.city},
+                              </div>
+                            ))}
+                            {employee.assigned_regions.total_count > 2 && (
+                              <div className="text-xs text-muted-foreground">
+                                +{employee.assigned_regions.total_count - 2} more
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">No regions</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -357,32 +431,26 @@ export function EmployeeList({
 
       {/* Pagination - visible on all screen sizes */}
       {pagination.totalPages > 1 && (
-        <div className="px-2 py-3 lg:p-6">
-          <div className="flex items-center justify-center">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.currentPage - 1)}
-                disabled={pagination.currentPage === 1}
-                className="cursor-pointer hover:bg-accent transition-colors"
-              >
-                Previous
-              </Button>
-              <span className="flex items-center px-3 text-sm text-gray-600 dark:text-gray-400">
-                Page {pagination.currentPage} of {pagination.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePageChange(pagination.currentPage + 1)}
-                disabled={pagination.currentPage === pagination.totalPages}
-                className="cursor-pointer hover:bg-accent transition-colors"
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center justify-center px-2 py-3 lg:p-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={() => handlePageChange(pagination.currentPage - 1)}
+                  className={pagination.currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+              {generatePaginationItems()}
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={() => handlePageChange(pagination.currentPage + 1)}
+                  className={pagination.currentPage === pagination.totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>

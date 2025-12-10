@@ -19,19 +19,6 @@ type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
 
-// Type for Supabase join response structure
-type SupabaseRegionJoinResult = {
-  region_id: string;
-  regions: {
-    id: string;
-    city: string;
-    state: string;
-  } | {
-    id: string;
-    city: string;
-    state: string;
-  }[];
-};
 
 import { createClient } from '../utils/supabase/server';
 import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
@@ -432,21 +419,13 @@ export async function listEmployees(
 
     const employees = data || []; // Return database rows directly
 
-    // Fetch assigned regions for each employee (limit to 3 regions + get total count)
+    // Fetch all assigned regions for each employee
     const employeesWithRegions = await Promise.all(
       employees.map(async (employee) => {
-        // Get total count of regions for this employee
-        const { count: regionCount } = await supabase
-          .from('employee_regions')
-          .select('*', { count: 'exact', head: true })
-          .eq('employee_id', employee.id);
-
-        
-        // Get first 3 regions with region details using proper join syntax
+        // Get all regions with region details using proper join syntax
         const { data: regionData, error: regionError } = await supabase
           .from('employee_regions')
           .select(`
-            region_id,
             regions (
               id,
               city,
@@ -454,30 +433,27 @@ export async function listEmployees(
             )
           `)
           .eq('employee_id', employee.id)
-          .range(0, 2) // Limit to first 3 regions
           .order('created_at', { ascending: false });
 
         if (regionError) {
           console.error(`Error fetching regions for employee ${employee.id}:`, regionError);
         }
 
-        const mappedRegions = (regionData || []).map((er: SupabaseRegionJoinResult) => {
-          // Supabase returns regions as an array even for single joins
-          const regionsArray = Array.isArray(er.regions) ? er.regions : [er.regions];
-          return regionsArray
-            .filter((region) => region)
-            .map((region) => ({
-              id: region?.id || '',
-              city: region?.city || '',
-              state: region?.state || ''
-            }));
-        }).flat().filter((r) => r.id && r.city && r.state);
+        const mappedRegions = (regionData || []).map((item: { regions: { id: string; city: string; state: string } | null }) => {
+          const region = item.regions;
+          if (!region) return null;
+          return {
+            id: region.id || '',
+            city: region.city || '',
+            state: region.state || ''
+          };
+        }).filter((r): r is { id: string; city: string; state: string } => r !== null && r.id && r.city && r.state);
 
       const result = {
           ...employee,
           assigned_regions: {
             regions: mappedRegions,
-            total_count: regionCount || 0
+            total_count: mappedRegions.length
           }
         };
 

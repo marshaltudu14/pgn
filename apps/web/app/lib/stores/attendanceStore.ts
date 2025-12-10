@@ -125,8 +125,6 @@ export const useAttendanceStore = create<AttendanceState>((set, get) => ({
   },
 
   fetchAttendanceRecords: async (params) => {
-    const state = get();
-
     // Don't prevent duplicate calls for filters/search to show loading state
     set({ isLoading: true, error: null });
     try {

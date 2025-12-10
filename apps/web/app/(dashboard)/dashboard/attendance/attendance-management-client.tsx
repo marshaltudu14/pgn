@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Search, Filter, X, Calendar, CalendarX } from 'lucide-react';
 
@@ -88,8 +87,8 @@ export default function AttendanceManagementClient() {
     }
   }, [setFilters, setPagination, fetchAttendanceRecords, filter.search]);
 
-  const handleSearchFieldChange = useCallback((value: string) => {
-    setFilters({ searchField: value as any });
+  const handleSearchFieldChange = useCallback((value: 'first_name' | 'last_name' | 'employee_id') => {
+    setFilters({ searchField: value });
     setPagination(1);
     fetchAttendanceRecords();
   }, [setFilters, setPagination, fetchAttendanceRecords]);

@@ -439,15 +439,15 @@ export async function listEmployees(
           console.error(`Error fetching regions for employee ${employee.id}:`, regionError);
         }
 
-        const mappedRegions = (regionData || []).map((item: { regions: { id: string; city: string; state: string } | null }) => {
-          const region = item.regions;
-          if (!region) return null;
-          return {
-            id: region.id || '',
-            city: region.city || '',
-            state: region.state || ''
-          };
-        }).filter((r): r is { id: string; city: string; state: string } => r !== null && r.id && r.city && r.state);
+        const mappedRegions = (regionData || []).map((item: { regions: { id: string; city: string; state: string }[] }) => {
+          const regionsArray = item.regions || [];
+          return regionsArray
+            .map((region) => ({
+              id: region?.id || '',
+              city: region?.city || '',
+              state: region?.state || ''
+            }));
+        }).flat().filter((r) => !!r.id && !!r.city && !!r.state);
 
       const result = {
           ...employee,

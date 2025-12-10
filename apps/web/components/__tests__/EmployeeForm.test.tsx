@@ -236,6 +236,8 @@ describe('EmployeeForm', () => {
     mockUseEmployeeStore.mockReturnValue({
       createEmployee: jest.fn(),
       updateEmployee: jest.fn(),
+      updateEmployeeRegions: jest.fn(),
+      fetchEmployeeRegions: jest.fn().mockResolvedValue([]),
     } as unknown as ReturnType<typeof useEmployeeStore>);
 
     // Mock regions store
@@ -467,6 +469,8 @@ describe('EmployeeForm', () => {
       mockUseEmployeeStore.mockReturnValue({
         createEmployee: jest.fn(),
         updateEmployee: mockUpdateEmployee,
+        updateEmployeeRegions: jest.fn(),
+        fetchEmployeeRegions: jest.fn().mockResolvedValue([]),
       } as unknown as ReturnType<typeof useEmployeeStore>);
 
       const onOpenChange = jest.fn();
@@ -514,6 +518,8 @@ describe('EmployeeForm', () => {
       mockUseEmployeeStore.mockReturnValue({
         createEmployee: jest.fn(),
         updateEmployee: mockUpdateEmployee,
+        updateEmployeeRegions: jest.fn(),
+        fetchEmployeeRegions: jest.fn().mockResolvedValue([]),
       } as unknown as ReturnType<typeof useEmployeeStore>);
 
       render(
@@ -538,6 +544,8 @@ describe('EmployeeForm', () => {
       mockUseEmployeeStore.mockReturnValue({
         createEmployee: jest.fn(),
         updateEmployee: mockUpdateEmployee,
+        updateEmployeeRegions: jest.fn(),
+        fetchEmployeeRegions: jest.fn().mockResolvedValue([]),
       } as unknown as ReturnType<typeof useEmployeeStore>);
 
       render(

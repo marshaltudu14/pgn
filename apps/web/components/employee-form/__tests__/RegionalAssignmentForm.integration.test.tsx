@@ -45,48 +45,103 @@ jest.mock('@/app/lib/stores/regionsStore', () => ({
 const mockUseRegionsStore = useRegionsStore as jest.MockedFunction<typeof useRegionsStore>;
 
 // Mock form with essential methods
-const createMockForm = (defaultValues: Partial<EmployeeFormData> = { assigned_regions: [] }) => ({
-  watch: jest.fn((field: string) => defaultValues[field as keyof EmployeeFormData]),
-  getValues: jest.fn(() => defaultValues),
-  setValue: jest.fn((field: string, value: any) => {
-    (defaultValues as any)[field as keyof EmployeeFormData] = value;
-  }),
-  control: {
-    _subjects: {
-      state: { observers: [], next: jest.fn() },
-      values: { observers: [], next: jest.fn() }
+const createMockForm = (defaultValues: Partial<EmployeeFormData> = { assigned_regions: [] }) => {
+  const formValues = { ...defaultValues };
+
+  return {
+    watch: jest.fn((field: string) => {
+    if (field === 'assigned_regions') {
+      return formValues[field as keyof EmployeeFormData] || [];
     }
-  } as any,
-  formState: {
-    errors: {},
-    isValid: true,
-    isDirty: false,
-    isLoading: false,
-    isSubmitted: false,
-    isSubmitSuccessful: false,
-    isSubmitting: false,
-    submitCount: 0,
-    dirtyFields: {},
-    touchedFields: {},
-    validatingFields: {},
-  } as any,
-  trigger: jest.fn(),
-  register: jest.fn(),
-  unregister: jest.fn(),
-  handleSubmit: jest.fn(),
-  reset: jest.fn(),
-  resetField: jest.fn(),
-  setError: jest.fn(),
-  clearErrors: jest.fn(),
-  getFieldState: jest.fn(() => ({
-    invalid: false,
-    isDirty: false,
-    isTouched: false,
-    error: undefined,
-    isValidating: false
-  })) as any,
-  setFocus: jest.fn(),
-}) as any;
+    return formValues[field as keyof EmployeeFormData];
+  }),
+    getValues: jest.fn(() => formValues),
+    setValue: jest.fn((field: string, value: any) => {
+      (formValues as any)[field as keyof EmployeeFormData] = value;
+    }),
+    control: {
+      _subjects: {
+        state: { observers: [], next: jest.fn() },
+        values: { observers: [], next: jest.fn() }
+      },
+      _getFieldArray: jest.fn(() => []),
+      _getWatch: jest.fn((name: string) => {
+        if (name === 'assigned_regions') {
+          return (formValues as any)[name] || [];
+        }
+        return (formValues as any)[name];
+      }),
+      _getValues: jest.fn(() => formValues),
+      _fields: new Map([
+        ['assigned_regions', {
+          _f: {
+            ref: { name: 'assigned_regions' },
+            name: 'assigned_regions',
+            value: formValues.assigned_regions || []
+          }
+        }]
+      ]),
+      _names: {
+        array: new Set(['assigned_regions']),
+        mount: new Set(),
+        unMount: new Set(),
+        watch: new Set(),
+        focus: new Set(),
+        fields: new Map(),
+      },
+      register: jest.fn(),
+      unregister: jest.fn(),
+      getFieldState: jest.fn((name: string) => {
+        if (name === 'assigned_regions') {
+          return {
+            invalid: false,
+            isDirty: false,
+            isTouched: false,
+            error: undefined,
+            value: (formValues as any)[name] || []
+          };
+        }
+        return {
+          invalid: false,
+          isDirty: false,
+          isTouched: false,
+          error: undefined,
+          value: (formValues as any)[name]
+        };
+      }),
+      _executeSchema: jest.fn(),
+    } as any,
+    formState: {
+      errors: {},
+      isValid: true,
+      isDirty: false,
+      isLoading: false,
+      isSubmitted: false,
+      isSubmitSuccessful: false,
+      isSubmitting: false,
+      submitCount: 0,
+      dirtyFields: {},
+      touchedFields: {},
+      validatingFields: {},
+    } as any,
+    trigger: jest.fn(),
+    register: jest.fn((name: string) => ({ name, onChange: jest.fn(), onBlur: jest.fn(), ref: jest.fn() })),
+    unregister: jest.fn(),
+    handleSubmit: jest.fn(),
+    reset: jest.fn(),
+    resetField: jest.fn(),
+    setError: jest.fn(),
+    clearErrors: jest.fn(),
+    getFieldState: jest.fn(() => ({
+      invalid: false,
+      isDirty: false,
+      isTouched: false,
+      error: undefined,
+      isValidating: false
+    })) as any,
+    setFocus: jest.fn(),
+  } as any;
+};
 
 describe('RegionalAssignmentForm - Business Logic', () => {
   beforeEach(() => {

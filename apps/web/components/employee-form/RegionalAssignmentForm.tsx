@@ -58,7 +58,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
       baseRegions = regions.filter(region =>
         region.city.toLowerCase().includes(search.toLowerCase()) ||
         region.state.toLowerCase().includes(search.toLowerCase()) ||
-        `${region.city}, ${region.state}`.toLowerCase().includes(search.toLowerCase())
+        `${region.city},${region.state}`.toLowerCase().includes(search.toLowerCase())
       );
     }
 
@@ -185,7 +185,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                                   return (
                                     <CommandItem
                                       key={region.id}
-                                      value={`${region.city}, ${region.state}`}
+                                      value={`${region.city},${region.state}`}
                                       onSelect={() => handleRegionSelect(region.id)}
                                     >
                                       <div className={cn(
@@ -199,7 +199,7 @@ export function RegionalAssignmentForm({ form }: RegionalAssignmentFormProps) {
                                       <div className="flex items-center gap-2">
                                         <MapPin className="h-4 w-4 text-muted-foreground" />
                                         <span className="font-medium">{region.city}</span>
-                                        <span className="text-sm text-muted-foreground">, {region.state}</span>
+                                        <span className="text-sm text-muted-foreground">,{region.state}</span>
                                       </div>
                                     </CommandItem>
                                   );

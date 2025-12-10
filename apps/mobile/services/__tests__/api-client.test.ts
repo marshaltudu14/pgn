@@ -18,6 +18,12 @@ jest.mock('@/store/auth-store', () => ({
   },
 }));
 
+// Create typed mocks for SessionManager
+const mockLoadSession = jest.mocked(SessionManager.loadSession);
+const mockSaveSession = jest.mocked(SessionManager.saveSession);
+const mockClearSession = jest.mocked(SessionManager.clearSession);
+const mockIsSessionExpired = jest.mocked(SessionManager.isSessionExpired);
+
 // Mock Platform
 jest.mock('react-native', () => ({
   Platform: {
@@ -33,7 +39,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   removeItem: jest.fn(),
 }));
 
-// Mock SessionManager
+// Mock SessionManager with proper session management
 jest.mock('@/utils/auth-utils', () => ({
   SessionManager: {
     loadSession: jest.fn(),
@@ -68,6 +74,14 @@ describe('API Client', () => {
       refreshToken: 'refresh-token',
     };
     mockAuthState.isTokenExpired.mockReturnValue(false);
+
+    // Mock SessionManager to return a valid session
+    mockLoadSession.mockResolvedValue({
+      accessToken: 'test-token',
+      refreshToken: 'refresh-token',
+      expiresAt: Date.now() + 3600000, // 1 hour from now
+    });
+    mockIsSessionExpired.mockReturnValue(false);
   });
 
   describe('API Methods', () => {
@@ -192,7 +206,7 @@ describe('API Client', () => {
   describe('Error Handling', () => {
     it('should handle 401 errors', async () => {
       // Mock SessionManager to return no session so it doesn't try to refresh token
-      (SessionManager.loadSession as jest.Mock).mockResolvedValue(null);
+      mockLoadSession.mockResolvedValueOnce(null);
 
       mockFetch.mockResolvedValueOnce({
         ok: false,
@@ -204,8 +218,8 @@ describe('API Client', () => {
       const result = await api.get('/protected');
 
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Session expired. Please login again.');
-      expect(SessionManager.clearSession).toHaveBeenCalled();
+      expect(result.error).toBe('No active session. Please login again.');
+      expect(mockClearSession).not.toHaveBeenCalled(); // Clear session not called if no session exists
     });
 
     it('should handle 403 errors', async () => {

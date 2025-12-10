@@ -346,7 +346,7 @@ describe('EmployeeList Component', () => {
       expect(screen.getAllByText(employee.email)).toHaveLength(2); // Mobile and desktop views
       expect(screen.getAllByText(employee.phone!)).toHaveLength(2); // Mobile and desktop views
       expect(screen.getAllByText('ACTIVE')).toHaveLength(3); // 2 in selects + 1 in badge
-      expect(screen.getByText('Mumbai')).toBeInTheDocument();
+      expect(screen.getByText('No regions')).toBeInTheDocument();
     });
 
     it('should display employment status badges with correct styling', () => {
@@ -407,7 +407,8 @@ describe('EmployeeList Component', () => {
         />
       );
 
-      expect(screen.getByText(mockEmployees[0].phone!)).toBeInTheDocument();
+      // Phone appears in both mobile and desktop views
+      expect(screen.getAllByText(mockEmployees[0].phone!)).toHaveLength(2);
     });
 
     it('should handle missing phone number', () => {

@@ -79,6 +79,7 @@ describe('API Client', () => {
     mockLoadSession.mockResolvedValue({
       accessToken: 'test-token',
       refreshToken: 'refresh-token',
+      expiresIn: 3600, // 1 hour in seconds
       expiresAt: Date.now() + 3600000, // 1 hour from now
     });
     mockIsSessionExpired.mockReturnValue(false);

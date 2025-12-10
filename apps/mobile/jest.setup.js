@@ -3,18 +3,34 @@
 // Add React Native development globals that are preset expects
 global.__DEV__ = true;
 
+// Polyfill setImmediate for jsdom environment
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (fn: (...args: any[]) => void) => setTimeout(fn, 0);
+}
+
 // Mock console methods to avoid noise in tests
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
 beforeEach(() => {
+  jest.clearAllMocks();
   console.error = jest.fn();
   console.warn = jest.fn();
 });
 
 afterEach(() => {
+  // Restore console methods
   console.error = originalConsoleError;
   console.warn = originalConsoleWarn;
+
+  // Clean up any pending promises
+  return new Promise(resolve => setImmediate(resolve));
+});
+
+// Enhanced async cleanup
+afterAll(async () => {
+  // Give any remaining async operations time to complete
+  await new Promise(resolve => setTimeout(resolve, 100));
 });
 
 // Mock react-native-reanimated to prevent native driver issues

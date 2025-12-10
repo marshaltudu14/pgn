@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { act } from '@testing-library/react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, useUser, useIsAuthenticated, useAuthLoading, useAuthError } from '../auth-store';
 import { api } from '@/services/api-client';
@@ -25,6 +25,71 @@ jest.mock('@/utils/auth-utils', () => ({
     saveSession: jest.fn(),
     isSessionExpired: jest.fn(() => false),
     getAccessToken: jest.fn(),
+    getRefreshToken: jest.fn(),
+  },
+}));
+
+// Mock location-foreground-service-notifee to prevent native module errors
+jest.mock('@/services/location-foreground-service-notifee', () => ({
+  locationTrackingServiceNotifee: {
+    isTrackingActive: jest.fn(() => false),
+    getEmergencyData: jest.fn(() => Promise.resolve(null)),
+    stopTracking: jest.fn(() => Promise.resolve()),
+  },
+}));
+
+// Mock expo-battery
+jest.mock('expo-battery', () => ({
+  getBatteryLevelAsync: jest.fn(() => Promise.resolve(0.8)),
+  getBatteryStateAsync: jest.fn(() => Promise.resolve(2)),
+}));
+
+// Mock @notifee/react-native
+jest.mock('@notifee/react-native', () => ({
+  createChannel: jest.fn(() => Promise.resolve()),
+  displayNotification: jest.fn(() => Promise.resolve()),
+  requestPermission: jest.fn(() => Promise.resolve(1)),
+  getTriggerNotifications: jest.fn(() => Promise.resolve([])),
+  cancelTriggerNotifications: jest.fn(() => Promise.resolve()),
+  getTriggerNotificationIds: jest.fn(() => Promise.resolve([])),
+  isChannelCreated: jest.fn(() => Promise.resolve(false)),
+  getChannels: jest.fn(() => Promise.resolve([])),
+  getChannel: jest.fn(() => Promise.resolve(null)),
+  deleteChannel: jest.fn(() => Promise.resolve()),
+  createTriggerNotification: jest.fn(() => Promise.resolve('notification-id')),
+  cancelNotification: jest.fn(() => Promise.resolve()),
+  cancelAllNotifications: jest.fn(() => Promise.resolve()),
+  getDisplayedNotifications: jest.fn(() => Promise.resolve([])),
+  getNotificationSettings: jest.fn(() => Promise.resolve({
+    authorizationStatus: 1,
+    notification: {
+      alert: true,
+      badge: true,
+      sound: true,
+    },
+    car: {
+      alert: true,
+      badge: true,
+      sound: true,
+    },
+    criticalAlert: true,
+    lockScreen: {
+      alert: true,
+      badge: true,
+      showWhenLocked: true,
+    },
+    provisional: false,
+    showPreviews: true,
+    timeSensitive: true,
+  })),
+}));
+
+// Mock attendance-store to prevent circular dependency issues
+jest.mock('@/store/attendance-store', () => ({
+  useAttendance: {
+    getState: jest.fn(() => ({
+      emergencyCheckOut: jest.fn(() => Promise.resolve()),
+    })),
   },
 }));
 
@@ -58,20 +123,22 @@ const createMockUser = (overrides: Partial<AuthenticatedUser> = {}): Authenticat
 
 describe('Auth Store', () => {
   beforeEach(() => {
+    // Clear all mocks before each test
     jest.clearAllMocks();
-    jest.useFakeTimers();
 
     // Mock AsyncStorage methods
     mockAsyncStorage.getItem.mockResolvedValue(null);
     mockAsyncStorage.setItem.mockResolvedValue();
     mockAsyncStorage.multiRemove.mockResolvedValue();
     mockAsyncStorage.multiSet.mockResolvedValue();
+    mockAsyncStorage.removeItem.mockResolvedValue();
 
     // Mock SessionManager methods - use default mocks that can be overridden in specific tests
     mockSessionManager.saveSession.mockResolvedValue();
     mockSessionManager.clearSession.mockResolvedValue();
     mockSessionManager.loadSession.mockResolvedValue(null); // Default: no session
     mockSessionManager.getAccessToken.mockResolvedValue(null); // Default: no token
+    mockSessionManager.getRefreshToken.mockResolvedValue(null); // Default: no refresh token
 
     // Mock API methods
     mockApi.post.mockResolvedValue({
@@ -89,31 +156,37 @@ describe('Auth Store', () => {
   });
 
   afterEach(() => {
+    // Clean up any pending timers
+    jest.clearAllTimers();
+    jest.runOnlyPendingTimers();
     jest.useRealTimers();
+
+    // Reset all mocks
+    jest.resetAllMocks();
   });
 
   describe('Initial State', () => {
     it('should have correct initial state', () => {
-      const { result } = renderHook(() => useAuth());
+      const authState = useAuth.getState();
 
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(result.current.isLoading).toBe(false);
-      expect(result.current.user).toBe(null);
-      expect(result.current.error).toBe(null);
-      expect(result.current.isLoggingIn).toBe(false);
-      expect(result.current.lastActivity).toBeGreaterThan(0);
+      expect(authState.isAuthenticated).toBe(false);
+      expect(authState.isLoading).toBe(false);
+      expect(authState.user).toBe(null);
+      expect(authState.error).toBe(null);
+      expect(authState.isLoggingIn).toBe(false);
+      expect(authState.lastActivity).toBeGreaterThan(0);
     });
 
     it('should have helper hooks working correctly', () => {
-      const userHook = renderHook(() => useUser());
-      const authHook = renderHook(() => useIsAuthenticated());
-      const loadingHook = renderHook(() => useAuthLoading());
-      const errorHook = renderHook(() => useAuthError());
+      const user = useUser();
+      const isAuthenticated = useIsAuthenticated();
+      const isLoading = useAuthLoading();
+      const error = useAuthError();
 
-      expect(userHook.result.current).toBe(null);
-      expect(authHook.result.current).toBe(false); // Session expired initially
-      expect(loadingHook.result.current).toBe(false);
-      expect(errorHook.result.current).toBe(null);
+      expect(user).toBe(null);
+      expect(isAuthenticated).toBe(false); // Session expired initially
+      expect(isLoading).toBe(false);
+      expect(error).toBe(null);
     });
   });
 

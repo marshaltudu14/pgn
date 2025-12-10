@@ -12,7 +12,12 @@ const mockUseRNColorScheme = useRNColorScheme as jest.MockedFunction<typeof useR
 describe('useColorScheme (web)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     mockUseRNColorScheme.mockReturnValue('light');
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('should return light during initial render', () => {
@@ -21,7 +26,7 @@ describe('useColorScheme (web)', () => {
     expect(result.current).toBe('light');
   });
 
-  it('should return RN colorScheme after hydration', () => {
+  it('should return RN colorScheme after hydration', async () => {
     // Mock the RN hook to return a specific value
     mockUseRNColorScheme.mockReturnValue('dark');
 
@@ -30,6 +35,7 @@ describe('useColorScheme (web)', () => {
     // Wait for useEffect to complete (hydration)
     act(() => {
       // Force flush of effects
+      jest.advanceTimersByTime(0);
     });
 
     // After hydration, should return the RN colorScheme
@@ -79,8 +85,6 @@ describe('useColorScheme (web)', () => {
   });
 
   it('should use fake timers for useEffect', () => {
-    jest.useFakeTimers();
-
     const { result } = renderHook(() => useColorScheme());
 
     act(() => {
@@ -88,8 +92,6 @@ describe('useColorScheme (web)', () => {
     });
 
     expect(result.current).toBeDefined();
-
-    jest.useRealTimers();
   });
 
   it('should handle unmount without errors', () => {
@@ -108,6 +110,7 @@ describe('useColorScheme (web)', () => {
 
     act(() => {
       // Force flush of effects
+      jest.advanceTimersByTime(0);
     });
 
     rerender();

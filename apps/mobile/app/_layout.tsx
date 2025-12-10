@@ -1,20 +1,10 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import {
-  configureReanimatedLogger,
-  ReanimatedLogLevel,
-} from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/Toast';
 import { ThemeProvider as AppThemeProvider } from '@/contexts/theme-context';
 import { useState, useEffect } from 'react';
 import { ThemeWrapper } from '@/components/ThemeWrapper';
-
-// Configure Reanimated logger to reduce warnings
-configureReanimatedLogger({
-  level: ReanimatedLogLevel.warn,
-  strict: false, // Disable strict mode to reduce warnings
-});
 
 // Keep the splash screen visible while we initialize the app
 SplashScreen.preventAutoHideAsync();

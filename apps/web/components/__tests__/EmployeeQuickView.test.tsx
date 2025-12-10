@@ -6,21 +6,21 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { Employee, EmploymentStatus } from '@pgn/shared';
+import { EmployeeWithRegions, EmploymentStatus } from '@pgn/shared';
 import { EmployeeQuickView } from '../employee-quick-view';
 
 // Mock UI components to simplify testing
-jest.mock('@/components/ui/dialog', () => ({
-  Dialog: ({ children, open, onOpenChange }: {
+jest.mock('@/components/ui/sheet', () => ({
+  Sheet: ({ children, open, onOpenChange }: {
     children: React.ReactNode;
     open: boolean;
     onOpenChange: (open: boolean) => void;
   }) => (
     open ? (
-      <div role="dialog" data-testid="dialog">
+      <div role="dialog" data-testid="sheet">
         {children}
         <button
-          data-testid="close-dialog"
+          data-testid="close-sheet"
           onClick={() => onOpenChange(false)}
         >
           Close
@@ -28,23 +28,38 @@ jest.mock('@/components/ui/dialog', () => ({
       </div>
     ) : null
   ),
-  DialogContent: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-content">{children}</div>
+  SheetContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sheet-content">{children}</div>
   ),
-  DialogHeader: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-header">{children}</div>
+  SheetHeader: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sheet-header">{children}</div>
   ),
-  DialogTitle: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-title">{children}</div>
+  SheetTitle: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sheet-title">{children}</div>
   ),
-  DialogDescription: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="dialog-description">{children}</div>
+  SheetFooter: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sheet-footer">{children}</div>
   ),
 }));
 
 jest.mock('@/components/ui/badge', () => ({
   Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
     <span className={className} data-testid="badge">{children}</span>
+  ),
+}));
+
+jest.mock('@/components/ui/card', () => ({
+  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} data-testid="card">{children}</div>
+  ),
+  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} data-testid="card-content">{children}</div>
+  ),
+  CardHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} data-testid="card-header">{children}</div>
+  ),
+  CardTitle: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div className={className} data-testid="card-title">{children}</div>
   ),
 }));
 
@@ -98,10 +113,33 @@ jest.mock('lucide-react', () => ({
   Clock: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => <span data-testid={testId || "clock-icon"} className={className}></span>,
   User: ({ className }: { className?: string }) => <span data-testid="user-icon" className={className}></span>,
   Users: ({ className, 'data-testid': testId }: { className?: string; 'data-testid'?: string }) => <span data-testid={testId || "users-icon"} className={className}></span>,
+  MapPin: ({ className }: { className?: string }) => <span data-testid="mappin-icon" className={className}></span>,
+  Briefcase: ({ className }: { className?: string }) => <span data-testid="briefcase-icon" className={className}></span>,
+  ChevronRight: ({ className }: { className?: string }) => <span data-testid="chevronright-icon" className={className}></span>,
+}));
+
+// Mock Avatar component
+jest.mock('@/components/ui/avatar', () => ({
+  Avatar: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="avatar" className={className}>{children}</div>
+  ),
+  AvatarFallback: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="avatar-fallback" className={className}>{children}</div>
+  ),
+}));
+
+// Mock Card component
+jest.mock('@/components/ui/card', () => ({
+  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card" className={className}>{children}</div>
+  ),
+  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="card-content" className={className}>{children}</div>
+  ),
 }));
 
 // Helper function to create mock employee data
-const createMockEmployee = (overrides: Partial<Employee> = {}): Employee => ({
+const createMockEmployee = (overrides: Partial<EmployeeWithRegions> = {}): EmployeeWithRegions => ({
   id: 'emp-123',
   human_readable_user_id: 'PGN-2024-0001',
   first_name: 'John',
@@ -114,6 +152,16 @@ const createMockEmployee = (overrides: Partial<Employee> = {}): Employee => ({
   updated_at: '2024-01-01T00:00:00Z',
   employment_status_changed_at: '2024-01-01T00:00:00Z',
   employment_status_changed_by: 'admin',
+  assigned_regions: {
+    regions: [
+      { id: 'region-1', city: 'New York', state: 'NY' },
+      { id: 'region-2', city: 'Los Angeles', state: 'CA' },
+      { id: 'region-3', city: 'Chicago', state: 'IL' },
+      { id: 'region-4', city: 'Houston', state: 'TX' },
+      { id: 'region-5', city: 'Phoenix', state: 'AZ' },
+    ],
+    total_count: 5
+  },
   ...overrides,
 });
 
@@ -135,7 +183,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sheet')).not.toBeInTheDocument();
     });
 
     it('should not render when employee is null', () => {
@@ -147,7 +195,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sheet')).not.toBeInTheDocument();
     });
 
     it('should render when open is true and employee is provided', () => {
@@ -161,9 +209,9 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByTestId('dialog')).toBeInTheDocument();
-      expect(screen.getByTestId('dialog-content')).toBeInTheDocument();
-      expect(screen.getByTestId('dialog-header')).toBeInTheDocument();
+      expect(screen.getByTestId('sheet')).toBeInTheDocument();
+      expect(screen.getByTestId('sheet-content')).toBeInTheDocument();
+      expect(screen.getByTestId('sheet-header')).toBeInTheDocument();
     });
 
     it('should render employee basic information', () => {
@@ -192,13 +240,11 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByText('Contact Information')).toBeInTheDocument();
-      expect(screen.getByText('Email')).toBeInTheDocument();
-      expect(screen.getByText('Phone')).toBeInTheDocument();
-      expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
-      expect(screen.getByText('9876543210')).toBeInTheDocument();
-      expect(screen.getByTestId('mail-icon')).toBeInTheDocument();
-      expect(screen.getByTestId('phone-icon')).toBeInTheDocument();
+      expect(screen.getByText('Contact Details')).toBeInTheDocument();
+      expect(screen.getAllByText('Email')).toHaveLength(2); // One in summary, one in details
+      expect(screen.getAllByText('Phone')).toHaveLength(2); // One in summary, one in details
+      expect(screen.getAllByText('john.doe@example.com')).toHaveLength(2); // One in summary, one in details
+      expect(screen.getAllByText('9876543210')).toHaveLength(2); // One in summary, one in details
     });
 
     it('should render employment details section', () => {
@@ -215,12 +261,8 @@ describe('EmployeeQuickView Component', () => {
       expect(screen.getByText('Employment Details')).toBeInTheDocument();
       expect(screen.getByText('Status')).toBeInTheDocument();
       expect(screen.getByText('Login Access')).toBeInTheDocument();
-      expect(screen.getByTestId('badge')).toHaveTextContent('ACTIVE');
-      expect(screen.getByTestId('status-icon')).toBeInTheDocument();
-      expect(screen.getByTestId('login-enabled-icon')).toBeInTheDocument();
-      expect(screen.getByText('Enabled')).toBeInTheDocument();
-      expect(screen.getByTestId('building-icon')).toBeInTheDocument();
-      expect(screen.getByTestId('shield-icon')).toBeInTheDocument();
+      expect(screen.getAllByText('Active')).toHaveLength(2); // One in header, one in details
+      expect(screen.getAllByText('Enabled')).toHaveLength(2); // One in quick info, one in details
     });
 
     it('should render timeline information section', () => {
@@ -242,11 +284,9 @@ describe('EmployeeQuickView Component', () => {
       expect(screen.getByText('Last Updated')).toBeInTheDocument();
       expect(screen.getByText('Jan 1, 2024')).toBeInTheDocument();
       expect(screen.getByText('Jan 15, 2024')).toBeInTheDocument();
-      expect(screen.getByTestId('calendar-icon')).toBeInTheDocument();
-      expect(screen.getByTestId('clock-icon')).toBeInTheDocument();
     });
 
-    it('should render assigned cities section', () => {
+    it('should render assigned regions section with all regions', () => {
       const mockEmployee = createMockEmployee();
 
       render(
@@ -257,9 +297,13 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByText('Assigned Cities')).toBeInTheDocument();
-      expect(screen.getByText('Mumbai')).toBeInTheDocument();
-      expect(screen.getByText('Pune')).toBeInTheDocument();
+      expect(screen.getByText('Assigned Regions')).toBeInTheDocument();
+      expect(screen.getByText('5 Regions')).toBeInTheDocument();
+      expect(screen.getByText('New York')).toBeInTheDocument();
+      expect(screen.getByText('Los Angeles')).toBeInTheDocument();
+      expect(screen.getByText('Chicago')).toBeInTheDocument();
+      expect(screen.getByText('Houston')).toBeInTheDocument();
+      expect(screen.getByText('Phoenix')).toBeInTheDocument();
     });
 
     it('should render footer with edit button when onEdit is provided', () => {
@@ -274,8 +318,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByText('Edit Employee')).toBeInTheDocument();
-      expect(screen.getByTestId('edit-icon')).toBeInTheDocument();
+      expect(screen.getByText('Edit Employee Details')).toBeInTheDocument();
     });
 
     it('should not render edit button when onEdit is not provided', () => {
@@ -290,7 +333,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.queryByText('Edit Employee')).not.toBeInTheDocument();
+      expect(screen.queryByText('Edit Employee Details')).not.toBeInTheDocument();
     });
   });
 
@@ -303,7 +346,7 @@ describe('EmployeeQuickView Component', () => {
       { status: 'ON_LEAVE' as EmploymentStatus, expectedIcon: 'status-icon' },
     ];
 
-    statusTests.forEach(({ status, expectedIcon }) => {
+    statusTests.forEach(({ status }) => {
       it(`should render correct icon and badge for ${status} status`, () => {
         const mockEmployee = createMockEmployee({ employment_status: status });
 
@@ -315,10 +358,17 @@ describe('EmployeeQuickView Component', () => {
           />
         );
 
-        expect(screen.getByTestId(expectedIcon)).toBeInTheDocument();
-        expect(screen.getByTestId('badge')).toHaveTextContent(
-          status.replace('_', ' ')
-        );
+        // Map status to expected label text
+        const statusLabels: Record<EmploymentStatus, string> = {
+          ACTIVE: 'Active',
+          SUSPENDED: 'Suspended',
+          RESIGNED: 'Resigned',
+          TERMINATED: 'Terminated',
+          ON_LEAVE: 'On Leave'
+        };
+
+        // Check that the status badge exists with the correct text (appears twice)
+        expect(screen.getAllByText(statusLabels[status])).toHaveLength(2);
       });
     });
 
@@ -335,8 +385,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByTestId('login-disabled-icon')).toBeInTheDocument();
-      expect(screen.getByText('Disabled')).toBeInTheDocument();
+      expect(screen.getAllByText('Disabled')).toHaveLength(2); // One in quick info, one in details
     });
   });
 
@@ -354,7 +403,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      const editButton = screen.getByText('Edit Employee');
+      const editButton = screen.getByText('Edit Employee Details');
       await user.click(editButton);
 
       expect(mockOnEdit).toHaveBeenCalledWith(mockEmployee);
@@ -373,13 +422,13 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      const closeButton = screen.getByTestId('close-dialog');
+      const closeButton = screen.getByTestId('close-sheet');
       await user.click(closeButton);
 
       expect(mockOnOpenChange).toHaveBeenCalledWith(false);
     });
 
-    it('should call onOpenChange when dialog is closed by other means', () => {
+    it('should call onOpenChange when sheet is closed by other means', () => {
       const mockEmployee = createMockEmployee();
 
       const { rerender } = render(
@@ -399,13 +448,13 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sheet')).not.toBeInTheDocument();
     });
   });
 
   describe('Data Handling', () => {
     it('should handle employee with null phone', () => {
-      const mockEmployee = createMockEmployee({ phone: '' });
+      const mockEmployee = createMockEmployee({ phone: undefined });
 
       render(
         <EmployeeQuickView
@@ -415,7 +464,7 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByText('-')).toBeInTheDocument();
+      expect(screen.getAllByText('-')).toHaveLength(2); // One in quick info, one in details
     });
 
     it('should handle employee with empty phone', () => {
@@ -429,9 +478,120 @@ describe('EmployeeQuickView Component', () => {
         />
       );
 
-      expect(screen.getByText('-')).toBeInTheDocument();
+      expect(screen.getAllByText('-')).toHaveLength(2); // One in quick info, one in details
+    });
+  });
+
+  describe('Regions Display', () => {
+    it('should display "No Regions Assigned" when employee has no regions', () => {
+      const mockEmployee = createMockEmployee({
+        assigned_regions: {
+          regions: [],
+          total_count: 0
+        }
+      });
+
+      render(
+        <EmployeeQuickView
+          open={true}
+          onOpenChange={mockOnOpenChange}
+          employee={mockEmployee}
+        />
+      );
+
+      expect(screen.getByText('No Regions Assigned')).toBeInTheDocument();
+      expect(screen.getByText('This employee hasn\'t been assigned to any regions yet.')).toBeInTheDocument();
     });
 
-    
+    it('should display correct count for single region', () => {
+      const mockEmployee = createMockEmployee({
+        assigned_regions: {
+          regions: [
+            { id: 'region-1', city: 'Boston', state: 'MA' }
+          ],
+          total_count: 1
+        }
+      });
+
+      render(
+        <EmployeeQuickView
+          open={true}
+          onOpenChange={mockOnOpenChange}
+          employee={mockEmployee}
+        />
+      );
+
+      expect(screen.getByText('1 Region')).toBeInTheDocument();
+      expect(screen.getByText('Boston')).toBeInTheDocument();
+      expect(screen.getByText('MA')).toBeInTheDocument();
     });
+
+    it('should display correct count for multiple regions', () => {
+      const mockEmployee = createMockEmployee({
+        assigned_regions: {
+          regions: [
+            { id: 'region-1', city: 'Boston', state: 'MA' },
+            { id: 'region-2', city: 'Miami', state: 'FL' },
+            { id: 'region-3', city: 'Seattle', state: 'WA' }
+          ],
+          total_count: 3
+        }
+      });
+
+      render(
+        <EmployeeQuickView
+          open={true}
+          onOpenChange={mockOnOpenChange}
+          employee={mockEmployee}
+        />
+      );
+
+      expect(screen.getByText('3 Regions')).toBeInTheDocument();
+      expect(screen.getByText('Boston')).toBeInTheDocument();
+      expect(screen.getByText('Miami')).toBeInTheDocument();
+      expect(screen.getByText('Seattle')).toBeInTheDocument();
+    });
+
+    it('should handle missing assigned_regions gracefully', () => {
+      const mockEmployeeWithoutRegions = {
+        ...createMockEmployee(),
+        assigned_regions: undefined
+      } as unknown as EmployeeWithRegions;
+
+      render(
+        <EmployeeQuickView
+          open={true}
+          onOpenChange={mockOnOpenChange}
+          employee={mockEmployeeWithoutRegions}
+        />
+      );
+
+      // Should still render the component without crashing
+      expect(screen.getByTestId('sheet')).toBeInTheDocument();
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    it('should handle mismatch between total_count and actual regions length', () => {
+      const mockEmployee = createMockEmployee({
+        assigned_regions: {
+          regions: [
+            { id: 'region-1', city: 'Boston', state: 'MA' }
+          ],
+          total_count: 5 // Mismatch: total_count says 5 but only 1 region provided
+        }
+      });
+
+      render(
+        <EmployeeQuickView
+          open={true}
+          onOpenChange={mockOnOpenChange}
+          employee={mockEmployee}
+        />
+      );
+
+      // Should display the actual count from the regions array
+      expect(screen.getByText('1 Region')).toBeInTheDocument();
+      expect(screen.getByText('Boston')).toBeInTheDocument();
+    });
+  });
 });

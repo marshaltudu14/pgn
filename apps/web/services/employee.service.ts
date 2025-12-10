@@ -439,8 +439,13 @@ export async function listEmployees(
           console.error(`Error fetching regions for employee ${employee.id}:`, regionError);
         }
 
-        const mappedRegions = (regionData || []).map((item: { regions: { id: string; city: string; state: string }[] }) => {
-          const regionsArray = item.regions || [];
+        const mappedRegions = (regionData || []).map((item: { regions: { id: string; city: string; state: string } | { id: string; city: string; state: string }[] }) => {
+          const regions = item.regions;
+          if (!regions) return [];
+
+          // Handle both single region object and array of regions
+          const regionsArray = Array.isArray(regions) ? regions : [regions];
+
           return regionsArray
             .map((region) => ({
               id: region?.id || '',
@@ -776,6 +781,11 @@ export async function resetEmployeePassword(
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Validate employee ID first
+    if (!employeeId || typeof employeeId !== 'string' || employeeId.trim() === '') {
+      return { success: false, error: 'Employee not found' };
+    }
+
     // Step 1: Get employee by ID to get their email
     const employee = await getEmployeeById(employeeId);
 

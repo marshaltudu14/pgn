@@ -37,26 +37,24 @@ const createMockSupabaseClient = () => {
   // Smart mock that tracks calls
   const createSmartChain = (tableName: string) => {
     const callLog: Array<{ method: string; args: any[] }> = [];
+    let shouldResolve = false;
+    let resolveValue: any = { data: [], error: null };
+
+    // Create chain object with lazy evaluation
     const chain: any = {};
 
-  
     // Create method that logs and chains
-    const createMethod = (methodName: string, shouldResolve = false, resolveValue?: any) => {
+    const createMethod = (methodName: string, isTerminal = false) => {
       const fn = jest.fn().mockImplementation((...args: any[]) => {
         callLog.push({ method: methodName, args });
 
-        if (shouldResolve) {
-          return Promise.resolve(resolveValue || { data: [], error: null });
+        if (isTerminal || shouldResolve) {
+          // Return a promise for terminal methods
+          return Promise.resolve(resolveValue);
         }
 
         return chain;
       });
-
-      // For methods that should resolve, also set the mockReturnValue for direct calls
-      if (shouldResolve) {
-        fn.mockResolvedValue(resolveValue || { data: [], error: null });
-      }
-
       return fn;
     };
 
@@ -73,6 +71,7 @@ const createMockSupabaseClient = () => {
     chain.contains = createMethod('contains');
     chain.order = createMethod('order');
     chain.range = createMethod('range');
+    chain.limit = createMethod('limit', true); // limit is terminal
 
     // Special handling for common patterns
     if (tableName === 'employees') {
@@ -96,12 +95,16 @@ const createMockSupabaseClient = () => {
       chain.single = jest.fn().mockResolvedValue({ data: null, error: null });
     }
 
-    // Default limit
-    chain.limit = createMethod('limit', true, { data: [], error: null });
-
     // Helper method to override behavior
     chain.override = (methodName: string, implementation: any) => {
       chain[methodName] = implementation;
+      return chain;
+    };
+
+    // Method to configure what the chain should resolve to
+    chain.setResolve = (value: any) => {
+      resolveValue = value;
+      shouldResolve = true;
       return chain;
     };
 
@@ -163,8 +166,10 @@ describe('Employee Service', () => {
       chain.or = jest.fn().mockImplementation(returnChain);
       chain.contains = jest.fn().mockImplementation(returnChain);
       chain.order = jest.fn().mockImplementation(returnChain);
-      chain.range = jest.fn().mockImplementation(returnChain);
-      chain.limit = jest.fn().mockImplementation(returnChain);
+
+      // Terminal methods that should resolve
+      chain.range = jest.fn().mockResolvedValue(customResolve || { data: [], error: null });
+      chain.limit = jest.fn().mockResolvedValue(customResolve || { data: [], error: null });
 
       // Methods that resolve to promises
       chain.single = jest.fn().mockResolvedValue(customResolve || { data: null, error: null });
@@ -1145,47 +1150,41 @@ describe('Employee Service', () => {
     ];
 
     // Helper function to mock listEmployees database calls
-    const mockListEmployeesCalls = (employees: any[], totalCount: number = 25) => {
-      // Track if we're in a count query
-      let isCountQuery = false;
-
+    const mockListEmployeesCalls = (employees: any[], totalCount: number | undefined = 25, regions: any[] = []) => {
       mockSupabaseClient.from.mockImplementation((table: string) => {
         const chain = createQueryChain();
 
         if (table === 'employees') {
           // Main employee list query
-          chain.select = jest.fn().mockImplementation((...args) => {
-            isCountQuery = args[1]?.count === 'exact';
+          chain.select = jest.fn().mockImplementation(() => {
             return chain;
           });
           chain.order = jest.fn().mockReturnValue(chain);
+          chain.ilike = jest.fn().mockReturnValue(chain); // Add support for ilike search
+          chain.in = jest.fn().mockReturnValue(chain); // Add support for in operator
           chain.range = jest.fn().mockResolvedValue({
             data: employees,
             error: null,
             count: totalCount
           });
         } else if (table === 'employee_regions') {
-          // Region queries - return empty regions for simplicity
-          chain.select = jest.fn().mockImplementation((...args) => {
-            isCountQuery = args[1]?.count === 'exact';
+          // Region queries - return regions based on employee_id
+          chain.select = jest.fn().mockReturnValue(chain);
+          chain.eq = jest.fn().mockImplementation((field, value) => {
+            if (field === 'employee_id') {
+              // Find regions for this employee
+              const employeeRegions = regions.filter(r => r.employee_id === value);
+              chain.order = jest.fn().mockResolvedValue({
+                data: employeeRegions.map(er => ({ regions: er.region })),
+                error: null
+              });
+            }
             return chain;
           });
-          chain.eq = jest.fn().mockReturnValue(chain);
-
-          if (isCountQuery) {
-            // Mock the count query to return count 0
-            chain.eq = jest.fn().mockImplementation(() => {
-              return Promise.resolve({ count: 0 });
-            });
-          } else {
-            // Mock the data query to return empty array
-            chain.range = jest.fn().mockReturnValue(chain);
-            chain.order = jest.fn().mockReturnValue(chain);
-            chain.range = jest.fn().mockResolvedValue({
-              data: [],
-              error: null
-            });
-          }
+          chain.order = jest.fn().mockResolvedValue({
+            data: [],
+            error: null
+          });
         }
 
         return chain;
@@ -1214,17 +1213,13 @@ describe('Employee Service', () => {
     });
 
     it('should return paginated employee list with custom parameters', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: mockEmployees,
-              error: null,
-              count: 150
-            })
-          })
-        })
-      });
+      // Use the helper to mock both employees and regions queries
+      // Provide empty regions for each employee
+      const employeeRegions = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(mockEmployees, 150, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 2,
@@ -1234,8 +1229,17 @@ describe('Employee Service', () => {
       };
       const result = await listEmployees(params);
 
+      // The result includes regions for each employee
+      const expectedEmployees = mockEmployees.map(emp => ({
+        ...emp,
+        assigned_regions: {
+          regions: [{ id: 'test-region', city: 'Test City', state: 'TS' }],
+          total_count: 1
+        }
+      }));
+
       expect(result).toEqual({
-        employees: mockEmployees,
+        employees: expectedEmployees,
         total: 150,
         page: 2,
         limit: 25,
@@ -1244,19 +1248,13 @@ describe('Employee Service', () => {
     });
 
     it('should apply search filter across multiple fields', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          ilike: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({
-                data: [mockEmployees[0]], // Only John Doe matches (searching human_readable_user_id by default)
-                error: null,
-                count: 1
-              })
-            })
-          })
-        })
-      });
+      // Only John Doe matches
+      const filteredEmployees = [mockEmployees[0]];
+      const employeeRegions = filteredEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(filteredEmployees, 1, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 1,
@@ -1271,19 +1269,13 @@ describe('Employee Service', () => {
     });
 
     it('should apply search filter by last name', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          ilike: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({
-                data: [mockEmployees[1]], // Only Jane Smith matches
-                error: null,
-                count: 1
-              })
-            })
-          })
-        })
-      });
+      // Only Jane Smith matches
+      const filteredEmployees = [mockEmployees[1]];
+      const employeeRegions = filteredEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(filteredEmployees, 1, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 1,
@@ -1297,19 +1289,12 @@ describe('Employee Service', () => {
     });
 
     it('should apply search filter by email', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          ilike: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({
-                data: mockEmployees,
-                error: null,
-                count: 2
-              })
-            })
-          })
-        })
-      });
+      // Both employees have example.com emails
+      const employeeRegions = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(mockEmployees, 2, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 1,
@@ -1323,19 +1308,13 @@ describe('Employee Service', () => {
     });
 
     it('should apply employment status filter with single status', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          in: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({
-                data: [mockEmployees[0]], // Only active employee
-                error: null,
-                count: 1
-              })
-            })
-          })
-        })
-      });
+      // Only active employee
+      const filteredEmployees = [mockEmployees[0]];
+      const employeeRegions = filteredEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(filteredEmployees, 1, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 1,
@@ -1348,19 +1327,12 @@ describe('Employee Service', () => {
     });
 
     it('should apply employment status filter with multiple statuses', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          in: jest.fn().mockReturnValue({
-            order: jest.fn().mockReturnValue({
-              range: jest.fn().mockResolvedValue({
-                data: mockEmployees,
-                error: null,
-                count: 2
-              })
-            })
-          })
-        })
-      });
+      // Both employees match either ACTIVE or ON_LEAVE
+      const employeeRegions = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(mockEmployees, 2, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 1,
@@ -1410,17 +1382,11 @@ describe('Employee Service', () => {
     });
 
     it('should calculate hasMore correctly for last page', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: mockEmployees,
-              error: null,
-              count: 75
-            })
-          })
-        })
-      });
+      const employeeRegions = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(mockEmployees, 75, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 2,
@@ -1434,17 +1400,11 @@ describe('Employee Service', () => {
     });
 
     it('should calculate hasMore correctly for middle page', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: mockEmployees,
-              error: null,
-              count: 150
-            })
-          })
-        })
-      });
+      const employeeRegions = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(mockEmployees, 150, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 2,
@@ -1484,16 +1444,44 @@ describe('Employee Service', () => {
     });
 
     it('should handle undefined count', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: mockEmployees,
-              error: null,
-              count: undefined
-            })
-          })
-        })
+      // Direct mock instead of using helper to pass undefined count
+      const regionsData = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        const chain = createQueryChain();
+
+        if (table === 'employees') {
+          chain.select = jest.fn().mockReturnValue(chain);
+          chain.order = jest.fn().mockReturnValue(chain);
+          chain.ilike = jest.fn().mockReturnValue(chain);
+          chain.in = jest.fn().mockReturnValue(chain);
+          chain.range = jest.fn().mockResolvedValue({
+            data: mockEmployees,
+            error: null,
+            count: undefined // Explicitly set count to undefined
+          });
+        } else if (table === 'employee_regions') {
+          chain.select = jest.fn().mockReturnValue(chain);
+          chain.eq = jest.fn().mockImplementation((field, value) => {
+            if (field === 'employee_id') {
+              const empRegions = regionsData.filter(r => r.employee_id === value);
+              chain.order = jest.fn().mockResolvedValue({
+                data: empRegions.map(er => ({ regions: er.region })),
+                error: null
+              });
+            }
+            return chain;
+          });
+          chain.order = jest.fn().mockResolvedValue({
+            data: [],
+            error: null
+          });
+        }
+
+        return chain;
       });
 
       const params: EmployeeListParams = {
@@ -1529,17 +1517,11 @@ describe('Employee Service', () => {
     });
 
     it('should handle page parameter of 0 (should be treated as 1)', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: mockEmployees,
-              error: null,
-              count: 25
-            })
-          })
-        })
-      });
+      const employeeRegions = mockEmployees.map(emp => ({
+        employee_id: emp.id,
+        region: { id: 'test-region', city: 'Test City', state: 'TS' }
+      }));
+      mockListEmployeesCalls(mockEmployees, 25, employeeRegions);
 
       const params: EmployeeListParams = {
         page: 0,
@@ -1554,17 +1536,7 @@ describe('Employee Service', () => {
     });
 
     it('should handle negative page parameter', async () => {
-      mockSupabaseClient.from.mockReturnValue({
-        select: jest.fn().mockReturnValue({
-          order: jest.fn().mockReturnValue({
-            range: jest.fn().mockResolvedValue({
-              data: [],
-              error: null,
-              count: 25
-            })
-          })
-        })
-      });
+      mockListEmployeesCalls([], 25);
 
       const params: EmployeeListParams = {
         page: -1,
@@ -1573,6 +1545,106 @@ describe('Employee Service', () => {
       const result = await listEmployees(params);
 
       expect(result.employees).toHaveLength(0);
+    });
+
+    describe('Regions Fetching', () => {
+      it('should fetch all regions for each employee', async () => {
+        const mockRegions = [
+          { regions: { id: 'region-1', city: 'New York', state: 'NY' } },
+          { regions: { id: 'region-2', city: 'Los Angeles', state: 'CA' } },
+          { regions: { id: 'region-3', city: 'Chicago', state: 'IL' } }
+        ];
+
+        mockListEmployeesCalls(mockEmployees, 25, mockRegions);
+
+        const params: EmployeeListParams = {};
+        const result = await listEmployees(params);
+
+        // Verify that employee_regions table was queried
+        expect(mockSupabaseClient.from).toHaveBeenCalledWith('employee_regions');
+
+        // Verify the regions are properly attached to employees
+        expect(result.employees).toHaveLength(2);
+        // The regions should be mapped correctly in the service layer
+      });
+
+      it('should handle employees with no regions', async () => {
+        const mockEmployeesWithRegions = [
+          {
+            ...mockEmployees[0],
+            assigned_regions: { regions: [], total_count: 0 }
+          },
+          {
+            ...mockEmployees[1],
+            assigned_regions: { regions: [], total_count: 0 }
+          }
+        ];
+
+        mockListEmployeesCalls(mockEmployeesWithRegions, 25, []);
+
+        const params: EmployeeListParams = {};
+        const result = await listEmployees(params);
+
+        expect(result.employees).toHaveLength(2);
+        // Should handle empty regions gracefully
+      });
+
+      it('should handle large number of regions per employee', async () => {
+        const manyRegions = Array.from({ length: 20 }, (_, i) => ({
+          regions: {
+            id: `region-${i + 1}`,
+            city: `City ${i + 1}`,
+            state: `ST${i + 1}`
+          }
+        }));
+
+        mockListEmployeesCalls([mockEmployees[0]], 25, manyRegions);
+
+        const params: EmployeeListParams = {};
+        const result = await listEmployees(params);
+
+        expect(result.employees).toHaveLength(1);
+        // Should fetch all regions without limitation
+        expect(mockSupabaseClient.from).toHaveBeenCalledWith('employee_regions');
+      });
+
+      it('should handle regions query errors gracefully', async () => {
+        // Mock employee query success
+        const employeeQuery = createQueryChain({
+          data: mockEmployees,
+          error: null,
+          count: 25
+        });
+
+        // Mock regions query failure
+        const regionsQuery = createQueryChain({
+          data: null,
+          error: { message: 'Regions query failed' }
+        });
+
+        mockSupabaseClient.from.mockImplementation((table: string) => {
+          if (table === 'employees') {
+            return employeeQuery;
+          } else if (table === 'employee_regions') {
+            return regionsQuery;
+          }
+          return createQueryChain();
+        });
+
+        const params: EmployeeListParams = {};
+
+        // Should still complete despite regions error - employees should have empty regions
+        const result = await listEmployees(params);
+
+        expect(result.employees).toHaveLength(2);
+        // Each employee should have empty assigned_regions due to the error
+        result.employees.forEach((emp) => {
+          expect(emp.assigned_regions).toEqual({
+            regions: [],
+            total_count: 0
+          });
+        });
+      });
     });
   });
 
@@ -1988,36 +2060,53 @@ describe('Employee Service', () => {
     };
 
     it('should update assigned_regions field', async () => {
-      // Mock the database response for updateEmployee called within updateRegionalAssignments
+      // Mock the database response
       const mockUpdatedEmployee = {
         id: 'emp-123',
         updated_at: new Date().toISOString()
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: mockUpdatedEmployee,
+      // Mock the delete operation on employee_regions table
+      const mockDelete = jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({
+          data: null,
+          error: null
+        })
+      });
+
+      // Setup from to return different mocks based on table
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'employee_regions') {
+          return {
+            delete: mockDelete,
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockResolvedValue({
+                data: null,
                 error: null
               })
             })
-          })
-        })
+          };
+        }
+        if (table === 'employees') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: mockUpdatedEmployee,
+                  error: null
+                })
+              })
+            })
+          };
+        }
+        return {};
       });
 
       const result = await updateRegionalAssignments('emp-123', regionalAssignment);
 
       expect(result).toEqual(mockUpdatedEmployee);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('employees');
-
-      const updateCall = mockSupabaseClient.from().update;
-      expect(updateCall).toHaveBeenCalledWith(
-        expect.objectContaining({
-          updated_at: expect.any(String)
-        })
-      );
+      expect(mockDelete).toHaveBeenCalled();
     });
 
     it('should handle partial regional assignment updates', async () => {
@@ -2030,56 +2119,98 @@ describe('Employee Service', () => {
         updated_at: new Date().toISOString()
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        update: jest.fn().mockReturnValue({
-          eq: jest.fn().mockReturnValue({
-            select: jest.fn().mockReturnValue({
-              single: jest.fn().mockResolvedValue({
-                data: mockUpdatedEmployee,
+      // Mock the delete operation on employee_regions table
+      const mockDelete = jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({
+          data: null,
+          error: null
+        })
+      });
+
+      // Setup from to return different mocks based on table
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'employee_regions') {
+          return {
+            delete: mockDelete,
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockResolvedValue({
+                data: null,
                 error: null
               })
             })
-          })
-        })
+          };
+        }
+        if (table === 'employees') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: mockUpdatedEmployee,
+                  error: null
+                })
+              })
+            })
+          };
+        }
+        return {};
       });
 
       const result = await updateRegionalAssignments('emp-123', partialAssignment);
 
       expect(result).toEqual(mockUpdatedEmployee);
       expect(mockSupabaseClient.from).toHaveBeenCalledWith('employees');
-
-      const updateCall = mockSupabaseClient.from().update;
-      expect(updateCall).toHaveBeenCalledWith(
-        expect.objectContaining({
-          updated_at: expect.any(String)
-        })
-      );
+      expect(mockDelete).toHaveBeenCalled();
     });
 
     it('should handle empty assigned_regions array', async () => {
       const emptyRegionsAssignment = {
       };
 
-      const mockUpdate = jest.fn().mockReturnValue({
-        eq: jest.fn().mockReturnValue({
-          select: jest.fn().mockReturnValue({
-            single: jest.fn().mockResolvedValue({
-              data: {
-                id: 'emp-123',
-                updated_at: new Date().toISOString()
-              },
-              error: null
-            })
-          })
+      // Mock the database response
+      const mockUpdatedEmployee = {
+        id: 'emp-123',
+        updated_at: new Date().toISOString()
+      };
+
+      // Mock the delete operation on employee_regions table
+      const mockDelete = jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({
+          data: null,
+          error: null
         })
       });
 
-      mockSupabaseClient.from.mockReturnValue({
-        update: mockUpdate
+      // Setup from to return different mocks based on table
+      mockSupabaseClient.from.mockImplementation((table: string) => {
+        if (table === 'employee_regions') {
+          return {
+            delete: mockDelete,
+            insert: jest.fn().mockReturnValue({
+              select: jest.fn().mockResolvedValue({
+                data: null,
+                error: null
+              })
+            })
+          };
+        }
+        if (table === 'employees') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({
+                  data: mockUpdatedEmployee,
+                  error: null
+                })
+              })
+            })
+          };
+        }
+        return {};
       });
 
-      await updateRegionalAssignments('emp-123', emptyRegionsAssignment);
-
+      const result = await updateRegionalAssignments('emp-123', emptyRegionsAssignment);
+      expect(result).toEqual(mockUpdatedEmployee);
+      expect(mockDelete).toHaveBeenCalled();
     });
   });
 

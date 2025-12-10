@@ -179,7 +179,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                   <div className="flex-1">
                     <p className="text-xs font-medium text-muted-foreground">Phone</p>
                     <p className="text-sm font-medium">
-                      {employee.phone || 'Not set'}
+                      {employee.phone || '-'}
                     </p>
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                   <div className="flex-1">
                     <p className="text-xs font-medium text-muted-foreground">Regions</p>
                     <p className="text-sm font-medium">
-                      {employee.assigned_regions?.total_count || 0}
+                      {employee.assigned_regions?.regions?.length || 0}
                     </p>
                   </div>
                 </div>
@@ -251,7 +251,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                       <Phone className="h-4 w-4" />
                       Phone
                     </span>
-                    <span className="text-sm">{employee.phone || 'Not provided'}</span>
+                    <span className="text-sm">{employee.phone || '-'}</span>
                   </div>
                 </div>
               </CardContent>
@@ -335,7 +335,7 @@ export function EmployeeQuickView({ open, onOpenChange, employee, onEdit }: Empl
                     <h3 className="text-lg font-semibold">Assigned Regions</h3>
                   </div>
                   <Badge variant="secondary" className="text-xs">
-                    {employee.assigned_regions.total_count} {employee.assigned_regions.total_count === 1 ? 'Region' : 'Regions'}
+                    {employee.assigned_regions.regions.length} {employee.assigned_regions.regions.length === 1 ? 'Region' : 'Regions'}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

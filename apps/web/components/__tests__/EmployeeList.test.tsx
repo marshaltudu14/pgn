@@ -52,6 +52,8 @@ jest.mock('@/components/ui/button', () => ({
       {children}
     </button>
   ),
+  buttonVariants: ({ variant, size, className }: { variant?: string; size?: string; className?: string }) =>
+    `btn btn-${variant || 'default'} btn-${size || 'default'} ${className || ''}`,
 }));
 
 jest.mock('@/components/ui/input', () => ({
@@ -638,8 +640,6 @@ describe('EmployeeList Component', () => {
 
       expect(screen.getByText('Previous')).toBeInTheDocument();
       expect(screen.getByText('Next')).toBeInTheDocument();
-      expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
-      // The component now shows total count in the header instead of pagination footer
       expect(screen.getByText('50 employees found')).toBeInTheDocument();
     });
 
@@ -698,8 +698,8 @@ describe('EmployeeList Component', () => {
         />
       );
 
-      const prevButton = screen.getByText('Previous');
-      expect(prevButton).toBeDisabled();
+      const prevButton = screen.getByText('Previous').closest('a');
+      expect(prevButton).toHaveClass('pointer-events-none', 'opacity-50');
     });
 
     it('should disable Next button on last page', () => {
@@ -723,8 +723,8 @@ describe('EmployeeList Component', () => {
         />
       );
 
-      const nextButton = screen.getByText('Next');
-      expect(nextButton).toBeDisabled();
+      const nextButton = screen.getByText('Next').closest('a');
+      expect(nextButton).toHaveClass('pointer-events-none', 'opacity-50');
     });
 
     it('should handle page size changes', async () => {

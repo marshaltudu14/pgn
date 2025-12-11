@@ -52,6 +52,7 @@ describe('RegionsTable', () => {
   const defaultProps = {
     regions: mockRegions,
     isLoading: false,
+    isDeleting: false,
     pagination: mockPagination,
     filters: {
       sort_by: 'city' as const,

@@ -24,7 +24,7 @@ export interface UpdateRegionRequest {
 export interface RegionFilter {
   state?: string;
   city?: string;
-  sort_by?: 'state' | 'city' | 'employee_count';
+  sort_by?: 'state' | 'city' | 'employee_count' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -34,7 +34,7 @@ export interface RegionListParams {
   search?: string;
   state?: string;
   city?: string;
-  sort_by?: 'state' | 'city' | 'employee_count';
+  sort_by?: 'state' | 'city' | 'employee_count' | 'created_at' | 'updated_at';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -76,14 +76,14 @@ export const regionsQuerySchema = z.object({
   search: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
-  sort_by: z.enum(['state', 'city', 'employee_count']).optional().default('city'),
-  sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
+  sort_by: z.enum(['state', 'city', 'employee_count', 'created_at', 'updated_at']).optional().default('updated_at'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
 export const searchRegionsSchema = z.object({
   q: z.string().min(1, 'Search query is required'),
-  sort_by: z.enum(['state', 'city', 'employee_count']).optional().default('city'),
-  sort_order: z.enum(['asc', 'desc']).optional().default('asc'),
+  sort_by: z.enum(['state', 'city', 'employee_count', 'created_at', 'updated_at']).optional().default('updated_at'),
+  sort_order: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
 // Response schemas

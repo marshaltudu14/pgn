@@ -29,6 +29,7 @@ interface FarmerState {
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearError: () => void;
   setError: (error: string | null) => void;
+  resetFormLoading: () => void;
   refetch: () => Promise<void>;
 }
 
@@ -264,6 +265,8 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   setError: (error) => set({ error }),
+
+  resetFormLoading: () => set({ formLoading: false }),
 
   refetch: async () => {
     await get().fetchFarmers();

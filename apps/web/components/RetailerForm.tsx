@@ -59,7 +59,8 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
     createRetailer,
     updateRetailer,
     fetchDealers,
-    clearError
+    clearError,
+    resetFormLoading
   } = useRetailerStore();
   const { getDealerById } = useDealerStore();
   const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
@@ -132,6 +133,12 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
       });
     }
   }, [retailer, form, fetchDealers, getDealerById]);
+
+  // Reset formLoading and clear errors when component mounts
+  useEffect(() => {
+    resetFormLoading();
+    clearError();
+  }, [resetFormLoading, clearError]);
 
   const onSubmit = async (data: RetailerFormData) => {
     clearError();
@@ -266,7 +273,6 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                                 role="combobox"
                                 className="w-full justify-between h-12"
                                 type="button"
-                                disabled={formLoading}
                               >
                                 <div className="flex items-center">
                                   {selectedDealer ? (

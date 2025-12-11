@@ -30,6 +30,7 @@ interface RetailerState {
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearError: () => void;
   setError: (error: string | null) => void;
+  resetFormLoading: () => void;
   refetch: () => Promise<void>;
 }
 
@@ -263,6 +264,8 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   setError: (error) => set({ error }),
+
+  resetFormLoading: () => set({ formLoading: false }),
 
   getRetailerById: async (id: string): Promise<RetailerWithFarmers | null> => {
     try {

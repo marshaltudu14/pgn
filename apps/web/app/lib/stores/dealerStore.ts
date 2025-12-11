@@ -28,6 +28,7 @@ interface DealerState {
   setPagination: (page: number, itemsPerPage?: number) => void;
   clearError: () => void;
   setError: (error: string | null) => void;
+  resetFormLoading: () => void;
   refetch: () => Promise<void>;
 }
 
@@ -217,6 +218,8 @@ export const useDealerStore = create<DealerState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   setError: (error) => set({ error }),
+
+  resetFormLoading: () => set({ formLoading: false }),
 
   getDealerById: async (id: string): Promise<DealerWithRetailers | null> => {
     try {

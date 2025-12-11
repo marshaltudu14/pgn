@@ -71,8 +71,8 @@ export const useRegionsStore = create<RegionsStore>()(
       filters: {
         page: 1,
         limit: 20,
-        sort_by: 'city',
-        sort_order: 'asc',
+        sort_by: 'updated_at',
+        sort_order: 'desc',
       },
       hasMore: true,
 

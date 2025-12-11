@@ -38,7 +38,7 @@ interface DealerFormProps {
 }
 
 export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
-  const { formLoading, error, createDealer, updateDealer, clearError } = useDealerStore();
+  const { formLoading, error, createDealer, updateDealer, clearError, resetFormLoading } = useDealerStore();
   const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
   const isEditing = !!dealer;
   const [selectedRegion, setSelectedRegion] = useState(dealer?.region_id || '');
@@ -79,6 +79,12 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
       });
     }
   }, [dealer, form, fetchRegions]);
+
+  // Reset formLoading and clear errors when component mounts
+  useEffect(() => {
+    resetFormLoading();
+    clearError();
+  }, [resetFormLoading, clearError]);
 
   const onSubmit = async (data: DealerFormData) => {
     clearError();

@@ -235,8 +235,57 @@ export function RetailerList({
     return items;
   };
 
-  
-  
+  // Show skeleton when loading
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-bold">Retailers</h2>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+          <Button disabled className="cursor-pointer">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Retailer
+          </Button>
+        </div>
+        <div className="w-full overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Dealer</TableHead>
+                <TableHead>Region</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-48" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded cursor-pointer" />
+                      <Skeleton className="h-8 w-8 rounded cursor-pointer" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -340,27 +389,7 @@ export function RetailerList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading && retailers.length === 0 ? (
-                  // Show skeleton rows when loading and no data exists
-                  [...Array(5)].map((_, index) => (
-                    <TableRow key={index}>
-                      <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell ><Skeleton className="h-8 w-48" /></TableCell>
-                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell ><Skeleton className="h-8 w-32" /></TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-8 w-8 rounded" />
-                          <Skeleton className="h-8 w-8 rounded" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <>
-                    {retailers.map((retailer) => (
+                {retailers.map((retailer) => (
                   <TableRow key={retailer.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">
                       <div>
@@ -469,9 +498,7 @@ export function RetailerList({
                       </div>
                     </TableCell>
                   </TableRow>
-                              ))}
-                    </>
-                )}
+                ))}
               </TableBody>
             </Table>
       </div>
@@ -500,7 +527,7 @@ export function RetailerList({
       )}
 
       {/* Empty State */}
-      {!loading && retailers.length === 0 && (
+      {retailers.length === 0 && (
         <div className="text-center py-12">
           <Store className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium text-muted-foreground mb-2">No retailers found</h3>

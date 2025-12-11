@@ -108,6 +108,11 @@ export default function RegionsManagementClient() {
         });
         setShowCreateModal(false);
         toast.success('Region created successfully');
+
+        // Clear search term and refetch to show updated data
+        setSearchTerm('');
+        setFilters({ search: '', page: 1 });
+        await fetchRegions();
       } else {
         toast.error('State and city are required');
       }
@@ -124,6 +129,11 @@ export default function RegionsManagementClient() {
       await updateRegion(id, data);
       setEditingRegion(null);
       toast.success('Region updated successfully');
+
+      // Clear search term and refetch to show updated data
+      setSearchTerm('');
+      setFilters({ search: '', page: 1 });
+      await fetchRegions();
     } catch (error) {
       console.error('Failed to update region:', error);
       toast.error('Failed to update region');

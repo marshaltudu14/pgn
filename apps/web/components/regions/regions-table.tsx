@@ -38,7 +38,6 @@ interface RegionsTableProps {
   onEdit: (region: RegionSchema) => void;
   onDelete: (id: string) => void;
   onPageChange: (page: number) => void;
-  _onPageSizeChange?: (size: number) => void;
   onSortChange: (sortBy: 'state' | 'city', sortOrder: 'asc' | 'desc') => void;
 }
 
@@ -50,7 +49,6 @@ export function RegionsTable({
   onEdit,
   onDelete,
   onPageChange,
-  _onPageSizeChange,
   onSortChange,
 }: RegionsTableProps) {
 

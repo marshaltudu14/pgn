@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Command,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -57,7 +56,8 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
     createFarmer,
     updateFarmer,
     fetchRetailers,
-    clearError
+    clearError,
+    resetFormLoading
   } = useFarmerStore();
   const { getRetailerById } = useRetailerStore();
   const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
@@ -130,6 +130,12 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
       });
     }
   }, [farmer, form, getRetailerById]);
+
+  // Reset formLoading and clear errors when component mounts
+  useEffect(() => {
+    resetFormLoading();
+    clearError();
+  }, [resetFormLoading, clearError]);
 
   const onSubmit = async (data: FarmerFormData) => {
     clearError();
@@ -265,7 +271,6 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
                                 role="combobox"
                                 className="w-full justify-between h-12"
                                 type="button"
-                                disabled={formLoading}
                               >
                                 <div className="flex items-center">
                                   {selectedRetailer ? (
@@ -332,60 +337,60 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
                                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                       <span className="text-sm text-muted-foreground">Searching...</span>
                                     </div>
-                                  ) : (
-                                    <>
-                                      <CommandEmpty>
+                                  ) : retailers.length === 0 && !selectedRetailer ? (
+                                    <div className="flex items-center justify-center py-6">
+                                      <span className="text-sm text-muted-foreground">
                                         {retailerSearchQuery
                                           ? 'No retailers found matching your search.'
-                                          : selectedRetailer
-                                          ? null
                                           : 'Type to search retailers...'}
-                                      </CommandEmpty>
-                                      <CommandGroup>
-                                        {/* Show selected retailer if editing and no search results */}
-                                        {selectedRetailer && !retailerSearchQuery && (
-                                          <CommandItem
-                                            key={selectedRetailer.id}
-                                            value={`${selectedRetailer.name} (${selectedRetailer.id})`}
-                                            onSelect={() => {
-                                              field.onChange(selectedRetailer.id);
-                                              setOpenRetailer(false);
-                                            }}
-                                          >
-                                            <div className={cn(
-                                              "mr-2 h-4 w-4 rounded-sm border border-primary",
-                                              field.value === selectedRetailer.id
-                                                ? "bg-primary text-primary-foreground"
-                                                : "opacity-50 [&_svg]:invisible"
-                                            )}>
-                                              {field.value === selectedRetailer.id && <Check className="h-3 w-3" />}
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                              <div className="flex-1">
-                                                <div className="font-medium">{selectedRetailer.name}</div>
-                                                <div className="text-sm text-muted-foreground">
-                                                  {selectedRetailer.phone && (
-                                                    <span className="flex items-center gap-1">
-                                                      <User className="h-3 w-3" />
-                                                      {selectedRetailer.phone}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <CommandGroup>
+                                      {/* Show selected retailer if editing and no search results */}
+                                      {selectedRetailer && !retailerSearchQuery && (
+                                        <CommandItem
+                                          key={selectedRetailer.id}
+                                          value={`${selectedRetailer.name} (${selectedRetailer.id})`}
+                                          onSelect={() => {
+                                            field.onChange(selectedRetailer.id);
+                                            setOpenRetailer(false);
+                                          }}
+                                        >
+                                          <div className={cn(
+                                            "mr-2 h-4 w-4 rounded-sm border border-primary",
+                                            field.value === selectedRetailer.id
+                                              ? "bg-primary text-primary-foreground"
+                                              : "opacity-50 [&_svg]:invisible"
+                                          )}>
+                                            {field.value === selectedRetailer.id && <Check className="h-3 w-3" />}
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <div className="flex-1">
+                                              <div className="font-medium">{selectedRetailer.name}</div>
+                                              <div className="text-sm text-muted-foreground">
+                                                {selectedRetailer.phone && (
+                                                  <span className="flex items-center gap-1">
+                                                    <User className="h-3 w-3" />
+                                                    {selectedRetailer.phone}
+                                                  </span>
+                                                )}
+                                                {selectedRetailer.address && (
+                                                  <span className="flex items-center gap-1">
+                                                    <Building className="h-3 w-3" />
+                                                    <span className="truncate">
+                                                      {selectedRetailer.address.length > 40
+                                                        ? `${selectedRetailer.address.slice(0, 40)}...`
+                                                        : selectedRetailer.address}
                                                     </span>
-                                                  )}
-                                                  {selectedRetailer.address && (
-                                                    <span className="flex items-center gap-1">
-                                                      <Building className="h-3 w-3" />
-                                                      <span className="truncate">
-                                                        {selectedRetailer.address.length > 40
-                                                          ? `${selectedRetailer.address.slice(0, 40)}...`
-                                                          : selectedRetailer.address}
-                                                      </span>
-                                                    </span>
-                                                  )}
-                                                </div>
+                                                  </span>
+                                                )}
                                               </div>
                                             </div>
-                                          </CommandItem>
-                                        )}
-                                        {retailers.map((retailer) => (
+                                          </div>
+                                        </CommandItem>
+                                      )}
+                                      {retailers.map((retailer) => (
                                           <CommandItem
                                             key={retailer.id}
                                             value={`${retailer.name} (${retailer.id})`}
@@ -429,8 +434,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
                                             </div>
                                           </CommandItem>
                                         ))}
-                                      </CommandGroup>
-                                    </>
+                                    </CommandGroup>
                                   )}
                                 </CommandList>
                               </Command>

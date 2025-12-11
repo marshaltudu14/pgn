@@ -38,8 +38,6 @@ function DashboardLayoutContent() {
   const getActiveTab = (currentPath: string): string => {
     if (currentPath === '/(dashboard)' || currentPath === '/(dashboard)/') {
       return 'home';
-    } else if (currentPath.includes('/tasks')) {
-      return 'tasks';
     } else if (currentPath.includes('/attendance')) {
       return 'attendance';
     } else if (currentPath.includes('/profile')) {
@@ -62,9 +60,6 @@ function DashboardLayoutContent() {
     switch (tab) {
       case 'home':
         router.push('/(dashboard)');
-        break;
-      case 'tasks':
-        router.push('/(dashboard)/tasks');
         break;
       case 'profile':
         router.push('/(dashboard)/profile');

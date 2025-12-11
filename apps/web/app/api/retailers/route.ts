@@ -23,8 +23,10 @@ const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> 
     console.log('📥 Retailers API - Received params:', JSON.stringify(params, null, 2));
 
     // Check if this is a mobile client (employee) or web admin
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    // Mobile app sends 'x-client-info: pgn-mobile-client'
+    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
     console.log('🔍 Retailers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
+    console.log('🔍 Retailers API - x-client-info header:', request.headers.get('x-client-info'));
 
     const user = (request as AuthenticatedRequest).user;
     let regionFilter: string[] | undefined;
@@ -92,7 +94,8 @@ const createRetailerHandler = async (request: NextRequest): Promise<NextResponse
     const retailerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as RetailerInsert;
 
     // Check if this is a mobile client (employee) or web admin
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    // Mobile app sends 'x-client-info: pgn-mobile-client'
+    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
     console.log('🔍 Create Retailers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
 
     // Get user from authenticated request (set by security middleware)

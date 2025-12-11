@@ -24,8 +24,10 @@ const getFarmersHandler = async (request: NextRequest): Promise<NextResponse> =>
     console.log('📥 Farmers API - Received params:', JSON.stringify(params, null, 2));
 
     // Check if this is a mobile client (employee) or web admin
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    // Mobile app sends 'x-client-info: pgn-mobile-client'
+    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
     console.log('🔍 Farmers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
+    console.log('🔍 Farmers API - x-client-info header:', request.headers.get('x-client-info'));
 
     const user = (request as AuthenticatedRequest).user;
     let regionFilter: string[] | undefined;
@@ -93,7 +95,8 @@ const createFarmerHandler = async (request: NextRequest): Promise<NextResponse> 
     const farmerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as FarmerInsert;
 
     // Check if this is a mobile client (employee) or web admin
-    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    // Mobile app sends 'x-client-info: pgn-mobile-client'
+    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
     console.log('🔍 Create Farmers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
 
     // Get user from authenticated request (set by security middleware)

@@ -129,22 +129,7 @@ export default function FarmerFormClient() {
           </div>
         </div>
 
-        {isEditMode && farmer && (
-          <div className="bg-muted/50 border rounded-lg p-4 mb-8">
-            <div className="flex items-center space-x-4">
-              <div>
-                <p className="text-sm font-medium">Farmer ID</p>
-                <p className="text-lg">{farmer.id}</p>
-              </div>
-              <div className="h-8 w-px bg-border"></div>
-              <div>
-                <p className="text-sm font-medium">Created</p>
-                <p className="text-lg">{new Date(farmer.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
+        
         <FarmerForm
           farmer={farmer}
           onSuccess={handleFormSuccess}

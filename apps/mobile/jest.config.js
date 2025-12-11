@@ -57,8 +57,28 @@ module.exports = {
       },
     },
     {
-      displayName: "Store/Services/Utils (node)",
-      testMatch: ["<rootDir>/store/**/*.test.{ts,tsx}", "<rootDir>/services/**/*.test.{ts,tsx}", "<rootDir>/utils/**/*.test.{ts,tsx}"],
+      displayName: "React Components/Hooks/Store (jsdom)",
+      testMatch: ["<rootDir>/hooks/**/*.test.{ts,tsx}", "<rootDir>/components/**/*.test.{ts,tsx}", "<rootDir>/store/**/*.test.{ts,tsx}"],
+      testEnvironment: "jsdom",
+      setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
+      setupFiles: ["<rootDir>/jest.polyfills.js"],
+      moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "native.js"],
+      transform: {
+        "^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
+      },
+      transformIgnorePatterns: [
+        "node_modules/(?!(jest-)?react-native|@react-native(-community)?|expo(-.*)?|@expo(nent)?|react-native-reanimated|react-native-gesture-handler|react-native-screens|react-native-safe-area-context|@react-native-async-storage|@react-navigation|react-native-vector-icons|expo-modules)/"
+      ],
+      moduleNameMapper: {
+        "^@/(.*)$": "<rootDir>/$1",
+        "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$":
+          "<rootDir>/__mocks__/fileMock.js",
+        ".(css|less|scss|sass)$": "identity-obj-proxy",
+      },
+    },
+    {
+      displayName: "Services/Utils (node)",
+      testMatch: ["<rootDir>/services/**/*.test.{ts,tsx}", "<rootDir>/utils/**/*.test.{ts,tsx}"],
       testEnvironment: "node",
       setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
       setupFiles: ["<rootDir>/jest.polyfills.js"],
@@ -79,5 +99,5 @@ module.exports = {
   ],
   verbose: true,
   bail: false,
-  testTimeout: 10000,
+  testTimeout: 30000,
 };

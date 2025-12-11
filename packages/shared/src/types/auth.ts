@@ -160,6 +160,11 @@ export interface EmployeeWithRegions extends EmployeeRow {
     }>;
     total_count: number;
   };
+  regions?: Array<{
+    id: string;
+    city: string;
+    state: string;
+  }>;
 }
 
 // Type for joined employee_regions query result

@@ -129,22 +129,7 @@ export default function DealerFormClient() {
           </div>
         </div>
 
-        {isEditMode && dealer && (
-          <div className="bg-muted/50 border rounded-lg p-4 mb-8">
-            <div className="flex items-center space-x-4">
-              <div>
-                <p className="text-sm font-medium">Dealer ID</p>
-                <p className="text-lg">{dealer.id}</p>
-              </div>
-              <div className="h-8 w-px bg-border"></div>
-              <div>
-                <p className="text-sm font-medium">Created</p>
-                <p className="text-lg">{new Date(dealer.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
+        
         <DealerForm
           dealer={dealer}
           onSuccess={handleFormSuccess}

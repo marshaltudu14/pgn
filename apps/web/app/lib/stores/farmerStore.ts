@@ -7,6 +7,7 @@ interface FarmerState {
   farmers: FarmerWithRetailer[];
   retailers: Retailer[];
   loading: boolean;
+  formLoading: boolean;
   loadingRetailers: boolean;
   error: string | null;
   pagination: {
@@ -35,7 +36,8 @@ interface FarmerState {
 export const useFarmerStore = create<FarmerState>((set, get) => ({
   farmers: [],
   retailers: [],
-  loading: false,
+  loading: true,
+  formLoading: false,
   loadingRetailers: false,
   error: null,
   pagination: {
@@ -142,7 +144,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
   },
 
   createFarmer: async (farmerData: FarmerFormData) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -155,7 +157,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to create farmer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to create farmer', loading: false });
+        set({ error: result.error || 'Failed to create farmer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -167,13 +169,13 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       return { success: true, data };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },
 
   updateFarmer: async (id: string, farmerData: FarmerFormData) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -186,7 +188,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to update farmer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to update farmer', loading: false });
+        set({ error: result.error || 'Failed to update farmer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -198,13 +200,13 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       return { success: true, data };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },
 
   deleteFarmer: async (id: string) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -216,7 +218,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to delete farmer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to delete farmer', loading: false });
+        set({ error: result.error || 'Failed to delete farmer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -226,7 +228,7 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       return { success: true };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },

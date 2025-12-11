@@ -129,22 +129,7 @@ export default function RetailerFormClient() {
           </div>
         </div>
 
-        {isEditMode && retailer && (
-          <div className="bg-muted/50 border rounded-lg p-4 mb-8">
-            <div className="flex items-center space-x-4">
-              <div>
-                <p className="text-sm font-medium">Retailer ID</p>
-                <p className="text-lg">{retailer.id}</p>
-              </div>
-              <div className="h-8 w-px bg-border"></div>
-              <div>
-                <p className="text-sm font-medium">Created</p>
-                <p className="text-lg">{new Date(retailer.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
+        
         <RetailerForm
           retailer={retailer}
           onSuccess={handleFormSuccess}

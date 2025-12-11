@@ -6,6 +6,7 @@ import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './u
 interface DealerState {
   dealers: DealerWithRetailers[];
   loading: boolean;
+  formLoading: boolean;
   error: string | null;
   pagination: {
     currentPage: number;
@@ -32,7 +33,8 @@ interface DealerState {
 
 export const useDealerStore = create<DealerState>((set, get) => ({
   dealers: [],
-  loading: false,
+  loading: true,
+  formLoading: false,
   error: null,
   pagination: {
     currentPage: 1,
@@ -107,7 +109,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
   },
 
   createDealer: async (dealerData: DealerInsert) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -120,7 +122,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to create dealer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to create dealer', loading: false });
+        set({ error: result.error || 'Failed to create dealer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -138,7 +140,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
   },
 
   updateDealer: async (id: string, dealerData: DealerUpdate) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -151,7 +153,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to update dealer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to update dealer', loading: false });
+        set({ error: result.error || 'Failed to update dealer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -163,13 +165,13 @@ export const useDealerStore = create<DealerState>((set, get) => ({
       return { success: true, data };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },
 
   deleteDealer: async (id: string) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -181,7 +183,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to delete dealer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to delete dealer', loading: false });
+        set({ error: result.error || 'Failed to delete dealer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -191,7 +193,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
       return { success: true };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },

@@ -80,7 +80,8 @@ export function EmployeeList({
   // Initial data fetch when component mounts
   useEffect(() => {
     fetchEmployees();
-  }, [fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Local state for search input (immediate updates)
   const [searchInput, setSearchInput] = useState(filters.search || '');
@@ -93,7 +94,8 @@ export function EmployeeList({
       setPagination(1); // Reset to first page
       fetchEmployees();
     }
-  }, [debouncedSearchInput, filters.search, setFilters, setPagination, fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchInput]); // Only depend on debouncedSearchInput
 
   // Handle search input changes (immediate)
   const handleSearchChange = useCallback((value: string) => {
@@ -104,28 +106,32 @@ export function EmployeeList({
       setPagination(1);
       fetchEmployees();
     }
-  }, [setFilters, setPagination, fetchEmployees, filters.search]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.search]); // Only depend on filters.search
 
   const handleStatusChange = useCallback(async (value: EmploymentStatus | 'all') => {
     setFilters({ status: value });
     setPagination(1); // Reset to first page
     await fetchEmployees(); // Non-search filter triggers immediate fetch
-  }, [setFilters, setPagination, fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // No dependencies needed
 
   const handleSearchFieldChange = useCallback(async (value: SearchFieldType) => {
     setFilters({ searchField: value });
     setPagination(1); // Reset to first page
     await fetchEmployees(); // Non-search filter triggers immediate fetch
-  }, [setFilters, setPagination, fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // No dependencies needed
 
   const handleClearSearch = useCallback(async () => {
     setSearchInput('');
     setFilters({ search: '' });
     setPagination(1);
     await fetchEmployees();
-  }, [setFilters, setPagination, fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // No dependencies needed
 
-  
+
   const handlePageChange = async (page: number) => {
     setPagination(page);
     await fetchEmployees();

@@ -7,6 +7,7 @@ interface RetailerState {
   retailers: RetailerWithFarmers[];
   dealers: Dealer[];
   loading: boolean;
+  formLoading: boolean;
   loadingDealers: boolean;
   error: string | null;
   pagination: {
@@ -35,7 +36,8 @@ interface RetailerState {
 export const useRetailerStore = create<RetailerState>((set, get) => ({
   retailers: [],
   dealers: [],
-  loading: false,
+  loading: true,
+  formLoading: false,
   loadingDealers: false,
   error: null,
   pagination: {
@@ -141,7 +143,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
   },
 
   createRetailer: async (retailerData: RetailerFormData) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -154,7 +156,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to create retailer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to create retailer', loading: false });
+        set({ error: result.error || 'Failed to create retailer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -166,13 +168,13 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       return { success: true, data };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },
 
   updateRetailer: async (id: string, retailerData: RetailerFormData) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -185,7 +187,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to update retailer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to update retailer', loading: false });
+        set({ error: result.error || 'Failed to update retailer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -197,13 +199,13 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       return { success: true, data };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },
 
   deleteRetailer: async (id: string) => {
-    set({ loading: true, error: null });
+    set({ formLoading: true, error: null });
 
     try {
       const token = useAuthStore.getState().token;
@@ -215,7 +217,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       const result = await handleApiResponse(response, 'Failed to delete retailer');
 
       if (!result.success) {
-        set({ error: result.error || 'Failed to delete retailer', loading: false });
+        set({ error: result.error || 'Failed to delete retailer', formLoading: false });
         return { success: false, error: result.error };
       }
 
@@ -225,7 +227,7 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       return { success: true };
     } catch (error) {
       const errorMessage = transformApiErrorMessage(error);
-      set({ error: errorMessage, loading: false });
+      set({ error: errorMessage, formLoading: false });
       return { success: false, error: errorMessage };
     }
   },

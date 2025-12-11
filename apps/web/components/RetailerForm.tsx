@@ -54,6 +54,7 @@ interface RetailerFormProps {
 export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProps) {
   const {
     loading,
+    formLoading,
     error,
     dealers,
     loadingDealers,
@@ -62,7 +63,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
     fetchDealers,
     clearError
   } = useRetailerStore();
-  const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
+  const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
   const isEditing = !!retailer;
 
   const [openDealer, setOpenDealer] = useState(false);
@@ -82,9 +83,9 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
     mode: 'onBlur',
   });
 
-  // Load regions data
+  // Load all regions data at once
   useEffect(() => {
-    fetchRegions();
+    fetchRegions({ limit: 1000 });
   }, [fetchRegions]);
 
   // Load dealers for dropdown with search functionality
@@ -212,8 +213,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                         <Input
                           placeholder="Enter retailer name"
                           {...field}
-                          disabled={loading}
-                        />
+                                                  />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -230,8 +230,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                         <Input
                           placeholder="Enter shop/business name"
                           {...field}
-                          disabled={loading}
-                        />
+                                                  />
                       </FormControl>
                       <FormDescription>
                         The registered name of the retailer&apos;s shop or business
@@ -389,8 +388,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                         <Input
                           placeholder="Enter phone number"
                           {...field}
-                          disabled={loading}
-                          type="tel"
+                                                    type="tel"
                         />
                       </FormControl>
                       <FormMessage />
@@ -408,8 +406,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                         <Input
                           placeholder="Enter email address"
                           {...field}
-                          disabled={loading}
-                          type="email"
+                                                    type="email"
                         />
                       </FormControl>
                       <FormMessage />
@@ -438,8 +435,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                         <Textarea
                           placeholder="Enter complete address"
                           {...field}
-                          disabled={loading}
-                          rows={3}
+                                                    rows={3}
                         />
                       </FormControl>
                       <FormDescription>
@@ -458,8 +454,6 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                   }}
                   regions={transformedRegions}
                   isLoading={regionsLoading}
-                  onSearch={searchRegions}
-                  disabled={loading}
                 />
               </CardContent>
             </Card>
@@ -478,8 +472,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                 variant="outline"
                 className="cursor-pointer"
                 onClick={handleCancel}
-                disabled={loading}
-              >
+                              >
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>
@@ -488,7 +481,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
                 className="cursor-pointer"
                 disabled={loading || loadingDealers}
               >
-                {loading ? (
+                {formLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <Save className="h-4 w-4 mr-2" />

@@ -186,7 +186,7 @@ export function DealerList({
   };
 
   
-  if (loading && dealers.length === 0) {
+  if (loading) {
     return (
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -196,19 +196,23 @@ export function DealerList({
             Add Dealer
           </Button>
         </div>
-        <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
+        <div className="px-2 py-3 lg:p-6 border-b border-border">
           <div className="flex flex-col sm:flex-row gap-4">
             <Skeleton className="h-10 w-64" />
           </div>
         </div>
-        <div className="bg-white dark:bg-black">
-          <div className="px-2 py-3 lg:p-6">
-            <div className="w-full overflow-x-auto border rounded-lg">
+        <div className="px-2 py-3 lg:p-6">
+            <div className="w-full overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                      <div className="flex items-center">
+                    <TableHead>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2"
+                        onClick={() => handleSort('name')}
+                      >
                         Name
                         {filters.sort_by === 'name' ? (
                           filters.sort_order === 'asc' ? (
@@ -219,12 +223,12 @@ export function DealerList({
                         ) : (
                           <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
                         )}
-                      </div>
+                      </Button>
                     </TableHead>
                     <TableHead>Contact</TableHead>
-                    <TableHead >Address</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead>Region</TableHead>
-                    <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('created_at')}>
+                    <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>
                       <div className="flex items-center">
                         Created By
                         {filters.sort_by === 'created_at' ? (
@@ -238,7 +242,7 @@ export function DealerList({
                         )}
                       </div>
                     </TableHead>
-                    <TableHead className="hidden lg:table-cell cursor-pointer" onClick={() => handleSort('updated_at')}>
+                    <TableHead className="cursor-pointer" onClick={() => handleSort('updated_at')}>
                       <div className="flex items-center">
                         Updated By
                         {filters.sort_by === 'updated_at' ? (
@@ -277,7 +281,6 @@ export function DealerList({
             </div>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -306,7 +309,7 @@ export function DealerList({
       )}
 
       {/* Search and Filter Section */}
-      <div className="px-2 py-3 lg:p-6 border-b border-border bg-white dark:bg-black">
+      <div className="px-2 py-3 lg:p-6 border-b border-border">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -335,180 +338,164 @@ export function DealerList({
       </div>
 
       {/* Table View - Desktop and Mobile */}
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2"
-                      onClick={() => handleSort('name')}
-                    >
-                      Name
-                      {filters.sort_by === 'name' && (
-                        filters.sort_order === 'asc' ? (
-                          <ChevronUp className="ml-1 h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        )
-                      )}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
-                    <div className="flex items-center">
-                      Name
-                      {filters.sort_by === 'name' ? (
-                        filters.sort_order === 'asc' ? (
-                          <ChevronUp className="ml-1 h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        )
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Region</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>
-                    <div className="flex items-center">
-                      Created By
-                      {filters.sort_by === 'created_at' ? (
-                        filters.sort_order === 'asc' ? (
-                          <ChevronUp className="ml-1 h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        )
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => handleSort('updated_at')}>
-                    <div className="flex items-center">
-                      Updated By
-                      {filters.sort_by === 'updated_at' ? (
-                        filters.sort_order === 'asc' ? (
-                          <ChevronUp className="ml-1 h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="ml-1 h-4 w-4" />
-                        )
-                      ) : (
-                        <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dealers.map((dealer) => (
-                  <TableRow key={dealer.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">
+      <div className="w-full overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => handleSort('name')}
+                >
+                  Name
+                  {filters.sort_by === 'name' ? (
+                    filters.sort_order === 'asc' ? (
+                      <ChevronUp className="ml-1 h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    )
+                  ) : (
+                    <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Address</TableHead>
+              <TableHead>Region</TableHead>
+              <TableHead className="cursor-pointer" onClick={() => handleSort('created_at')}>
+                <div className="flex items-center">
+                  Created By
+                  {filters.sort_by === 'created_at' ? (
+                    filters.sort_order === 'asc' ? (
+                      <ChevronUp className="ml-1 h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    )
+                  ) : (
+                    <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead className="cursor-pointer" onClick={() => handleSort('updated_at')}>
+                <div className="flex items-center">
+                  Updated By
+                  {filters.sort_by === 'updated_at' ? (
+                    filters.sort_order === 'asc' ? (
+                      <ChevronUp className="ml-1 h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="ml-1 h-4 w-4" />
+                    )
+                  ) : (
+                    <ChevronDown className="ml-1 h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              </TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {dealers.map((dealer) => (
+              <TableRow key={dealer.id} className="hover:bg-muted/50">
+                <TableCell className="font-medium">
+                  <div>
+                    <div className="font-medium">{dealer.name}</div>
+                    {dealer.email && (
+                      <div className="text-sm text-muted-foreground flex items-center gap-1 md:hidden">
+                        <Mail className="h-3 w-3" />
+                        {dealer.email.length > 15 ? `${dealer.email.slice(0, 15)}...` : dealer.email}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {dealer.phone && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        {dealer.phone}
+                      </div>
+                    )}
+                    {dealer.email && !dealer.phone && (
+                      <div className="text-sm text-muted-foreground flex items-center gap-1 md:hidden">
+                        <Mail className="h-3 w-3" />
+                        {dealer.email.length > 15 ? `${dealer.email.slice(0, 15)}...` : dealer.email}
+                      </div>
+                    )}
+                    {!dealer.phone && !dealer.email && '-'}
+                  </div>
+                </TableCell>
+                <TableCell >
+                  <div className="text-sm max-w-xs truncate">
+                    {dealer.address || '-'}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {dealer.region ? (
+                      <div className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        {dealer.region.city}, {dealer.region.state}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell >
+                  <div className="text-sm">
+                    {dealer.created_by_employee ? (
                       <div>
-                        <div className="font-medium">{dealer.name}</div>
-                        {dealer.email && (
-                          <div className="text-sm text-muted-foreground flex items-center gap-1 md:hidden">
-                            <Mail className="h-3 w-3" />
-                            {dealer.email.length > 15 ? `${dealer.email.slice(0, 15)}...` : dealer.email}
-                          </div>
-                        )}
+                        <div className="font-medium">{dealer.created_by_employee.first_name} {dealer.created_by_employee.last_name}</div>
+                        <div className="text-muted-foreground">{dealer.created_by_employee.human_readable_user_id}</div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {dealer.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3 text-muted-foreground" />
-                            {dealer.phone}
-                          </div>
-                        )}
-                        {dealer.email && !dealer.phone && (
-                          <div className="text-sm text-muted-foreground flex items-center gap-1 md:hidden">
-                            <Mail className="h-3 w-3" />
-                            {dealer.email.length > 15 ? `${dealer.email.slice(0, 15)}...` : dealer.email}
-                          </div>
-                        )}
-                        {!dealer.phone && !dealer.email && '-'}
+                    ) : (
+                      <span className="text-muted-foreground">Admin</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell >
+                  <div className="text-sm">
+                    {dealer.updated_by_employee ? (
+                      <div>
+                        <div className="font-medium">{dealer.updated_by_employee.first_name} {dealer.updated_by_employee.last_name}</div>
+                        <div className="text-muted-foreground">{dealer.updated_by_employee.human_readable_user_id}</div>
                       </div>
-                    </TableCell>
-                    <TableCell >
-                      <div className="text-sm max-w-xs truncate">
-                        {dealer.address || '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {dealer.region ? (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-muted-foreground" />
-                            {dealer.region.city}, {dealer.region.state}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell >
-                      <div className="text-sm">
-                        {dealer.created_by_employee ? (
-                          <div>
-                            <div className="font-medium">{dealer.created_by_employee.first_name} {dealer.created_by_employee.last_name}</div>
-                            <div className="text-muted-foreground">{dealer.created_by_employee.human_readable_user_id}</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Admin</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell >
-                      <div className="text-sm">
-                        {dealer.updated_by_employee ? (
-                          <div>
-                            <div className="font-medium">{dealer.updated_by_employee.first_name} {dealer.updated_by_employee.last_name}</div>
-                            <div className="text-muted-foreground">{dealer.updated_by_employee.human_readable_user_id}</div>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Admin</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDealerSelect?.(dealer)}
-                          className="cursor-pointer"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDealerEdit?.(dealer)}
-                          className="cursor-pointer"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+                    ) : (
+                      <span className="text-muted-foreground">Admin</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDealerSelect?.(dealer)}
+                      className="cursor-pointer"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDealerEdit?.(dealer)}
+                      className="cursor-pointer"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center p-4 lg:p-6 border-t border-border bg-white dark:bg-black">
+        <div className="flex items-center justify-center p-4 lg:p-6 border-t border-border">
           <Pagination>
             <PaginationContent>
               <PaginationItem>

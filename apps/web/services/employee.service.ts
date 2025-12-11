@@ -181,18 +181,18 @@ export async function createEmployee(
       // Enhanced error handling with specific error messages
       let errorMessage = 'Failed to create employee';
 
-      if (error.message.includes('duplicate key')) {
-        if (error.message.includes('email')) {
+      if (error.message?.includes('duplicate key')) {
+        if (error.message?.includes('email')) {
           errorMessage = 'An employee with this email address already exists in the system.';
-        } else if (error.message.includes('phone')) {
+        } else if (error.message?.includes('phone')) {
           errorMessage = 'An employee with this phone number already exists in the system.';
         } else {
           errorMessage = 'A record with these details already exists in the system.';
         }
-      } else if (error.message.includes('new row violates row-level security policy')) {
+      } else if (error.message?.includes('new row violates row-level security policy')) {
         errorMessage = 'You do not have permission to create employees. Please contact your administrator.';
       } else {
-        errorMessage = `Failed to create employee: ${error.message}`;
+        errorMessage = `Failed to create employee: ${error.message || 'Unknown error'}`;
       }
 
       // CRITICAL: Log the state for potential cleanup
@@ -259,7 +259,7 @@ export async function getEmployeeById(id: string): Promise<Employee | null> {
         return null; // Not found
       }
       console.error('Error getting employee:', error);
-      throw new Error(`Failed to get employee: ${error.message}`);
+      throw new Error(`Failed to get employee: ${error.message || 'Unknown error'}`);
     }
 
     return data; // Return the database row directly
@@ -293,7 +293,7 @@ export async function getEmployeeByHumanReadableId(
         return null; // Not found
       }
       console.error('Error getting employee by human readable ID:', error);
-      throw new Error(`Failed to get employee: ${error.message}`);
+      throw new Error(`Failed to get employee: ${error.message || 'Unknown error'}`);
     }
 
     return data; // Return the database row directly
@@ -327,7 +327,7 @@ export async function getEmployeeByEmail(
         return null; // Not found
       }
       console.error('Error getting employee by email:', error);
-      throw new Error(`Failed to get employee: ${error.message}`);
+      throw new Error(`Failed to get employee: ${error.message || 'Unknown error'}`);
     }
 
     return data; // Return the database row directly
@@ -414,7 +414,7 @@ export async function listEmployees(
 
     if (error) {
       console.error('Error listing employees:', error);
-      throw new Error(`Failed to list employees: ${error.message}`);
+      throw new Error(`Failed to list employees: ${error.message || 'Unknown error'}`);
     }
 
     const employees = data || []; // Return database rows directly
@@ -521,7 +521,7 @@ export async function updateEmployee(
 
     if (error) {
       console.error('Error updating employee:', error);
-      throw new Error(`Failed to update employee: ${error.message}`);
+      throw new Error(`Failed to update employee: ${error.message || 'Unknown error'}`);
     }
 
     // Note: Region assignments are handled separately via updateRegionalAssignments function
@@ -638,7 +638,7 @@ export async function getEmployeeRegions(
       .eq('employee_id', employeeId);
 
     if (error) {
-      throw new Error(`Failed to fetch employee regions: ${error.message}`);
+      throw new Error(`Failed to fetch employee regions: ${error.message || 'Unknown error'}`);
     }
 
     // The data comes back as an array of objects with regions property
@@ -837,7 +837,7 @@ export async function fetchEmployeeRegions(
 
     if (error) {
       console.error('Error fetching employee regions:', error);
-      throw new Error(`Failed to fetch employee regions: ${error.message}`);
+      throw new Error(`Failed to fetch employee regions: ${error.message || 'Unknown error'}`);
     }
 
     // Extract the regions from the join result

@@ -146,7 +146,7 @@ jest.mock('@/components/ui/popover', () => ({
 
 // Mock Button component
 jest.mock('@/components/ui/button', () => ({
-  Button: ({ children, disabled, onClick, type, asChild, ...props }: {
+  Button: ({ children, disabled, onClick, type, asChild: _asChild, ...props }: {
     children: React.ReactNode;
     disabled?: boolean;
     onClick?: () => void;

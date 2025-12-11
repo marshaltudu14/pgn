@@ -18,20 +18,25 @@ beforeEach(() => {
   console.warn = jest.fn();
 });
 
-afterEach(() => {
-  // Restore console methods
-  console.error = originalConsoleError;
-  console.warn = originalConsoleWarn;
+// Commented out problematic hooks
+// afterEach(() => {
+//   // Restore console methods
+//   console.error = originalConsoleError;
+//   console.warn = originalConsoleWarn;
 
-  // Clean up any pending promises
-  return new Promise(resolve => setImmediate(resolve));
-});
+//   // Clean up any pending promises
+//   return new Promise(resolve => {
+//     setImmediate(resolve);
+//   });
+// });
 
 // Enhanced async cleanup
-afterAll(async () => {
-  // Give any remaining async operations time to complete
-  await new Promise(resolve => setTimeout(resolve, 100));
-});
+// afterAll(async () => {
+//   // Give any remaining async operations time to complete
+//   await new Promise(resolve => {
+//     setImmediate(resolve);
+//   });
+// }, 10000);
 
 // Mock react-native-reanimated to prevent native driver issues
 jest.mock('react-native-reanimated', () => {

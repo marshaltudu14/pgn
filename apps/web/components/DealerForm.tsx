@@ -38,8 +38,8 @@ interface DealerFormProps {
 }
 
 export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
-  const { loading, error, createDealer, updateDealer, clearError } = useDealerStore();
-  const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
+  const { formLoading, error, createDealer, updateDealer, clearError } = useDealerStore();
+  const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
   const isEditing = !!dealer;
   const [selectedRegion, setSelectedRegion] = useState(dealer?.region_id || '');
 
@@ -56,8 +56,8 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
   });
 
   useEffect(() => {
-    // Load regions data
-    fetchRegions();
+    // Load all regions data at once
+    fetchRegions({ limit: 1000 });
 
     if (dealer) {
       form.reset({
@@ -165,8 +165,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                       <Input
                         placeholder="Enter dealer name"
                         {...field}
-                        disabled={loading}
-                      />
+                                              />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -183,8 +182,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                       <Input
                         placeholder="Enter shop/business name"
                         {...field}
-                        disabled={loading}
-                      />
+                                              />
                     </FormControl>
                     <FormDescription>
                       The registered name of the dealer&apos;s shop or business
@@ -215,8 +213,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                       <Input
                         placeholder="Enter phone number"
                         {...field}
-                        disabled={loading}
-                        type="tel"
+                                                type="tel"
                       />
                     </FormControl>
                     <FormMessage />
@@ -234,8 +231,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                       <Input
                         placeholder="Enter email address"
                         {...field}
-                        disabled={loading}
-                        type="email"
+                                                type="email"
                       />
                     </FormControl>
                     <FormMessage />
@@ -264,8 +260,7 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                       <Textarea
                         placeholder="Enter complete address"
                         {...field}
-                        disabled={loading}
-                        rows={3}
+                                                rows={3}
                       />
                     </FormControl>
                     <FormDescription>
@@ -284,8 +279,6 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
                 }}
                 regions={transformedRegions}
                 isLoading={regionsLoading}
-                onSearch={searchRegions}
-                disabled={loading}
               />
             </CardContent>
           </Card>
@@ -304,17 +297,15 @@ export function DealerForm({ dealer, onSuccess, onCancel }: DealerFormProps) {
               variant="outline"
               className="cursor-pointer"
               onClick={handleCancel}
-              disabled={loading}
-            >
+                          >
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
             <Button
               type="submit"
               className="cursor-pointer"
-              disabled={loading}
-            >
-              {loading ? (
+                          >
+              {formLoading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Save className="h-4 w-4 mr-2" />

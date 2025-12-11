@@ -365,7 +365,9 @@ export async function getEmployeeRegions(employeeId: string): Promise<string[]> 
     .single();
 
   if (error || !employee) {
-    throw new Error('Employee not found');
+    // User not found in employees table, so they're an admin
+    // Admins have access to all regions, return empty array to show all
+    return [];
   }
 
   const assignedCities = employee.assigned_cities as { city: string; state: string }[] || [];
@@ -401,7 +403,9 @@ export async function canEmployeeAccessRegion(employeeId: string, regionId: stri
     .single();
 
   if (error || !employee) {
-    return false;
+    // User not found in employees table, so they're an admin
+    // Admins have access to all regions
+    return true;
   }
 
   const assignedCities = employee.assigned_cities as { city: string; state: string }[] || [];

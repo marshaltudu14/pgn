@@ -1,4 +1,4 @@
-import FloatingActionButton from '@/components/FloatingActionButton';
+import ModernFloatingActionButton from '@/components/ModernFloatingActionButton';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAttendance } from '@/store/attendance-store';
 import { useAuth } from '@/store/auth-store';
@@ -329,8 +329,8 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating Action Button - positioned absolutely on top */}
-      <FloatingActionButton options={fabOptions} />
+      {/* Modern Floating Action Button with Material Design 3 */}
+      <ModernFloatingActionButton options={fabOptions} />
     </View>
   );
 }

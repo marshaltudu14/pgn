@@ -22,6 +22,7 @@ const loginHandler = async (req: NextRequest): Promise<NextResponse> => {
 
   // No rate limiting for admin users, rate limiting for employees
   const email = (body as { email: string }).email.toLowerCase().trim();
+
   let userRateLimit = null;
 
   // Only apply rate limiting to non-admin users

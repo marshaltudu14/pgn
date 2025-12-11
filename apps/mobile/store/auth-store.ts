@@ -16,7 +16,6 @@ import {
   parseAuthErrorCode
 } from './utils/errorHandling';
 import { locationTrackingServiceNotifee } from '@/services/location-foreground-service-notifee';
-import { useAttendance } from './attendance-store';
 
 interface AuthStoreState {
   // Authentication state
@@ -597,9 +596,9 @@ export const useAuth = create<AuthStoreState>()(
               const emergencyData = await locationTrackingServiceNotifee.getEmergencyData();
 
               if (emergencyData && emergencyData.trackingActive && emergencyData.attendanceId) {
-                // Use the attendance store's emergency checkout function
-                const attendanceStore = useAttendance.getState();
-                await attendanceStore.emergencyCheckOut({
+                // Dynamically import attendance store to avoid circular dependency
+                const attendanceStore = await import('./attendance-store');
+                await attendanceStore.useAttendance.getState().emergencyCheckOut({
                   attendanceId: emergencyData.attendanceId,
                   reason: 'User logged out during active session',
                   lastLocation: emergencyData.location,

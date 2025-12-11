@@ -51,7 +51,10 @@ describe('useAuthStore', () => {
     employmentStatus: 'ACTIVE',
     canLogin: true,
     phone: '+1234567890',
-    assignedCities: ['New York', 'Los Angeles'],
+    assignedCities: [
+      { id: '1', city: 'New York', state: 'NY', label: 'New York, NY' },
+      { id: '2', city: 'Los Angeles', state: 'CA', label: 'Los Angeles, CA' }
+    ],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };

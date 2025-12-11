@@ -3,7 +3,7 @@ import {
   listFarmers,
   createFarmer
 } from '@/services/farmer.service';
-import { withSecurity, addSecurityHeaders, type AuthenticatedRequest } from '@/lib/security-middleware';
+import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
 import {
   FarmerListParamsSchema,

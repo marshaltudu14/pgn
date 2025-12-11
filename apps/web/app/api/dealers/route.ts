@@ -1,5 +1,5 @@
 import { withApiValidation } from '@/lib/api-validation';
-import { addSecurityHeaders, withSecurity, type AuthenticatedRequest } from '@/lib/security-middleware';
+import { addSecurityHeaders, withSecurity } from '@/lib/security-middleware';
 import {
     createDealer,
     listDealers

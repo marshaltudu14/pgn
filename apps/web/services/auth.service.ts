@@ -414,8 +414,8 @@ export class AuthService {
 
       return data.map(er => ({
         id: er.region_id,
-        city: er.regions.city,
-        state: er.regions.state
+        city: er.regions?.[0]?.city || '',
+        state: er.regions?.[0]?.state || ''
       }));
     } catch (error) {
       console.error('Database query error:', error);

@@ -37,8 +37,6 @@
       "Bash(npx shadcn@latest add:*)",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_wait_for",
-      "Bash(npm run dev)",
-      "Bash(PORT=3001 npm run dev:*)",
       "Bash(robocopy:*)",
       "mcp__shadcn__search_items_in_registries",
       "mcp__shadcn__view_items_in_registries",
@@ -57,7 +55,6 @@
       "mcp__next-devtools__init",
       "Bash(npm run build:shared:*)",
       "Bash(gradlew.bat assembleDebug:*)",
-      "Bash(npx expo run:android:*)",
       "Bash(.gradlew.bat:*)",
       "Bash(./gradlew.bat:*)",
       "Bash(cmd /c gradlew.bat clean:*)",
@@ -125,7 +122,6 @@
       "Bash(tail:*)",
       "Bash(head:*)",
       "Bash(npm list:*)",
-      "Bash(npm run dev:web:*)",
       "mcp__next-devtools__nextjs_call",
       "mcp__next-devtools__upgrade_nextjs_16",
       "Bash(npm dedupe:*)",
@@ -135,7 +131,12 @@
       "Bash(gradlew.bat assembleRelease:*)",
       "Bash(xxd:*)"
     ],
-    "deny": [],
+    "deny": [
+      "Bash(npm run dev)",
+      "Bash(PORT=3001 npm run dev:*)",
+      "Bash(npm run dev:web:*)",
+      "Bash(npx expo run:android:*)"
+    ],
     "ask": []
   },
   "enableAllProjectMcpServers": true,

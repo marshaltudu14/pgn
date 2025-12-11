@@ -525,7 +525,6 @@ describe('Employee Service', () => {
       } as any);
 
       // Mock generateHumanReadableUserId
-      const originalGenerateHumanReadableUserId = generateHumanReadableUserId;
       (generateHumanReadableUserId as jest.MockedFunction<typeof generateHumanReadableUserId>) = jest.fn().mockResolvedValue(`PGN-${currentYear}-0002`);
 
       const result = await createEmployee(createData);
@@ -693,36 +692,59 @@ describe('Employee Service', () => {
         password: 'password123'
       };
 
-      // Mock existing employee check and insert failure
-      let callCount = 0;
+      // Configure the mock to return appropriate responses for each call
+      // Use the same pattern as the first test
       mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'employees') {
-          callCount++;
-          if (callCount === 1) {
-            // First call is getEmployeeByEmail
-            return {
-              select: jest.fn().mockReturnValue({
-                eq: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({
-                    data: null,
-                    error: { code: 'PGRST116' }
+          const chain = createQueryChain();
+
+          // Override specific methods based on the query pattern
+          const originalSelect = chain.select;
+          chain.select = jest.fn().mockImplementation((...args) => {
+            const result = originalSelect(...args);
+
+            // Check if this is a getEmployeeByEmail call (selecting '*')
+            if (args[0] === '*') {
+              // Override eq to handle email lookup
+              const originalEq = result.eq;
+              result.eq = jest.fn().mockImplementation((field, value) => {
+                const eqResult = originalEq(field, value);
+                // Configure single() to return not found
+                eqResult.single = jest.fn().mockResolvedValue({
+                  data: null,
+                  error: { code: 'PGRST116' }
+                });
+                return eqResult;
+              });
+            }
+
+            // Check if this is a generateHumanReadableUserId call
+            if (args[0] === 'human_readable_user_id') {
+              // Configure like, order, and limit chain
+              result.like = jest.fn().mockReturnValue({
+                order: jest.fn().mockReturnValue({
+                  limit: jest.fn().mockResolvedValue({
+                    data: [],
+                    error: null
                   })
                 })
+              });
+            }
+
+            return result;
+          });
+
+          // Override insert to fail for this test
+          chain.insert = jest.fn().mockReturnValue({
+            select: jest.fn().mockReturnValue({
+              single: jest.fn().mockResolvedValue({
+                data: null,
+                error: { message: 'Database constraint violation' }
               })
-            };
-          } else if (callCount === 2) {
-            // Second call is insert - this should fail
-            return {
-              insert: jest.fn().mockReturnValue({
-                select: jest.fn().mockReturnValue({
-                  single: jest.fn().mockResolvedValue({
-                    data: null,
-                    error: { message: 'Database constraint violation' }
-                  })
-                })
-              })
-            };
-          }
+            })
+          });
+
+          return chain;
         }
         return createQueryChain();
       });
@@ -737,9 +759,6 @@ describe('Employee Service', () => {
         success: true,
         data: { user: { id: 'auth-id-123' } }
       } as any);
-
-      // Mock generateHumanReadableUserId
-      (generateHumanReadableUserId as jest.MockedFunction<typeof generateHumanReadableUserId>).mockResolvedValue(`PGN-${currentYear}-0001`);
 
       await expect(createEmployee(createData)).rejects.toThrow('Failed to create employee: Database constraint violation');
 

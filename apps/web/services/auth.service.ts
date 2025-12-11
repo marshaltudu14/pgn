@@ -9,7 +9,7 @@ import {
   LogoutRequest,
   LogoutResponse,
   RefreshRequest,
-  RefreshResponse
+  RefreshResponse,
 } from '@pgn/shared';
 
 export class AuthService {
@@ -19,7 +19,9 @@ export class AuthService {
   async getCurrentUser() {
     try {
       const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
         return null;
@@ -34,8 +36,15 @@ export class AuthService {
       return {
         id: user.id,
         humanReadableId: user.email || '',
-        firstName: userMetadata.first_name || userMetadata.full_name?.split(' ')[0] || user.email || '',
-        lastName: userMetadata.last_name || userMetadata.full_name?.split(' ').slice(1).join(' ') || '',
+        firstName:
+          userMetadata.first_name ||
+          userMetadata.full_name?.split(' ')[0] ||
+          user.email ||
+          '',
+        lastName:
+          userMetadata.last_name ||
+          userMetadata.full_name?.split(' ').slice(1).join(' ') ||
+          '',
         email: user.email || '',
         employmentStatus: 'ACTIVE' as EmploymentStatus,
         canLogin: true,
@@ -54,7 +63,9 @@ export class AuthService {
       const supabase = await createClient();
       const { data, error } = await supabase
         .from('employees')
-        .select('id, human_readable_user_id, employment_status, can_login, email, first_name, last_name')
+        .select(
+          'id, human_readable_user_id, employment_status, can_login, email, first_name, last_name'
+        )
         .eq('id', authUserId)
         .maybeSingle();
 
@@ -76,7 +87,7 @@ export class AuthService {
         full_name: `${data.first_name || ''} ${data.last_name || ''}`,
         email: data.email,
         first_name: data.first_name,
-        last_name: data.last_name
+        last_name: data.last_name,
       };
     } catch {
       // Handle unexpected errors gracefully
@@ -92,7 +103,9 @@ export class AuthService {
       const supabase = await createClient();
       const { data, error } = await supabase
         .from('employees')
-        .select('id, human_readable_user_id, employment_status, can_login, email, first_name, last_name')
+        .select(
+          'id, human_readable_user_id, employment_status, can_login, email, first_name, last_name'
+        )
         .eq('human_readable_user_id', userId)
         .maybeSingle();
 
@@ -114,7 +127,7 @@ export class AuthService {
         full_name: `${data.first_name || ''} ${data.last_name || ''}`,
         email: data.email,
         first_name: data.first_name,
-        last_name: data.last_name
+        last_name: data.last_name,
       };
     } catch {
       // Handle unexpected errors gracefully
@@ -122,7 +135,6 @@ export class AuthService {
     }
   }
 
-  
   /**
    * Authenticate user with Supabase auth and return session info
    * Uses email + password for both admin and employee login
@@ -130,7 +142,7 @@ export class AuthService {
    * Employee users get JWT tokens for API access
    */
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-        const { email, password } = credentials;
+    const { email, password } = credentials;
 
     if (!email || !password) {
       throw new Error('Email and password are required');
@@ -140,11 +152,12 @@ export class AuthService {
     const authEmail = email.toLowerCase().trim();
 
     try {
-            // Authenticate with Supabase using email and password
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password: password,
-      });
+      // Authenticate with Supabase using email and password
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: password,
+        });
 
       if (authError || !authData.user) {
         // Provide more specific error messages based on the error code
@@ -166,12 +179,18 @@ export class AuthService {
       const userMetadata = authData.user.user_metadata || {};
 
       if (userMetadata.role === 'admin') {
-                // Admin users don't get JWT tokens since they only login via Next.js
+        // Admin users don't get JWT tokens since they only login via Next.js
         const authenticatedUser: AuthenticatedUser = {
           id: authData.user.id,
           humanReadableId: authEmail,
-          firstName: userMetadata.first_name || userMetadata.full_name?.split(' ')[0] || authEmail,
-          lastName: userMetadata.last_name || userMetadata.full_name?.split(' ').slice(1).join(' ') || '',
+          firstName:
+            userMetadata.first_name ||
+            userMetadata.full_name?.split(' ')[0] ||
+            authEmail,
+          lastName:
+            userMetadata.last_name ||
+            userMetadata.full_name?.split(' ').slice(1).join(' ') ||
+            '',
           email: authEmail,
           employmentStatus: 'ACTIVE',
           canLogin: true,
@@ -185,21 +204,22 @@ export class AuthService {
           employee: authenticatedUser,
         };
 
-                return response;
+        return response;
       } else {
         // Employee login - check if they exist in employees table using auth user ID
-                const employee = await this.findEmployeeById(authData.user.id);
+        const employee = await this.findEmployeeById(authData.user.id);
 
         if (!employee) {
-                    await supabase.auth.signOut();
+          await supabase.auth.signOut();
           throw new Error('Employee account not found - contact administrator');
         }
 
-        
         // Check if employee can login based on employment status
         if (!employee.can_login) {
           await supabase.auth.signOut();
-          const message = this.getEmploymentStatusMessage(employee.employment_status);
+          const message = this.getEmploymentStatusMessage(
+            employee.employment_status
+          );
           throw new Error(message);
         }
 
@@ -314,7 +334,9 @@ export class AuthService {
   /**
    * Get current employment status for an employee from employees table
    */
-  async getCurrentEmploymentStatus(employeeId: string): Promise<EmploymentStatus | null> {
+  async getCurrentEmploymentStatus(
+    employeeId: string
+  ): Promise<EmploymentStatus | null> {
     try {
       const supabase = await createClient();
       const { data, error } = await supabase
@@ -338,7 +360,9 @@ export class AuthService {
   /**
    * Get current user data by ID from employees table
    */
-  async getCurrentUserById(employeeId: string): Promise<Database['public']['Tables']['employees']['Row'] | null> {
+  async getCurrentUserById(
+    employeeId: string
+  ): Promise<Database['public']['Tables']['employees']['Row'] | null> {
     try {
       const supabase = await createClient();
       const { data, error } = await supabase
@@ -386,12 +410,57 @@ export class AuthService {
   }
 
   /**
+   * Get assigned regions for an employee
+   */
+  async getEmployeeRegions(employeeId: string): Promise<string[]> {
+    try {
+      const supabase = await createClient();
+
+      const { data, error } = await supabase
+        .from('employee_regions')
+        .select(
+          `
+          regions!inner (
+            city,
+            state
+          )
+        `
+        )
+        .eq('employee_id', employeeId);
+
+      if (error) {
+        console.error('Error fetching employee regions:', error);
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      const regions = data
+        .map((item: { regions: { city: string; state: string }[] }) => {
+          const region = item.regions;
+          if (region && region.length > 0 && region[0].city && region[0].state) {
+            return `${region[0].city}, ${region[0].state}`;
+          }
+          return null;
+        })
+        .filter((item): item is string => item !== null);
+
+      return regions;
+    } catch (error) {
+      console.error('Database query error for regions:', error);
+      return [];
+    }
+  }
+
+  /**
    * Track failed login attempt for rate limiting
    * Simple implementation using console logging for internal company use
    */
   async trackFailedLoginAttempt(): Promise<void> {
     try {
-          } catch (error) {
+    } catch (error) {
       console.error('Failed to track login attempt:', error);
     }
   }

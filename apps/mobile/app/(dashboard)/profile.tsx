@@ -103,7 +103,6 @@ export default function ProfileScreen() {
 
   const employeeStatusInfo = getEmployeeStatusInfo();
 
-  
   const profileItems = [
     {
       icon: User,

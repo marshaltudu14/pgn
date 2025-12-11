@@ -57,6 +57,9 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
+    // Fetch assigned regions from employee_regions table
+    const assignedCities = await authService.getEmployeeRegions(user.employeeId);
+
       // Return complete user profile information
     const userProfile = {
       id: currentUserData.id,
@@ -69,7 +72,8 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       canLogin: authService.canLoginWithStatus(currentUserData.employment_status as EmploymentStatus),
         employmentStatusChangedAt: currentUserData.employment_status_changed_at,
       createdAt: currentUserData.created_at,
-      updatedAt: currentUserData.updated_at
+      updatedAt: currentUserData.updated_at,
+      assignedCities: assignedCities // Add assigned cities to response
     };
 
     // Return success response wrapped in API response structure

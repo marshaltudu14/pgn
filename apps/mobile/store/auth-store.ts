@@ -452,6 +452,9 @@ export const useAuth = create<AuthStoreState>()(
               // Transform assignedCities from array of objects to include both ID and city/state data
               const rawAssignedCities = userResponse.data.assignedCities || [];
 
+              // DEBUG: Log the raw data from API
+              console.log('DEBUG: Raw assignedCities from API:', JSON.stringify(rawAssignedCities, null, 2));
+
               const assignedCities = rawAssignedCities.map((city: any) => {
                 // If it's an object with city, state, and id properties, keep all data
                 if (city && typeof city === 'object' && city.city && city.state && city.id) {
@@ -508,6 +511,9 @@ export const useAuth = create<AuthStoreState>()(
                 createdAt: userResponse.data.createdAt || user?.createdAt,
                 updatedAt: userResponse.data.updatedAt || user?.updatedAt,
               };
+
+              // DEBUG: Log the transformed data
+              console.log('DEBUG: Transformed assignedCities:', JSON.stringify(assignedCities, null, 2));
 
               // Force update with a new object reference to ensure React re-renders
               set({

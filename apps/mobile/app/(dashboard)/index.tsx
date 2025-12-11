@@ -162,12 +162,27 @@ export default function HomeScreen() {
       return 'No regions assigned';
     }
     if (user.assignedCities.length === 1) {
-      return user.assignedCities[0];
+      const region = user.assignedCities[0];
+      return typeof region === 'object' && region.city && region.state
+        ? `${region.city}, ${region.state}`
+        : String(region);
     }
     if (user.assignedCities.length <= 2) {
-      return user.assignedCities.join(', ');
+      return user.assignedCities.map(region =>
+        typeof region === 'object' && region.city && region.state
+          ? `${region.city}, ${region.state}`
+          : String(region)
+      ).join(', ');
     }
-    return `${user.assignedCities[0]}, ${user.assignedCities[1]} +${user.assignedCities.length - 2} more`;
+    const firstRegion = user.assignedCities[0];
+    const secondRegion = user.assignedCities[1];
+    const firstRegionStr = typeof firstRegion === 'object' && firstRegion.city && firstRegion.state
+      ? `${firstRegion.city}, ${firstRegion.state}`
+      : String(firstRegion);
+    const secondRegionStr = typeof secondRegion === 'object' && secondRegion.city && secondRegion.state
+      ? `${secondRegion.city}, ${secondRegion.state}`
+      : String(secondRegion);
+    return `${firstRegionStr}, ${secondRegionStr} +${user.assignedCities.length - 2} more`;
   };
 
   // Entity items for quick access - Order: Dealers, Retailers, Farmers

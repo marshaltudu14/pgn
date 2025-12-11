@@ -125,7 +125,10 @@ const createMockUser = (overrides: Partial<AuthenticatedUser> = {}): Authenticat
   employmentStatus: 'ACTIVE',
   canLogin: true,
   phone: '+1234567890',
-  assignedCities: ['New York', 'Boston'],
+  assignedCities: [
+    { id: '1', city: 'New York', state: 'NY', label: 'New York, NY' },
+    { id: '2', city: 'Boston', state: 'MA', label: 'Boston, MA' }
+  ],
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
   ...overrides,

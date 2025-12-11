@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -40,7 +40,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
   const colors = useThemeColors();
   const { createFarmer, isCreating } = useFarmerStore();
   const { user } = useAuthStore();
-  const assignedRegions = user?.assignedCities || [];
+  const assignedRegions = useMemo(() => user?.assignedCities || [], [user?.assignedCities]);
 
   const [formData, setFormData] = useState<FarmerFormData>({
     name: '',
@@ -155,7 +155,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
         'Failed to create farmer. Please check your connection and try again.'
       );
     }
-  }, [formData, validateForm, createFarmer, onClose, retailerId]);
+  }, [formData, validateForm, createFarmer, onClose, retailerId, assignedRegions]);
 
   const handleClose = useCallback(() => {
     if (isCreating) return; // Prevent closing during submission
@@ -171,7 +171,7 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
     });
     setErrors({});
     onClose();
-  }, [isCreating, onClose, retailerId]);
+  }, [isCreating, onClose, retailerId, assignedRegions]);
 
   const renderInput = (
     field: keyof FarmerFormData,
@@ -363,9 +363,9 @@ export default function CreateFarmerModal({ visible, onClose, retailerId }: Crea
                   Select Region
                 </Text>
                 <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                  {assignedRegions.map((region) => (
+                  {assignedRegions.map((region, index) => (
                     <TouchableOpacity
-                      key={region.id}
+                      key={region.id || `region-${index}`}
                       style={[
                         styles.regionOption,
                         {

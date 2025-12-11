@@ -5,30 +5,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
-  createEmployee,
-  getEmployeeById,
-  getEmployeeByHumanReadableId,
-  getEmployeeByEmail,
-  listEmployees,
-  updateEmployee,
-  changeEmploymentStatus,
-  updateRegionalAssignments,
-  isEmailTaken,
-  isPhoneTaken,
-  isHumanReadableIdTaken,
-  resetEmployeePassword,
-  updateEmployeeRegions,
-  fetchEmployeeRegions,
-  getEmployeeRegions
+    changeEmploymentStatus,
+    createEmployee,
+    fetchEmployeeRegions,
+    getEmployeeByEmail,
+    getEmployeeByHumanReadableId,
+    getEmployeeById,
+    getEmployeeRegions,
+    isEmailTaken,
+    isHumanReadableIdTaken,
+    isPhoneTaken,
+    listEmployees,
+    resetEmployeePassword,
+    updateEmployee,
+    updateEmployeeRegions,
+    updateRegionalAssignments
 } from '../employee.service';
 
-import { generateHumanReadableUserId } from '../employee.service';
 import {
-  CreateEmployeeRequest,
-  UpdateEmployeeRequest,
-  ChangeEmploymentStatusRequest,
-  EmployeeListParams
+    ChangeEmploymentStatusRequest,
+    CreateEmployeeRequest,
+    EmployeeListParams,
+    UpdateEmployeeRequest
 } from '@pgn/shared';
+import { generateHumanReadableUserId } from '../employee.service';
 
 // Create a comprehensive Supabase mock
 const createMockSupabaseClient = () => {
@@ -151,8 +151,8 @@ jest.mock('../employee.service', () => {
   };
 });
 
+import { createAuthUser, getUserByEmail, resetUserPassword, updateUserPasswordByEmail } from '../../utils/supabase/admin';
 import { createClient } from '../../utils/supabase/server';
-import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../../utils/supabase/admin';
 
 // Import the module for mocking - disabled as it's not currently used
 // const employeeService = require('../employee.service');
@@ -2228,7 +2228,8 @@ describe('Employee Service', () => {
     });
 
     it('should handle null email parameter', async () => {
-      await expect(isEmailTaken(null as any)).rejects.toThrow();
+      const result = await isEmailTaken(null as any);
+      expect(result).toBe(false);
     });
 
     it('should handle database errors', async () => {
@@ -2236,7 +2237,8 @@ describe('Employee Service', () => {
         createQueryChain({ data: null, error: { message: 'Connection failed' } })
       );
 
-      await expect(isEmailTaken('test@example.com')).rejects.toThrow();
+      const result = await isEmailTaken('test@example.com');
+      expect(result).toBe(false);
     });
   });
 
@@ -2269,11 +2271,13 @@ describe('Employee Service', () => {
     });
 
     it('should handle null phone parameter', async () => {
-      await expect(isPhoneTaken(null as any)).rejects.toThrow();
+      const result = await isPhoneTaken(null as any);
+      expect(result).toBe(false);
     });
 
     it('should handle empty phone parameter', async () => {
-      await expect(isPhoneTaken('')).rejects.toThrow();
+      const result = await isPhoneTaken('');
+      expect(result).toBe(false);
     });
 
     it('should handle database errors', async () => {
@@ -2281,7 +2285,8 @@ describe('Employee Service', () => {
         createQueryChain({ data: null, error: { message: 'Connection failed' } })
       );
 
-      await expect(isPhoneTaken('1234567890')).rejects.toThrow();
+      const result = await isPhoneTaken('1234567890');
+      expect(result).toBe(false);
     });
   });
 

@@ -132,7 +132,8 @@
       "Bash(NODE_PATH=./node_modules npm test:*)",
       "Bash(npm run tsc:*)",
       "Bash(npm run android:release:*)",
-      "Bash(gradlew.bat assembleRelease:*)"
+      "Bash(gradlew.bat assembleRelease:*)",
+      "Bash(xxd:*)"
     ],
     "deny": [],
     "ask": []

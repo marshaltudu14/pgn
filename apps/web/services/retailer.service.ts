@@ -4,11 +4,11 @@
  */
 
 import {
-  Retailer,
-  RetailerInsert,
-  RetailerUpdate,
-  RetailerListParams,
-  RetailerListResponse,
+    Retailer,
+    RetailerInsert,
+    RetailerListParams,
+    RetailerListResponse,
+    RetailerUpdate,
 } from '@pgn/shared';
 import { createClient } from '../utils/supabase/server';
 
@@ -47,8 +47,15 @@ export async function listRetailers(
     `, { count: 'exact' });
 
   // Apply search and filters
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,shop_name.ilike.%${search}%`);
+  // Note: search and phone are mutually exclusive
+  // If phone is provided, use phone search only
+  // If search is provided (and no phone), use general search
+  if (phone) {
+    console.log('🔍 Searching retailers by phone:', phone);
+    query = query.ilike('phone', `%${phone}%`);
+  } else if (search) {
+    console.log('🔍 Searching retailers by name/shop:', search);
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,shop_name.ilike.%${search}%`);
   }
 
   if (shop_name) {
@@ -57,10 +64,6 @@ export async function listRetailers(
 
   if (email) {
     query = query.ilike('email', `%${email}%`);
-  }
-
-  if (phone) {
-    query = query.ilike('phone', `%${phone}%`);
   }
 
   if (dealer_id) {
@@ -80,7 +83,15 @@ export async function listRetailers(
   // Apply pagination
   query = query.range(from, to);
 
+  console.log('🔎 Retailer Service - Executing query with params:', { page, limit, search, phone, dealer_id, region_id });
+  
   const { data, error, count } = await query;
+  
+  console.log('🔎 Retailer Service - Query results:', { 
+    dataCount: data?.length || 0, 
+    totalCount: count,
+    error: error?.message 
+  });
 
   if (error) {
     console.error('Error fetching retailers:', error);

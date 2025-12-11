@@ -1,29 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { withApiValidation } from '@/lib/api-validation';
+import { addSecurityHeaders, withSecurity } from '@/lib/security-middleware';
 import {
-  listDealers,
-  createDealer
+    createDealer,
+    listDealers
 } from '@/services/dealer.service';
 import {
-  getEmployeeRegions,
-  canEmployeeAccessRegion
+    canEmployeeAccessRegion,
+    getEmployeeRegions
 } from '@/services/regions.service';
-import {
-  DealerInsert,
-  DealerListParamsSchema,
-  DealerFormDataSchema,
-  DealerListResponseSchema,
-  BaseApiResponseSchema,
-  type DealerListParams,
-} from '@pgn/shared';
-import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
-import { withApiValidation } from '@/lib/api-validation';
-import { buildTimeApiContract } from '@pgn/shared';
 import { createClient } from '@/utils/supabase/server';
+import {
+    BaseApiResponseSchema,
+    buildTimeApiContract,
+    DealerFormDataSchema,
+    DealerInsert,
+    DealerListParamsSchema,
+    DealerListResponseSchema,
+    type DealerListParams,
+} from '@pgn/shared';
+import { NextRequest, NextResponse } from 'next/server';
 
 const getDealersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Get validated query parameters from the middleware
     const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery;
+    
+    console.log('📥 Dealers API - Received params:', JSON.stringify(params, null, 2));
 
     // Get employee ID from JWT token
     const supabase = await createClient();
@@ -43,6 +45,8 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
     }
 
     const result = await listDealers(params as DealerListParams, regionFilter);
+    
+    console.log('📤 Dealers API - Returning dealers count:', result.dealers.length);
 
     const response = NextResponse.json({
       success: true,

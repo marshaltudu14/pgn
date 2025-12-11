@@ -5,21 +5,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
+import { useFarmerStore } from '@/app/lib/stores/farmerStore';
+import { useRetailerStore } from '@/app/lib/stores/retailerStore';
+import { useRegionsStore } from '@/app/lib/stores/regionsStore';
 import { Button } from '@/components/ui/button';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Command,
@@ -30,19 +19,27 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Loader2,
-  Save,
-  X,
-  ChevronDown,
-} from 'lucide-react';
-import { Farmer, FarmerFormData, FarmerFormDataSchema } from '@pgn/shared';
-import { useFarmerStore } from '@/app/lib/stores/farmerStore';
-import { useRegionsStore } from '@/app/lib/stores/regionsStore';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { Farmer, FarmerFormData, FarmerFormDataSchema, Retailer } from '@pgn/shared';
+import { Building, Check, ChevronDown, Loader2, Save, User, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { RegionSelector } from './RegionSelector';
 
 interface FarmerFormProps {
@@ -63,12 +60,15 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
     fetchRetailers,
     clearError
   } = useFarmerStore();
+  const { getRetailerById } = useRetailerStore();
   const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
   const isEditing = !!farmer;
 
+  const [selectedRegion, setSelectedRegion] = useState(farmer?.region_id || '');
   const [openRetailer, setOpenRetailer] = useState(false);
   const [retailerSearchQuery, setRetailerSearchQuery] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState(farmer?.region_id || '');
+  const [retailerSearchType, setRetailerSearchType] = useState<'name' | 'phone'>('name');
+  const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
 
   const form = useForm<FarmerFormData>({
     defaultValues: {
@@ -88,25 +88,16 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
     fetchRegions({ limit: 1000 });
   }, [fetchRegions]);
 
-  // Load retailers for dropdown with search functionality
+  // Fetch retailers only when search query is provided
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (retailerSearchQuery) {
-        // Search by query (could be name or phone)
-        fetchRetailers({
-          search: retailerSearchQuery,
-          limit: 10
-        });
-      } else {
-        // Load initial retailers without search
-        fetchRetailers({
-          limit: 10
-        });
+      if (retailerSearchQuery && retailerSearchQuery.trim()) {
+        fetchRetailers({ search: retailerSearchQuery, searchType: retailerSearchType, limit: 20 });
       }
-    }, 300); // 300ms debounce
+    }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [retailerSearchQuery, fetchRetailers]);
+  }, [retailerSearchQuery, retailerSearchType, fetchRetailers]);
 
   useEffect(() => {
     if (farmer) {
@@ -119,6 +110,15 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
         retailer_id: farmer.retailer_id || '',
         region_id: farmer.region_id || '',
       });
+
+      // If editing and has a retailer_id, fetch that specific retailer to show it
+      if (farmer.retailer_id) {
+        getRetailerById(farmer.retailer_id).then(retailer => {
+          if (retailer) {
+            setSelectedRetailer(retailer);
+          }
+        }).catch(console.error);
+      }
     } else {
       form.reset({
         name: '',
@@ -130,7 +130,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
         region_id: '',
       });
     }
-  }, [farmer, form]);
+  }, [farmer, form, getRetailerById]);
 
   const onSubmit = async (data: FarmerFormData) => {
     clearError();
@@ -255,109 +255,189 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
                   control={form.control}
                   name="retailer_id"
                   render={({ field }) => {
-                    const selectedRetailer = retailers.find(r => r.id === field.value);
                     return (
                       <FormItem>
                         <FormLabel>Retailer</FormLabel>
-                        <Popover open={openRetailer} onOpenChange={setOpenRetailer}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="w-full justify-between h-12"
-                              type="button"
-                              disabled={loading || loadingRetailers}
-                              onClick={() => field.onChange(selectedRetailer?.id || 'none')}
-                            >
-                              {selectedRetailer ? (
-                                <div className="text-left">
-                                  <div className="font-medium truncate">
-                                    {selectedRetailer.name}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {selectedRetailer.phone && (
-                                      <>
-                                        {selectedRetailer.phone}
+                        <FormControl>
+                          <Popover open={openRetailer} onOpenChange={setOpenRetailer}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between h-12"
+                                type="button"
+                                disabled={formLoading}
+                              >
+                                <div className="flex items-center">
+                                  {selectedRetailer ? (
+                                    <div className="text-left flex-1">
+                                      <div className="font-medium truncate">{selectedRetailer.name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {selectedRetailer.phone && `• ${selectedRetailer.phone}`}
                                         {selectedRetailer.address && ` • ${selectedRetailer.address.slice(0, 30)}${selectedRetailer.address.length > 30 ? '...' : ''}`}
-                                      </>
-                                    )}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground">
+                                      Search retailers by name or phone...
+                                    </span>
+                                  )}
+                                </div>
+                                <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-full p-0 max-h-[400px]"
+                              align="start"
+                              style={{ width: 'var(--radix-popover-trigger-width)' }}
+                            >
+                              <Command shouldFilter={false}>
+                                {/* Search Type Toggle */}
+                                <div className="flex items-center gap-2 px-3 py-2 border-b">
+                                  <span className="text-sm text-muted-foreground">Search by:</span>
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setRetailerSearchType('name')}
+                                      className={cn(
+                                        "px-3 py-1 text-xs rounded-md transition-colors cursor-pointer",
+                                        retailerSearchType === 'name'
+                                          ? "bg-primary text-primary-foreground"
+                                          : "bg-muted hover:bg-muted/80"
+                                      )}
+                                    >
+                                      Name
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setRetailerSearchType('phone')}
+                                      className={cn(
+                                        "px-3 py-1 text-xs rounded-md transition-colors cursor-pointer",
+                                        retailerSearchType === 'phone'
+                                          ? "bg-primary text-primary-foreground"
+                                          : "bg-muted hover:bg-muted/80"
+                                      )}
+                                    >
+                                      Phone
+                                    </button>
                                   </div>
                                 </div>
-                              ) : (
-                                "Select a retailer (optional)"
-                              )}
-                              <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent
-                            className="w-screen max-w-md p-0 max-h-[400px]"
-                            align="start"
-                            side="bottom"
-                            sideOffset={4}
-                          >
-                            <Command>
-                              <CommandInput
-                                placeholder="Search retailers by name or phone..."
-                                value={retailerSearchQuery}
-                                onValueChange={setRetailerSearchQuery}
-                              />
-                              <CommandList>
-                                {loadingRetailers && retailers.length === 0 ? (
-                                  <div className="flex items-center justify-center py-6">
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    <span className="text-sm text-muted-foreground">Loading retailers...</span>
-                                  </div>
-                                ) : (
-                                  <>
-                                    <CommandEmpty>No retailers found.</CommandEmpty>
-                                    <CommandGroup>
-                                      <CommandItem
-                                        value="none"
-                                        onSelect={() => {
-                                          field.onChange('none');
-                                          setOpenRetailer(false);
-                                        }}
-                                      >
-                                        No retailer assigned
-                                      </CommandItem>
-                                      {retailers.map((retailer) => (
-                                        <CommandItem
-                                          key={retailer.id}
-                                          value={retailer.id}
-                                          onSelect={() => {
-                                            field.onChange(retailer.id);
-                                            setOpenRetailer(false);
-                                          }}
-                                          className="p-3"
-                                        >
-                                          <div className="flex flex-col items-start">
-                                            <div className="font-medium truncate w-full">
-                                              {retailer.name}
+                                <CommandInput
+                                  placeholder={`Search retailers by ${retailerSearchType}...`}
+                                  value={retailerSearchQuery}
+                                  onValueChange={setRetailerSearchQuery}
+                                />
+                                <CommandList>
+                                  {loadingRetailers ? (
+                                    <div className="flex items-center justify-center py-6">
+                                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                      <span className="text-sm text-muted-foreground">Searching...</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <CommandEmpty>
+                                        {retailerSearchQuery
+                                          ? 'No retailers found matching your search.'
+                                          : selectedRetailer
+                                          ? null
+                                          : 'Type to search retailers...'}
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {/* Show selected retailer if editing and no search results */}
+                                        {selectedRetailer && !retailerSearchQuery && (
+                                          <CommandItem
+                                            key={selectedRetailer.id}
+                                            value={`${selectedRetailer.name} (${selectedRetailer.id})`}
+                                            onSelect={() => {
+                                              field.onChange(selectedRetailer.id);
+                                              setOpenRetailer(false);
+                                            }}
+                                          >
+                                            <div className={cn(
+                                              "mr-2 h-4 w-4 rounded-sm border border-primary",
+                                              field.value === selectedRetailer.id
+                                                ? "bg-primary text-primary-foreground"
+                                                : "opacity-50 [&_svg]:invisible"
+                                            )}>
+                                              {field.value === selectedRetailer.id && <Check className="h-3 w-3" />}
                                             </div>
-                                            {retailer.shop_name && (
-                                              <div className="text-sm text-muted-foreground truncate w-full">
-                                                Shop: {retailer.shop_name}
+                                            <div className="flex items-center gap-3">
+                                              <div className="flex-1">
+                                                <div className="font-medium">{selectedRetailer.name}</div>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {selectedRetailer.phone && (
+                                                    <span className="flex items-center gap-1">
+                                                      <User className="h-3 w-3" />
+                                                      {selectedRetailer.phone}
+                                                    </span>
+                                                  )}
+                                                  {selectedRetailer.address && (
+                                                    <span className="flex items-center gap-1">
+                                                      <Building className="h-3 w-3" />
+                                                      <span className="truncate">
+                                                        {selectedRetailer.address.length > 40
+                                                          ? `${selectedRetailer.address.slice(0, 40)}...`
+                                                          : selectedRetailer.address}
+                                                      </span>
+                                                    </span>
+                                                  )}
+                                                </div>
                                               </div>
-                                            )}
-                                            <div className="text-sm text-muted-foreground">
-                                              {retailer.phone && <span>{retailer.phone}</span>}
-                                              {retailer.phone && retailer.address && <span> • </span>}
-                                              {retailer.address && (
-                                                <span className="truncate">
-                                                  {retailer.address}
-                                                </span>
-                                              )}
                                             </div>
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </>
-                                )}
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
+                                          </CommandItem>
+                                        )}
+                                        {retailers.map((retailer) => (
+                                          <CommandItem
+                                            key={retailer.id}
+                                            value={`${retailer.name} (${retailer.id})`}
+                                            onSelect={() => {
+                                              field.onChange(retailer.id);
+                                              setSelectedRetailer(retailer);
+                                              setOpenRetailer(false);
+                                              setRetailerSearchQuery('');
+                                            }}
+                                          >
+                                            <div className={cn(
+                                              "mr-2 h-4 w-4 rounded-sm border border-primary",
+                                              field.value === retailer.id
+                                                ? "bg-primary text-primary-foreground"
+                                                : "opacity-50 [&_svg]:invisible"
+                                            )}>
+                                              {field.value === retailer.id && <Check className="h-3 w-3" />}
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              <div className="flex-1">
+                                                <div className="font-medium">{retailer.name}</div>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {retailer.phone && (
+                                                    <span className="flex items-center gap-1">
+                                                      <User className="h-3 w-3" />
+                                                      {retailer.phone}
+                                                    </span>
+                                                  )}
+                                                  {retailer.address && (
+                                                    <span className="flex items-center gap-1">
+                                                      <Building className="h-3 w-3" />
+                                                      <span className="truncate">
+                                                        {retailer.address.length > 40
+                                                          ? `${retailer.address.slice(0, 40)}...`
+                                                          : retailer.address}
+                                                      </span>
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </>
+                                  )}
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </FormControl>
                         <FormDescription>
                           The retailer this farmer is associated with (optional)
                         </FormDescription>

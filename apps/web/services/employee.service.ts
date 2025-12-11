@@ -4,24 +4,22 @@
  */
 
 import {
-  CreateEmployeeRequest,
-  UpdateEmployeeRequest,
   ChangeEmploymentStatusRequest,
+  CreateEmployeeRequest,
+  Database,
   EmployeeListParams,
   EmployeeListResponse,
-} from '@pgn/shared';
-import {
-  Database,
   TablesInsert,
   TablesUpdate,
+  UpdateEmployeeRequest,
 } from '@pgn/shared';
 type Employee = Database['public']['Tables']['employees']['Row'];
 type EmployeeInsert = TablesInsert<'employees'>;
 type EmployeeUpdate = TablesUpdate<'employees'>;
 
 
+import { createAuthUser, getUserByEmail, resetUserPassword, updateUserPasswordByEmail } from '../utils/supabase/admin';
 import { createClient } from '../utils/supabase/server';
-import { createAuthUser, resetUserPassword, getUserByEmail, updateUserPasswordByEmail } from '../utils/supabase/admin';
 
 /**
  * Get the next user ID sequence for the current year
@@ -348,7 +346,7 @@ export async function listEmployees(
 
     const {
       page = 1,
-      limit = 50,
+      limit = 10,
       search,
       search_field = 'human_readable_user_id',
       employment_status,
@@ -557,6 +555,10 @@ export async function changeEmploymentStatus(
     return employee;
   } catch (error) {
     console.error('Error in changeEmploymentStatus:', error);
+    // Re-throw with more specific error message
+    if (error instanceof Error) {
+      throw new Error(`Failed to change employment status: ${error.message.replace('Failed to update employee: ', '')}`);
+    }
     throw error;
   }
 }
@@ -569,6 +571,11 @@ export async function updateRegionalAssignments(
   id: string,
   regionalAssignment: { assigned_regions?: string[] }
 ): Promise<Employee> {
+  // Validate employee ID
+  if (!id || typeof id !== 'string' || id.trim() === '') {
+    throw new Error('Invalid employee ID');
+  }
+
   const supabase = await createClient();
 
   try {
@@ -666,34 +673,37 @@ export async function isEmailTaken(
   email: string,
   excludeId?: string
 ): Promise<boolean> {
-  try {
-    const supabase = await createClient();
-
-    if (!email || typeof email !== 'string') {
-      return false;
-    }
-
-    let query = supabase
-      .from('employees')
-      .select('id')
-      .eq('email', email.toLowerCase().trim());
-
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
-
-    const { data, error } = await query.limit(1);
-
-    if (error) {
-      console.error('Error checking email availability:', error);
-      return false;
-    }
-
-    return !!(data && data.length > 0);
-  } catch (error) {
-    console.error('Error in isEmailTaken:', error);
-    return false;
+  if (!email || typeof email !== 'string') {
+    return false; // Gracefully handle invalid inputs
   }
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from('employees')
+    .select('id')
+    .eq('email', email.toLowerCase().trim());
+
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
+
+  const { data, error } = await query.limit(1);
+
+  if (error) {
+    // Only ignore PGRST116 (no rows found) error
+    if (error.code === 'PGRST116') {
+      return false;
+    }
+    console.error('Error checking email availability:', error);
+    return false; // Gracefully handle database errors
+  }
+
+  // Handle both array and single object responses
+  if (Array.isArray(data)) {
+    return data.length > 0;
+  }
+  return !!data;
 }
 
 /**
@@ -703,41 +713,44 @@ export async function isPhoneTaken(
   phone: string,
   excludeId?: string
 ): Promise<boolean> {
-  try {
-    const supabase = await createClient();
-
-    if (!phone || typeof phone !== 'string') {
-      return false;
-    }
-
-    // Clean phone number - remove formatting, keep digits only
-    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      return false; // Invalid phone number format
-    }
-
-    let query = supabase
-      .from('employees')
-      .select('id')
-      .eq('phone', cleanPhone);
-
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
-
-    const { data, error } = await query.limit(1);
-
-    if (error) {
-      console.error('Error checking phone availability:', error);
-      return false;
-    }
-
-    return !!(data && data.length > 0);
-  } catch (error) {
-    console.error('Error in isPhoneTaken:', error);
-    return false;
+  if (!phone || typeof phone !== 'string') {
+    return false; // Gracefully handle invalid inputs
   }
+
+  // Clean phone number - remove formatting, keep digits only
+  const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+
+  if (!cleanPhone || cleanPhone.length !== 10) {
+    return false; // Gracefully handle invalid phone format
+  }
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from('employees')
+    .select('id')
+    .eq('phone', cleanPhone);
+
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
+
+  const { data, error } = await query.limit(1);
+
+  if (error) {
+    // Only ignore PGRST116 (no rows found) error
+    if (error.code === 'PGRST116') {
+      return false;
+    }
+    console.error('Error checking phone availability:', error);
+    return false; // Gracefully handle database errors
+  }
+
+  // Handle both array and single object responses
+  if (Array.isArray(data)) {
+    return data.length > 0;
+  }
+  return !!data;
 }
 
 /**
@@ -747,30 +760,33 @@ export async function isHumanReadableIdTaken(
   humanReadableId: string,
   excludeId?: string
 ): Promise<boolean> {
-  try {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    let query = supabase
-      .from('employees')
-      .select('id')
-      .eq('human_readable_user_id', humanReadableId);
+  let query = supabase
+    .from('employees')
+    .select('id')
+    .eq('human_readable_user_id', humanReadableId);
 
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
+  if (excludeId) {
+    query = query.neq('id', excludeId);
+  }
 
-    const { data, error } = await query.limit(1);
+  const { data, error } = await query.limit(1);
 
-    if (error) {
-      console.error('Error checking human readable ID availability:', error);
+  if (error) {
+    // Only ignore PGRST116 (no rows found) error
+    if (error.code === 'PGRST116') {
       return false;
     }
-
-    return !!(data && data.length > 0);
-  } catch (error) {
-    console.error('Error in isHumanReadableIdTaken:', error);
-    return false;
+    console.error('Error checking human readable ID availability:', error);
+    return false; // Return false for database errors as per test expectations
   }
+
+  // Handle both array and single object responses
+  if (Array.isArray(data)) {
+    return data.length > 0;
+  }
+  return !!data;
 }
 
 /**
@@ -806,7 +822,9 @@ export async function resetEmployeePassword(
     return { success: true };
   } catch (error) {
     console.error('Error in resetEmployeePassword:', error);
-    return { success: false, error: 'An unexpected error occurred' };
+    // Preserve the original error message if it's from getEmployeeById
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    return { success: false, error: errorMessage };
   }
 }
 

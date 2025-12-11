@@ -1,7 +1,7 @@
+import { Dealer, Retailer, RetailerFilters, RetailerFormData, RetailerListResponse, RetailerWithFarmers } from '@pgn/shared';
 import { create } from 'zustand';
-import { Retailer, RetailerWithFarmers, RetailerFilters, RetailerListResponse, RetailerFormData, Dealer } from '@pgn/shared';
 import { useAuthStore } from './authStore';
-import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
+import { getAuthHeaders, handleApiResponse, transformApiErrorMessage } from './utils/errorHandling';
 
 interface RetailerState {
   retailers: RetailerWithFarmers[];
@@ -21,7 +21,7 @@ interface RetailerState {
   filters: RetailerFilters;
 
   fetchRetailers: (params?: Partial<{ page: number; itemsPerPage: number; filters: RetailerFilters }>) => Promise<void>;
-  fetchDealers: (params?: { search?: string; limit?: number }) => Promise<void>;
+  fetchDealers: (params?: { search?: string; searchType?: 'name' | 'phone'; limit?: number }) => Promise<void>;
   createRetailer: (retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   updateRetailer: (id: string, retailerData: RetailerFormData) => Promise<{ success: boolean; error?: string; data?: Retailer }>;
   deleteRetailer: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -119,7 +119,17 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
 
     try {
       const searchParams = new URLSearchParams();
-      if (params?.search) searchParams.set('search', params.search);
+      
+      // Use searchType to determine which parameter to use
+      if (params?.search) {
+        const searchType = params.searchType || 'name'; // Default to name search
+        if (searchType === 'name') {
+          searchParams.set('search', params.search); // search param searches name/shop_name
+        } else if (searchType === 'phone') {
+          searchParams.set('phone', params.search); // phone param searches phone only
+        }
+      }
+      
       if (params?.limit) searchParams.set('limit', params.limit.toString());
       if (!params?.limit) searchParams.set('limit', '10'); // Default limit for dropdown
 
@@ -133,8 +143,12 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       }
 
       const data = await response.json();
+      console.log('🏪 Store - Received dealer data:', JSON.stringify(data, null, 2));
+      
       // Handle different response formats
       const dealers = data.data?.dealers || data.dealers || [];
+      console.log('🏪 Store - Extracted dealers count:', dealers.length);
+      
       set({ dealers, loadingDealers: false });
     } catch (error) {
       console.error('Error fetching dealers:', error);

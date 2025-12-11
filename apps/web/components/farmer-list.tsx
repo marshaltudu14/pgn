@@ -241,7 +241,7 @@ export function FarmerList({
             {pagination.totalItems} farmer{pagination.totalItems !== 1 ? 's' : ''} found
           </p>
         </div>
-        <Button onClick={onFarmerCreate}>
+        <Button onClick={onFarmerCreate} className="cursor-pointer">
           <Plus className="h-4 w-4 mr-2" />
           Add Farmer
         </Button>
@@ -281,10 +281,8 @@ export function FarmerList({
       </div>
 
       {/* Table View - Desktop and Mobile */}
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
-            <Table>
+      <div className="w-full overflow-x-auto">
+        <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
@@ -471,8 +469,6 @@ export function FarmerList({
                 )}
               </TableBody>
             </Table>
-          </div>
-        </div>
       </div>
 
       {/* Pagination */}
@@ -506,7 +502,7 @@ export function FarmerList({
           <p className="text-sm text-muted-foreground mb-4">
             Get started by adding your first farmer.
           </p>
-          <Button onClick={onFarmerCreate}>
+          <Button onClick={onFarmerCreate} className="cursor-pointer">
             <Plus className="h-4 w-4 mr-2" />
             Add Farmer
           </Button>

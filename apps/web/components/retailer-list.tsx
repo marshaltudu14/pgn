@@ -246,7 +246,7 @@ export function RetailerList({
             {pagination.totalItems} retailer{pagination.totalItems !== 1 ? 's' : ''} found
           </p>
         </div>
-        <Button onClick={onRetailerCreate}>
+        <Button onClick={onRetailerCreate} className="cursor-pointer">
           <Plus className="h-4 w-4 mr-2" />
           Add Retailer
         </Button>
@@ -286,10 +286,8 @@ export function RetailerList({
       </div>
 
       {/* Table View - Desktop and Mobile */}
-      <div className="bg-white dark:bg-black">
-        <div className="px-2 py-3 lg:p-6">
-          <div className="w-full overflow-x-auto border rounded-lg">
-            <Table>
+      <div className="w-full overflow-x-auto">
+        <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
@@ -476,8 +474,6 @@ export function RetailerList({
                 )}
               </TableBody>
             </Table>
-          </div>
-        </div>
       </div>
 
       {/* Pagination */}
@@ -511,7 +507,7 @@ export function RetailerList({
           <p className="text-sm text-muted-foreground mb-4">
             Get started by adding your first retailer.
           </p>
-          <Button onClick={onRetailerCreate}>
+          <Button onClick={onRetailerCreate} className="cursor-pointer">
             <Plus className="h-4 w-4 mr-2" />
             Add Retailer
           </Button>

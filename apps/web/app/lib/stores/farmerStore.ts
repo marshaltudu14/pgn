@@ -1,7 +1,7 @@
+import { Farmer, FarmerFilters, FarmerFormData, FarmerListResponse, FarmerWithRetailer, Retailer } from '@pgn/shared';
 import { create } from 'zustand';
-import { Farmer, FarmerWithRetailer, FarmerFilters, FarmerListResponse, Retailer, FarmerFormData } from '@pgn/shared';
 import { useAuthStore } from './authStore';
-import { handleApiResponse, getAuthHeaders, transformApiErrorMessage } from './utils/errorHandling';
+import { getAuthHeaders, handleApiResponse, transformApiErrorMessage } from './utils/errorHandling';
 
 interface FarmerState {
   farmers: FarmerWithRetailer[];
@@ -21,7 +21,7 @@ interface FarmerState {
   filters: FarmerFilters;
 
   fetchFarmers: (params?: Partial<{ page: number; itemsPerPage: number; filters: FarmerFilters }>) => Promise<void>;
-  fetchRetailers: (params?: { search?: string; limit?: number }) => Promise<void>;
+  fetchRetailers: (params?: { search?: string; searchType?: 'name' | 'phone'; limit?: number }) => Promise<void>;
   createFarmer: (farmerData: FarmerFormData) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
   updateFarmer: (id: string, farmerData: FarmerFormData) => Promise<{ success: boolean; error?: string; data?: Farmer }>;
   deleteFarmer: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -120,7 +120,17 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
 
     try {
       const searchParams = new URLSearchParams();
-      if (params?.search) searchParams.set('search', params.search);
+      
+      // Use searchType to determine which parameter to use
+      if (params?.search) {
+        const searchType = params.searchType || 'name'; // Default to name search
+        if (searchType === 'name') {
+          searchParams.set('search', params.search); // search param searches name/shop_name
+        } else if (searchType === 'phone') {
+          searchParams.set('phone', params.search); // phone param searches phone only
+        }
+      }
+      
       if (params?.limit) searchParams.set('limit', params.limit.toString());
       if (!params?.limit) searchParams.set('limit', '10'); // Default limit for dropdown
 
@@ -134,8 +144,12 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       }
 
       const data = await response.json();
+      console.log('🏪 Store - Received retailer data:', JSON.stringify(data, null, 2));
+      
       // Handle different response formats
       const retailers = data.data?.retailers || data.retailers || [];
+      console.log('🏪 Store - Extracted retailers count:', retailers.length);
+      
       set({ retailers, loadingRetailers: false });
     } catch (error) {
       console.error('Error fetching retailers:', error);

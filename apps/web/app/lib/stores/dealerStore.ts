@@ -17,6 +17,7 @@ interface DealerState {
     hasPreviousPage: boolean;
   };
   filters: DealerFilters;
+  loadingDealers: boolean;
 
   fetchDealers: (params?: Partial<{ page: number; itemsPerPage: number; filters: DealerFilters }>) => Promise<void>;
   createDealer: (dealerData: DealerInsert) => Promise<{ success: boolean; error?: string; data?: Dealer }>;
@@ -36,6 +37,7 @@ export const useDealerStore = create<DealerState>((set, get) => ({
   loading: true,
   formLoading: false,
   error: null,
+  loadingDealers: false,
   pagination: {
     currentPage: 1,
     totalPages: 1,

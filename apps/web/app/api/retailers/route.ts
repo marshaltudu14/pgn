@@ -1,25 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import {
-  listRetailers,
-  createRetailer
-} from '@/services/retailer.service';
-import { withSecurity, addSecurityHeaders } from '@/lib/security-middleware';
 import { withApiValidation } from '@/lib/api-validation';
+import { addSecurityHeaders, withSecurity } from '@/lib/security-middleware';
 import {
-  RetailerListParamsSchema,
-  RetailerFormDataSchema,
-  RetailerListResponseSchema,
-  RetailerCreatedResponseSchema,
-  type RetailerInsert,
+    createRetailer,
+    listRetailers
+} from '@/services/retailer.service';
+import {
+    apiContract,
+    RetailerCreatedResponseSchema,
+    RetailerFormDataSchema,
+    RetailerListParamsSchema,
+    RetailerListResponseSchema,
+    type RetailerInsert,
 } from '@pgn/shared';
-import { apiContract } from '@pgn/shared';
+import { NextRequest, NextResponse } from 'next/server';
 
 const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Use validated query parameters from the middleware
     const params = (request as NextRequest & { validatedQuery?: Record<string, unknown> }).validatedQuery;
+    
+    console.log('📥 Retailers API - Received params:', JSON.stringify(params, null, 2));
 
     const result = await listRetailers(params);
+    
+    console.log('📤 Retailers API - Returning retailers count:', result.retailers.length);
 
     const response = NextResponse.json({
       success: true,

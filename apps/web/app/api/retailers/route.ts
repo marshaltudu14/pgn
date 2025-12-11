@@ -13,42 +13,15 @@ import {
     type RetailerInsert,
 } from '@pgn/shared';
 import { NextRequest, NextResponse } from 'next/server';
-import { getEmployeeRegions, canEmployeeAccessRegion } from '@/services/regions.service';
 
 const getRetailersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Get validated query parameters from the middleware
     const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery;
 
-    // Check if this is a mobile client (employee) or web admin
-    // Mobile app sends 'x-client-info: pgn-mobile-client'
-    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
-
-    const user = (request as AuthenticatedRequest).user;
-    let regionFilter: string[] | undefined;
-
-    // Check if region_id is passed in query params (for web admin manual filtering)
-    const queryParams = params as Record<string, unknown>;
-    const explicitRegionId = queryParams.region_id as string | undefined;
-
-    if (explicitRegionId) {
-      regionFilter = [explicitRegionId];
-    }
-    // Apply automatic region filtering for mobile employees
-    else if (isMobileClient && user && user.employeeId) {
-      // Get employee's assigned regions
-      try {
-        regionFilter = await getEmployeeRegions(user.employeeId);
-      } catch (error) {
-        console.error('Error getting employee regions:', error);
-        // If we can't get regions, return empty result
-        regionFilter = [];
-      }
-    } else if (!isMobileClient) {
-      regionFilter = undefined;
-    }
-
-    const result = await listRetailers(params as Record<string, unknown>, regionFilter);
+    // RLS policies will automatically filter data based on employee's assigned regions
+    // Web admin can still pass explicit region_id for manual filtering
+    const result = await listRetailers(params as Record<string, unknown>);
 
     // Successfully fetched retailers
 
@@ -77,42 +50,8 @@ const createRetailerHandler = async (request: NextRequest): Promise<NextResponse
     // Get validated body from the middleware
     const retailerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as RetailerInsert;
 
-    // Check if this is a mobile client (employee) or web admin
-    // Mobile app sends 'x-client-info: pgn-mobile-client'
-    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
-
-    // Get user from authenticated request (set by security middleware)
-    const user = (request as AuthenticatedRequest).user;
-
-    if (!user) {
-      const response = NextResponse.json(
-        {
-          success: false,
-          error: 'Unauthorized',
-          message: 'No valid user token found'
-        },
-        { status: 401 }
-      );
-      return addSecurityHeaders(response);
-    }
-
-    // For mobile employees, validate region access if region_id is provided
-    if (isMobileClient && retailerData.region_id) {
-      const hasAccess = await canEmployeeAccessRegion(user.employeeId, retailerData.region_id);
-
-      if (!hasAccess) {
-        const response = NextResponse.json(
-          {
-            success: false,
-            error: 'Forbidden',
-            message: 'You do not have access to this region'
-          },
-          { status: 403 }
-        );
-        return addSecurityHeaders(response);
-      }
-    }
-
+    // RLS policies will automatically validate region access during insert
+    // No manual validation needed
     const result = await createRetailer(retailerData);
 
     const response = NextResponse.json({

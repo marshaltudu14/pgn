@@ -10,7 +10,6 @@ import {
   LogoutResponse,
   RefreshRequest,
   RefreshResponse,
-  EmployeeRegionWithDetails,
 } from '@pgn/shared';
 
 export class AuthService {
@@ -387,7 +386,8 @@ export class AuthService {
   /**
    * Get employee's assigned regions with details
    */
-  async getEmployeeRegionsWithDetails(employeeId: string): Promise<Array<{id: string; city: string; state: string}>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async getEmployeeRegionsWithDetails(employeeId: string): Promise<any[]> {
     try {
       const supabase = await createClient();
 
@@ -413,21 +413,19 @@ export class AuthService {
         return [];
       }
 
-      // Define type for the returned data based on actual API response
-      type EmployeeRegionData = {
-        region_id: string;
-        regions: {
-          id: string;
-          city: string;
-          state: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = data.map((er: any) => {
+        // Handle both object and array structures for regions
+        const region = Array.isArray(er.regions) ? er.regions[0] : er.regions;
+        return {
+          id: er.region_id,
+          city: region?.city || '',
+          state: region?.state || '',
+          label: region?.city && region?.state
+            ? `${region.city}, ${region.state}`
+            : region?.city || region?.state || `Region ${er.region_id?.slice(0, 8) || ''}`
         };
-      };
-
-      const result = data.map((er: EmployeeRegionData) => ({
-        id: er.region_id,
-        city: er.regions?.city || '',
-        state: er.regions?.state || ''
-      }));
+      });
 
       return result;
     } catch (error) {

@@ -92,7 +92,16 @@ export const useRetailerStore = create<RetailerStoreState>()(
           const currentFilters = { ...get().filters, ...filters };
           const currentPage = refresh ? 1 : page;
 
-          set({ loading: true, error: null });
+          // Clear existing data when starting fresh fetch (page 1) to show only loader
+          if (currentPage === 1) {
+            set({
+              loading: true,
+              error: null,
+              retailers: [] // Clear existing data to show only loader
+            });
+          } else {
+            set({ loading: true, error: null });
+          }
 
           try {
             const queryParams = new URLSearchParams({
@@ -248,22 +257,55 @@ export const useRetailerStore = create<RetailerStoreState>()(
 
         // Search retailers
         searchRetailers: async (query: string, limit = 10) => {
+          set({ loading: true, error: null });
+
           try {
             const queryParams = new URLSearchParams({
               search: query,
               limit: limit.toString(),
             });
 
-            const response = await api.get<Retailer[]>(`${API_ENDPOINTS.RETAILERS}?${queryParams}`);
+            const response = await api.get<RetailerListResponse>(`${API_ENDPOINTS.RETAILERS}?${queryParams}`);
 
-            if (response.success && response.data) {
-              return response;
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to search retailers');
+
+            const retailerData = handledResponse.data as any;
+            if (handledResponse.success && retailerData) {
+              // Update the store with the search results
+              set({
+                retailers: retailerData.retailers || retailerData,
+                loading: false,
+              });
             } else {
-              return response;
+              set({
+                error: handledResponse.error || 'Failed to search retailers',
+                loading: false,
+              });
+            }
+
+            // Return the proper API response format for the store
+            if (handledResponse.success) {
+              return {
+                success: true,
+                data: retailerData?.retailers || retailerData || []
+              };
+            } else {
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to search retailers'
+              };
             }
           } catch (error) {
+            set({
+              error: 'Network error occurred while searching retailers',
+              loading: false,
+            });
             console.error('Error searching retailers:', error);
-            throw error;
+            return {
+              success: false,
+              error: 'Network error occurred while searching retailers'
+            };
           }
         },
 

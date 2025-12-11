@@ -144,11 +144,9 @@ export const useRetailerStore = create<RetailerState>((set, get) => ({
       }
 
       const data = await response.json();
-      console.log('🏪 Store - Received dealer data:', JSON.stringify(data, null, 2));
-      
+
       // Handle different response formats
       const dealers = data.data?.dealers || data.dealers || [];
-      console.log('🏪 Store - Extracted dealers count:', dealers.length);
       
       set({ dealers, loadingDealers: false });
     } catch (error) {

@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TextInput,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -23,35 +24,44 @@ export default function RetailersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const {
     retailers,
     fetchRetailers,
     searchRetailers,
     setSelectedRetailer,
+    pagination,
   } = useRetailerStore();
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const loadRetailers = useCallback(async () => {
+
+  const loadRetailers = useCallback(async (page = 1, refresh = false) => {
     try {
-      setIsInitialLoad(true);
-      await fetchRetailers({ refresh: true });
+      if (page === 1) {
+        setIsInitialLoad(true);
+      }
+      await fetchRetailers({ page, refresh });
     } catch (error) {
       console.error('Error loading retailers:', error);
     } finally {
       setIsInitialLoad(false);
+      setIsLoadingSearch(false);
     }
   }, [fetchRetailers]);
 
   useEffect(() => {
-    loadRetailers();
+    loadRetailers(1, true);
   }, [loadRetailers]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchRetailers({ refresh: true });
+      setCurrentPage(1);
+      await fetchRetailers({ page: 1, refresh: true });
     } catch (error) {
       console.error('Error refreshing retailers:', error);
     } finally {
@@ -61,14 +71,36 @@ export default function RetailersScreen() {
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
+    setIsLoadingSearch(true);
     if (query.trim()) {
       try {
+        // Clear existing data when starting search
         await searchRetailers(query);
+        setCurrentPage(1);
+        setHasMore(true);
       } catch (error) {
         console.error('Error searching retailers:', error);
+      } finally {
+        setIsLoadingSearch(false);
       }
     } else {
-      loadRetailers();
+      loadRetailers(1, true);
+    }
+  };
+
+  const loadMoreRetailers = async () => {
+    if (!hasMore || isLoadingSearch) return;
+
+    const nextPage = currentPage + 1;
+    try {
+      setIsLoadingSearch(true);
+      const result = await fetchRetailers({ page: nextPage });
+      setHasMore(result.pagination.currentPage < result.pagination.totalPages);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more retailers:', error);
+    } finally {
+      setIsLoadingSearch(false);
     }
   };
 
@@ -117,11 +149,7 @@ export default function RetailersScreen() {
           </View>
         </View>
 
-        <View style={[styles.listItemBadge, { backgroundColor: colors.iconBg }]}>
-          <Text style={[styles.listItemBadgeText, { color: colors.textSecondary }]}>
-            R-{item.id.slice(-4)}
-          </Text>
-        </View>
+        {/* Hide ID - removed from display */}
       </View>
 
       <View style={[styles.listItemSeparator, { backgroundColor: colors.separator }]} />
@@ -136,7 +164,7 @@ export default function RetailersScreen() {
           <View style={styles.titleRow}>
             <Users size={18} color={COLORS.SAFFRON} style={styles.titleIcon} />
             <Text style={[styles.title, { color: colors.text }]}>
-              Retailers
+              Retailers ({pagination.totalItems})
             </Text>
           </View>
           <TouchableOpacity
@@ -175,10 +203,12 @@ export default function RetailersScreen() {
             tintColor={colors.textSecondary}
           />
         }
+        onEndReached={loadMoreRetailers}
+        onEndReachedThreshold={0.1}
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={() => {
-          // Don't show empty state during initial load
-          if (isInitialLoad) return null;
+          // Don't show empty state during initial load or when searching/loading
+          if (isInitialLoad || isLoadingSearch) return null;
 
           return (
             <View style={{
@@ -238,11 +268,28 @@ export default function RetailersScreen() {
             </View>
           );
         }}
+        ListFooterComponent={() => {
+          if (isLoadingSearch && !isInitialLoad) {
+            return (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={COLORS.SAFFRON} />
+              </View>
+            );
+          }
+          return null;
+        }}
       />
 
       {/* Loading - only show during initial load */}
       {isInitialLoad && (
         <View style={styles.loadingContainer}>
+          <Spinner size={24} color={COLORS.SAFFRON} />
+        </View>
+      )}
+
+      {/* Search Loading Overlay */}
+      {isLoadingSearch && searchQuery.trim() !== '' && (
+        <View style={styles.searchLoadingContainer}>
           <Spinner size={24} color={COLORS.SAFFRON} />
         </View>
       )}
@@ -364,6 +411,21 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     transform: [{ translateX: -12 }, { translateY: -12 }],
+    zIndex: 1000,
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  searchLoadingContainer: {
+    position: 'absolute',
+    top: 120, // Position below header
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 1000,
   },
 });

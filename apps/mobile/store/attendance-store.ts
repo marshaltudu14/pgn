@@ -1848,7 +1848,7 @@ async function checkServiceHealthOnInitialization(state: Partial<AttendanceStore
     // AC 9: If elapsed time <= 1 hour OR service was crashed, resume tracking if still CHECKED_IN
     else if (emergencyData.trackingActive && state.currentStatus === 'CHECKED_IN' &&
              (!wasOfflineForTooLong || !wasServiceRunning)) {
-      console.log('[AttendanceStore] Service health check passed: Resuming normal tracking');
+      // Service health check passed: Resuming normal tracking
       // Service will be restarted by the normal app flow - no action needed here
     }
 

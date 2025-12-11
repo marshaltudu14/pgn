@@ -89,7 +89,16 @@ export const useFarmerStore = create<FarmerStoreState>()(
           const currentFilters = { ...get().filters, ...filters };
           const currentPage = refresh ? 1 : page;
 
-          set({ loading: true, error: null });
+          // Clear existing data when starting fresh fetch (page 1) to show only loader
+          if (currentPage === 1) {
+            set({
+              loading: true,
+              error: null,
+              farmers: [] // Clear existing data to show only loader
+            });
+          } else {
+            set({ loading: true, error: null });
+          }
 
           try {
             const queryParams = new URLSearchParams({
@@ -246,22 +255,55 @@ export const useFarmerStore = create<FarmerStoreState>()(
 
         // Search farmers
         searchFarmers: async (query: string, limit = 10) => {
+          set({ loading: true, error: null });
+
           try {
             const queryParams = new URLSearchParams({
               search: query,
               limit: limit.toString(),
             });
 
-            const response = await api.get<Farmer[]>(`${API_ENDPOINTS.FARMERS}?${queryParams}`);
+            const response = await api.get<FarmerListResponse>(`${API_ENDPOINTS.FARMERS}?${queryParams}`);
 
-            if (response.success && response.data) {
-              return response;
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to search farmers');
+
+            const farmerData = handledResponse.data as any;
+            if (handledResponse.success && farmerData) {
+              // Update the store with the search results
+              set({
+                farmers: farmerData.farmers || farmerData,
+                loading: false,
+              });
             } else {
-              return response;
+              set({
+                error: handledResponse.error || 'Failed to search farmers',
+                loading: false,
+              });
+            }
+
+            // Return the proper API response format for the store
+            if (handledResponse.success) {
+              return {
+                success: true,
+                data: farmerData?.farmers || farmerData || []
+              };
+            } else {
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to search farmers'
+              };
             }
           } catch (error) {
+            set({
+              error: 'Network error occurred while searching farmers',
+              loading: false,
+            });
             console.error('Error searching farmers:', error);
-            throw error;
+            return {
+              success: false,
+              error: 'Network error occurred while searching farmers'
+            };
           }
         },
 

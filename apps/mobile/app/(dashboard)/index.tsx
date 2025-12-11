@@ -12,7 +12,6 @@ import {
   MapPin,
   ChevronRight,
   Award,
-  Activity,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -118,7 +117,7 @@ export default function HomeScreen() {
       loadTodayStats(),
       loadCurrentStatus(),
       // Re-fetch user data to get updated regions and status
-      useAuth.getState().fetchUser(),
+      useAuth.getState().refreshUserData(),
     ]);
     setRefreshing(false);
   }, [loadTodayStats, loadCurrentStatus]);

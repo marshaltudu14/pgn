@@ -17,7 +17,7 @@ class TokenRefreshService {
     // Clear any existing interval
     this.stop();
 
-    console.log('[TokenRefreshService] Starting periodic token refresh checks');
+    // Starting periodic token refresh checks
 
     this.refreshInterval = setInterval(async () => {
       await this.checkAndRefreshToken();
@@ -31,7 +31,7 @@ class TokenRefreshService {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
-      console.log('[TokenRefreshService] Stopped periodic token refresh checks');
+      // Stopped periodic token refresh checks
     }
   }
 
@@ -43,7 +43,7 @@ class TokenRefreshService {
       const session = await SessionManager.loadSession();
 
       if (!session) {
-        console.log('[TokenRefreshService] No active session');
+        // No active session
         return false;
       }
 
@@ -51,14 +51,14 @@ class TokenRefreshService {
 
       // Refresh if token is expiring within the buffer time
       if (timeUntilExpiry <= this.TOKEN_EXPIRY_BUFFER) {
-        console.log('[TokenRefreshService] Token expiring soon, refreshing...');
+        // Token expiring soon, refreshing...
 
         // Import api client here to avoid circular dependency
         const { api } = await import('./api-client');
         const refreshSuccess = await api.post('/auth/refresh', { token: session.refreshToken });
 
         if (refreshSuccess) {
-          console.log('[TokenRefreshService] Token refreshed successfully');
+          // Token refreshed successfully
           return true;
         } else {
           console.error('[TokenRefreshService] Token refresh failed, clearing session');
@@ -69,7 +69,7 @@ class TokenRefreshService {
           return false;
         }
       } else {
-        console.log(`[TokenRefreshService] Token valid, expires in ${Math.round(timeUntilExpiry / 1000)}s`);
+        // Token valid, expires in calculated time
         return true;
       }
     } catch (error) {
@@ -84,14 +84,14 @@ class TokenRefreshService {
   private emitLogoutEvent() {
     // In a real app, you might use an event emitter or global state manager
     // For now, we'll just log it
-    console.log('[TokenRefreshService] User logged out due to token expiry');
+    // User logged out due to token expiry
   }
 
   /**
    * Force an immediate token refresh
    */
   async forceRefresh(): Promise<boolean> {
-    console.log('[TokenRefreshService] Forcing immediate token refresh');
+    // Forcing immediate token refresh
     return await this.checkAndRefreshToken();
   }
 }

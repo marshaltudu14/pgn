@@ -92,7 +92,16 @@ export const useDealerStore = create<DealerStoreState>()(
           const currentFilters = { ...get().filters, ...filters };
           const currentPage = refresh ? 1 : page;
 
-          set({ loading: true, error: null });
+          // Clear existing data when starting fresh fetch (page 1) to show only loader
+          if (currentPage === 1) {
+            set({
+              loading: true,
+              error: null,
+              dealers: [] // Clear existing data to show only loader
+            });
+          } else {
+            set({ loading: true, error: null });
+          }
 
           try {
             const queryParams = new URLSearchParams({
@@ -261,22 +270,55 @@ export const useDealerStore = create<DealerStoreState>()(
 
         // Search dealers
         searchDealers: async (query: string, limit = 10) => {
+          set({ loading: true, error: null });
+
           try {
             const queryParams = new URLSearchParams({
               search: query,
               limit: limit.toString(),
             });
 
-            const response = await api.get<Dealer[]>(`${API_ENDPOINTS.DEALERS}?${queryParams}`);
+            const response = await api.get<DealerListResponse>(`${API_ENDPOINTS.DEALERS}?${queryParams}`);
 
-            if (response.success && response.data) {
-              return response;
+            // Handle API response with validation error support
+            const handledResponse = handleMobileApiResponse(response.data || response, 'Failed to search dealers');
+
+            const dealerData = handledResponse.data as any;
+            if (handledResponse.success && dealerData) {
+              // Update the store with the search results
+              set({
+                dealers: dealerData.dealers || dealerData,
+                loading: false,
+              });
             } else {
-              return response;
+              set({
+                error: handledResponse.error || 'Failed to search dealers',
+                loading: false,
+              });
+            }
+
+            // Return the proper API response format for the store
+            if (handledResponse.success) {
+              return {
+                success: true,
+                data: dealerData?.dealers || dealerData || []
+              };
+            } else {
+              return {
+                success: false,
+                error: handledResponse.error || 'Failed to search dealers'
+              };
             }
           } catch (error) {
+            set({
+              error: 'Network error occurred while searching dealers',
+              loading: false,
+            });
             console.error('Error searching dealers:', error);
-            throw error;
+            return {
+              success: false,
+              error: 'Network error occurred while searching dealers'
+            };
           }
         },
 

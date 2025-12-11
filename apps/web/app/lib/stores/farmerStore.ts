@@ -145,11 +145,9 @@ export const useFarmerStore = create<FarmerState>((set, get) => ({
       }
 
       const data = await response.json();
-      console.log('🏪 Store - Received retailer data:', JSON.stringify(data, null, 2));
-      
+
       // Handle different response formats
       const retailers = data.data?.retailers || data.retailers || [];
-      console.log('🏪 Store - Extracted retailers count:', retailers.length);
       
       set({ retailers, loadingRetailers: false });
     } catch (error) {

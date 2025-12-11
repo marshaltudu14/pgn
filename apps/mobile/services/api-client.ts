@@ -233,23 +233,18 @@ export async function apiCall<T = any>(
     if (!isPublicEndpoint(endpoint)) {
       let session = await SessionManager.loadSession();
 
-      console.log('[API Client] Session for', endpoint, ':', {
-        hasSession: !!session,
-        hasAccessToken: !!session?.accessToken,
-        isExpired: session ? SessionManager.isSessionExpired(session) : false,
-        endpoint: endpoint
-      });
+      // Session validated for endpoint
 
       // Check if session exists and token is not expired
       if (!session || SessionManager.isSessionExpired(session)) {
         // Try to refresh token if we have a refresh token
         if (session?.refreshToken) {
-          console.log('[API Client] Token expired, refreshing for:', endpoint);
+          // Token expired, attempting refresh
           const refreshSuccess = await refreshTokenAPI(session.refreshToken);
 
           if (refreshSuccess) {
             session = await SessionManager.loadSession();
-            console.log('[API Client] Token refreshed successfully for:', endpoint);
+            // Token refreshed successfully
           } else {
             console.error('[API Client] Token refresh failed for:', endpoint);
             await SessionManager.clearSession();
@@ -270,7 +265,7 @@ export async function apiCall<T = any>(
       // Add authorization header with current token
       if (session?.accessToken) {
         authHeaders.Authorization = `Bearer ${session.accessToken}`;
-        console.log('[API Client] Authorization header added for:', endpoint);
+        // Authorization header added
       } else {
         console.error('[API Client] No access token after refresh for:', endpoint);
         return {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -38,7 +38,6 @@ export default function DealersScreen() {
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const flatListRef = useRef<FlatList<Dealer>>(null);
 
   const loadDealers = useCallback(async (page = 1, refresh = false) => {
     try {
@@ -151,11 +150,7 @@ export default function DealersScreen() {
           </View>
         </View>
 
-        <View style={[styles.listItemBadge, { backgroundColor: colors.iconBg }]}>
-          <Text style={[styles.listItemBadgeText, { color: colors.textSecondary }]}>
-            D-{item.id.slice(-4)}
-          </Text>
-        </View>
+        {/* Hide ID - removed from display */}
       </View>
 
       <View style={[styles.listItemSeparator, { backgroundColor: colors.separator }]} />
@@ -170,7 +165,7 @@ export default function DealersScreen() {
           <View style={styles.titleRow}>
             <Store size={18} color={colors.primary} style={styles.titleIcon} />
             <Text style={[styles.title, { color: colors.text }]}>
-              Dealers
+              Dealers ({pagination.totalItems})
             </Text>
           </View>
           <TouchableOpacity
@@ -209,10 +204,12 @@ export default function DealersScreen() {
             tintColor={colors.textSecondary}
           />
         }
+        onEndReached={loadMoreDealers}
+        onEndReachedThreshold={0.1}
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={() => {
-          // Don't show empty state during initial load
-          if (isInitialLoad) return null;
+          // Don't show empty state during initial load or when searching/loading
+          if (isInitialLoad || isLoadingSearch) return null;
 
           return (
             <View style={{
@@ -272,11 +269,28 @@ export default function DealersScreen() {
             </View>
           );
         }}
+        ListFooterComponent={() => {
+          if (isLoadingSearch && !isInitialLoad) {
+            return (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            );
+          }
+          return null;
+        }}
       />
 
       {/* Loading - only show during initial load */}
       {isInitialLoad && (
         <View style={styles.loadingContainer}>
+          <Spinner size={24} color={COLORS.SAFFRON} />
+        </View>
+      )}
+
+      {/* Search Loading Overlay */}
+      {isLoadingSearch && searchQuery.trim() !== '' && (
+        <View style={styles.searchLoadingContainer}>
           <Spinner size={24} color={COLORS.SAFFRON} />
         </View>
       )}
@@ -398,6 +412,21 @@ const styles = StyleSheet.create({
     top: '50%',
     left: '50%',
     transform: [{ translateX: -12 }, { translateY: -12 }],
+    zIndex: 1000,
+  },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  searchLoadingContainer: {
+    position: 'absolute',
+    top: 120, // Position below header
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
     zIndex: 1000,
   },
 });

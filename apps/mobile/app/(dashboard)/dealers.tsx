@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   TextInput,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '@/hooks/use-theme-colors';
@@ -23,35 +24,45 @@ export default function DealersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoadingSearch, setIsLoadingSearch] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
   const {
     dealers,
     fetchDealers,
     searchDealers,
     setSelectedDealer,
+    pagination,
   } = useDealerStore();
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  const loadDealers = useCallback(async () => {
+  const flatListRef = useRef<FlatList<Dealer>>(null);
+
+  const loadDealers = useCallback(async (page = 1, refresh = false) => {
     try {
-      setIsInitialLoad(true);
-      await fetchDealers({ refresh: true });
+      if (page === 1) {
+        setIsInitialLoad(true);
+      }
+      await fetchDealers({ page, refresh });
     } catch (error) {
       console.error('Error loading dealers:', error);
     } finally {
       setIsInitialLoad(false);
+      setIsLoadingSearch(false);
     }
   }, [fetchDealers]);
 
   useEffect(() => {
-    loadDealers();
+    loadDealers(1, true);
   }, [loadDealers]);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await fetchDealers({ refresh: true });
+      setCurrentPage(1);
+      await fetchDealers({ page: 1, refresh: true });
     } catch (error) {
       console.error('Error refreshing dealers:', error);
     } finally {
@@ -61,14 +72,36 @@ export default function DealersScreen() {
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
+    setIsLoadingSearch(true);
     if (query.trim()) {
       try {
+        // Clear existing data when starting search
         await searchDealers(query);
+        setCurrentPage(1);
+        setHasMore(true);
       } catch (error) {
         console.error('Error searching dealers:', error);
+      } finally {
+        setIsLoadingSearch(false);
       }
     } else {
-      loadDealers();
+      loadDealers(1, true);
+    }
+  };
+
+  const loadMoreDealers = async () => {
+    if (!hasMore || isLoadingSearch) return;
+
+    const nextPage = currentPage + 1;
+    try {
+      setIsLoadingSearch(true);
+      const result = await fetchDealers({ page: nextPage });
+      setHasMore(result.pagination.currentPage < result.pagination.totalPages);
+      setCurrentPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more dealers:', error);
+    } finally {
+      setIsLoadingSearch(false);
     }
   };
 

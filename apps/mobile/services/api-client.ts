@@ -223,6 +223,7 @@ export async function apiCall<T = any>(
     const baseHeaders: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'x-client-type': 'mobile', // Header to identify mobile clients for region filtering
       'x-client-info': 'pgn-mobile-client',
       'User-Agent': 'pgn-mobile-app/1.0.0',
     };

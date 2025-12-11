@@ -21,13 +21,8 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
     // Get validated query parameters from the middleware
     const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery;
 
-    console.log('📥 Dealers API - Received params:', JSON.stringify(params, null, 2));
-
     // Check if this is a mobile client (employee) or web admin
-    // Mobile app sends 'x-client-info: pgn-mobile-client'
-    const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
-    console.log('🔍 Dealers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
-    console.log('🔍 Dealers API - x-client-info header:', request.headers.get('x-client-info'));
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
 
     const user = (request as AuthenticatedRequest).user;
     let regionFilter: string[] | undefined;
@@ -37,20 +32,34 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
     const explicitRegionId = queryParams.region_id as string | undefined;
 
     if (explicitRegionId) {
-      console.log('🔍 Explicit region filter in query params:', explicitRegionId);
       regionFilter = [explicitRegionId];
     }
     // Apply automatic region filtering for mobile employees
     else if (isMobileClient && user && user.employeeId) {
-      console.log('👤 Employee ID:', user.employeeId);
-
       // Get employee's assigned regions
       try {
         regionFilter = await getEmployeeRegions(user.employeeId);
-        console.log('📍 Assigned region IDs:', regionFilter);
 
         if (regionFilter.length === 0) {
-          console.log('⚠️ Employee has no regions assigned, returning empty result');
+          // Return empty result for employees with no regions
+          const emptyResponse = {
+            dealers: [],
+            pagination: {
+              currentPage: 1,
+              totalPages: 0,
+              totalItems: 0,
+              itemsPerPage: 20,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            }
+          };
+
+          const response = NextResponse.json({
+            success: true,
+            data: emptyResponse,
+            message: 'No dealers found - no regions assigned'
+          });
+          return addSecurityHeaders(response);
         }
       } catch (error) {
         console.error('Error getting employee regions:', error);
@@ -58,16 +67,12 @@ const getDealersHandler = async (request: NextRequest): Promise<NextResponse> =>
         regionFilter = [];
       }
     } else if (!isMobileClient) {
-      console.log('🌐 Web admin client - showing all dealers without region filtering');
       regionFilter = undefined;
     }
 
     const result = await listDealers(params as DealerListParams, regionFilter);
 
-    console.log('📤 Dealers API - Total dealers found:', result.dealers.length);
-    if (regionFilter && regionFilter.length > 0) {
-      console.log('✅ Region filtering applied for', regionFilter.length, 'regions');
-    }
+    // Successfully fetched dealers
 
     const response = NextResponse.json({
       success: true,
@@ -97,7 +102,6 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
     // Check if this is a mobile client (employee) or web admin
     // Mobile app sends 'x-client-info: pgn-mobile-client'
     const isMobileClient = request.headers.get('x-client-info') === 'pgn-mobile-client';
-    console.log('🔍 Create Dealers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
 
     // Get user from authenticated request (set by security middleware)
     const user = (request as AuthenticatedRequest).user;
@@ -116,11 +120,9 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
 
     // For mobile employees, validate region access if region_id is provided
     if (isMobileClient && dealerData.region_id) {
-      console.log('🔒 Validating region access for region_id:', dealerData.region_id);
       const hasAccess = await canEmployeeAccessRegion(user.employeeId, dealerData.region_id);
 
       if (!hasAccess) {
-        console.log('❌ Region access denied for employee:', user.employeeId);
         const response = NextResponse.json(
           {
             success: false,
@@ -131,9 +133,6 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
         );
         return addSecurityHeaders(response);
       }
-      console.log('✅ Region access granted');
-    } else if (!isMobileClient) {
-      console.log('🌐 Web admin - skipping region access validation');
     }
 
     const result = await createDealer(dealerData);

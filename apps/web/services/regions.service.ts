@@ -354,77 +354,74 @@ export async function searchRegions(
   };
 }
 
-// Get regions that an employee has access to based on assigned_cities
+// Get regions that an employee has access to based on employee_regions junction table
 export async function getEmployeeRegions(employeeId: string): Promise<string[]> {
   const supabase = await createClient();
 
-  const { data: employee, error } = await supabase
+  // First check if employee exists
+  const { data: employee, error: employeeError } = await supabase
     .from('employees')
-    .select('assigned_cities')
+    .select('id, employment_status, can_login')
     .eq('id', employeeId)
     .single();
 
-  if (error || !employee) {
+  if (employeeError) {
     // User not found in employees table, so they're an admin
     // Admins have access to all regions, return empty array to show all
     return [];
   }
 
-  const assignedCities = employee.assigned_cities as { city: string; state: string }[] || [];
-
-  // Get region IDs for assigned cities
-  const cityNames = assignedCities.map(ac => ac.city);
-
-  if (cityNames.length === 0) {
+  if (!employee) {
     return [];
   }
 
-  const { data: regions, error: regionError } = await supabase
-    .from('regions')
-    .select('id')
-    .in('city', cityNames);
+  // Get region IDs from employee_regions junction table
+  const { data: employeeRegionMappings, error: mappingError } = await supabase
+    .from('employee_regions')
+    .select('region_id')
+    .eq('employee_id', employeeId);
 
-  if (regionError) {
-    console.error('Error fetching employee regions:', regionError);
+  if (mappingError) {
     throw new Error('Failed to fetch employee regions');
   }
 
-  return regions?.map(r => r.id) || [];
+  if (!employeeRegionMappings || employeeRegionMappings.length === 0) {
+    return [];
+  }
+
+  const regionIds = employeeRegionMappings.map(mapping => mapping.region_id);
+  return regionIds;
 }
 
 // Check if an employee has access to a specific region
 export async function canEmployeeAccessRegion(employeeId: string, regionId: string): Promise<boolean> {
   const supabase = await createClient();
 
-  const { data: employee, error } = await supabase
+  // First check if employee exists
+  const { data: employee, error: employeeError } = await supabase
     .from('employees')
-    .select('assigned_cities')
+    .select('id')
     .eq('id', employeeId)
     .single();
 
-  if (error || !employee) {
+  if (employeeError || !employee) {
     // User not found in employees table, so they're an admin
     // Admins have access to all regions
     return true;
   }
 
-  const assignedCities = employee.assigned_cities as { city: string; state: string }[] || [];
-
-  if (assignedCities.length === 0) {
-    return false;
-  }
-
-  // Get the city for the region
-  const { data: region, error: regionError } = await supabase
-    .from('regions')
-    .select('city')
-    .eq('id', regionId)
+  // Check if the employee has this specific region assigned
+  const { data: mapping, error: mappingError } = await supabase
+    .from('employee_regions')
+    .select('region_id')
+    .eq('employee_id', employeeId)
+    .eq('region_id', regionId)
     .single();
 
-  if (regionError || !region) {
+  if (mappingError) {
     return false;
   }
 
-  // Check if the region's city is in the employee's assigned cities
-  return assignedCities.some(ac => ac.city === region.city);
+  const hasAccess = !!mapping;
+  return hasAccess;
 }

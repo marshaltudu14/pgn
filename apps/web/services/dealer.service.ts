@@ -50,10 +50,8 @@ export async function listDealers(
   // If phone is provided, use phone search only
   // If search is provided (and no phone), use general search
   if (phone) {
-    console.log('🔍 Searching dealers by phone:', phone);
     query = query.ilike('phone', `%${phone}%`);
   } else if (search) {
-    console.log('🔍 Searching dealers by name/shop:', search);
     query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,shop_name.ilike.%${search}%`);
   }
 
@@ -78,15 +76,7 @@ export async function listDealers(
   // Apply pagination
   query = query.range(from, to);
 
-  console.log('🔎 Dealer Service - Executing query with params:', { page, limit, search, phone, region_id });
-  
   const { data, error, count } = await query;
-  
-  console.log('🔎 Dealer Service - Query results:', { 
-    dataCount: data?.length || 0, 
-    totalCount: count,
-    error: error?.message 
-  });
 
   if (error) {
     console.error('Error fetching dealers:', error);

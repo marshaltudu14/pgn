@@ -163,24 +163,24 @@ export default function HomeScreen() {
     }
     if (user.assignedCities.length === 1) {
       const region = user.assignedCities[0];
-      return typeof region === 'object' && region.city && region.state
-        ? `${region.city}, ${region.state}`
+      return typeof region === 'object' && region.city
+        ? `${region.city}`
         : String(region);
     }
     if (user.assignedCities.length <= 2) {
       return user.assignedCities.map(region =>
-        typeof region === 'object' && region.city && region.state
-          ? `${region.city}, ${region.state}`
+        typeof region === 'object' && region.city
+          ? `${region.city}`
           : String(region)
       ).join(', ');
     }
     const firstRegion = user.assignedCities[0];
     const secondRegion = user.assignedCities[1];
-    const firstRegionStr = typeof firstRegion === 'object' && firstRegion.city && firstRegion.state
-      ? `${firstRegion.city}, ${firstRegion.state}`
+    const firstRegionStr = typeof firstRegion === 'object' && firstRegion.city
+      ? `${firstRegion.city}`
       : String(firstRegion);
-    const secondRegionStr = typeof secondRegion === 'object' && secondRegion.city && secondRegion.state
-      ? `${secondRegion.city}, ${secondRegion.state}`
+    const secondRegionStr = typeof secondRegion === 'object' && secondRegion.city
+      ? `${secondRegion.city}`
       : String(secondRegion);
     return `${firstRegionStr}, ${secondRegionStr} +${user.assignedCities.length - 2} more`;
   };

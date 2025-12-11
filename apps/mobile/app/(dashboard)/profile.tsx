@@ -134,7 +134,7 @@ export default function ProfileScreen() {
       icon: MapPin,
       label: 'Assigned Regions',
       value: user?.assignedCities && user.assignedCities.length > 0
-        ? user.assignedCities.join(', ')
+        ? user.assignedCities.map(city => typeof city === 'object' && city.city ? city.city : String(city)).join(', ')
         : 'Not assigned',
     },
   ];

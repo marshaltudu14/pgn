@@ -339,78 +339,32 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
                   Select Region
                 </Text>
                 <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                  {assignedRegions.map((region, index) => {
-                    // Handle the case where region values are [object Object] strings
-                    let regionId = '';
-                    let regionCity = '';
-                    let regionState = '';
-                    let regionLabel = '';
-
-                    if (typeof region === 'object' && region !== null) {
-                      // If the values are "[object Object]" strings, need to parse them differently
-                      if (region.city && region.city === '[object Object]') {
-                        // This means the data structure is nested incorrectly, try to extract the real values
-                        // Based on the logs, it seems the actual values might be in nested objects
-                        try {
-                          // Try to parse the nested data
-                          const parsedCity = JSON.parse(region.city);
-                          const parsedLabel = JSON.parse(region.label);
-                          regionId = region.id || `region-${index}`;
-                          regionCity = parsedCity?.city || parsedCity || `Region ${index}`;
-                          regionState = parsedCity?.state || parsedLabel?.state || '';
-                          regionLabel = parsedLabel?.label || parsedLabel?.city ?
-                                       `${parsedLabel?.city}, ${parsedLabel?.state}` :
-                                       `${regionCity}, ${regionState}`;
-                        } catch {
-                          // If parsing fails, use fallback
-                          regionId = region.id || `region-${index}`;
-                          regionCity = `Region ${index}`;
-                          regionState = '';
-                          regionLabel = `Region ${index}`;
+                  {assignedRegions.map((region) => (
+                    <TouchableOpacity
+                      key={region.id}
+                      style={[
+                        styles.regionOption,
+                        {
+                          backgroundColor: colors.listBg,
+                          borderBottomColor: colors.border,
                         }
-                      } else {
-                        // Normal case - values are properly structured
-                        regionId = region.id || `region-${index}`;
-                        regionCity = region.city || `Region ${index}`;
-                        regionState = region.state || '';
-                        regionLabel = region.label || (region.city && region.state ?
-                                       `${region.city}, ${region.state}` : `Region ${index}`);
-                      }
-                    } else {
-                      // Handle case where region is just a string or other primitive
-                      regionId = `region-${index}`;
-                      regionCity = region?.toString() || `Region ${index}`;
-                      regionState = '';
-                      regionLabel = regionCity;
-                    }
-
-                    return (
-                      <TouchableOpacity
-                        key={regionId}
-                        style={[
-                          styles.regionOption,
-                          {
-                            backgroundColor: colors.listBg,
-                            borderBottomColor: colors.border,
-                          }
-                        ]}
-                        onPress={() => {
-                          setFormData(prev => ({ ...prev, region_id: regionId }));
-                          setShowRegionPicker(false);
-                          if (errors.region_id) {
-                            setErrors(prev => ({ ...prev, region_id: undefined }));
-                          }
-                        }}
-                      >
-                        <Text style={[styles.regionOptionText, { color: colors.text }]}>
-                          {regionLabel}
-                        </Text>
-                        {formData.region_id === regionId && (
-                          <Ionicons name="checkmark" size={20} color={colors.primary} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                      ]}
+                      onPress={() => {
+                        setFormData(prev => ({ ...prev, region_id: region.id }));
+                        setShowRegionPicker(false);
+                        if (errors.region_id) {
+                          setErrors(prev => ({ ...prev, region_id: undefined }));
+                        }
+                      }}
+                    >
+                      <Text style={[styles.regionOptionText, { color: colors.text }]}>
+                        {region.label}
+                      </Text>
+                      {formData.region_id === region.id && (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
                 </ScrollView>
               </View>
             </TouchableOpacity>

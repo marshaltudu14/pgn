@@ -363,49 +363,32 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
                   Select Region
                 </Text>
                 <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                  {assignedRegions.map((region, index) => {
-                    // Handle cases where region properties might be objects instead of strings
-                    const regionId = typeof region === 'object' && region.id ? region.id :
-                                    typeof region === 'object' && region.id ? region.id : `region-${index}`;
-                    const regionCity = typeof region === 'object' && region.city ?
-                                      (typeof region.city === 'string' ? region.city :
-                                       typeof region.city === 'object' && region.city.city ? region.city.city : JSON.stringify(region.city))
-                                      : typeof region === 'string' ? region : `Region ${index}`;
-                    const regionState = typeof region === 'object' && region.state ?
-                                       (typeof region.state === 'string' ? region.state :
-                                        typeof region.state === 'object' && region.state.state ? region.state.state : JSON.stringify(region.state))
-                                       : '';
-                    const regionLabel = typeof region === 'object' && region.label ?
-                                       (typeof region.label === 'string' ? region.label : JSON.stringify(region.label))
-                                       : `${regionCity}, ${regionState}`;
-
-                    return (
-                      <TouchableOpacity
-                        key={regionId}
-                        style={[
-                          styles.regionOption,
-                          {
-                            backgroundColor: colors.listBg,
-                            borderBottomColor: colors.border,
-                          }
-                        ]}
-                        onPress={() => {
-                          setFormData(prev => ({ ...prev, region_id: regionId }));
-                          setShowRegionPicker(false);
-                          if (errors.region_id) {
-                            setErrors(prev => ({ ...prev, region_id: undefined }));
-                          }
-                        }}
-                      >
-                        <Text style={[styles.regionOptionText, { color: colors.text }]}>
-                          {regionLabel || `${regionCity}, ${regionState}`}
-                        </Text>
-                        {formData.region_id === regionId && (
-                          <Ionicons name="checkmark" size={20} color={colors.primary} />
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                  {assignedRegions.map((region) => (
+                    <TouchableOpacity
+                      key={region.id}
+                      style={[
+                        styles.regionOption,
+                        {
+                          backgroundColor: colors.listBg,
+                          borderBottomColor: colors.border,
+                        }
+                      ]}
+                      onPress={() => {
+                        setFormData(prev => ({ ...prev, region_id: region.id }));
+                        setShowRegionPicker(false);
+                        if (errors.region_id) {
+                          setErrors(prev => ({ ...prev, region_id: undefined }));
+                        }
+                      }}
+                    >
+                      <Text style={[styles.regionOptionText, { color: colors.text }]}>
+                        {region.label}
+                      </Text>
+                      {formData.region_id === region.id && (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
                 </ScrollView>
               </View>
             </TouchableOpacity>

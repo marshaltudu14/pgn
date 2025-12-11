@@ -10,6 +10,7 @@ import {
   LogoutResponse,
   RefreshRequest,
   RefreshResponse,
+  EmployeeRegionWithDetails,
 } from '@pgn/shared';
 
 export class AuthService {
@@ -412,11 +413,23 @@ export class AuthService {
         return [];
       }
 
-      return data.map(er => ({
+      // Define type for the returned data based on actual API response
+      type EmployeeRegionData = {
+        region_id: string;
+        regions: {
+          id: string;
+          city: string;
+          state: string;
+        };
+      };
+
+      const result = data.map((er: EmployeeRegionData) => ({
         id: er.region_id,
-        city: er.regions?.[0]?.city || '',
-        state: er.regions?.[0]?.state || ''
+        city: er.regions?.city || '',
+        state: er.regions?.state || ''
       }));
+
+      return result;
     } catch (error) {
       console.error('Database query error:', error);
       return [];

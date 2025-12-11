@@ -52,7 +52,6 @@ interface RetailerFormProps {
 
 export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProps) {
   const {
-    loading,
     formLoading,
     error,
     dealers,
@@ -558,8 +557,7 @@ export function RetailerForm({ retailer, onSuccess, onCancel }: RetailerFormProp
               <Button
                 type="submit"
                 className="cursor-pointer"
-                disabled={loading || loadingDealers}
-              >
+                >
                 {formLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (

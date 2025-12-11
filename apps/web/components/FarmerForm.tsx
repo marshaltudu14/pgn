@@ -50,7 +50,6 @@ interface FarmerFormProps {
 
 export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
   const {
-    loading,
     formLoading,
     error,
     retailers,
@@ -559,8 +558,7 @@ export function FarmerForm({ farmer, onSuccess, onCancel }: FarmerFormProps) {
               <Button
                 type="submit"
                 className="cursor-pointer"
-                disabled={loading || loadingRetailers}
-              >
+                  >
                 {formLoading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (

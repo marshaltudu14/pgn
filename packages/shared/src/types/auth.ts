@@ -10,6 +10,13 @@ export interface CityAssignment {
   state: string;
 }
 
+export interface RegionAssignment {
+  id: string;
+  city: string;
+  state: string;
+  label: string;
+}
+
 export interface JWTPayload {
   sub: string; // Employee human readable ID (PGN-2024-0001)
   employeeId: string; // Internal employee UUID (now same as auth.users.id)
@@ -92,7 +99,7 @@ export interface AuthenticatedUser {
   employmentStatus: EmploymentStatus;
   canLogin: boolean;
   phone?: string;
-  assignedCities?: string[];
+  assignedCities?: RegionAssignment[];
   employmentStatusChangedAt?: string;
   createdAt?: string;
   updatedAt?: string;

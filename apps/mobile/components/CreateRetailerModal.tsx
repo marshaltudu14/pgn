@@ -14,7 +14,7 @@ import { ChevronLeft, Plus, Phone, Mail, MapPin, Store, User, ChevronDown } from
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useRetailerStore } from '@/store/retailer-store';
-import { useRegionStore } from '@/store/region-store';
+import { useAuthStore } from '@/store/auth-store';
 import { RetailerFormData, Dealer } from '@pgn/shared';
 import { COLORS } from '@/constants';
 import Spinner from '@/components/Spinner';
@@ -39,7 +39,8 @@ interface FormErrors {
 export default function CreateRetailerModal({ visible, onClose, dealerId }: CreateRetailerModalProps) {
   const colors = useThemeColors();
   const { createRetailer, isCreating } = useRetailerStore();
-  const { regions, fetchRegions } = useRegionStore();
+  const { user } = useAuthStore();
+  const assignedRegions = user?.assignedCities || [];
 
   const [formData, setFormData] = useState<RetailerFormData>({
     name: '',
@@ -48,7 +49,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
     address: '',
     shop_name: '',
     dealer_id: dealerId || '',
-    region_id: '',
+    region_id: assignedRegions.length > 0 ? assignedRegions[0].id : '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -56,12 +57,12 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
   const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
   const [showRegionPicker, setShowRegionPicker] = useState(false);
 
-  // Fetch regions when modal opens
+  // Pre-select first region when modal opens and form is reset
   useEffect(() => {
-    if (visible && regions.length === 0) {
-      fetchRegions();
+    if (visible && assignedRegions.length > 0 && !formData.region_id) {
+      setFormData(prev => ({ ...prev, region_id: assignedRegions[0].id }));
     }
-  }, [visible, regions.length, fetchRegions]);
+  }, [visible, assignedRegions, formData.region_id]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -142,7 +143,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
           address: '',
           shop_name: '',
           dealer_id: dealerId || '',
-          region_id: '',
+          region_id: assignedRegions.length > 0 ? assignedRegions[0].id : '',
         });
       } else {
         Alert.alert('Error', response.error || 'Failed to create retailer');
@@ -166,7 +167,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
       address: '',
       shop_name: '',
       dealer_id: dealerId || '',
-      region_id: '',
+      region_id: assignedRegions.length > 0 ? assignedRegions[0].id : '',
     });
     setErrors({});
     onClose();
@@ -330,9 +331,9 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
                 ]}
               >
                 {(() => {
-                  const selectedRegion = regions.find(r => r.id === formData.region_id);
+                  const selectedRegion = assignedRegions.find(r => r.id === formData.region_id);
                   return formData.region_id
-                    ? selectedRegion ? `${selectedRegion.city}, ${selectedRegion.state}` : formData.region_id
+                    ? selectedRegion ? selectedRegion.label : 'Select region'
                     : 'Select region';
                 })()}
               </Text>
@@ -362,7 +363,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
                   Select Region
                 </Text>
                 <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                  {regions.map((region) => (
+                  {assignedRegions.map((region) => (
                     <TouchableOpacity
                       key={region.id}
                       style={[
@@ -381,7 +382,7 @@ export default function CreateRetailerModal({ visible, onClose, dealerId }: Crea
                       }}
                     >
                       <Text style={[styles.regionOptionText, { color: colors.text }]}>
-                        {region.city}, {region.state}
+                        {region.label}
                       </Text>
                       {formData.region_id === region.id && (
                         <Ionicons name="checkmark" size={20} color={colors.primary} />

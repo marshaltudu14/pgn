@@ -57,8 +57,8 @@ const userHandler = async (req: NextRequest): Promise<NextResponse> => {
       return addSecurityHeaders(response);
     }
 
-    // Fetch assigned regions from employee_regions table
-    const assignedCities = await authService.getEmployeeRegions(user.employeeId);
+    // Fetch assigned regions with details from employee_regions table
+    const assignedCities = await authService.getEmployeeRegionsWithDetails(user.employeeId);
 
       // Return complete user profile information
     const userProfile = {

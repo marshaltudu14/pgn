@@ -384,6 +384,46 @@ export class AuthService {
   }
 
   /**
+   * Get employee's assigned regions with details
+   */
+  async getEmployeeRegionsWithDetails(employeeId: string): Promise<Array<{id: string; city: string; state: string}>> {
+    try {
+      const supabase = await createClient();
+
+      // Get region details for employee
+      const { data, error } = await supabase
+        .from('employee_regions')
+        .select(`
+          region_id,
+          regions (
+            id,
+            city,
+            state
+          )
+        `)
+        .eq('employee_id', employeeId);
+
+      if (error) {
+        console.error('Error fetching employee regions:', error);
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        return [];
+      }
+
+      return data.map(er => ({
+        id: er.region_id,
+        city: er.regions.city,
+        state: er.regions.state
+      }));
+    } catch (error) {
+      console.error('Database query error:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get employment status message
    */
   private getEmploymentStatusMessage(status: EmploymentStatus): string {

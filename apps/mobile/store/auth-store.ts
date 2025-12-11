@@ -449,20 +449,48 @@ export const useAuth = create<AuthStoreState>()(
             if (userResponse.success && userResponse.data) {
               const { user } = get();
 
-              // Transform assignedCities from array of objects to array of strings for mobile app
+              // Transform assignedCities from array of objects to include both ID and city/state data
               const rawAssignedCities = userResponse.data.assignedCities || [];
 
               const assignedCities = rawAssignedCities.map((city: any) => {
-                // If it's an object with city property, extract the city name
-                if (city && typeof city === 'object' && city.city) {
-                  return city.city;
+                // If it's an object with city, state, and id properties, keep all data
+                if (city && typeof city === 'object' && city.city && city.state && city.id) {
+                  return {
+                    id: city.id,
+                    city: city.city,
+                    state: city.state,
+                    label: `${city.city}, ${city.state}` // For display purposes
+                  };
                 }
-                // If it's already a string, return as is
+                // If it's an object with partial data, create a label
+                if (city && typeof city === 'object' && (city.city || city.state)) {
+                  return {
+                    id: city.id || null,
+                    city: city.city || '',
+                    state: city.state || '',
+                    label: city.city && city.state
+                      ? `${city.city}, ${city.state}`
+                      : city.city || city.state || ''
+                  };
+                }
+                // If it's already a string, parse it (legacy format)
                 if (typeof city === 'string') {
-                  return city;
+                  // Try to parse city,state format
+                  const parts = city.split(',').map((p: string) => p.trim());
+                  return {
+                    id: null,
+                    city: parts[0] || city,
+                    state: parts[1] || '',
+                    label: city
+                  };
                 }
-                // Fallback: convert to string
-                return String(city);
+                // Fallback: convert to string with empty data
+                return {
+                  id: null,
+                  city: String(city),
+                  state: '',
+                  label: String(city)
+                };
               });
 
               // Update user data with API response, even if user is null (fresh login/load)

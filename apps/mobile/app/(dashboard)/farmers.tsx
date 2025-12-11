@@ -33,6 +33,7 @@ export default function FarmersScreen() {
     searchFarmers,
     setSelectedFarmer,
     pagination,
+    loading,
   } = useFarmerStore();
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -206,8 +207,8 @@ export default function FarmersScreen() {
         onEndReachedThreshold={0.1}
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={() => {
-          // Don't show empty state during initial load or when searching/loading
-          if (isInitialLoad || isLoadingSearch) return null;
+          // Don't show empty state during loading from the store or when searching
+          if (loading || isLoadingSearch) return null;
 
           return (
             <View style={{
@@ -279,8 +280,8 @@ export default function FarmersScreen() {
         }}
       />
 
-      {/* Loading - only show during initial load */}
-      {isInitialLoad && (
+      {/* Loading - only show during loading from store */}
+      {loading && !farmers.length && (
         <View style={styles.loadingContainer}>
           <Spinner size={24} color="#F59E0B" />
         </View>

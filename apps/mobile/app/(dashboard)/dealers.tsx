@@ -34,6 +34,7 @@ export default function DealersScreen() {
     searchDealers,
     setSelectedDealer,
     pagination,
+    loading,
   } = useDealerStore();
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -208,8 +209,8 @@ export default function DealersScreen() {
         onEndReachedThreshold={0.1}
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={() => {
-          // Don't show empty state during initial load or when searching/loading
-          if (isInitialLoad || isLoadingSearch) return null;
+          // Don't show empty state during loading from the store or when searching
+          if (loading || isLoadingSearch) return null;
 
           return (
             <View style={{
@@ -281,8 +282,8 @@ export default function DealersScreen() {
         }}
       />
 
-      {/* Loading - only show during initial load */}
-      {isInitialLoad && (
+      {/* Loading - only show during loading from store */}
+      {loading && !dealers.length && (
         <View style={styles.loadingContainer}>
           <Spinner size={24} color={COLORS.SAFFRON} />
         </View>

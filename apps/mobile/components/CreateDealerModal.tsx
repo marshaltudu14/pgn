@@ -14,7 +14,7 @@ import { ChevronLeft, Plus, Phone, Mail, MapPin, User, Store, ChevronDown } from
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useDealerStore } from '@/store/dealer-store';
-import { useRegionStore } from '@/store/region-store';
+import { useAuthStore } from '@/store/auth-store';
 import { DealerFormData } from '@pgn/shared';
 import { COLORS } from '@/constants';
 import Spinner from '@/components/Spinner';
@@ -36,7 +36,8 @@ interface FormErrors {
 export default function CreateDealerModal({ visible, onClose }: CreateDealerModalProps) {
   const colors = useThemeColors();
   const { createDealer, isCreating } = useDealerStore();
-  const { regions, fetchRegions } = useRegionStore();
+  const { user } = useAuthStore();
+  const assignedRegions = user?.assignedCities || [];
 
   const [formData, setFormData] = useState<DealerFormData>({
     name: '',
@@ -50,12 +51,12 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
   const [errors, setErrors] = useState<FormErrors>({});
   const [showRegionPicker, setShowRegionPicker] = useState(false);
 
-  // Fetch regions when modal opens
+  // Pre-select first region when modal opens and form is reset
   useEffect(() => {
-    if (visible && regions.length === 0) {
-      fetchRegions();
+    if (visible && assignedRegions.length > 0 && !formData.region_id) {
+      setFormData(prev => ({ ...prev, region_id: assignedRegions[0].id }));
     }
-  }, [visible, regions.length, fetchRegions]);
+  }, [visible, assignedRegions, formData.region_id]);
 
   const validateForm = useCallback((): boolean => {
     const newErrors: FormErrors = {};
@@ -130,7 +131,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
           email: '',
           address: '',
           shop_name: '',
-          region_id: '',
+          region_id: assignedRegions.length > 0 ? assignedRegions[0].id : '',
         });
       } else {
         Alert.alert('Error', response.error || 'Failed to create dealer');
@@ -153,7 +154,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
       email: '',
       address: '',
       shop_name: '',
-      region_id: '',
+      region_id: assignedRegions.length > 0 ? assignedRegions[0].id : '',
     });
     setErrors({});
     onClose();
@@ -306,9 +307,9 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
                 ]}
               >
                 {(() => {
-                  const selectedRegion = regions.find(r => r.id === formData.region_id);
+                  const selectedRegion = assignedRegions.find(r => r.id === formData.region_id);
                   return formData.region_id
-                    ? selectedRegion ? `${selectedRegion.city}, ${selectedRegion.state}` : formData.region_id
+                    ? selectedRegion ? selectedRegion.label : 'Select region'
                     : 'Select region';
                 })()}
               </Text>
@@ -338,7 +339,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
                   Select Region
                 </Text>
                 <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
-                  {regions.map((region) => (
+                  {assignedRegions.map((region) => (
                     <TouchableOpacity
                       key={region.id}
                       style={[
@@ -357,7 +358,7 @@ export default function CreateDealerModal({ visible, onClose }: CreateDealerModa
                       }}
                     >
                       <Text style={[styles.regionOptionText, { color: colors.text }]}>
-                        {region.city}, {region.state}
+                        {region.label}
                       </Text>
                       {formData.region_id === region.id && (
                         <Ionicons name="checkmark" size={20} color={colors.primary} />

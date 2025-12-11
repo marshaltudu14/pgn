@@ -34,6 +34,7 @@ export default function RetailersScreen() {
     searchRetailers,
     setSelectedRetailer,
     pagination,
+    loading,
   } = useRetailerStore();
 
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -207,8 +208,8 @@ export default function RetailersScreen() {
         onEndReachedThreshold={0.1}
         contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={() => {
-          // Don't show empty state during initial load or when searching/loading
-          if (isInitialLoad || isLoadingSearch) return null;
+          // Don't show empty state during loading from the store or when searching
+          if (loading || isLoadingSearch) return null;
 
           return (
             <View style={{
@@ -280,8 +281,8 @@ export default function RetailersScreen() {
         }}
       />
 
-      {/* Loading - only show during initial load */}
-      {isInitialLoad && (
+      {/* Loading - only show during loading from store */}
+      {loading && !retailers.length && (
         <View style={styles.loadingContainer}>
           <Spinner size={24} color={COLORS.SAFFRON} />
         </View>

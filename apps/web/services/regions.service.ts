@@ -354,7 +354,7 @@ export async function searchRegions(
   };
 }
 
-// Get regions that an employee has access to based on employee_regions junction table
+// Get regions that an employee has access to based on employee_regions junction table (returns IDs only)
 export async function getEmployeeRegions(employeeId: string): Promise<string[]> {
   const supabase = await createClient();
 
@@ -392,6 +392,7 @@ export async function getEmployeeRegions(employeeId: string): Promise<string[]> 
   const regionIds = employeeRegionMappings.map(mapping => mapping.region_id);
   return regionIds;
 }
+
 
 // Check if an employee has access to a specific region
 export async function canEmployeeAccessRegion(employeeId: string, regionId: string): Promise<boolean> {

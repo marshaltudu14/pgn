@@ -392,61 +392,8 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      tasks: {
-        Row: {
-          assigned_employee_id: string
-          completed_at: string | null
-          completion_notes: string | null
-          created_at: string | null
-          description: string | null
-          due_date: string | null
-          id: string
-          priority: string
-          progress: number | null
-          status: string
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          assigned_employee_id: string
-          completed_at?: string | null
-          completion_notes?: string | null
-          created_at?: string | null
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          priority?: string
-          progress?: number | null
-          status?: string
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          assigned_employee_id?: string
-          completed_at?: string | null
-          completion_notes?: string | null
-          created_at?: string | null
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          priority?: string
-          progress?: number | null
-          status?: string
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_assigned_employee_id_fkey"
-            columns: ["assigned_employee_id"]
-            isOneToOne: false
-            referencedRelation: "employees"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
+  }
     Views: {
       [_ in never]: never
     }

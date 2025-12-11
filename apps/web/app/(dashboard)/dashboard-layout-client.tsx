@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useSidebarSwipe } from '@/hooks/use-sidebar-swipe';
 import { cn } from '@/lib/utils';
-import { Building2, Calendar, CheckSquare, Home, LogOut, Map, Settings, Store, Tractor, Users } from 'lucide-react';
+import { Building2, Calendar, Home, LogOut, Map, Settings, Store, Tractor, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -34,11 +34,6 @@ const navigationSections = [
         title: 'Dashboard',
         url: '/dashboard',
         icon: Home,
-      },
-      {
-        title: 'Tasks',
-        url: '/dashboard/tasks',
-        icon: CheckSquare,
       },
     ],
   },

@@ -289,7 +289,7 @@ export const useRegionsStore = create<RegionsStore>()(
             throw new Error(errorData.error || 'Failed to delete region');
           }
 
-          // Refresh the regions list
+          // Re-fetch regions with current filters after successful deletion
           const { filters } = get();
           await get().fetchRegions(filters);
 

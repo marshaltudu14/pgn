@@ -1,14 +1,9 @@
 import { withApiValidation } from '@/lib/api-validation';
-import { addSecurityHeaders, withSecurity } from '@/lib/security-middleware';
+import { addSecurityHeaders, withSecurity, type AuthenticatedRequest } from '@/lib/security-middleware';
 import {
     createDealer,
     listDealers
 } from '@/services/dealer.service';
-import {
-    canEmployeeAccessRegion,
-    getEmployeeRegions
-} from '@/services/regions.service';
-import { createClient } from '@/utils/supabase/server';
 import {
     BaseApiResponseSchema,
     buildTimeApiContract,
@@ -19,34 +14,58 @@ import {
     type DealerListParams,
 } from '@pgn/shared';
 import { NextRequest, NextResponse } from 'next/server';
+import { getEmployeeRegions, canEmployeeAccessRegion } from '@/services/regions.service';
 
 const getDealersHandler = async (request: NextRequest): Promise<NextResponse> => {
   try {
     // Get validated query parameters from the middleware
     const params = (request as NextRequest & { validatedQuery: unknown }).validatedQuery;
-    
+
     console.log('📥 Dealers API - Received params:', JSON.stringify(params, null, 2));
 
-    // Get employee ID from JWT token
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check if this is a mobile client (employee) or web admin
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    console.log('🔍 Dealers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
 
+    const user = (request as AuthenticatedRequest).user;
     let regionFilter: string[] | undefined;
 
-    if (user) {
+    // Check if region_id is passed in query params (for web admin manual filtering)
+    const queryParams = params as Record<string, unknown>;
+    const explicitRegionId = queryParams.region_id as string | undefined;
+
+    if (explicitRegionId) {
+      console.log('🔍 Explicit region filter in query params:', explicitRegionId);
+      regionFilter = [explicitRegionId];
+    }
+    // Apply automatic region filtering for mobile employees
+    else if (isMobileClient && user && user.employeeId) {
+      console.log('👤 Employee ID:', user.employeeId);
+
       // Get employee's assigned regions
       try {
-        regionFilter = await getEmployeeRegions(user.id);
+        regionFilter = await getEmployeeRegions(user.employeeId);
+        console.log('📍 Assigned region IDs:', regionFilter);
+
+        if (regionFilter.length === 0) {
+          console.log('⚠️ Employee has no regions assigned, returning empty result');
+        }
       } catch (error) {
         console.error('Error getting employee regions:', error);
         // If we can't get regions, return empty result
         regionFilter = [];
       }
+    } else if (!isMobileClient) {
+      console.log('🌐 Web admin client - showing all dealers without region filtering');
+      regionFilter = undefined;
     }
 
     const result = await listDealers(params as DealerListParams, regionFilter);
-    
-    console.log('📤 Dealers API - Returning dealers count:', result.dealers.length);
+
+    console.log('📤 Dealers API - Total dealers found:', result.dealers.length);
+    if (regionFilter && regionFilter.length > 0) {
+      console.log('✅ Region filtering applied for', regionFilter.length, 'regions');
+    }
 
     const response = NextResponse.json({
       success: true,
@@ -73,9 +92,12 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
     // Get validated body from the middleware
     const dealerData = (request as NextRequest & { validatedBody: unknown }).validatedBody as DealerInsert;
 
-    // Get employee ID from JWT token
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check if this is a mobile client (employee) or web admin
+    const isMobileClient = request.headers.get('x-client-type') === 'mobile';
+    console.log('🔍 Create Dealers API - Client type:', isMobileClient ? 'Mobile Employee' : 'Web Admin');
+
+    // Get user from authenticated request (set by security middleware)
+    const user = (request as AuthenticatedRequest).user;
 
     if (!user) {
       const response = NextResponse.json(
@@ -89,11 +111,13 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
       return addSecurityHeaders(response);
     }
 
-    // Validate region access if region_id is provided
-    if (dealerData.region_id) {
-      const hasAccess = await canEmployeeAccessRegion(user.id, dealerData.region_id);
+    // For mobile employees, validate region access if region_id is provided
+    if (isMobileClient && dealerData.region_id) {
+      console.log('🔒 Validating region access for region_id:', dealerData.region_id);
+      const hasAccess = await canEmployeeAccessRegion(user.employeeId, dealerData.region_id);
 
       if (!hasAccess) {
+        console.log('❌ Region access denied for employee:', user.employeeId);
         const response = NextResponse.json(
           {
             success: false,
@@ -104,6 +128,9 @@ const createDealerHandler = async (request: NextRequest): Promise<NextResponse> 
         );
         return addSecurityHeaders(response);
       }
+      console.log('✅ Region access granted');
+    } else if (!isMobileClient) {
+      console.log('🌐 Web admin - skipping region access validation');
     }
 
     const result = await createDealer(dealerData);

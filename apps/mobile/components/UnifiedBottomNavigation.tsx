@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/hooks/use-theme-colors';
-import { Home, User, Calendar, ArrowUp, ArrowDown, Timer } from 'lucide-react-native';
+import { Home, User, Calendar, ArrowUp, ArrowDown, Timer, ClipboardList } from 'lucide-react-native';
 import { COLORS } from '@/constants';
 import { useAttendance } from '@/store/attendance-store';
 import { useAuth } from '@/store/auth-store';
@@ -159,6 +159,7 @@ const AnimatedCheckInOutButton: React.FC<{
   );
 };
 
+
 const TabButton: React.FC<{
   item: TabItem;
   colors: any;
@@ -232,6 +233,14 @@ export default function UnifiedBottomNavigation({
       isActive: activeTab === 'home',
     },
     {
+      key: 'tasks',
+      icon: ClipboardList,
+      label: 'Tasks',
+      onPress: () => {}, // Empty function to prevent navigation
+      isActive: false,
+      disabled: true, // Explicitly disabled
+    },
+    {
       key: 'attendance',
       icon: Calendar,
       label: 'Attendance',
@@ -259,7 +268,7 @@ export default function UnifiedBottomNavigation({
         right: 0,
       }
     ]}>
-      {tabs.slice(0, 1).map((tab) => (
+      {tabs.slice(0, 2).map((tab) => (
         <TabButton key={tab.key} item={tab} colors={colors} />
       ))}
 
@@ -273,7 +282,7 @@ export default function UnifiedBottomNavigation({
         isConnected={connectionDisplayInfo.isConnected ?? false}
       />
 
-      {tabs.slice(1).map((tab) => (
+      {tabs.slice(2).map((tab) => (
         <TabButton key={tab.key} item={tab} colors={colors} />
       ))}
     </View>

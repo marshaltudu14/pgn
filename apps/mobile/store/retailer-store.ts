@@ -6,6 +6,7 @@ import { api, ApiResponse } from '@/services/api-client';
 import { API_ENDPOINTS } from '@/constants/api';
 import { handleMobileApiResponse, transformApiErrorMessage } from './utils/errorHandling';
 import { useRegionStore } from './region-store';
+import { useAuthStore } from './auth-store';
 
 interface RetailerStoreState {
   // Data state

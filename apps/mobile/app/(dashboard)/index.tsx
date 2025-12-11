@@ -1,20 +1,28 @@
-import ModernFloatingActionButton from '@/components/ModernFloatingActionButton';
 import { useThemeColors } from '@/hooks/use-theme-colors';
 import { useAttendance } from '@/store/attendance-store';
 import { useAuth } from '@/store/auth-store';
 import { homeStyles } from '@/styles/dashboard/home-styles';
 import { useRouter } from 'expo-router';
 import {
-  Clock,
   Sprout,
   Store,
-  TrendingUp,
   Users,
   UserCheck,
   User,
+  MapPin,
+  ChevronRight,
+  Award,
+  Activity,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions,
+  RefreshControl,
+} from 'react-native';
 import { EmploymentStatus } from '@pgn/shared';
 
 export default function HomeScreen() {
@@ -24,8 +32,10 @@ export default function HomeScreen() {
   const { fetchAttendanceHistory, attendanceHistory, getAttendanceStatus } =
     useAttendance();
   const colors = useThemeColors();
+  Dimensions.get('window');
 
-    const [todayStats, setTodayStats] = useState({
+  const [refreshing, setRefreshing] = useState(false);
+  const [todayStats, setTodayStats] = useState({
     daysPresent: 0,
     totalHours: 0,
     avgHours: 0,
@@ -89,12 +99,7 @@ export default function HomeScreen() {
     });
   }, [attendanceHistory]);
 
-  // Format distance
-  const formatDistance = (meters: number) => {
-    if (meters < 1000) return `${meters}m`;
-    return `${(meters / 1000).toFixed(1)} km`;
-  };
-
+  
   // Load current attendance status
   const loadCurrentStatus = useCallback(async () => {
     try {
@@ -105,6 +110,18 @@ export default function HomeScreen() {
       console.error('Error loading current status:', error);
     }
   }, [user?.id, getAttendanceStatus]);
+
+  // Refresh data
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([
+      loadTodayStats(),
+      loadCurrentStatus(),
+      // Re-fetch user data to get updated regions and status
+      useAuth.getState().fetchUser(),
+    ]);
+    setRefreshing(false);
+  }, [loadTodayStats, loadCurrentStatus]);
 
   useEffect(() => {
     loadTodayStats();
@@ -137,35 +154,24 @@ export default function HomeScreen() {
 
   const employeeStatusInfo = getEmployeeStatusInfo();
 
-  // Stats items for mobile list design
-  const statsItems = [
-    {
-      label: user?.firstName || 'User',
-      value: user?.lastName || '',
-      icon: User,
-      color: colors.text,
-    },
-    {
-      label: 'Status',
-      value: employeeStatusInfo.text,
-      icon: UserCheck,
-      color: employeeStatusInfo.color,
-    },
-    {
-      label: 'Hours',
-      value: todayStats.totalHours.toFixed(1),
-      icon: Clock,
-      color: colors.primary,
-    },
-    {
-      label: 'Distance',
-      value: formatDistance(todayStats.totalDistance),
-      icon: TrendingUp,
-      color: colors.textSecondary,
-    },
-  ];
+  // Get full name
+  const userFullName = user ? `${user.firstName} ${user.lastName}` : 'User';
 
-  // Entity items for quick access
+  // Get regions display
+  const getRegionsDisplay = () => {
+    if (!user?.assignedCities || user.assignedCities.length === 0) {
+      return 'No regions assigned';
+    }
+    if (user.assignedCities.length === 1) {
+      return user.assignedCities[0];
+    }
+    if (user.assignedCities.length <= 2) {
+      return user.assignedCities.join(', ');
+    }
+    return `${user.assignedCities[0]}, ${user.assignedCities[1]} +${user.assignedCities.length - 2} more`;
+  };
+
+  // Entity items for quick access - Order: Dealers, Retailers, Farmers
   const entityItems = [
     {
       id: 'dealers',
@@ -193,61 +199,7 @@ export default function HomeScreen() {
     },
   ];
 
-  // FAB options for creating new entities
-  const fabOptions = [
-    {
-      id: 'create-dealer',
-      label: 'Dealer',
-      icon: Store,
-      color: '#3B82F6',
-      onPress: () => router.push('/dealers' as any),
-    },
-    {
-      id: 'create-retailer',
-      label: 'Retailer',
-      icon: Users,
-      color: '#10B981',
-      onPress: () => router.push('/retailers' as any),
-    },
-    {
-      id: 'create-farmer',
-      label: 'Farmer',
-      icon: Sprout,
-      color: '#F59E0B',
-      onPress: () => router.push('/farmers' as any),
-    },
-  ];
-
-  // Render stat item
-  const renderStatItem = ({ item }: { item: (typeof statsItems)[0] }) => {
-    const Icon = item.icon;
-    const isEmployeeName = item.icon === User;
-
-    return (
-      <View style={homeStyles.statItem}>
-        <View style={homeStyles.statIconContainer}>
-          <Icon size={16} color={item.color} />
-        </View>
-        <View style={homeStyles.statContent}>
-          <Text style={[homeStyles.statValue, { color: colors.text }]}>
-            {item.label}
-          </Text>
-          {!isEmployeeName ? (
-            <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>
-              {item.value}
-            </Text>
-          ) : (
-            item.value && (
-              <Text style={[homeStyles.statLabel, { color: colors.textSecondary }]}>
-                {item.value}
-              </Text>
-            )
-          )}
-        </View>
-      </View>
-    );
-  };
-
+  
   // Render entity item
   const renderEntityItem = (item: (typeof entityItems)[0]) => {
     const Icon = item.icon;
@@ -299,25 +251,90 @@ export default function HomeScreen() {
       <ScrollView
         style={[homeStyles.container, { backgroundColor: 'transparent' }]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
       >
-        {/* Stats Section - Direct Icons */}
-        <View style={[homeStyles.statsSection, { marginTop: 40 }]}>
-          <View style={homeStyles.statsGrid}>
-            {statsItems.map(item => (
-              <View key={item.label}>{renderStatItem({ item })}</View>
-            ))}
+        {/* Profile Section with Logo */}
+        <View style={[homeStyles.profileSection, { marginTop: 40 }]}>
+          <View style={homeStyles.profileHeader}>
+            {/* Logo/User Icon */}
+            <View style={[homeStyles.profileLogoContainer, { backgroundColor: colors.primary }]}>
+              <User size={32} color="#FFFFFF" />
+            </View>
+
+            {/* User Info */}
+            <View style={homeStyles.profileInfo}>
+              <Text style={[homeStyles.userName, { color: colors.text }]}>
+                {userFullName}
+              </Text>
+              <Text style={[homeStyles.userSubtitle, { color: colors.textSecondary }]}>
+                ID: {user?.humanReadableId || 'N/A'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Entity Management Section */}
-        <View style={[homeStyles.statsSection, { marginTop: 12 }]}>
+        {/* Stats Cards Section */}
+        <View style={[homeStyles.sectionContainer, { marginTop: 24 }]}>
+          <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>Today&apos;s Overview</Text>
+          <View style={homeStyles.statsCardsContainer}>
+            <View style={homeStyles.statCard}>
+              <View style={[homeStyles.statCardIcon, { backgroundColor: colors.primary + '20' }]}>
+                <Award size={20} color={colors.primary} />
+              </View>
+              <View style={homeStyles.statCardContent}>
+                <Text style={[homeStyles.statCardLabel, { color: colors.textSecondary }]}>Attendance</Text>
+                <Text style={[homeStyles.statCardValue, { color: colors.text }]}>
+                  {todayStats.daysPresent > 0 ? 'Present' : 'Not Marked'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={homeStyles.statCard}>
+              <View style={[homeStyles.statCardIcon, { backgroundColor: employeeStatusInfo.color + '20' }]}>
+                <UserCheck size={20} color={employeeStatusInfo.color} />
+              </View>
+              <View style={homeStyles.statCardContent}>
+                <Text style={[homeStyles.statCardLabel, { color: colors.textSecondary }]}>Status</Text>
+                <Text style={[homeStyles.statCardValue, { color: colors.text }]}>
+                  {employeeStatusInfo.text}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Regions Section */}
+        <View style={[homeStyles.sectionContainer, { marginTop: 8 }]}>
+          <View style={homeStyles.sectionHeader}>
+            <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>Assigned Regions</Text>
+            <TouchableOpacity onPress={() => router.push('/profile' as any)}>
+              <ChevronRight size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={homeStyles.regionsCard}>
+            <MapPin size={16} color={colors.primary} />
+            <Text style={[homeStyles.regionsText, { color: colors.text }]}>
+              {getRegionsDisplay()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Quick Actions Section */}
+        <View style={[homeStyles.sectionContainer, { marginTop: 8 }]}>
+          <Text style={[homeStyles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
           <View
             style={{
               flexDirection: 'row',
               justifyContent: 'center',
               alignItems: 'flex-start',
-              marginBottom: 8,
               marginHorizontal: 16,
               gap: 8,
             }}
@@ -328,9 +345,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Modern Floating Action Button with Material Design 3 */}
-      <ModernFloatingActionButton options={fabOptions} />
     </View>
   );
 }

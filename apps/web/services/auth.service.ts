@@ -438,10 +438,21 @@ export class AuthService {
       }
 
       const regions = data
-        .map((item: { regions: { city: string; state: string }[] }) => {
-          const region = item.regions;
-          if (region && region.length > 0 && region[0].city && region[0].state) {
-            return `${region[0].city}, ${region[0].state}`;
+        .map((item: { regions: { city: string; state: string } | { city: string; state: string }[] | null }) => {
+          // Handle both possible data structures
+          let region;
+          if (item.regions) {
+            // If regions is an array, take the first item
+            if (Array.isArray(item.regions)) {
+              region = item.regions[0];
+            } else {
+              // If regions is an object, use it directly
+              region = item.regions;
+            }
+          }
+
+          if (region && region.city && region.state) {
+            return `${region.city}, ${region.state}`;
           }
           return null;
         })

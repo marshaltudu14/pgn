@@ -42,27 +42,27 @@ export default function ModernFloatingActionButton({
   const [showFarmerModal, setShowFarmerModal] = useState(false);
   const colors = useThemeColors();
 
-  // Enhanced theme for Material Design 3
+  // Enhanced theme for Material Design 3 - transparent background
   const theme = {
     ...MD3LightTheme,
     colors: {
       ...MD3LightTheme.colors,
       primary: COLORS.SAFFRON,
       secondary: colors.primary,
-      background: colors.background,
-      surface: colors.background,
+      background: 'transparent',
+      surface: 'transparent',
       onPrimary: '#FFFFFF',
       onSecondary: '#FFFFFF',
       onBackground: colors.text,
       onSurface: colors.text,
-      shadow: colors.border,
+      shadow: 'transparent',
       elevation: {
         level0: 'transparent',
-        level1: colors.border,
-        level2: colors.border,
-        level3: colors.border,
-        level4: colors.border,
-        level5: colors.border,
+        level1: 'transparent',
+        level2: 'transparent',
+        level3: 'transparent',
+        level4: 'transparent',
+        level5: 'transparent',
       },
     },
   };
@@ -145,13 +145,9 @@ export default function ModernFloatingActionButton({
     },
   ];
 
-  // Calculate position - position above the bottom navigation
-  const bottomPosition = 10; // Fixed position above the tab bar
-
   return (
     <Provider theme={theme}>
       <Portal>
-        {/* FAB Group with Material Design 3 styling */}
         <FAB.Group
           open={open}
           visible={true}
@@ -172,19 +168,19 @@ export default function ModernFloatingActionButton({
           fabStyle={{
             backgroundColor: COLORS.SAFFRON,
             borderRadius: 16,
-            marginBottom: 8,
           }}
           style={{
             position: 'absolute',
-            bottom: bottomPosition,
+            bottom: 80, // Position above bottom navigation
             right: 16,
-            zIndex: 1000,
           }}
           color="#FFFFFF"
           accessibilityLabel="Add new entity"
         />
+      </Portal>
 
-        {/* Create Dealer Modal */}
+      {/* Create Dealer Modal */}
+      <Portal>
         <CreateDealerModal
           visible={showDealerModal}
           onClose={() => setShowDealerModal(false)}

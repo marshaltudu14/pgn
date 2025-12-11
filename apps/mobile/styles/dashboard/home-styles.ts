@@ -4,6 +4,117 @@ export const homeStyles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // Profile Section
+  profileSection: {
+    paddingHorizontal: 20,
+  },
+  profileHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  profileLogoContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    fontFamily: 'System',
+    marginBottom: 4,
+  },
+  userSubtitle: {
+    fontSize: 14,
+    fontFamily: 'System',
+  },
+  statusBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    fontFamily: 'System',
+  },
+
+  // Section styles
+  sectionContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    fontFamily: 'System',
+  },
+
+  // Stats Cards
+  statsCardsContainer: {
+    flexDirection: 'row' as const,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  statCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  statCardContent: {
+    flex: 1,
+  },
+  statCardLabel: {
+    fontSize: 12,
+    fontFamily: 'System',
+    marginBottom: 2,
+  },
+  statCardValue: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    fontFamily: 'System',
+  },
+
+  // Regions Card
+  regionsCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  regionsText: {
+    fontSize: 14,
+    fontFamily: 'System',
+    flex: 1,
+  },
+
+  // Legacy styles (keeping for compatibility)
   compactHeader: {
     paddingHorizontal: 20,
     paddingBottom: 12,
@@ -21,28 +132,6 @@ export const homeStyles = StyleSheet.create({
     alignItems: 'flex-end' as const,
     gap: 6,
   },
-  userName: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    fontFamily: 'System',
-    marginBottom: 2,
-  },
-  userSubtitle: {
-    fontSize: 14,
-    fontFamily: 'System',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    fontFamily: 'System',
-  },
   networkStatusBadge: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
@@ -57,19 +146,7 @@ export const homeStyles = StyleSheet.create({
     fontFamily: 'System',
   },
 
-  // Section styles
-  sectionHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    fontFamily: 'System',
-  },
-
-  // Stats section
+  // Stats section (legacy)
   statsSection: {
     marginBottom: 8,
   },
@@ -100,4 +177,4 @@ export const homeStyles = StyleSheet.create({
     fontFamily: 'System',
   },
 
-  });
+});

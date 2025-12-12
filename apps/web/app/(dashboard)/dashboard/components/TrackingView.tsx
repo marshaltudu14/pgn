@@ -8,28 +8,14 @@ import { DailyAttendanceRecord, Employee } from '@pgn/shared';
 import { Battery, BatteryFull, BatteryLow, BatteryMedium, RefreshCw, Search, Users, Clock, X, Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useAttendanceStore } from '../../../lib/stores/attendanceStore';
 import { useEmployeeStore } from '../../../lib/stores/employeeStore';
 import { EmployeeList } from './EmployeeList';
 import MapComponent from './MapComponent';
-import SearchFieldSelector from '@/components/search-field-selector';
-import { useDebounce } from '@/lib/utils/debounce';
 import { useRegionsStore } from '../../../lib/stores/regionsStore';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { MapPin, ChevronDown, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { RegionSelector } from '@/components/RegionSelector';
+import { Form } from '@/components/ui/form';
 
 // Department filter removed - employees table doesn't have department field
 // Can be added later when role/department tracking is implemented
@@ -49,70 +35,84 @@ export default function TrackingView() {
     isLoading: loadingAttendance
   } = useAttendanceStore();
 
-  const { regions, isLoading: regionsLoading, fetchRegions, searchRegions } = useRegionsStore();
+  const { regions, isLoading: regionsLoading, fetchRegions } = useRegionsStore();
+
+  // Simple form for RegionSelector (no submission needed)
+  const form = useForm({ defaultValues: { region_id: '' } });
 
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
   const [searchInSheet, setSearchInSheet] = useState('');
   const [previousEmployeeId, setPreviousEmployeeId] = useState<string | null>(null);
   const [shouldCenterMap, setShouldCenterMap] = useState(false);
-  const [regionFilterOpen, setRegionFilterOpen] = useState(false);
-  const [regionSearchQuery, setRegionSearchQuery] = useState('');
-  const [isInitialRegionsLoad, setIsInitialRegionsLoad] = useState(true);
-  
+
   // Memoize the fetch function to prevent unnecessary re-renders
   const memoizedFetchAttendanceRecords = useCallback(() => {
     const today = new Date().toISOString().split('T')[0];
     fetchAttendanceRecords({ date: today, limit: 50 });
   }, [fetchAttendanceRecords]);
 
-  // Debounced values
-  const debouncedSearchQuery = useDebounce(filters.search, 300);
-  const debouncedSearchField = useDebounce(filters.searchField, 300);
-  const debouncedRegionSearchQuery = useDebounce(regionSearchQuery, 300);
-
-  // Handle region search with debouncing
+  
+  // Fetch all regions once on component mount
   useEffect(() => {
-    if (debouncedRegionSearchQuery) {
-      searchRegions(debouncedRegionSearchQuery);
-    }
-  }, [debouncedRegionSearchQuery, searchRegions]);
-
-  // Handle search changes with debouncing
-  useEffect(() => {
-    const fetchParams: Parameters<typeof fetchEmployees>[0] = { limit: 100 };
-
-    if (debouncedSearchQuery) {
-      fetchParams.search = debouncedSearchQuery;
-      fetchParams.search_field = debouncedSearchField;
-    }
-
-    // Add region filter if selected
-    if (filters.assigned_regions && filters.assigned_regions.length > 0) {
-      fetchParams.assigned_regions = filters.assigned_regions;
-    }
-
-    fetchEmployees(fetchParams);
-  }, [debouncedSearchQuery, debouncedSearchField, filters.assigned_regions, fetchEmployees]);
-
-  // Initial regions data fetch and set default region
-  useEffect(() => {
-    fetchRegions({ limit: 20 }).then(() => {
-      setIsInitialRegionsLoad(false);
-    });
+    fetchRegions({ limit: 1000 });
   }, [fetchRegions]);
+
+  // Fetch all employees for the selected region once
+  useEffect(() => {
+    // Fetch all employees without search to get the full list for local filtering
+    const fetchParams: Parameters<typeof fetchEmployees>[0] = { limit: 1000 };
+    fetchEmployees(fetchParams);
+  }, [filters.assigned_regions, fetchEmployees]);
+
+  // Local search filter for employees - search across all fields
+  const filteredEmployees = useMemo(() => {
+    if (!filters.search) return employees;
+
+    const query = filters.search.toLowerCase();
+    return employees.filter(employee => {
+      // Search across all relevant fields
+      return (
+        employee.human_readable_user_id?.toLowerCase().includes(query) ||
+        employee.first_name?.toLowerCase().includes(query) ||
+        employee.last_name?.toLowerCase().includes(query) ||
+        employee.email?.toLowerCase().includes(query) ||
+        employee.phone?.toLowerCase().includes(query) ||
+        // Also search combined name for better UX
+        `${employee.first_name} ${employee.last_name}`.toLowerCase().includes(query)
+      );
+    });
+  }, [employees, filters.search]);
+
+  // Sort regions alphabetically by city, then state
+  const sortedRegions = useMemo(() => {
+    if (!regions) return [];
+    return [...regions].sort((a, b) => {
+      const cityA = a.city.toLowerCase();
+      const cityB = b.city.toLowerCase();
+      if (cityA < cityB) return -1;
+      if (cityA > cityB) return 1;
+      // If cities are the same, sort by state
+      const stateA = a.state.toLowerCase();
+      const stateB = b.state.toLowerCase();
+      if (stateA < stateB) return -1;
+      if (stateA > stateB) return 1;
+      return 0;
+    });
+  }, [regions]);
 
   // Set first region as default when regions are loaded
   useEffect(() => {
-    if (regions && regions.length > 0 && (!filters.assigned_regions || filters.assigned_regions.length === 0) && !isInitialRegionsLoad) {
-      setFilters({ assigned_regions: [regions[0].id] });
+    if (sortedRegions && sortedRegions.length > 0 && (!filters.assigned_regions || filters.assigned_regions.length === 0)) {
+      setFilters({ assigned_regions: [sortedRegions[0].id] });
     }
-  }, [regions, filters.assigned_regions, setFilters, isInitialRegionsLoad]);
+  }, [sortedRegions, filters.assigned_regions, setFilters]);
 
-  // Initial data fetch
+  // Update form value when selected region changes
   useEffect(() => {
-    fetchEmployees({ limit: 100 }); // API limit is 100
-  }, [fetchEmployees]);
+    const regionId = filters.assigned_regions?.[0] || '';
+    form.setValue('region_id', regionId);
+  }, [filters.assigned_regions, form]);
 
   // Initial attendance data fetch
   useEffect(() => {
@@ -201,123 +201,42 @@ export default function TrackingView() {
       <div className="hidden md:flex h-full">
         {/* Left Panel - Desktop */}
         <div className="w-1/3 md:min-w-[320px] md:max-w-[400px] h-full flex flex-col bg-background border-r relative z-10">
-          {/* Top Filters Row - Search Field Selector and Refresh */}
-          <div className="flex items-center justify-between p-2 border-b">
-            <SearchFieldSelector
-              onValueChange={(value) => setFilters({ searchField: value })}
-              value={filters.searchField}
-              className="flex-1"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              title="Refresh Data"
-              className="relative h-9 px-3 font-mono text-xs cursor-pointer ml-2"
-              disabled={loadingAttendance}
-            >
-              {loadingAttendance ? (
-                <RefreshCw className="h-3 w-3 animate-spin" />
-              ) : (
-                <>
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  {timeUntilRefresh}s
-                </>
-              )}
-            </Button>
-          </div>
-
-          {/* Region Filter Row */}
+          {/* Region Filter Row with Timer */}
           <div className="p-2 border-b">
-            <Popover open={regionFilterOpen} onOpenChange={setRegionFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between h-9"
-                  type="button"
-                  disabled={regionsLoading && (!filters.assigned_regions || filters.assigned_regions.length === 0)}
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {regionsLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                        <span className="truncate">Loading regions...</span>
-                      </>
-                    ) : filters.assigned_regions && filters.assigned_regions.length > 0 ? (() => {
-                      const selectedRegionId = filters.assigned_regions[0]; // Get first selected region
-                      const region = regions.find(r => r.id === selectedRegionId);
-                      return (
-                        <div className="flex items-center gap-2 truncate">
-                          <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                          <span className="truncate">{region ? `${region.city}, ${region.state}` : 'Unknown region'}</span>
-                        </div>
-                      );
-                    })() : (
-                      <div className="flex items-center gap-2 truncate">
-                        <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <span className="text-muted-foreground truncate">Filter by region...</span>
-                      </div>
-                    )}
-                  </div>
-                  {!regionsLoading && <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-screen max-w-md p-0 max-h-[400px]"
-                align="start"
-                sideOffset={4}
-              >
-                <Command>
-                  <CommandInput
-                    placeholder="Search regions..."
-                    value={regionSearchQuery}
-                    onValueChange={setRegionSearchQuery}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1">
+                <Form {...form}>
+                  <RegionSelector
+                    value={filters.assigned_regions?.[0] || ''}
+                    onValueChange={(value) => setFilters({ assigned_regions: value ? [value] : [] })}
+                    regions={sortedRegions.map(region => ({
+                      id: region.id,
+                      city: region.city,
+                      state: region.state
+                    }))}
+                    isLoading={regionsLoading}
+                    placeholder="Filter by region..."
                   />
-                  <CommandList>
-                    {regionsLoading && regions.length === 0 ? (
-                      <div className="flex items-center justify-center py-6">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        <span className="text-sm text-muted-foreground">Loading regions...</span>
-                      </div>
-                    ) : (
-                      <>
-                        <CommandEmpty>
-                          {regionSearchQuery ? 'No regions found matching your search.' : 'No regions available.'}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {regions.map((region) => (
-                            <CommandItem
-                              key={region.id}
-                              value={`${region.city}, ${region.state}`}
-                              onSelect={() => {
-                                setFilters({ assigned_regions: [region.id] });
-                                setRegionFilterOpen(false);
-                                setRegionSearchQuery('');
-                              }}
-                            >
-                              <div className={cn(
-                                "mr-2 h-4 w-4 rounded-sm border border-primary",
-                                filters.assigned_regions?.includes(region.id)
-                                  ? "bg-primary text-primary-foreground"
-                                  : "opacity-50 [&_svg]:invisible"
-                              )}>
-                                {filters.assigned_regions?.includes(region.id) && <Check className="h-3 w-3" />}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{region.city}</span>
-                                <span className="text-muted-foreground">{region.state}</span>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </>
-                    )}
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+                </Form>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                title="Refresh Data"
+                className="relative h-12 px-3 font-mono text-xs cursor-pointer whitespace-nowrap"
+                disabled={loadingAttendance}
+              >
+                {loadingAttendance ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    {timeUntilRefresh}s
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Search Input Row - Bottom */}
@@ -325,7 +244,7 @@ export default function TrackingView() {
             <div className="relative">
               <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search employees..."
+                placeholder="Search by name, ID, email, or phone..."
                 className="pl-8 pr-8 h-9 w-full"
                 value={filters.search || ''}
                 onChange={(e) => setFilters({ search: e.target.value })}
@@ -350,7 +269,7 @@ export default function TrackingView() {
                </div>
              ) : (
                <EmployeeList
-                 employees={employees}
+                 employees={filteredEmployees}
                  attendanceMap={attendanceMap}
                  selectedEmployeeId={selectedEmployee?.id || null}
                  onSelectEmployee={(emp) => {
@@ -476,19 +395,29 @@ export default function TrackingView() {
 
         {/* Mobile Controls */}
         <div className="flex-shrink-0 bg-background border-b p-2 space-y-2">
-          {/* Top Row: Search Field Selector and Refresh */}
+          {/* Region Filter Row with Timer */}
           <div className="flex items-center justify-between gap-2">
-            <SearchFieldSelector
-              onValueChange={(value) => setFilters({ searchField: value })}
-              value={filters.searchField}
-              className="flex-1"
-            />
+            <div className="flex-1">
+              <Form {...form}>
+                <RegionSelector
+                  value={filters.assigned_regions?.[0] || ''}
+                  onValueChange={(value) => setFilters({ assigned_regions: value ? [value] : [] })}
+                  regions={sortedRegions.map(region => ({
+                    id: region.id,
+                    city: region.city,
+                    state: region.state
+                  }))}
+                  isLoading={regionsLoading}
+                  placeholder="Filter by region..."
+                />
+              </Form>
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleRefresh}
               title="Refresh Data"
-              className="relative font-mono text-xs cursor-pointer whitespace-nowrap"
+              className="relative h-12 px-3 font-mono text-xs cursor-pointer whitespace-nowrap"
               disabled={loadingAttendance}
             >
               {loadingAttendance ? (
@@ -499,103 +428,11 @@ export default function TrackingView() {
             </Button>
           </div>
 
-          {/* Region Filter Row */}
-          <Popover open={regionFilterOpen} onOpenChange={setRegionFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                className="w-full justify-between h-9"
-                type="button"
-                disabled={regionsLoading && (!filters.assigned_regions || filters.assigned_regions.length === 0)}
-              >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {regionsLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                      <span className="truncate">Loading regions...</span>
-                    </>
-                  ) : filters.assigned_regions && filters.assigned_regions.length > 0 ? (() => {
-                    const firstRegionId = filters.assigned_regions[0];
-                    const region = regions.find(r => r.id === firstRegionId);
-                    const regionCount = filters.assigned_regions.length;
-                    return (
-                      <div className="flex items-center gap-2 truncate">
-                        <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                        <span className="truncate">{region ? `${region.city}, ${region.state}` : 'Unknown region'}{regionCount > 1 ? ` (+${regionCount - 1})` : ''}</span>
-                      </div>
-                    );
-                  })() : (
-                    <div className="flex items-center gap-2 truncate">
-                      <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                      <span className="text-muted-foreground truncate">Filter by region...</span>
-                    </div>
-                  )}
-                </div>
-                {!regionsLoading && <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-screen max-w-md p-0 max-h-[400px]"
-              align="start"
-              sideOffset={4}
-            >
-              <Command>
-                <CommandInput
-                  placeholder="Search regions..."
-                  value={regionSearchQuery}
-                  onValueChange={setRegionSearchQuery}
-                />
-                <CommandList>
-                  {regionsLoading && regions.length === 0 ? (
-                    <div className="flex items-center justify-center py-6">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span className="text-sm text-muted-foreground">Loading regions...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <CommandEmpty>
-                        {regionSearchQuery ? 'No regions found matching your search.' : 'No regions available.'}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {regions.map((region) => (
-                          <CommandItem
-                            key={region.id}
-                            value={`${region.city}, ${region.state}`}
-                            onSelect={() => {
-                              setFilters({ assigned_regions: [region.id] });
-                              setRegionFilterOpen(false);
-                              setRegionSearchQuery('');
-                            }}
-                          >
-                            <div className={cn(
-                              "mr-2 h-4 w-4 rounded-sm border border-primary",
-                              filters.assigned_regions?.includes(region.id)
-                                ? "bg-primary text-primary-foreground"
-                                : "opacity-50 [&_svg]:invisible"
-                            )}>
-                              {filters.assigned_regions?.includes(region.id) && <Check className="h-3 w-3" />}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{region.city}</span>
-                              <span className="text-muted-foreground">{region.state}</span>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </>
-                  )}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-
           {/* Search Input Row */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search employees..."
+              placeholder="Search by name, ID, email, or phone..."
               className="pl-10 pr-10 w-full"
               value={searchInSheet}
               onChange={(e) => setSearchInSheet(e.target.value)}
@@ -631,7 +468,7 @@ export default function TrackingView() {
                   <div className="relative">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search employees..."
+                      placeholder="Search by name, ID, email, or phone..."
                       className="pl-10 pr-10"
                       value={searchInSheet}
                       onChange={(e) => setSearchInSheet(e.target.value)}
@@ -651,7 +488,7 @@ export default function TrackingView() {
                   </div>
                   <ScrollArea className="flex-1">
                     <EmployeeList
-                      employees={employees}
+                      employees={filteredEmployees}
                       attendanceMap={attendanceMap}
                       selectedEmployeeId={selectedEmployee?.id || null}
                       onSelectEmployee={(emp) => {

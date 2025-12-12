@@ -100,7 +100,6 @@ export function RegionSelector({
       name="region_id"
       render={(_field) => (
         <FormItem>
-          <FormLabel>Region *</FormLabel>
           <FormControl>
             <Popover
               open={open}

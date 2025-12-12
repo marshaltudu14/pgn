@@ -24,7 +24,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import React, { Suspense } from 'react';
-import ErrorBoundary from './dashboard/components/ui/error-boundary';
 
 const navigationSections = [
   {
@@ -123,8 +122,7 @@ function DashboardLayoutContent({
 
   return (
     <SidebarProvider>
-      <ErrorBoundary>
-        <SidebarSwipeWrapper>
+      <SidebarSwipeWrapper>
           <Sidebar variant="inset" collapsible="icon">
             <SidebarHeader>
               <SidebarMenu>
@@ -229,13 +227,10 @@ function DashboardLayoutContent({
               className="flex-1 bg-white dark:bg-black px-2 py-3 lg:p-6"
               suppressHydrationWarning
             >
-              <ErrorBoundary key={typeof window !== 'undefined' ? window.location.pathname : 'server'}>
-                {children}
-              </ErrorBoundary>
+              {children}
             </main>
           </SidebarInset>
-        </SidebarSwipeWrapper>
-      </ErrorBoundary>
+      </SidebarSwipeWrapper>
     </SidebarProvider>
   );
 }

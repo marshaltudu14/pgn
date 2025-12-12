@@ -260,7 +260,7 @@ export const ChangeEmploymentStatusRequestSchema = z.object({
 
 export const EmployeeListParamsSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
+  limit: z.coerce.number().int().min(1).max(1000).default(50),
   search: z.string().optional(),
   search_field: z.enum(['human_readable_user_id', 'first_name', 'last_name', 'email', 'phone']).optional(),
   employment_status: z.array(EmploymentStatusSchema).optional(),

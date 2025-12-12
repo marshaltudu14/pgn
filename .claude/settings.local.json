@@ -129,7 +129,12 @@
       "Bash(npm run tsc:*)",
       "Bash(npm run android:release:*)",
       "Bash(gradlew.bat assembleRelease:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "Bash(set:*)",
+      "Bash(npm run android:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(npm run android:build:*)",
+      "Bash(./build-apk.bat:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
